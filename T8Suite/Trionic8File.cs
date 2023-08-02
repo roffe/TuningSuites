@@ -141,7 +141,7 @@ namespace T8SuitePro
             {
                 if (File.Exists(filename))
                 {
-                    
+
                     // read the file footer
                     //3ff00 - 0x3ffff
                     FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read);
@@ -182,7 +182,7 @@ namespace T8SuitePro
         {
             // startvector = second 4 byte word in the file
             byte[] vector_data = readdatafromfile(filename, 4, 4);
-            
+
             long address = Convert.ToInt64(vector_data[0]) * 256 * 256 * 256;
             address += Convert.ToInt64(vector_data[1]) * 256 * 256;
             address += Convert.ToInt64(vector_data[2]) * 256;
@@ -632,7 +632,7 @@ namespace T8SuitePro
 
             int val = 0;
             bool retval = false;
-            
+
             try
             {
                 int addrtaboffset = GetEndOfSymbolTable(filename);
@@ -667,8 +667,8 @@ namespace T8SuitePro
                         byte[] headerDecrypted = b.Decrypt_ECB(header);
                         string id = System.Text.Encoding.UTF8.GetString(headerDecrypted).Substring(0, 9).TrimEnd('\0');
                         logger.Debug("Header id: " + id);
-                            
-                        fsread.Seek(symboltableoffset+24, SeekOrigin.Begin);
+
+                        fsread.Seek(symboltableoffset + 24, SeekOrigin.Begin);
                         byte[] unencrypted = br.ReadBytes(symbtablength);
                         byte[] value;
                         if (SymbolnamesDictionary.TryGetValue(id, out value))
@@ -992,8 +992,8 @@ namespace T8SuitePro
 
         private static bool DetermineOpen_FromData(byte[] data)
         {
-            byte[] addrPat = { 0x20,0x3C,0x00, 0x14, 0x00, 0x00 };
-            byte[] addrMsk = { 0xf1,0xbf,0xff, 0xff, 0xff, 0x00 };
+            byte[] addrPat = { 0x20, 0x3C, 0x00, 0x14, 0x00, 0x00 };
+            byte[] addrMsk = { 0xf1, 0xbf, 0xff, 0xff, 0xff, 0x00 };
             uint pos = 0x20000;
 
             while ((pos + addrMsk.Length) <= data.Length)
@@ -1012,7 +1012,7 @@ namespace T8SuitePro
         {
             const int MinRequiredLevel = 2;
             int level = 0;
-            
+
 
             // Determine open/closed by looking at symbol names
             if (DetermineOpen_FromSymbolNames(symbols) == true)
@@ -1042,7 +1042,7 @@ namespace T8SuitePro
 
         private static bool m_openbin = false;
         public static bool IsSoftwareOpen
-        {   get { return m_openbin; } }
+        { get { return m_openbin; } }
 
         // This symbol has different meaning and usage depending on if the binary is open or closed!!
         // As such, it's better to translate everything in one place and only work on translated symbols
@@ -1075,7 +1075,8 @@ namespace T8SuitePro
                             sh.Flash_start_address = sh.Internal_address;
                         }
                         // Sram and maybe flash
-                        else */if (sh.Internal_address >= 0x100000)
+                        else */
+                        if (sh.Internal_address >= 0x100000)
                         {
                             // SRAM address
                             sh.Start_address = sh.Internal_address;
@@ -1160,8 +1161,8 @@ namespace T8SuitePro
 
         private static bool ReadAddressPair(byte[] data, uint pos, out uint addr1, out uint addr2)
         {
-            byte[] addrPat = { 0x20,0x3C,0x00 };
-            byte[] addrMsk = { 0xf1,0xbf,0xff };
+            byte[] addrPat = { 0x20, 0x3C, 0x00 };
+            byte[] addrMsk = { 0xf1, 0xbf, 0xff };
 
             addr1 = 0;
             addr2 = 0;
@@ -1386,7 +1387,7 @@ namespace T8SuitePro
                 0x67, 0x00                          // 67 14                beq.s   loc_4F3B0
             };
             byte[] PidMsk =
-            {       
+            {
                 0xff, 0xf8,                         // 4a 07                tst.b   d*
                 0xff, 0xff, 0x00, 0x00,             // 67 00 00 BC          beq.w   xxxx
                 0xff, 0xff, 0x00, 0x00,             // 48 78 06 4B          pea     (xxxx).w
@@ -1452,7 +1453,7 @@ namespace T8SuitePro
             byte[] TemPat =
             {
                 0x4e, 0x71,
-                0x00, 0x00, 0x4f, 0x46, 0x46, 0x00 
+                0x00, 0x00, 0x4f, 0x46, 0x46, 0x00
             };
             byte[] TemMsk =
             {
@@ -1565,12 +1566,12 @@ namespace T8SuitePro
             {
                 logger.Debug("Could not extract symboltable!");
             }
-            
+
             FileStream fsread = new FileStream(filename, FileMode.Open, FileAccess.Read);
             using (BinaryReader br = new BinaryReader(fsread))
             {
                 logger.Debug("Find address table offset");
-                if(!FindAddressTableOffset(symboltableoffset, fsread, br))
+                if (!FindAddressTableOffset(symboltableoffset, fsread, br))
                 {
                     MessageBox.Show("Could not find address table offset!");
                     return false;
