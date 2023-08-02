@@ -37,47 +37,47 @@ namespace CommonSuite
             char[] sep2 = new char[1];
             sep.SetValue('|', 0);
             sep2.SetValue('=', 0);
-             string[] values = previousline.Split(sep);
-             if (values.Length > 0)
-             {
+            string[] values = previousline.Split(sep);
+            if (values.Length > 0)
+            {
 
-                 for (int t = 1; t < values.Length; t++)
-                 {
-                     string subvalue = (string)values.GetValue(t);
-                     string[] subvals = subvalue.Split(sep2);
-                     if (subvals.Length == 2)
-                     {
-                         string varname = (string)subvals.GetValue(0);
-                         if (varname == varnametofetch)
-                         {
-                             retval = (float) ConvertToDouble((string)subvals.GetValue(1));
-                             if (varname == "AD_sond")
-                             {
-                                 retval = (float)ConvertToLambda(retval);
-                             }
-                             if (varname == _widebandSymbol)
-                             {
-                                 if (varname == "DisplProt.AD_Scanner")
-                                 {
-                                     retval = (float)ConvertToWidebandLambda(retval);
-                                 }
-                             }
-                             if (varname == "P_fak")
-                             {
-                                 if (retval > 32000) retval = -(65535 - retval);
-                             }
-                             if (varname == "I_fak")
-                             {
-                                 if (retval > 32000) retval = -(65535 - retval);
-                             }
-                             if (varname == "D_fak")
-                             {
-                                 if (retval > 32000) retval = -(65535 - retval);
-                             }
-                         }
-                     }
-                 }
-             }
+                for (int t = 1; t < values.Length; t++)
+                {
+                    string subvalue = (string)values.GetValue(t);
+                    string[] subvals = subvalue.Split(sep2);
+                    if (subvals.Length == 2)
+                    {
+                        string varname = (string)subvals.GetValue(0);
+                        if (varname == varnametofetch)
+                        {
+                            retval = (float)ConvertToDouble((string)subvals.GetValue(1));
+                            if (varname == "AD_sond")
+                            {
+                                retval = (float)ConvertToLambda(retval);
+                            }
+                            if (varname == _widebandSymbol)
+                            {
+                                if (varname == "DisplProt.AD_Scanner")
+                                {
+                                    retval = (float)ConvertToWidebandLambda(retval);
+                                }
+                            }
+                            if (varname == "P_fak")
+                            {
+                                if (retval > 32000) retval = -(65535 - retval);
+                            }
+                            if (varname == "I_fak")
+                            {
+                                if (retval > 32000) retval = -(65535 - retval);
+                            }
+                            if (varname == "D_fak")
+                            {
+                                if (retval > 32000) retval = -(65535 - retval);
+                            }
+                        }
+                    }
+                }
+            }
             return retval;
         }
 
@@ -164,7 +164,7 @@ namespace CommonSuite
             value = Math.Abs(value - 125); // value - 125 means range -125 to -75 
             // abs value means range 125 to 75 in which 125 = lean and 75 = rich
             value /= 100;
-            return (value); 
+            return (value);
 
         }
 
@@ -415,9 +415,9 @@ namespace CommonSuite
                     sep2.SetValue('=', 0);
                     DateTime dtpreviousline = DateTime.MaxValue;
                     //while ((line = sr.ReadLine()) != null)
-                    foreach (string line in alllines) 
+                    foreach (string line in alllines)
                     {
-                        linecount+= line.Length;
+                        linecount += line.Length;
                         int percentage = (linecount * 90) / (int)fi.Length;
                         CastExportProgressEvent(10 + percentage);
 
@@ -455,7 +455,7 @@ namespace CommonSuite
                                             rest_ticks = Math.Abs(dt.Ticks - exported_to.Ticks);
                                             if (rest_ticks > TimeSpan.TicksPerMinute) rest_ticks = 0;
                                             long rest_ms = rest_ticks / TimeSpan.TicksPerMillisecond;
-                                          //  logger.Debug("From timespan: " + dtpreviousline.Minute.ToString("D2") + ":" + dtpreviousline.Second.ToString("D2") + "." + dtpreviousline.Millisecond.ToString("D3") + " upto " + dt.Minute.ToString("D2") + ":" + dt.Second.ToString("D2") + "." + dt.Millisecond.ToString("D3") + " export_to " + exported_to.Minute.ToString("D2") + ":" + exported_to.Second.ToString("D2") + "." + exported_to.Millisecond.ToString("D3") + " results in " + numberofrepeats.ToString() + " and rest = " + rest_ticks.ToString() + " is " + rest_ms.ToString() + " ms");
+                                            //  logger.Debug("From timespan: " + dtpreviousline.Minute.ToString("D2") + ":" + dtpreviousline.Second.ToString("D2") + "." + dtpreviousline.Millisecond.ToString("D3") + " upto " + dt.Minute.ToString("D2") + ":" + dt.Second.ToString("D2") + "." + dt.Millisecond.ToString("D3") + " export_to " + exported_to.Minute.ToString("D2") + ":" + exported_to.Second.ToString("D2") + "." + exported_to.Millisecond.ToString("D3") + " results in " + numberofrepeats.ToString() + " and rest = " + rest_ticks.ToString() + " is " + rest_ms.ToString() + " ms");
                                             dtpreviousline = dt;
                                         }
                                         else
@@ -541,7 +541,7 @@ namespace CommonSuite
                                                                         {
                                                                             // interpolate between current and 
                                                                             float difference = (float)value - (float)previousvalue;
-                                                                            float newvalue = (float)value - ((((float)(numberofrepeats)-(float)repeatcount) / (float)numberofrepeats) * difference);
+                                                                            float newvalue = (float)value - ((((float)(numberofrepeats) - (float)repeatcount) / (float)numberofrepeats) * difference);
                                                                             if (varname == "P_fak")
                                                                             {
                                                                                 if (newvalue > 32000) newvalue = -(65535 - newvalue);
@@ -664,7 +664,7 @@ namespace CommonSuite
                             }
                             //logger.Debug("value = " + value.ToString() + " retval = " + retval.ToString());
                         }
-                        
+
                     }
                 }
             }
@@ -681,6 +681,8 @@ namespace CommonSuite
                     break;
 
                 case "DisplProt.LambdaScanner": // AFR through wideband?
+                    retval = "1.52";
+                    break;
                 case "Wideband":
                     retval = "22";
                     break;
@@ -691,7 +693,7 @@ namespace CommonSuite
                 case "RPM":
                 case "ActualIn.n_Engine":
                 case "Rpm":
-                    retval = "7000";
+                    retval = "8500";
                     break;
                 case "TORQUE":
                 case "Out.M_Engine":
@@ -728,7 +730,12 @@ namespace CommonSuite
                 case "P_Manifold":
                 case "ECMStat.p_Diff":
                 case "In.p_AirInlet":
-                    retval = "2.0";
+                case "ActualIn.p_AirInlet":
+                case "ECMStat.p_DiffThrot":
+                    retval = "3.0";
+                    break;
+                case "In.p_AirBefThrottle":
+                    retval = "4.0";
                     break;
                 case "Lufttemp":
                 case "ActualIn.T_AirInlet":
@@ -760,7 +767,9 @@ namespace CommonSuite
                 case "Knock_lim":
                     retval = "120";
                     break;
-
+                case "In.p_AirAmbient":
+                    retval = "120.0";
+                    break;
                 case "Knock_level":
                     retval = "120";
                     break;
@@ -871,6 +880,8 @@ namespace CommonSuite
                     break;
 
                 case "DisplProt.LambdaScanner": // AFR through wideband?
+                    retval = "0.50";
+                    break;
                 case "Wideband":
                     retval = "7";
                     break;
@@ -902,7 +913,7 @@ namespace CommonSuite
                     retval = "0";
                     break;
                 case "IGNADV":
-                    retval = "-10" ;
+                    retval = "-10";
                     break;
                 case "IMPORTANTLINE":
                     retval = "0";
@@ -913,8 +924,13 @@ namespace CommonSuite
                 case "P_Manifold10":
                 case "P_Manifold":
                 case "ECMStat.p_Diff":
+                case "ActualIn.p_AirInlet":
                 case "In.p_AirInlet":
-                    retval = "-1";
+                    retval = "-1.0";
+                    break;
+                case "In.p_AirBefThrottle":
+                case "ECMStat.p_DiffThrot":
+                    retval = "-2.0";
                     break;
                 case "Lufttemp":
                 case "ActualIn.T_AirInlet":
@@ -959,6 +975,9 @@ namespace CommonSuite
                     break;
                 case "Insptid_ms10":
                     retval = "0";
+                    break;
+                case "In.p_AirAmbient":
+                    retval = "50.0";
                     break;
                 case "PWM_ut10":
                     retval = "0";
@@ -1086,6 +1105,9 @@ namespace CommonSuite
                 case "U_lambda_cat":
                     retval = "lambda (2)";
                     break;
+                case "In.p_AirAmbient":
+                    retval = "kPa";
+                    break;
                 case "Ign_angle":
                 case "Ign_angle_byte":
                 case "Out.fi_Ignition":
@@ -1112,6 +1134,9 @@ namespace CommonSuite
                 case "P_Manifold":
                 case "ECMStat.p_Diff":
                 case "In.p_AirInlet":
+                case "ActualIn.p_AirInlet":
+                case "In.p_AirBefThrottle":
+                case "ECMStat.p_DiffThrot":
                     retval = "bar";
                     break;
                 case "Lufttemp":            // T5
@@ -1205,7 +1230,7 @@ namespace CommonSuite
         {
             int retval = 0;
 
-            
+
             for (int i = 0; i < symbolname.Length; i++)
             {
                 retval += Convert.ToInt32(symbolname[i]);
