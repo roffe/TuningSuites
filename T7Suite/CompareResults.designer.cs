@@ -31,6 +31,8 @@ namespace T7
             this.components = new System.ComponentModel.Container();
             DevExpress.XtraGrid.StyleFormatCondition styleFormatCondition1 = new DevExpress.XtraGrid.StyleFormatCondition();
             DevExpress.XtraGrid.StyleFormatCondition styleFormatCondition2 = new DevExpress.XtraGrid.StyleFormatCondition();
+            this.gcMissingInOriFile = new DevExpress.XtraGrid.Columns.GridColumn();
+            this.gcMissingInCompareFile = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridControl1 = new DevExpress.XtraGrid.GridControl();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.showDifferenceMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -52,12 +54,28 @@ namespace T7
             this.gridColumn12 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridColumn13 = new DevExpress.XtraGrid.Columns.GridColumn();
             this.gridColumn14 = new DevExpress.XtraGrid.Columns.GridColumn();
-            this.gcMissingInOriFile = new DevExpress.XtraGrid.Columns.GridColumn();
-            this.gcMissingInCompareFile = new DevExpress.XtraGrid.Columns.GridColumn();
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.gridView1)).BeginInit();
             this.SuspendLayout();
+            // 
+            // gcMissingInOriFile
+            // 
+            this.gcMissingInOriFile.Caption = "Missing in original file";
+            this.gcMissingInOriFile.FieldName = "MissingInOriFile";
+            this.gcMissingInOriFile.Name = "gcMissingInOriFile";
+            this.gcMissingInOriFile.Visible = true;
+            this.gcMissingInOriFile.VisibleIndex = 9;
+            this.gcMissingInOriFile.Width = 43;
+            // 
+            // gcMissingInCompareFile
+            // 
+            this.gcMissingInCompareFile.Caption = "Missing in compare file";
+            this.gcMissingInCompareFile.FieldName = "MissingInCompareFile";
+            this.gcMissingInCompareFile.Name = "gcMissingInCompareFile";
+            this.gcMissingInCompareFile.Visible = true;
+            this.gcMissingInCompareFile.VisibleIndex = 10;
+            this.gcMissingInCompareFile.Width = 84;
             // 
             // gridControl1
             // 
@@ -81,33 +99,33 @@ namespace T7
             this.saveLayoutToolStripMenuItem,
             this.exportAsTuningPackageToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(208, 92);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(197, 92);
             // 
             // showDifferenceMapToolStripMenuItem
             // 
             this.showDifferenceMapToolStripMenuItem.Name = "showDifferenceMapToolStripMenuItem";
-            this.showDifferenceMapToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.showDifferenceMapToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
             this.showDifferenceMapToolStripMenuItem.Text = "Show differences map";
             this.showDifferenceMapToolStripMenuItem.Click += new System.EventHandler(this.showDifferenceMapToolStripMenuItem_Click);
             // 
             // exportToExcelToolStripMenuItem
             // 
             this.exportToExcelToolStripMenuItem.Name = "exportToExcelToolStripMenuItem";
-            this.exportToExcelToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.exportToExcelToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
             this.exportToExcelToolStripMenuItem.Text = "Export to Excel";
             this.exportToExcelToolStripMenuItem.Click += new System.EventHandler(this.exportToExcelToolStripMenuItem_Click);
             // 
             // saveLayoutToolStripMenuItem
             // 
             this.saveLayoutToolStripMenuItem.Name = "saveLayoutToolStripMenuItem";
-            this.saveLayoutToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.saveLayoutToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
             this.saveLayoutToolStripMenuItem.Text = "Save layout";
             this.saveLayoutToolStripMenuItem.Click += new System.EventHandler(this.saveLayoutToolStripMenuItem_Click);
             // 
             // exportAsTuningPackageToolStripMenuItem
             // 
             this.exportAsTuningPackageToolStripMenuItem.Name = "exportAsTuningPackageToolStripMenuItem";
-            this.exportAsTuningPackageToolStripMenuItem.Size = new System.Drawing.Size(207, 22);
+            this.exportAsTuningPackageToolStripMenuItem.Size = new System.Drawing.Size(196, 22);
             this.exportAsTuningPackageToolStripMenuItem.Text = "Export as tuning package";
             this.exportAsTuningPackageToolStripMenuItem.Click += new System.EventHandler(this.exportAsTuningPackageToolStripMenuItem_Click);
             // 
@@ -158,9 +176,9 @@ namespace T7
             this.gridView1.OptionsView.ShowIndicator = false;
             this.gridView1.SortInfo.AddRange(new DevExpress.XtraGrid.Columns.GridColumnSortInfo[] {
             new DevExpress.XtraGrid.Columns.GridColumnSortInfo(this.gridColumn10, DevExpress.Data.ColumnSortOrder.Ascending)});
-            this.gridView1.DoubleClick += new System.EventHandler(this.gridView1_DoubleClick);
-            this.gridView1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.gridView1_KeyDown);
             this.gridView1.CustomDrawCell += new DevExpress.XtraGrid.Views.Base.RowCellCustomDrawEventHandler(this.gridView1_CustomDrawCell);
+            this.gridView1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.gridView1_KeyDown);
+            this.gridView1.DoubleClick += new System.EventHandler(this.gridView1_DoubleClick);
             // 
             // gridColumn1
             // 
@@ -168,8 +186,8 @@ namespace T7
             this.gridColumn1.FieldName = "SYMBOLNAME";
             this.gridColumn1.Name = "gridColumn1";
             this.gridColumn1.Visible = true;
-            this.gridColumn1.VisibleIndex = 1;
-            this.gridColumn1.Width = 67;
+            this.gridColumn1.VisibleIndex = 0;
+            this.gridColumn1.Width = 179;
             // 
             // gridColumn2
             // 
@@ -192,7 +210,7 @@ namespace T7
             this.gridColumn4.Name = "gridColumn4";
             this.gridColumn4.Visible = true;
             this.gridColumn4.VisibleIndex = 2;
-            this.gridColumn4.Width = 66;
+            this.gridColumn4.Width = 39;
             // 
             // gridColumn5
             // 
@@ -206,8 +224,8 @@ namespace T7
             this.gridColumn6.FieldName = "DESCRIPTION";
             this.gridColumn6.Name = "gridColumn6";
             this.gridColumn6.Visible = true;
-            this.gridColumn6.VisibleIndex = 0;
-            this.gridColumn6.Width = 384;
+            this.gridColumn6.VisibleIndex = 1;
+            this.gridColumn6.Width = 129;
             // 
             // gridColumn7
             // 
@@ -218,7 +236,7 @@ namespace T7
             this.gridColumn7.Name = "gridColumn7";
             this.gridColumn7.Visible = true;
             this.gridColumn7.VisibleIndex = 3;
-            this.gridColumn7.Width = 66;
+            this.gridColumn7.Width = 39;
             // 
             // gridColumn8
             // 
@@ -227,7 +245,7 @@ namespace T7
             this.gridColumn8.Name = "gridColumn8";
             this.gridColumn8.Visible = true;
             this.gridColumn8.VisibleIndex = 4;
-            this.gridColumn8.Width = 66;
+            this.gridColumn8.Width = 39;
             // 
             // gridColumn9
             // 
@@ -238,6 +256,7 @@ namespace T7
             this.gridColumn9.Name = "gridColumn9";
             this.gridColumn9.Visible = true;
             this.gridColumn9.VisibleIndex = 5;
+            this.gridColumn9.Width = 43;
             // 
             // gridColumn10
             // 
@@ -258,6 +277,7 @@ namespace T7
             this.gridColumn12.Name = "gridColumn12";
             this.gridColumn12.Visible = true;
             this.gridColumn12.VisibleIndex = 6;
+            this.gridColumn12.Width = 43;
             // 
             // gridColumn13
             // 
@@ -266,6 +286,7 @@ namespace T7
             this.gridColumn13.Name = "gridColumn13";
             this.gridColumn13.Visible = true;
             this.gridColumn13.VisibleIndex = 7;
+            this.gridColumn13.Width = 43;
             // 
             // gridColumn14
             // 
@@ -274,22 +295,7 @@ namespace T7
             this.gridColumn14.Name = "gridColumn14";
             this.gridColumn14.Visible = true;
             this.gridColumn14.VisibleIndex = 8;
-            // 
-            // gcMissingInOriFile
-            // 
-            this.gcMissingInOriFile.Caption = "Missing in original file";
-            this.gcMissingInOriFile.FieldName = "MissingInOriFile";
-            this.gcMissingInOriFile.Name = "gcMissingInOriFile";
-            this.gcMissingInOriFile.Visible = true;
-            this.gcMissingInOriFile.VisibleIndex = 9;
-            // 
-            // gcMissingInCompareFile
-            // 
-            this.gcMissingInCompareFile.Caption = "Missing in compare file";
-            this.gcMissingInCompareFile.FieldName = "MissingInCompareFile";
-            this.gcMissingInCompareFile.Name = "gcMissingInCompareFile";
-            this.gcMissingInCompareFile.Visible = true;
-            this.gcMissingInCompareFile.VisibleIndex = 10;
+            this.gridColumn14.Width = 43;
             // 
             // CompareResults
             // 
