@@ -676,10 +676,12 @@ namespace CommonSuite
             string retval = "1000";
             switch (symbolname)
             {
+                case "maf_frequency":
+                    retval = "13000";
+                    break;
                 case "ActualIn.U_Battery": // 
                     retval = "16";
                     break;
-
                 case "DisplProt.LambdaScanner": // AFR through wideband?
                     retval = "1.52";
                     break;
@@ -875,10 +877,12 @@ namespace CommonSuite
             string retval = "0";
             switch (symbolname)
             {
+                case "maf_frequency":
+                    retval = "700";
+                    break;
                 case "ActualIn.U_Battery": // 
                     retval = "6";
                     break;
-
                 case "DisplProt.LambdaScanner": // AFR through wideband?
                     retval = "0.50";
                     break;
@@ -888,7 +892,6 @@ namespace CommonSuite
                 case "Lambda.LambdaInt": // AFR through narrowband?
                     retval = "0.5";
                     break;
-
                 case "In.n_Engine":
                 case "RPM":
                 case "ActualIn.n_Engine":
@@ -1073,10 +1076,12 @@ namespace CommonSuite
             string retval = symbolname;
             switch (symbolname)
             {
+                case "maf_frequency":
+                    retval = "Hz";
+                    break;
                 case "ActualIn.U_Battery": // 
                     retval = "Volt";
                     break;
-
                 case "DisplProt.LambdaScanner": // AFR through wideband?
                 case "Wideband":
                     retval = "WBLambda";

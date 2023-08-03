@@ -1,5 +1,5 @@
 @echo off
-set T7.version=0.1.59.0
+set T7.version=0.1.60.1
 set SetupT7Suite.version=0.1.59
 set TrionicCANLib.version=0.1.55.0
 set AquaGauge.version=3.0.0.0
