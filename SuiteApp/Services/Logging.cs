@@ -1,6 +1,6 @@
 using NLog;
 
-namespace T7App.Services;
+namespace SuiteApp.Services;
 
 public static class Logging
 {

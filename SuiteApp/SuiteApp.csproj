@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The suites' shared UI: theme, workspace controls, dialogs. No suite knowledge; T7App and T8App build on it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SuiteApp</RootNamespace>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+    <!-- MIT; the colour picker in Set symbol colors -->
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- MIT; the docking workspace: MDI document windows, tabs and a dockable symbol list -->
+    <PackageReference Include="Dock.Avalonia" Version="12.1.0.7" />
+    <PackageReference Include="Dock.Model.Avalonia" Version="12.1.0.7" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0.7" />
+    <!-- MIT; the disassembly text (ASM highlighting, search) and the hex view -->
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
+    <PackageReference Include="AvaloniaHex" Version="0.1.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SuiteCore\SuiteCore.csproj" />
+    <ProjectReference Include="..\MapControls\MapControls.csproj" />
+  </ItemGroup>
+
+</Project>

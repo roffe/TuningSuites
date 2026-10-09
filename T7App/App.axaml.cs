@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using T7App.Services;
+using SuiteApp.Services;
 using T7App.ViewModels;
 using T7App.Views;
 using TrionicCANLib.API;

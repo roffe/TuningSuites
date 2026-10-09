@@ -6,7 +6,7 @@ using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 
-namespace T7App.Controls;
+namespace SuiteApp.Controls;
 
 /// <summary>
 /// ProGauges' LinearGauge as the realtime panel used it: a green-yellow to orange-red bar up to the value, the value under it,

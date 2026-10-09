@@ -7,7 +7,7 @@ using System.Linq;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
-using T7App.Controls;
+using SuiteApp.Controls;
 
 namespace T7App.ViewModels;
 

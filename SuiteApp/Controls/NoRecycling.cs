@@ -1,7 +1,7 @@
 using Avalonia.Controls.Recycling;
 using Avalonia.Controls.Recycling.Model;
 
-namespace T7App.Controls;
+namespace SuiteApp.Controls;
 
 /// <summary>
 /// Turns Dock's control recycling off (Dock builds its own when none is set). Recycling moved one view per document between

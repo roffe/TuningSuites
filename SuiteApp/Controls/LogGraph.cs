@@ -8,7 +8,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 
-namespace T7App.Controls;
+namespace SuiteApp.Controls;
 
 /// <summary>One line of the log viewer: a symbol's samples, seconds since the section's start.</summary>
 public sealed class LogChannel

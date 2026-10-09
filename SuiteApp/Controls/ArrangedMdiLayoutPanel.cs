@@ -7,7 +7,7 @@ using Avalonia.Layout;
 using Avalonia.VisualTree;
 using Dock.Avalonia.Controls;
 
-namespace T7App.Controls;
+namespace SuiteApp.Controls;
 
 /// <summary>
 /// Dock's MDI panel measures every inner window at the whole workspace's size and then arranges it at its own, smaller size:

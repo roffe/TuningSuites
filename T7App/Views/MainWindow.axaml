@@ -2,7 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
         xmlns:v="using:T7App.Views"
-        xmlns:c="using:T7App.Controls"
         xmlns:mc="using:MapControls"
         xmlns:cs="using:CommonSuite"
         x:Class="T7App.Views.MainWindow"

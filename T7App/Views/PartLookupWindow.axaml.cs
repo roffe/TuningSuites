@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using T7App.Services;
+using SuiteApp.Services;
 using T7App.ViewModels;
 
 namespace T7App.Views;

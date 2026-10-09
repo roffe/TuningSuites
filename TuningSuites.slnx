@@ -5,6 +5,7 @@
   <Project Path="MapControls/MapControls.csproj" />
   <Project Path="MapControlsDemo/MapControlsDemo.csproj" />
   <Project Path="MapControlsTest/MapControlsTest.csproj" />
+  <Project Path="SuiteApp/SuiteApp.csproj" />
   <Project Path="SuiteCore/SuiteCore.csproj" />
   <Project Path="SuiteCoreTest/SuiteCoreTest.csproj" />
   <Project Path="T7App/T7App.csproj" />

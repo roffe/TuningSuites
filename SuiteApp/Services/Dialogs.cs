@@ -9,7 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
-namespace T7App.Services
+namespace SuiteApp.Services
 {
     /// <summary>
     /// Stand-ins for WinForms MessageBox / OpenFileDialog / SaveFileDialog / Process.Start.

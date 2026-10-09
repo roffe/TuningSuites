@@ -14,10 +14,10 @@
         </Style>
         <!-- the selected row's text: T7Suite's MediumBlue in the light skin, the usual colours in the dark one -->
         <Style Selector="DataGridRow:selected DataGridCell">
-            <Setter Property="Foreground" Value="{DynamicResource T7SymbolSelectedForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
         </Style>
         <Style Selector="DataGridRow:selected TextBlock.onLight">
-            <Setter Property="Foreground" Value="{DynamicResource T7SymbolSelectedNameForeground}" />
+            <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedNameForeground}" />
         </Style>
     </UserControl.Styles>
     <DockPanel>
