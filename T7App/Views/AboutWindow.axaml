@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="T7App.Views.AboutWindow"
+        Title="About..." Width="330" SizeToContent="Height" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <!-- frmAbout: the white title band, the credits, the support note and Ok -->
+    <StackPanel>
+        <Border Background="White" BorderBrush="#A0A0A0" BorderThickness="0,0,0,1" Padding="8,10">
+            <TextBlock x:Name="Version" Text="T7Suite" FontSize="29" FontStyle="Italic" Foreground="Black"
+                       HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </Border>
+        <StackPanel Margin="12,10,12,12" Spacing="10">
+            <TextBlock TextWrapping="Wrap" Text="T7Suite Pro was created with the help of lots of people on ecuproject.com and trionictuning.com" />
+            <StackPanel Spacing="4">
+                <TextBlock Text="Special thanks go out to:" />
+                <TextBlock TextWrapping="Wrap" Foreground="Green"
+                           Text="Dilemma, Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Mattias Claesson, Roffe and..." />
+                <TextBlock Text="Just4pLeisure ;-)" Foreground="#FF1FBF" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" Text="No e-mail support currently, check out www.trionictuning.com" />
+                <Button Grid.Column="1" Content="Ok" MinWidth="80" HorizontalContentAlignment="Center" VerticalAlignment="Bottom" IsDefault="True" IsCancel="True" Click="OnOk" />
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</Window>

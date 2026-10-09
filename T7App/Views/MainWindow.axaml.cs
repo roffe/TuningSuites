@@ -291,7 +291,9 @@ public partial class MainWindow : Window
         string version = System.Reflection.Assembly.GetEntryAssembly()?
             .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
             .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "";
-        await Dialogs.Info(this, $"T7Suite {version}\n\nTrionic 7 tuning suite by Dilemma (Mattias Claesson), ported to .NET 10.", "About T7Suite");
+        // the build metadata (+commit) doesn't belong in the title
+        int plus = version.IndexOf('+');
+        await new AboutWindow(plus > 0 ? version[..plus] : version).ShowDialog(this);
     }
 
     // ---- logs ----

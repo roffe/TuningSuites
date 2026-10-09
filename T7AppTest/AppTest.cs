@@ -728,6 +728,11 @@ namespace T7AppTest
                 vm.SelectedViewer = axes;
                 Save(window, "axisbrowser");
 
+                var about = new AboutWindow("2.5.0");
+                about.Show();
+                Save(about, "about");
+                about.Close();
+
                 var lookup = new PartLookupViewModel { PartNumber = "5168646" };
                 lookup.Lookup();
                 Assert.IsNotNull(lookup.Info);
