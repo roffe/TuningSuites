@@ -15,8 +15,15 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         InitWorkspace();
-        using (var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite)) ApplySkin(settings.GetValue(SkinKey) as string);
+        using var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite);
+        ApplySkin(settings.GetValue(SkinKey) as string);
+        // the symbol list's width from the last session, as T7Suite's saved dock layout kept it
+        if (double.TryParse(settings.GetValue(SymbolListKey) as string, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out double width)
+            && width is > 0.05 and < 0.95)
+            SymbolPane.Proportion = width;
     }
+
+    private const string SymbolListKey = "SymbolListProportion";
 
     private MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;
 
@@ -354,6 +361,8 @@ public partial class MainWindow : Window
     protected override void OnClosed(System.EventArgs e)
     {
         base.OnClosed(e);
+        if (!double.IsNaN(SymbolPane.Proportion))
+            using (var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite)) settings.SetValue(SymbolListKey, SymbolPane.Proportion);
         Vm.Ecu.Dispose();
     }
 
