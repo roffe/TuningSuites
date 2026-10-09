@@ -22,6 +22,12 @@ public partial class MainWindow : SuiteMainWindow
         ("Actitis H., Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, G-ice, General Failure and Mattias Claesson",
          "Currently no e-mail support, check out www.trionictuning.com and www.ecuproject.com", "Special thanks to Just4pLeisure.");
 
+    protected override void OnDataContextChanged(System.EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (DataContext is T8MainWindowViewModel vm) vm.ShowBitmask = bits => new BitmaskWindow { DataContext = bits }.ShowDialog<bool>(this);
+    }
+
     private async void OnRecoverEcu(object? sender, RoutedEventArgs e)
     {
         if (await Dialogs.OpenFile(this, "Binary files", "*.bin") is { } file) await Vm.RecoverEcuAsync(file);
@@ -52,5 +58,29 @@ public partial class MainWindow : SuiteMainWindow
         var dialog = new FirmwareInfoWindow { DataContext = firmware };
         firmware.Hint += text => _ = Dialogs.Info(dialog, text, Vm.Caption);
         if (await dialog.ShowDialog<bool>(this)) await Vm.ApplyFirmwareAsync(firmware.ToEdit());
+    }
+
+    // Actions → TEM editor / PID editor
+    private async void OnPidEditor(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.PidEditor((sender as Avalonia.Controls.Control)?.Tag is "tem") is not { } editor) return;
+        if (await new PidEditorWindow { DataContext = editor }.ShowDialog<bool>(this)) await Vm.ApplyPidEditorAsync(editor);
+    }
+
+    // File → Create binary from TIS file: the base bin (from Binaries), the TIS file (T8Suite saved the base's first part when that
+    // was cancelled), then where to save it
+    private async void OnCreateFromTis(object? sender, RoutedEventArgs e)
+    {
+        string binaries = System.IO.Path.Combine(System.AppContext.BaseDirectory, "Binaries");
+        if (await Dialogs.OpenFileIn(this, "Select a binary file to base the new file on", binaries, "Binary files", "*.bin") is not { } baseBin
+            || !T8SuitePro.T8Binary.IsValidFile(baseBin)) return;
+        string? tis = await Dialogs.OpenFileIn(this, "Choose a TIS T8 file to build the new file with", null, "TIS T8 files", "*.gbf", "*.s19");
+        if (await Dialogs.SaveFile(this, "Binary files", "bin", title: "Choose a filename for the new binary file") is { } target) Vm.CreateFromTis(baseBin, tis, target);
+    }
+
+    // Tuning → Tuning wizards → Tuning Wizard
+    private async void OnTuningWizard(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.TuningWizard() is { } wizard) await new TuningWizardWindow { DataContext = wizard }.ShowDialog(this);
     }
 }

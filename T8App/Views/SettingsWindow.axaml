@@ -9,7 +9,7 @@
     <StackPanel Margin="16" Spacing="12">
         <HeaderedContentControl Header="User interface settings">
             <StackPanel Spacing="4">
-                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
+                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
                     <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
                     <CheckBox Grid.Row="1" Grid.Column="0" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}" />
                     <CheckBox Grid.Row="2" Grid.Column="0" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}" />
@@ -18,7 +18,8 @@
                     <CheckBox Grid.Row="0" Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}" />
                     <CheckBox Grid.Row="1" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" />
                     <CheckBox Grid.Row="2" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" />
-                    <CheckBox Grid.Row="3" Grid.Column="2" Content="Auto mapdetection active" IsChecked="{Binding MapDetectionActive}"
+                    <CheckBox Grid.Row="3" Grid.Column="2" Content="Show map preview popup" IsChecked="{Binding ShowMapPreviewPopup}" />
+                    <CheckBox Grid.Row="4" Grid.Column="2" Content="Auto mapdetection active" IsChecked="{Binding MapDetectionActive}"
                               ToolTip.Tip="When checked, T8Suite will try to add names to symbols in binaries without symboltables. This is a guesstimate routine." />
                 </Grid>
                 <TextBlock Text="Default view type for maps" Margin="0,8,0,0" />

@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommonSuite;
+using CommunityToolkit.Mvvm.Input;
 using SuiteApp.ViewModels;
 using T8SuitePro;
 using TrionicCANLib.API;
@@ -19,6 +21,10 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
         // "Symbol: ...", "Adding symbol names: ", "Importing symbols"; "Idle" / "Completed" clear it
         Trionic8File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Info is "Idle" or "Completed" ? "" : e.Info);
         InitEcu();
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(Binary)) OnPropertyChanged(nameof(HasTemTable));
+        };
     }
 
     protected override uint FileLength => FileT8.Length;
@@ -114,9 +120,11 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
 
     /// <summary>gridViewSymbols' sort: the categories alphabetically, inside one length descending, then name.</summary>
     protected override IEnumerable<SymbolHelper> OrderSymbols(IEnumerable<SymbolHelper> symbols) =>
-        symbols.OrderBy(s => s.Category, System.StringComparer.Ordinal).ThenByDescending(s => s.Length).ThenBy(s => s.Varname, System.StringComparer.Ordinal);
+        symbols.OrderBy(s => s.Category, StringComparer.Ordinal).ThenByDescending(s => s.Length).ThenBy(s => s.Varname, StringComparer.Ordinal);
 
     public override bool ColorSymbolNames => false;
+
+    public override bool ShowsMapPreview => Settings.ShowMapPreviewPopup;
 
     private static readonly SymbolFilter AllSymbols = new("All symbols", _ => true);
 
@@ -129,12 +137,60 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
 
     protected override SymbolFilter? DefaultSymbolFilter => WithinBinary;
 
-    /// <summary>Bit mask symbols open the bit mask viewer (StartBitMaskViewer), which comes with the T8 tools.</summary>
+    /// <summary>Bit mask symbols open the bit mask viewer instead of a map (StartBitMaskViewer).</summary>
     protected override bool OpenOther(SuiteBinary bin, SymbolHelper sh)
     {
-        if (sh.BitMask <= 0) return false;
-        ShowInfo($"{sh.SmartVarname} is a bit mask symbol; the bit mask viewer isn't ported yet");
+        if (sh.BitMask <= 0 || bin is not T8Binary t8) return false;
+        _ = OpenBitMaskAsync(t8, sh);
         return true;
+    }
+
+    /// <summary>The bit mask viewer's dialog (the window sets it); true for Ok.</summary>
+    public Func<BitmaskViewModel, Task<bool>>? ShowBitmask { get; set; }
+
+    /// <summary>
+    /// StartBitMaskViewer: the word at the symbol's address (from the file, or from the ECU for one in SRAM), its bits named by
+    /// every symbol at that address. Ok writes it back: into the file with a transaction entry and the checksum as on open, or
+    /// into the ECU's SRAM (T8Suite's SRAM branch did nothing).
+    /// </summary>
+    public async Task OpenBitMaskAsync(T8Binary bin, SymbolHelper sh)
+    {
+        bool sram = bin.FileAddress(sh) < 0;
+        // the word at the symbol's address, whatever its length
+        var word = new SymbolHelper { Varname = sh.SmartVarname, Start_address = sh.Flash_start_address, Length = 2 };
+        byte[]? data;
+        if (!sram) data = bin.Read((int)sh.Flash_start_address, 2);
+        else if (!await EnsureConnectedAsync())
+        {
+            ShowInfo("Symbol outside of flash boundary and no connection to ECU available");
+            return;
+        }
+        else if ((data = await ReadEcuMapAsync(word)) is not { Length: >= 2 })
+        {
+            ShowInfo("Symbol outside of flash boundary and failed to read symbol from ECU");
+            return;
+        }
+        var group = bin.Symbols.Cast<SymbolHelper>().Where(s => s.Flash_start_address == sh.Flash_start_address).ToList();
+        var bits = new BitmaskViewModel(group, data[0] << 8 | data[1]);
+        if (ShowBitmask == null || !await ShowBitmask(bits)) return;
+        byte[] value = [(byte)(bits.Value >> 8), (byte)bits.Value];
+        if (sram)
+        {
+            if (!await WriteEcuMapAsync(word, value)) ShowInfo(WriteRefusedText(sh.SmartVarname));
+            return;
+        }
+        try
+        {
+            int before = TransactionLog?.TransCollection.Count ?? 0;
+            bin.WriteData((int)sh.Flash_start_address, value, TransactionLog);
+            TransactionsAdded(before);
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
+            return;
+        }
+        await CheckChecksumAsync(bin.FileName);
     }
 
     /// <summary>Actions → Firmware information.</summary>
@@ -150,11 +206,103 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
             T8SuitePro.FirmwareInfo.Apply(bin, edit, TransactionLog);
             TransactionsAdded(before);
         }
-        catch (System.Exception e) when (e is System.IO.IOException or System.UnauthorizedAccessException)
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
         {
             ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
             return;
         }
         await CheckChecksumAsync(bin.FileName);
+    }
+
+    /// <summary>Actions → TEM editor: only with a TEM table of more than one entry (none of the stock bins has one).</summary>
+    public bool HasTemTable => Binary is T8Binary { Tems.Count: > 1 };
+
+    /// <summary>Actions → PID editor / TEM editor: a copy of the open file's table (an empty one when the file has none).</summary>
+    public PidEditorViewModel? PidEditor(bool tem) => Binary is T8Binary bin ? new PidEditorViewModel(bin, tem) : null;
+
+    /// <summary>The editor's Ok (btnPidEdit_ItemClick / btnTemEdit_ItemClick): the rows into the file, then the checksum as on open.</summary>
+    public async Task ApplyPidEditorAsync(PidEditorViewModel editor)
+    {
+        if (Binary is not T8Binary bin) return;
+        try
+        {
+            if (editor.IsTem) bin.WriteTems(editor.Table);
+            else bin.WritePids(editor.Table);
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
+            return;
+        }
+        if (editor.Table.Count > 0) await CheckChecksumAsync(bin.FileName);
+    }
+
+    /// <summary>File → Create binary from TIS file: the new bin into target, "New file created"; it isn't opened.</summary>
+    public void CreateFromTis(string baseBin, string? tisFile, string target)
+    {
+        try
+        {
+            System.IO.File.WriteAllBytes(target, TisFile.Build(baseBin, tisFile));
+            ShowInfo("New file created");
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.IO.InvalidDataException)
+        {
+            ShowInfo("Failed to create the new file: " + e.Message);
+        }
+    }
+
+    private List<WizardPack>? m_wizardPacks;
+
+    /// <summary>
+    /// Tuning → Tuning Wizard: the packs in TuningPacks next to the program (read once, as T8Suite did at startup) that fit the
+    /// open file's software version.
+    /// </summary>
+    public TuningWizardViewModel? TuningWizard()
+    {
+        if (Binary is not T8Binary bin) return null;
+        m_wizardPacks ??= WizardPack.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "TuningPacks"));
+        string sw = bin.SoftwareVersion.Trim();
+        return new TuningWizardViewModel(sw, m_wizardPacks.Where(p => p.Compatible(sw)).ToList(), ApplyWizardPackAsync);
+    }
+
+    // the backup, the package (transaction entries in a project), the PI area; open viewers show the new data
+    private Task<List<string>?> ApplyWizardPackAsync(WizardPack pack)
+    {
+        if (Binary is not T8Binary bin) return Task.FromResult<List<string>?>(null);
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        try
+        {
+            List<string> lines = pack.Apply(bin, TransactionLog);
+            TransactionsAdded(before);
+            RefreshViewers(bin.FileName);
+            return Task.FromResult<List<string>?>(lines);
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowInfo("Failed to apply the tuning pack: " + e.Message);
+            return Task.FromResult<List<string>?>(null);
+        }
+    }
+
+    /// <summary>Actions → Airmass result viewer, when the bin has the tables it needs (T8Suite silently did nothing otherwise).</summary>
+    [RelayCommand]
+    private void ShowAirmassResult()
+    {
+        if (Binary is not T8Binary bin) return;
+        if (!T8AirmassResult.Available(bin))
+        {
+            ShowInfo("This file lacks the pedal, torque or airmass tables the airmass result viewer needs");
+            return;
+        }
+        ShowDocument(new AirmassResultViewModel(this, bin.FileName, new AirmassSuite(
+            (file, options) => new T8AirmassResult(T8Binary.Open(file, false), options),
+            T8Binary.IsValidFile, null, "Car is high output (175/210 hp)", true,
+            ["Undefined gear", "First gear", "Second gear", "Third gear", "Fourth gear", "Fifth gear", "Sixth gear", "Reverse gear"],
+            [
+                (AirmassLimitType.AirmassLimiter, "Airmass limiter"), (AirmassLimitType.TorqueLimiterEngineE85, "E85 engine torque limiter"),
+                (AirmassLimitType.TorqueLimiterEngine, "Engine torque limiter"), (AirmassLimitType.TorqueLimiterGear, "Gear torque limiter"),
+                (AirmassLimitType.FuelCutLimiter, "Fuelcut limiter"), (AirmassLimitType.OverBoostLimiter, "Overboost limiter"),
+            ],
+            T8AirmassResult.CompressorDefaults(bin.Header.ChassisID))));
     }
 }

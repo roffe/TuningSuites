@@ -166,7 +166,8 @@ namespace T8AppTest
 
                 // the Tuning menu with DynamicTuningMenu's captions for an old calibration, opening its maps
                 var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                var airmass = (MenuItem)quick.Items[0]!;
+                // after the Tuning Wizard
+                var airmass = (MenuItem)quick.Items[1]!;
                 Assert.AreEqual("Airmass controller", airmass.Header);
                 var manual = (MenuItem)airmass.Items[0]!;
                 Assert.AreEqual("Max airmass map (manual)", manual.Header);

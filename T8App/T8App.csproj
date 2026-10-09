@@ -25,6 +25,8 @@
     <!-- Help → T8Suite user manual / Trionic 8 technical documentation -->
     <None Include="..\T8_manual.pdf" Link="T8_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Trionic 8.pdf" Link="Trionic 8.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the Tuning Wizard's packs (T8Suite's installer put them into TuningPacks next to the program) -->
+    <None Include="..\TuningPacks\*.t8x" Link="TuningPacks\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -19,6 +19,7 @@
             <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
             <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
+            <MenuItem Header="Browse axis info" Click="OnBrowseAxes" />
             <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
             <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
             <MenuItem Header="Edit an existing tuning package" Command="{Binding EditTuningPackageCommand}" />
@@ -53,6 +54,7 @@
                 <MenuItem Header="Import tuning package" Click="OnImportTuningPackage" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Setup log filters" Click="OnLogFilters" />
+                <MenuItem Header="Create binary from TIS file" Click="OnCreateFromTis" />
                 <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Settings" Click="OnSettings" />
@@ -80,7 +82,11 @@
                 <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Browse axis information" Command="{Binding BrowseAxesCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="VIN decoder" Click="OnVinDecoder" />
+                <MenuItem Header="Show interrupt vectors" Click="OnVectors" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Show disassembly" Click="OnDisassembly" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Show full disassembly" Click="OnFullDisassembly" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Compare symbols with other binary" Click="OnCompareToFile" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare binary outside symbolrange" Click="OnBinaryCompareOutsideSymbols" IsEnabled="{Binding HasFile}" />
@@ -90,8 +96,18 @@
                 <MenuItem Header="Copy address table to another binary" Click="OnCopyAddressTable" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import SRAM file" Click="OnImportSram" />
+                <MenuItem Header="View file in hex" Command="{Binding ViewHexCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Airmass result viewer" Command="{Binding ShowAirmassResultCommand}" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="TEM editor" Click="OnPidEditor" Tag="tem" IsEnabled="{Binding HasTemTable}" />
+                <MenuItem Header="PID editor" Click="OnPidEditor" Tag="pid" IsEnabled="{Binding HasFile}" />
             </MenuItem>
-            <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}" />
+            <!-- the Tuning Wizard, then the map buttons the bin has (built in code) -->
+            <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}">
+                <MenuItem Header="Tuning wizards">
+                    <MenuItem Header="Tuning Wizard" Click="OnTuningWizard" />
+                </MenuItem>
+            </MenuItem>
             <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
             <MenuItem Header="_Realtime">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />

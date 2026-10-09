@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T8App.ViewModels"
+        x:Class="T8App.Views.BitmaskWindow"
+        x:DataType="vm:BitmaskViewModel"
+        Title="Bit masked view of symbol" Width="760" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:MaskBit">
+            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked}" IsEnabled="{Binding IsEnabled}" MinHeight="28" />
+        </DataTemplate>
+    </Window.DataTemplates>
+    <StackPanel Margin="12" Spacing="10">
+        <HeaderedContentControl Header="Values in this symbol">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <ItemsControl ItemsSource="{Binding Low}" />
+                <ItemsControl Grid.Column="1" ItemsSource="{Binding High}" />
+            </Grid>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

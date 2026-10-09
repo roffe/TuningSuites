@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T8App.ViewModels"
+        x:Class="T8App.Views.TuningWizardWindow"
+        x:DataType="vm:TuningWizardViewModel"
+        Title="Tuning Wizard" Width="640" Height="480" CanResize="False" WindowStartupLocation="CenterOwner">
+    <!-- frmTuningWizard: one page at a time, the wizard's buttons below -->
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,12" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <Button Content="&lt; Back" MinWidth="80" IsEnabled="{Binding CanBack}" Click="OnBack" />
+            <Button Content="Next &gt;" MinWidth="80" IsDefault="True" IsEnabled="{Binding CanNext}" IsVisible="{Binding !IsFinished}" Click="OnNext" />
+            <Button Content="Finish" MinWidth="80" IsDefault="True" IsVisible="{Binding IsFinished}" Click="OnFinish" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" IsEnabled="{Binding CanCancel}" Click="OnFinish" />
+        </StackPanel>
+        <Panel>
+            <TextBlock TextWrapping="Wrap" IsVisible="{Binding OnWelcome}"
+                       Text="This wizard will help you apply a pre-defined set of Tuning Actions to your binary file. You will be given a choice of Tuning Actions in the coming pages." />
+            <DockPanel IsVisible="{Binding OnSelect}">
+                <TextBlock DockPanel.Dock="Top" Text="Selection your wanted Tuning Action from the list below and click Next" Margin="0,0,0,8" />
+                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" Margin="0,8,0,0">
+                    <TextBlock Text="Software Version" />
+                    <TextBlock Grid.Column="1" Text="{Binding SoftwareVersion}" />
+                    <TextBlock Grid.Row="1" Text="Author" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Author}" />
+                </Grid>
+                <ListBox ItemsSource="{Binding Packs}" SelectedItem="{Binding Selected}" />
+            </DockPanel>
+            <StackPanel Spacing="8" IsVisible="{Binding OnCode}">
+                <TextBlock Text="{Binding CodeText}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding HintText}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Enter code:" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Code}" MinWidth="200" />
+                </StackPanel>
+                <HyperlinkButton Content="Please visit trionictuning.com and learn how to earn the code." NavigateUri="http://www.trionictuning.com" />
+            </StackPanel>
+            <StackPanel Spacing="8" IsVisible="{Binding OnConfirm}">
+                <TextBlock Text="Your loaded binary file will now be modified with the following Tuning Action:" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Selected}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="The Tuning Action cannot be revered, ensure you have a copy of your binary stored." TextWrapping="Wrap" />
+                <CheckBox Content="I fully understand the consequenses." IsChecked="{Binding Understood}" />
+            </StackPanel>
+            <DockPanel IsVisible="{Binding IsFinished}">
+                <TextBlock DockPanel.Dock="Top" Text="{Binding FinishText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                <ListBox ItemsSource="{Binding Results}" />
+            </DockPanel>
+        </Panel>
+    </DockPanel>
+</Window>

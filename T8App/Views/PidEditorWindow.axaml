@@ -1,0 +1,102 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T8App.ViewModels"
+        x:Class="T8App.Views.PidEditorWindow"
+        x:DataType="vm:PidEditorViewModel"
+        Title="{Binding Title}" Width="1100" Height="560" WindowStartupLocation="CenterOwner">
+    <!-- frmPID / frmTEM: one grid, the PID columns or the TEM columns (code-behind); marked cells as onDrawCell painted them -->
+    <Window.Styles>
+        <Style Selector="Border.cell">
+            <Setter Property="Padding" Value="4,0" />
+        </Style>
+        <Style Selector="Border.fault">
+            <Setter Property="Background" Value="OrangeRed" />
+        </Style>
+        <Style Selector="Border.warn">
+            <Setter Property="Background" Value="Yellow" />
+        </Style>
+        <Style Selector="Border.fault TextBlock, Border.warn TextBlock">
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+        <Style Selector="Border.fault :is(TemplatedControl), Border.warn :is(TemplatedControl)">
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+        <Style Selector="Border.cell TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.cell TextBox, Border.cell ComboBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+    </Window.Styles>
+    <DockPanel Margin="12">
+        <TextBox DockPanel.Dock="Top" x:Name="FindBox" PlaceholderText="Find" Margin="0,0,0,8" TextChanged="OnFind" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+        <DataGrid x:Name="Grid" ItemsSource="{Binding View}" GridLinesVisibility="All" CanUserSortColumns="False" HeadersVisibility="Column">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="vm:PidRow" Header=" " Binding="{Binding Number}" IsReadOnly="True" Width="50" />
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="PID" Width="70">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding PidFault}">
+                            <TextBox Text="{Binding Pid}" MaxLength="4" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Label" Width="70">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding LabelFault}">
+                            <TextBox Text="{Binding Label}" MaxLength="4" IsReadOnly="{Binding !CanEdit}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Read" Width="120">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding ReadFault}">
+                            <ComboBox ItemsSource="{x:Static vm:PidEditorViewModel.Flags}" SelectedIndex="{Binding Read}" HorizontalAlignment="Stretch" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Write" Width="120">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding WriteFault}">
+                            <ComboBox ItemsSource="{x:Static vm:PidEditorViewModel.Flags}" SelectedIndex="{Binding Write}" HorizontalAlignment="Stretch" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Symbol" Width="260">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding SymbolFault}" Classes.warn="{Binding Mismatch}">
+                            <AutoCompleteBox Text="{Binding Symbol}" IsEnabled="{Binding CanEdit}" FilterMode="ContainsOrdinal" MaxDropDownHeight="400"
+                                             ItemsSource="{Binding $parent[Window].((vm:PidEditorViewModel)DataContext).SymbolNames}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:DataType="vm:PidRow" Header="Description" Binding="{Binding Description}" IsReadOnly="True" Width="*" />
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Type" Width="70">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding TypeFault}" Classes.warn="{Binding Mismatch}">
+                            <TextBlock Text="{Binding TypeText}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Address" Width="90">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding AddressFault}">
+                            <TextBlock Text="{Binding AddressText}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn x:DataType="vm:PidRow" Header="Size" Width="70">
+                    <DataTemplate x:DataType="vm:PidRow">
+                        <Border Classes="cell" Classes.fault="{Binding SizeFault}" Classes.warn="{Binding Mismatch}">
+                            <TextBlock Text="{Binding SizeText}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>
