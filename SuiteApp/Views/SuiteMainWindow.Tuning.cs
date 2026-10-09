@@ -90,7 +90,7 @@ public partial class SuiteMainWindow
 
     protected async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
     {
-        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails);
+        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption);
         string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(this);
         if (action == null || lookup.Info?.Binary is not { } stock) return;
         if (action == "open") await Vm.OpenFileAsync(stock, true);

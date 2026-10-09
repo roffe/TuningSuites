@@ -6,13 +6,11 @@ using System.IO;
 using System.Linq;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
-using T7;
 using SuiteApp.Controls;
-using SuiteApp.ViewModels;
 
-namespace T7App.ViewModels;
+namespace SuiteApp.ViewModels;
 
-/// <summary>A .t7l section in the log viewer ("CANBus logfile: name").</summary>
+/// <summary>A log section in the log viewer ("CANBus logfile: name").</summary>
 public class LogViewerViewModel : DocumentViewModel
 {
     public string FileName { get; }
@@ -21,18 +19,18 @@ public class LogViewerViewModel : DocumentViewModel
 
     public override string Title => "CANBus logfile: " + Path.GetFileName(FileName);
 
-    public LogViewerViewModel(string file, IReadOnlyList<T7LogLine> section)
+    public LogViewerViewModel(string file, IReadOnlyList<RealtimeLogLine> section, SuiteRegistry registry)
     {
         FileName = file;
         Start = section.Count > 0 ? section[0].Time : DateTime.MinValue;
-        var colors = new SymbolColors(new T7SuiteRegistry());
-        Channels = T7LogFile.Symbols(section).Select(name =>
+        var colors = new SymbolColors(registry);
+        Channels = RealtimeLog.Symbols(section).Select(name =>
         {
             var points = section.Select(l => (l.Time, v: l[name])).Where(p => p.v != null).ToList();
             System.Drawing.Color c = colors.GetColorFromRegistry(name);
             // black (no colour stored) shows as white
             var color = c.ToArgb() == System.Drawing.Color.Black.ToArgb() || c.A == 0 ? Avalonia.Media.Colors.White : Avalonia.Media.Color.FromRgb(c.R, c.G, c.B);
-            return new LogChannel(name, T7LogFile.DisplayName(name), color,
+            return new LogChannel(name, RealtimeLog.DisplayName(name), color,
                 points.Select(p => (p.Time - Start).TotalSeconds).ToArray(), points.Select(p => p.v!.Value).ToArray());
         }).ToList();
     }
@@ -56,9 +54,9 @@ public partial class LogSelectionViewModel : ObservableObject
     [ObservableProperty] private string _from;
     [ObservableProperty] private string _to;
 
-    public LogSelectionViewModel(IReadOnlyList<T7LogLine> lines)
+    public LogSelectionViewModel(IReadOnlyList<RealtimeLogLine> lines)
     {
-        Symbols = new(T7LogFile.Symbols(lines).Select(n => new LogSymbolChoice(n, true)));
+        Symbols = new(RealtimeLog.Symbols(lines).Select(n => new LogSymbolChoice(n, true)));
         _from = lines.Count > 0 ? lines[0].Time.ToString(TimeFormat, CultureInfo.InvariantCulture) : "";
         _to = lines.Count > 0 ? lines[^1].Time.AddSeconds(1).ToString(TimeFormat, CultureInfo.InvariantCulture) : "";
     }
@@ -134,12 +132,12 @@ public partial class SymbolColorRow(string name, Avalonia.Media.Color color) : O
 }
 
 /// <summary>
-/// frmPlotSelection as frmMain's Set symbol colors used it: every symbol with an SRAM address and its colour from the
+/// frmPlotSelection as the suites' Set symbol colors used it: every symbol with an SRAM address and its colour from the
 /// SymbolColors settings (black when none is stored), saved on Ok. The search box is new, there are hundreds of symbols.
 /// </summary>
 public partial class SymbolColorsViewModel : ObservableObject
 {
-    private readonly SymbolColors m_colors = new(new T7SuiteRegistry());
+    private readonly SymbolColors m_colors;
 
     public IReadOnlyList<SymbolColorRow> Rows { get; }
 
@@ -150,8 +148,9 @@ public partial class SymbolColorsViewModel : ObservableObject
     public IReadOnlyList<SymbolColorRow> Visible =>
         Search.Trim() is { Length: > 0 } s ? Rows.Where(r => r.Name.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList() : Rows;
 
-    public SymbolColorsViewModel(IEnumerable<string> symbols)
+    public SymbolColorsViewModel(IEnumerable<string> symbols, SuiteRegistry registry)
     {
+        m_colors = new SymbolColors(registry);
         Rows = symbols.Distinct().Select(n =>
         {
             System.Drawing.Color c = m_colors.GetColorFromRegistry(n);
@@ -160,8 +159,8 @@ public partial class SymbolColorsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Ok: T7Suite saved every row; saving only the changed ones stores the same. Black isn't saved
-    /// (SaveColorToRegistry skips it), so a stored colour can't be cleared, as in T7Suite.
+    /// Ok: the suites saved every row; saving only the changed ones stores the same. Black isn't saved
+    /// (SaveColorToRegistry skips it), so a stored colour can't be cleared, as in the suites.
     /// </summary>
     public void Save()
     {

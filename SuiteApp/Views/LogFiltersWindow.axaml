@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:T7App.ViewModels"
-        x:Class="T7App.Views.LogFiltersWindow"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        x:Class="SuiteApp.Views.LogFiltersWindow"
         x:DataType="vm:LogFiltersViewModel"
         Title="Log filters setup..." Width="760" Height="420" WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">

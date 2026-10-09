@@ -39,6 +39,14 @@ public partial class T8MainWindowViewModel
 
     protected override Task<bool> WriteEcuMapAsync(SymbolHelper sh, byte[] data) => Ecu.WriteMapAsync(sh, data);
 
+    // ---- realtime ----
+
+    public override RealtimeRules RealtimeRules => T8Realtime.Rules;
+
+    /// <summary>The shared panel over T8Suite's GMLAN passes (dynamic list unless "Prefer dynamic retrieval of live data" is off).</summary>
+    protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) =>
+        new(this, bin, T8Realtime.Rules, new T8RealtimeEngine(Ecu, Settings.PreferDynamicLiveData));
+
     /// <summary>MapViewerEx's timer only read the maps that live in SRAM alone.</summary>
     protected override bool AutoUpdates(MapViewerViewModel viewer) => base.AutoUpdates(viewer) && viewer.Symbol.Flash_start_address >= 0x100000;
 

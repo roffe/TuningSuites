@@ -189,10 +189,13 @@ namespace T8AppTest
                 settings.Apply(vm.Settings);
                 Assert.IsTrue(vm.Settings.MapDetectionActive);
 
-                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails) { PartNumber = "55353231_FA56_C_FME2_37_FIEF_81c" };
+                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "55353231_FA56_C_FME2_37_FIEF_81c" };
                 lookup.Lookup();
                 Assert.AreEqual("Saab93", lookup.Info!.CarModel);
                 Assert.AreEqual("B207L", lookup.Info.EngineType);
+                var unknown = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "123" };
+                unknown.Lookup();
+                Assert.AreEqual("The entered partnumber was not recognized by T8Suite", unknown.Message);
                 var lookupWindow = new SuiteApp.Views.PartLookupWindow { DataContext = lookup };
                 lookupWindow.Show();
                 Save(lookupWindow, "partlookup");
@@ -269,6 +272,59 @@ namespace T8AppTest
                 info.Show();
                 Save(info, "ecuinfo");
                 info.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+    
+        [TestMethod]
+        public void RealtimePanelAndLogs()
+        {
+            string file = CopyOfStockBin("rt.BIN");
+            string log = Path.Combine(s_dir, "rt-20261010-CanTraceExt.t8l");
+            var t0 = new DateTime(2026, 10, 10, 12, 0, 0);
+            File.WriteAllLines(log, Enumerable.Range(0, 50).Select(i =>
+                RealtimeLog.Line(t0.AddMilliseconds(i * 100), [("ActualIn.n_Engine", 900 + i * 40), ("Out.M_EngTrqAct", i * 4)], false)));
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T8MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+
+                // the panel opens; without an adapter it doesn't poll
+                vm.Settings.Adapter = "";
+                await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
+                RealtimeViewModel rt = vm.Realtime!;
+                Assert.IsFalse(rt.IsRunning);
+                Assert.AreEqual("ActualIn.U_Battery", rt.Rows[0].Name);
+                Assert.IsFalse(rt.HasPerformanceMode);
+                Assert.IsFalse(rt.CanAutotune);
+
+                // a pass on screen: T8's names on the dashboard, T8Suite's status texts, the per-cylinder rows
+                rt.Apply(new RealtimeSample(DateTime.Now,
+                [
+                    ("ActualIn.U_Battery", 13.8), ("ActualIn.n_Engine", 3000), ("Out.M_EngTrqAct", 250), ("IgnMastProt.fi_Offset", -1.5),
+                    ("AirMassMast.m_Request", 900), ("Out.X_AccPos", 55), ("In.p_AirInlet", 0.9), ("Lambda.Status", 1), ("FCut.CutStatus", 0),
+                    ("ECMStat.ST_ActiveAirDem", 50), ("Lambda.LambdaInt", 0.98), ("KnkCntCyl2", 7),
+                ], 20, null));
+                Assert.AreEqual(250, rt.Torque);
+                Assert.AreEqual(-1.5, rt.IgnitionOffset);
+                Assert.AreEqual(55, rt.Tps);
+                Assert.AreEqual(CommonSuite.Realtime.Power(3000, 250), rt.Power);
+                Assert.AreEqual("Closed loop not activated", rt.LambdaStatus);
+                Assert.AreEqual("Knock airmass limit", rt.AirmassLimiter);
+                Assert.IsTrue(rt.Rows.Single(r => r.Name == "KnkCntCyl2").Symbol.Derived);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "realtime");
+
+                // the day's .t8l in the viewer
+                await vm.OpenLogAsync(log, _ => System.Threading.Tasks.Task.FromResult<int?>(0));
+                var viewer = (LogViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("CANBus logfile: rt-20261010-CanTraceExt.t8l", viewer.Title);
+                CollectionAssert.AreEqual(new[] { "Rpm", "Out.M_EngTrqAct" }, viewer.Channels.Where(c => c.Symbol != "IMPORTANTLINE").Select(c => c.Name).ToArray());
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "logviewer");
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();

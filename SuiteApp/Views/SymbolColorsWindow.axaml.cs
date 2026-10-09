@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 /// <summary>Set symbol colors (T7Suite's frmPlotSelection in its symbol colours role).</summary>
 public partial class SymbolColorsWindow : Window

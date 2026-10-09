@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace T7
+namespace CommonSuite
 {
     public enum MatrixMode { Mean, Minimum, Maximum }
 
     /// <summary>
     /// View matrix from logfile: Z over a 16 × 16 grid of X and Y, both axes split evenly between their logged minimum and
     /// maximum, every line's last seen values into the nearest cell. Lines count only once all three symbols have been seen
-    /// (T7Suite also counted the zeros before that), and empty cells stay empty (T7Suite used 0 for "empty", so a real 0 lost
+    /// (the suites also counted the zeros before that), and empty cells stay empty (the suites used 0 for "empty", so a real 0 lost
     /// to the next value in min / max).
     /// </summary>
     public sealed class LogMatrix
@@ -22,12 +22,12 @@ namespace T7
 
         private LogMatrix() { }
 
-        /// <summary>Null when X or Y never changes (T7Suite: "x or y axis contains no differentiated values").</summary>
-        public static LogMatrix Build(IEnumerable<T7LogLine> lines, string x, string y, string z, MatrixMode mode)
+        /// <summary>Null when X or Y never changes (the suites: "x or y axis contains no differentiated values").</summary>
+        public static LogMatrix Build(IEnumerable<RealtimeLogLine> lines, string x, string y, string z, MatrixMode mode)
         {
             var points = new List<(double x, double y, double z)>();
             double? hx = null, hy = null, hz = null;
-            foreach (T7LogLine line in lines)
+            foreach (RealtimeLogLine line in lines)
             {
                 hx = line[x] ?? hx;
                 hy = line[y] ?? hy;

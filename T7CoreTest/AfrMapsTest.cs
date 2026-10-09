@@ -21,8 +21,8 @@ namespace T7CoreTest
             try
             {
                 var settings = new AppSettings(new T7SuiteRegistry());
-                Assert.AreEqual(7.39, AfrFeedback.AdcToAfr(0, settings), 1e-9);
-                Assert.AreEqual(22.3, AfrFeedback.AdcToAfr(1023, settings), 1e-9);
+                Assert.AreEqual(7.39, WidebandAfr.AdcToAfr(0, settings), 1e-9);
+                Assert.AreEqual(22.3, WidebandAfr.AdcToAfr(1023, settings), 1e-9);
 
                 string file = Path.Combine(dir, "afr.bin");
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file);

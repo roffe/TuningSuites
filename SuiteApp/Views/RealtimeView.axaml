@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:T7App.ViewModels"
-             xmlns:v="using:T7App.Views"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             xmlns:v="using:SuiteApp.Views"
              xmlns:c="using:SuiteApp.Controls"
-             x:Class="T7App.Views.RealtimeView"
+             x:Class="SuiteApp.Views.RealtimeView"
              x:DataType="vm:RealtimeViewModel">
     <UserControl.Styles>
         <Style Selector="Border.display">

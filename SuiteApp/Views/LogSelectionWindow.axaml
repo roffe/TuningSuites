@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:T7App.ViewModels"
-        x:Class="T7App.Views.LogSelectionWindow"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        x:Class="SuiteApp.Views.LogSelectionWindow"
         x:DataType="vm:LogSelectionViewModel"
         Title="Logfile data selection" Width="520" Height="560" WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">

@@ -40,6 +40,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     public AppSettings Settings { get; }
 
+    /// <summary>The suite's settings key, for what keeps its own subkeys (log filters, symbol colours).</summary>
+    protected SuiteRegistry Registry { get; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasFile))]
     private SuiteBinary? _binary;
@@ -121,6 +124,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         Suite = suite;
         Caption = caption;
+        Registry = registry;
         Settings = new AppSettings(registry);
         Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(c => new ColumnFilter(c.Header, c.Path)));

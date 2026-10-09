@@ -356,14 +356,14 @@ namespace T7AppTest
 
                 // a pass on screen: dashboard, decoded statuses, per-cylinder rows and the engine's cell in the ignition map
                 int[] air = vm.Binary!.GetXaxisValues("IgnNormCal.Map"), rpm = vm.Binary.GetYaxisValues("IgnNormCal.Map");
-                rt.Apply(new T7.RealtimeSample(System.DateTime.Now,
+                rt.Apply(new CommonSuite.RealtimeSample(System.DateTime.Now,
                 [
                     ("ActualIn.n_Engine", rpm[4]), ("MAF.m_AirInlet", air[7]), ("In.p_AirInlet", 0.85), ("Out.M_Engine", 300),
                     ("IgnProt.fi_Offset", -2.5), ("Lambda.Status", 0), ("FCut.CutStatus", 0), ("ECMStat.ST_ActiveAirDem", 10),
                     ("Lambda.LambdaInt", 0.85), ("KnockCyl1", 3),
                 ], 25, 1));
                 Assert.AreEqual(0.85, rt.Boost);
-                Assert.AreEqual(T7.Realtime.Power(rpm[4], 300), rt.Power);
+                Assert.AreEqual(CommonSuite.Realtime.Power(rpm[4], 300), rt.Power);
                 Assert.AreEqual("Closed loop activated", rt.LambdaStatus);
                 Assert.AreEqual("PedalMap", rt.AirmassLimiter);
                 Assert.AreEqual((0.85 * 14.7).ToString("F1"), rt.AfrText);
@@ -380,7 +380,7 @@ namespace T7AppTest
                 Assert.AreEqual("Symbol: FeedbackAFR [realtime.bin]", feedback.Title);
                 Assert.IsNull(feedback.EcuReadCommand);
                 int[] fuelRpm = vm.Binary.GetYaxisValues("BFuelCal.Map"), fuelAir = vm.Binary.GetXaxisValues("BFuelCal.Map");
-                rt.Apply(new T7.RealtimeSample(System.DateTime.Now,
+                rt.Apply(new CommonSuite.RealtimeSample(System.DateTime.Now,
                     [("ActualIn.n_Engine", fuelRpm[6]), ("MAF.m_AirInlet", fuelAir[3]), ("FCut.CutStatus", 0), ("DisplProt.AD_Scanner", 1023)], 25, null));
                 Assert.AreEqual("22.3", rt.AfrText);
                 int cell = 6 * T7.AfrFeedback.Columns + 3;
@@ -417,11 +417,11 @@ namespace T7AppTest
         {
             string log = Path.Combine(s_dir, "drive-20261009-CanTraceExt.t7l");
             var t0 = new System.DateTime(2026, 10, 9, 12, 0, 0);
-            var lines = new System.Collections.Generic.List<string> { T7.T7Log.Line(t0.AddMinutes(-5), [("ActualIn.n_Engine", 800)], false) };
+            var lines = new System.Collections.Generic.List<string> { CommonSuite.RealtimeLog.Line(t0.AddMinutes(-5), [("ActualIn.n_Engine", 800)], false) };
             for (int i = 0; i < 600; i++)
             {
                 double rpm = 900 + 2500 * System.Math.Sin(i / 60.0) * System.Math.Sin(i / 60.0);
-                lines.Add(T7.T7Log.Line(t0.AddMilliseconds(i * 100), [("ActualIn.n_Engine", rpm), ("In.p_AirInlet", rpm / 4000 - 0.3), ("Out.fi_Ignition", 30 - rpm / 200)], i == 300));
+                lines.Add(CommonSuite.RealtimeLog.Line(t0.AddMilliseconds(i * 100), [("ActualIn.n_Engine", rpm), ("In.p_AirInlet", rpm / 4000 - 0.3), ("Out.fi_Ignition", 30 - rpm / 200)], i == 300));
             }
             File.WriteAllLines(log, lines);
             s_session!.Dispatch(async () =>
@@ -750,7 +750,7 @@ namespace T7AppTest
                 Save(about, "about");
                 about.Close();
 
-                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails) { PartNumber = "5168646" };
+                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "5168646" };
                 lookup.Lookup();
                 Assert.IsNotNull(lookup.Info);
                 lookup.PartNumber = "123";

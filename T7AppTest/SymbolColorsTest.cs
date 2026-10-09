@@ -8,6 +8,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7;
 using T7App.ViewModels;
 using T7App.Views;
+using SuiteApp.ViewModels;
+using SuiteApp.Views;
 
 namespace T7AppTest
 {
@@ -52,12 +54,12 @@ namespace T7AppTest
                 Assert.AreEqual(row.Color, vm.SymbolColorChoices().Rows.Single(r => r.Name == symbol).Color);
 
                 var start = new DateTime(2024, 1, 1, 12, 0, 0);
-                List<T7LogLine> section =
+                List<RealtimeLogLine> section =
                 [
                     new(start, [(symbol, 1.0), ("ActualIn.T_Engine", 80.0)]),
                     new(start.AddSeconds(1), [(symbol, 1.2), ("ActualIn.T_Engine", 81.0)]),
                 ];
-                var log = new LogViewerViewModel(Path.Combine(s_dir, "x.t7l"), section);
+                var log = new LogViewerViewModel(Path.Combine(s_dir, "x.t7l"), section, new T7SuiteRegistry());
                 Assert.AreEqual(Color.FromRgb(0x12, 0x34, 0x56), log.Channels.Single(c => c.Symbol == symbol).Color);
                 return true;
             }, default).GetAwaiter().GetResult();

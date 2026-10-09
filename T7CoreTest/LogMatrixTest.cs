@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7;
 
@@ -13,7 +14,7 @@ namespace T7CoreTest
         public void BinsHeldValuesIntoTheNearestCell()
         {
             var t = new DateTime(2026, 10, 9);
-            var lines = new List<T7LogLine>
+            var lines = new List<RealtimeLogLine>
             {
                 new(t, [("rpm", 1000)]),                                    // no airmass / boost yet: not counted
                 new(t, [("rpm", 1000), ("air", 100), ("boost", 0)]),

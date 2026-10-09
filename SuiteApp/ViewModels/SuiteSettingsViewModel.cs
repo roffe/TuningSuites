@@ -39,6 +39,14 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _autoUpdateSRAMViewers;
     [ObservableProperty] private decimal? _autoUpdateInterval;
 
+    // "Use wideband O2 on com port", device and port
+    [ObservableProperty] private bool _useDigitalWidebandLambda;
+    [ObservableProperty] private string _widebandDevice;
+    [ObservableProperty] private string _wbPort;
+
+    public string[] WidebandDevices { get; } = ["PLX", "LM1", "LC1", "LM2", "ZT2", "AEM", "STAG", "LambdaShield"];
+    public string[] SerialPorts { get; } = System.IO.Ports.SerialPort.GetPortNames();
+
     public string[] AdapterTypes { get; } = CanAdapters.Types;
 
     // frmComportSettings' speeds, plus the SLCAN ones the flasher offers
@@ -71,6 +79,9 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _onlyPBus = s.OnlyPBus;
         _autoUpdateSRAMViewers = s.AutoUpdateSRAMViewers;
         _autoUpdateInterval = Math.Clamp(s.AutoUpdateInterval, 5, 60);
+        _useDigitalWidebandLambda = s.UseDigitalWidebandLambda;
+        _widebandDevice = Array.Exists(WidebandDevices, d => d == s.WidebandDevice) ? s.WidebandDevice : "LC1";
+        _wbPort = s.WbPort;
         // not the field: the setter fills the adapter list
         AdapterType = Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
     }
@@ -94,6 +105,9 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.OnlyPBus = OnlyPBus;
         s.AutoUpdateSRAMViewers = AutoUpdateSRAMViewers;
         s.AutoUpdateInterval = (int)(AutoUpdateInterval ?? 20);
+        s.UseDigitalWidebandLambda = UseDigitalWidebandLambda;
+        s.WidebandDevice = WidebandDevice;
+        s.WbPort = WbPort ?? "";
         // an empty folder fell back to <program>\Projects; the program folder isn't writable on Linux, so the default instead
         s.ProjectFolder = string.IsNullOrWhiteSpace(ProjectFolder)
             ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "TxSuite", "Projects")

@@ -46,56 +46,9 @@ public partial class T7MainWindowViewModel
 
     // ---- realtime ----
 
-    /// <summary>The open realtime panel.</summary>
-    public RealtimeViewModel? Realtime => Viewers.OfType<RealtimeViewModel>().FirstOrDefault();
+    public override RealtimeRules RealtimeRules => T7Realtime.Rules;
 
-    /// <summary>Toggle realtime panel [SHIFT+F1]: opens the panel and starts polling, or closes it.</summary>
-    [RelayCommand]
-    private async Task ToggleRealtimePanel()
-    {
-        if (Realtime is { } open)
-        {
-            await CloseViewerAsync(open);
-            return;
-        }
-        if (Binary is not T7Binary bin) return;
-        var panel = new RealtimeViewModel(this, bin);
-        ShowDocument(panel);
-        // not awaited: the command has to stay free to close the panel again
-        _ = panel.StartAsync();
-    }
-
-    /// <summary>View knock count / false knock / real knock / misfire map (ShowRealtimeMapFromECU): read from SRAM.</summary>
-    [RelayCommand]
-    private async Task ShowEcuMap(string name)
-    {
-        if (Binary is not T7Binary bin) return;
-        if (bin.FindAny(name) is not { } sh)
-        {
-            ShowInfo($"Symbol {name} does not exist in this file");
-            return;
-        }
-        await OpenSramSymbolAsync(bin, sh);
-    }
-
-    /// <summary>Write log marker [F6].</summary>
-    [RelayCommand]
-    private void WriteLogMarker() => Realtime?.WriteLogMarkerCommand.Execute(null);
-
-    /// <summary>Add to realtime list (symbol list): into the open panel, or into rtsymbols.txt for the next one.</summary>
-    public void AddToRealtime(SymbolHelper sh)
-    {
-        RealtimeSymbol symbol = T7.Realtime.FromSymbol(sh);
-        if (Realtime is { } panel)
-        {
-            panel.Add(symbol);
-            return;
-        }
-        string file = Path.Combine(SettingsKey.Folder(Suite), "rtsymbols.txt");
-        var rows = T7.Realtime.LoadLayout(file, Binary as T7Binary).Where(r => r.Name != symbol.Name).Append(symbol).ToList();
-        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
-        T7.Realtime.SaveLayout(file, rows);
-    }
+    protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) => new T7RealtimeViewModel(this, (T7Binary)bin);
 
     // ---- AFR maps ----
 

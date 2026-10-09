@@ -22,28 +22,28 @@ namespace T7CoreTest
                 string log = Path.Combine(dir, "bin-20261009-CanTraceExt.t7l");
                 File.WriteAllLines(log,
                 [
-                    T7Log.Line(t0, [("ActualIn.n_Engine", 900), ("In.p_AirInlet", 0.1)], false),
-                    T7Log.Line(t0.AddSeconds(1), [("ActualIn.n_Engine", 2500), ("In.p_AirInlet", 0.8)], true),
+                    RealtimeLog.Line(t0, [("ActualIn.n_Engine", 900), ("In.p_AirInlet", 0.1)], false),
+                    RealtimeLog.Line(t0.AddSeconds(1), [("ActualIn.n_Engine", 2500), ("In.p_AirInlet", 0.8)], true),
                     "garbage",
                     // a second session after a 30 s gap; this line has no boost
-                    T7Log.Line(t0.AddSeconds(31), [("ActualIn.n_Engine", 3000)], false),
-                    T7Log.Line(t0.AddSeconds(32), [("ActualIn.n_Engine", 3100), ("In.p_AirInlet", 1.2)], false),
+                    RealtimeLog.Line(t0.AddSeconds(31), [("ActualIn.n_Engine", 3000)], false),
+                    RealtimeLog.Line(t0.AddSeconds(32), [("ActualIn.n_Engine", 3100), ("In.p_AirInlet", 1.2)], false),
                 ]);
-                var lines = T7LogFile.Read(log);
+                var lines = RealtimeLog.Read(log);
                 Assert.HasCount(4, lines);
-                var sections = T7LogFile.Sections(lines);
+                var sections = RealtimeLog.Sections(lines);
                 Assert.HasCount(2, sections);
                 Assert.HasCount(2, sections[1]);                      // the first line after the gap is kept
-                Assert.AreEqual("12:00:31 - 12:00:32 [00:00:01]", T7LogFile.Describe(sections[1]));
-                CollectionAssert.AreEqual(new[] { "ActualIn.n_Engine", "In.p_AirInlet", "IMPORTANTLINE" }, T7LogFile.Symbols(lines));
-                Assert.AreEqual("Rpm", T7LogFile.DisplayName("ActualIn.n_Engine"));
+                Assert.AreEqual("12:00:31 - 12:00:32 [00:00:01]", RealtimeLog.Describe(sections[1]));
+                CollectionAssert.AreEqual(new[] { "ActualIn.n_Engine", "In.p_AirInlet", "IMPORTANTLINE" }, RealtimeLog.Symbols(lines));
+                Assert.AreEqual("Rpm", RealtimeLog.DisplayName("ActualIn.n_Engine"));
 
                 var rpmAbove = new LogFilter { Active = true, Symbol = "ActualIn.n_Engine", Type = LogFilter.MathType.GreaterThan, Value = 2000 };
-                Assert.HasCount(3, lines.Where(l => T7LogFile.Passes(l, [rpmAbove])));
+                Assert.HasCount(3, lines.Where(l => RealtimeLog.Passes(l, [rpmAbove])));
 
                 // CSV: a missing value leaves its column empty
                 string csv = Path.Combine(dir, "out.csv");
-                T7LogFile.ExportCsv(sections[1], ["ActualIn.n_Engine", "In.p_AirInlet"], csv);
+                RealtimeLog.ExportCsv(sections[1], ["ActualIn.n_Engine", "In.p_AirInlet"], csv);
                 CollectionAssert.AreEqual(new[] { "Time,ActualIn.n_Engine,In.p_AirInlet", "0.0000,3000,", "1.0000,3100,1.2" }, File.ReadAllLines(csv));
 
                 // filters are stored, and a removed one stays removed

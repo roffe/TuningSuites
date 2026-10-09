@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SuiteCore\SuiteCore.csproj" />
-    <ProjectReference Include="..\WidebandSupport\WidebandSupport.csproj" />
     <ProjectReference Include="$(TrionicDir)\TrionicCANLib\TrionicCANLib.csproj" />
   </ItemGroup>
 

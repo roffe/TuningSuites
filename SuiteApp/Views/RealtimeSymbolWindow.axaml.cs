@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 public partial class RealtimeSymbolWindow : Window
 {

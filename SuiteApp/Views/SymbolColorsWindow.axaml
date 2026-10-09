@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:T7App.ViewModels"
-        x:Class="T7App.Views.SymbolColorsWindow"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        x:Class="SuiteApp.Views.SymbolColorsWindow"
         x:DataType="vm:SymbolColorsViewModel"
         Title="Set symbol colors" Width="460" Height="600" WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">

@@ -19,11 +19,11 @@ namespace T7CoreTest
         [TestMethod]
         public void DecodesBigEndianAndSignedByName()
         {
-            Assert.AreEqual(0x1234, Realtime.Decode("ActualIn.n_Engine", [0x12, 0x34]));
-            Assert.AreEqual(-5, Realtime.Decode("ActualIn.T_Engine", [0xFF, 0xFB]));
-            Assert.AreEqual(65531, Realtime.Decode("ActualIn.n_Engine", [0xFF, 0xFB]));
-            Assert.AreEqual(0x01020304u, Realtime.Decode("x", [1, 2, 3, 4]));
-            Assert.AreEqual(0, Realtime.Decode("x", [1, 2, 3]));
+            Assert.AreEqual(0x1234, Realtime.Decode("ActualIn.n_Engine", [0x12, 0x34], T7Realtime.Rules.Signed));
+            Assert.AreEqual(-5, Realtime.Decode("ActualIn.T_Engine", [0xFF, 0xFB], T7Realtime.Rules.Signed));
+            Assert.AreEqual(65531, Realtime.Decode("ActualIn.n_Engine", [0xFF, 0xFB], T7Realtime.Rules.Signed));
+            Assert.AreEqual(0x01020304u, Realtime.Decode("x", [1, 2, 3, 4], T7Realtime.Rules.Signed));
+            Assert.AreEqual(0, Realtime.Decode("x", [1, 2, 3], T7Realtime.Rules.Signed));
         }
 
         [TestMethod]
@@ -42,7 +42,7 @@ namespace T7CoreTest
                 return r.Length == 8 ? [0, 1, 0, 2, 0, 3, 0, 4] : r.Name == "In.p_AirInlet" ? [0x05, 0xDC] : [0, 90];
             }
 
-            RealtimeSample s = Realtime.Cycle(rows, Read, DateTime.Now);
+            RealtimeSample s = Realtime.Cycle(rows, Read, DateTime.Now, T7Realtime.Rules);
             Assert.AreEqual(0.5, s["In.p_AirInlet"]!.Value, 1e-9);   // 1500 mbar abs → 0.5 bar
             Assert.AreEqual(90, s["ActualIn.T_Engine"]);
             CollectionAssert.AreEqual(new double[] { 1, 2, 3, 4 }, new[] { "KnockCyl1", "KnockCyl2", "KnockCyl3", "KnockCyl4" }.Select(n => s[n]!.Value).ToArray());
@@ -50,13 +50,13 @@ namespace T7CoreTest
             // the temperature waits two passes; a failed read keeps the last value
             reads.Clear();
             fail = true;
-            s = Realtime.Cycle(rows, Read, DateTime.Now);
+            s = Realtime.Cycle(rows, Read, DateTime.Now, T7Realtime.Rules);
             CollectionAssert.DoesNotContain(reads, "ActualIn.T_Engine");
             Assert.AreEqual(0.5, s["In.p_AirInlet"]!.Value, 1e-9);
             Assert.AreEqual(90, s["ActualIn.T_Engine"]);
-            Realtime.Cycle(rows, Read, DateTime.Now);
+            Realtime.Cycle(rows, Read, DateTime.Now, T7Realtime.Rules);
             reads.Clear();
-            Realtime.Cycle(rows, Read, DateTime.Now);
+            Realtime.Cycle(rows, Read, DateTime.Now, T7Realtime.Rules);
             CollectionAssert.Contains(reads, "ActualIn.T_Engine");
         }
 
@@ -69,7 +69,7 @@ namespace T7CoreTest
             SettingsKey.BaseFolder = dir;
             try
             {
-                List<RealtimeSymbol> dash = Realtime.Dashboard(bin, new AppSettings(new T7SuiteRegistry()));
+                List<RealtimeSymbol> dash = T7Realtime.Rules.Dashboard(bin, new AppSettings(new T7SuiteRegistry()));
                 RealtimeSymbol rpm = dash.Single(r => r.Name == "ActualIn.n_Engine");
                 Assert.AreEqual(bin.FindAny("ActualIn.n_Engine")!.Start_address, rpm.SramAddress);
                 Assert.AreEqual(5, dash.Single(r => r.Name == "ActualIn.T_Engine").Reload);
@@ -82,7 +82,7 @@ namespace T7CoreTest
                 Assert.AreEqual(0.1, tps.Correction, 1e-9);
                 Assert.AreEqual(bin.FindAny("Out.X_AccPedal")!.Start_address, tps.SramAddress);   // the bin's, not the saved 1
 
-                var user = Realtime.FromSymbol(bin.FindAny("BFuelProt.t_InjActual") ?? bin.FindAny("Out.X_AccPedal")!);
+                var user = T7Realtime.Rules.FromSymbol(bin.FindAny("BFuelProt.t_InjActual") ?? bin.FindAny("Out.X_AccPedal")!);
                 user.Description = "mine";
                 string ours = Path.Combine(dir, "ours.t7rtl");
                 Realtime.SaveLayout(ours, [rpm, user]);
@@ -100,9 +100,9 @@ namespace T7CoreTest
             }
 
             // the ignition map cell at the axes' own breakpoints
-            var tracker = new CellTracker(bin);
+            var tracker = new CellTracker(bin, T7Realtime.Rules.CellRules);
             int[] air = bin.GetXaxisValues("IgnNormCal.Map"), rpms = bin.GetYaxisValues("IgnNormCal.Map");
-            var cell = tracker.Cell("IgnNormCal.Map", i => i == CellTracker.Input.Rpm ? rpms[3] + 1 : air[5]);
+            var cell = tracker.Cell("IgnNormCal.Map", i => i == CellInput.Rpm ? rpms[3] + 1 : air[5]);
             Assert.AreEqual((5, 3), cell);
             Assert.IsNull(tracker.Cell("BoostCal.PMap", _ => 0));
         }
@@ -111,18 +111,18 @@ namespace T7CoreTest
         public void LogLinesRoundTripInAnyCulture()
         {
             var time = new DateTime(2026, 10, 9, 14, 3, 22, 123);
-            string line = T7Log.Line(time, [("ActualIn.n_Engine", 850), ("In.p_AirInlet", 0.1 * 3)], true);
+            string line = RealtimeLog.Line(time, [("ActualIn.n_Engine", 850), ("In.p_AirInlet", 0.1 * 3)], true);
             Assert.AreEqual("09/10/2026 14:03:22.123|ActualIn.n_Engine=850|In.p_AirInlet=0.3|IMPORTANTLINE=1|", line);
-            Assert.IsTrue(T7Log.TryParse(line, out DateTime t, out var values));
+            Assert.IsTrue(RealtimeLog.TryParse(line, out DateTime t, out var values));
             Assert.AreEqual(time, t);
             Assert.AreEqual(0.3, values[1].Value, 1e-12);
             Assert.AreEqual(("IMPORTANTLINE", 1d), values[2]);
 
             // T7Suite on a Swedish Windows: dots in the date, comma decimals
-            Assert.IsTrue(T7Log.TryParse("09.10.2026 14.03.22.123|In.p_AirInlet=0,75|", out t, out values));
+            Assert.IsTrue(RealtimeLog.TryParse("09.10.2026 14.03.22.123|In.p_AirInlet=0,75|", out t, out values));
             Assert.AreEqual(time, t);
             Assert.AreEqual(0.75, values[0].Value, 1e-12);
-            Assert.IsFalse(T7Log.TryParse("garbage", out _, out _));
+            Assert.IsFalse(RealtimeLog.TryParse("garbage", out _, out _));
 
             Assert.AreEqual("Closed loop activated", RealtimeStatus.Lambda(0));
             Assert.AreEqual("Airmass limit (pressure guard)", RealtimeStatus.Fuelcut(6));

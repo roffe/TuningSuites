@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using T7App.ViewModels;
+using SuiteApp.ViewModels;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 public partial class LogSelectionWindow : Window
 {

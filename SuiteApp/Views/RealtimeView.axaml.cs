@@ -2,11 +2,10 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using T7;
 using SuiteApp.Services;
-using T7App.ViewModels;
+using SuiteApp.ViewModels;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 public partial class RealtimeView : UserControl
 {
@@ -20,12 +19,12 @@ public partial class RealtimeView : UserControl
 
     private async void OnSaveLayout(object? sender, RoutedEventArgs e)
     {
-        if (Owner is { } w && await Dialogs.SaveFile(w, "Realtime layouts", "t7rtl") is { } file) Vm.SaveLayout(file);
+        if (Owner is { } w && await Dialogs.SaveFile(w, "Realtime layout files", Vm.LayoutExtension) is { } file) Vm.SaveLayout(file);
     }
 
     private async void OnLoadLayout(object? sender, RoutedEventArgs e)
     {
-        if (Owner is { } w && await Dialogs.OpenFile(w, "Realtime layouts", "*.t7rtl") is { } file) Vm.LoadLayout(file);
+        if (Owner is { } w && await Dialogs.OpenFile(w, "Realtime layout files", "*." + Vm.LayoutExtension) is { } file) Vm.LoadLayout(file);
     }
 
     private async void OnAdd(object? sender, RoutedEventArgs e)

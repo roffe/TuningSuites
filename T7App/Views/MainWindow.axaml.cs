@@ -146,55 +146,6 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnFullDisassembly(object? sender, RoutedEventArgs e) =>
         await Vm.ShowDisassemblyAsync(true, _ => System.Threading.Tasks.Task.FromResult(false));
 
-    // ---- logs ----
-
-    private async void OnOpenLog(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "Trionic 7 logfiles", "*.t7l") is not { } file) return;
-        await Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(this));
-    }
-
-    private async System.Threading.Tasks.Task<(string file, LogSelectionViewModel selection)?> ChooseLogData()
-    {
-        if (await Dialogs.OpenFile(this, "Trionic 7 logfiles", "*.t7l") is not { } file) return null;
-        LogSelectionViewModel selection = Vm.LogSelection(file);
-        return await new LogSelectionWindow { DataContext = selection }.ShowDialog<bool>(this) ? (file, selection) : null;
-    }
-
-    private async void OnExportLogCsv(object? sender, RoutedEventArgs e)
-    {
-        if (await ChooseLogData() is var (file, selection)) Vm.ExportLogCsv(file, selection);
-    }
-
-    private async void OnExportLogDif(object? sender, RoutedEventArgs e)
-    {
-        if (await ChooseLogData() is var (file, selection)) Vm.ExportLogDif(file, selection);
-    }
-
-    private async void OnLogMatrix(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "Trionic 7 logfiles", "*.t7l") is not { } file) return;
-        var (lines, selection) = Vm.MatrixSelection(file);
-        if (await new MatrixSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) Vm.ShowMatrix(lines, selection);
-    }
-
-    private async void OnLogFilters(object? sender, RoutedEventArgs e)
-    {
-        var filters = new LogFiltersViewModel(Vm.LoadLogFilters(), Vm.LogFilterSymbols);
-        if (await new LogFiltersWindow { DataContext = filters }.ShowDialog<bool>(this)) Vm.SaveLogFilters(filters.ToCollection());
-    }
-
-    private async void OnSymbolColors(object? sender, RoutedEventArgs e)
-    {
-        SymbolColorsViewModel colors = Vm.SymbolColorChoices();
-        if (await new SymbolColorsWindow { DataContext = colors }.ShowDialog<bool>(this)) colors.Save();
-    }
-
-    private void OnAddToRealtime(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.SelectedSymbol is { } sh) Vm.AddToRealtime(sh);
-    }
-
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings);

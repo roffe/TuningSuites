@@ -14,7 +14,7 @@ namespace T7
     public sealed class AfrFeedback
     {
         public const int Columns = 18, Rows = 16;
-        public const double Stoich = 14.7;
+        public const double Stoich = WidebandAfr.Stoich;
 
         public AFRMap Map { get; } = new();
         public T7Binary Binary { get; }
@@ -36,23 +36,6 @@ namespace T7
         // GetSymbolAsIntArray: 16-bit axes from the file
         private static int[] Axis(T7Binary bin, string name) =>
             bin.FindAny(name) is { } sh && bin.ReadSymbol(sh) is { } d ? Enumerable.Range(0, d.Length / 2).Select(i => d[i * 2] << 8 | d[i * 2 + 1]).ToArray() : [];
-
-        /// <summary>
-        /// ConvertToWidebandAFR: a 0..1023 ADC count to AFR with the configured voltages (settings ×1000). The count is scaled
-        /// over HighV − LowV without adding LowV, as T7Suite did.
-        /// </summary>
-        public static double AdcToAfr(double adc, AppSettings s)
-        {
-            double lowV = s.WidebandLowVoltage / 1000.0, highV = s.WidebandHighVoltage / 1000.0;
-            double lowAfr = s.WidebandLowAFR / 1000.0, highAfr = s.WidebandHighAFR / 1000.0;
-            if (highV <= lowV) return lowAfr;
-            double v = Math.Clamp(adc / 1023 * (highV - lowV), lowV, highV);
-            return lowAfr + (highAfr - lowAfr) / (highV - lowV) * (v - lowV);
-        }
-
-        /// <summary>The wideband AFR from the ECU symbol's realtime value (AD_Scanner is an ADC count, LambdaScanner AFR already ×0.1).</summary>
-        public static double? SymbolAfr(RealtimeSample sample, AppSettings s) =>
-            sample[s.WideBandSymbol] is { } v ? s.WideBandSymbol == "DisplProt.AD_Scanner" ? AdcToAfr(v, s) : v : null;
 
         /// <summary>
         /// LogWidebandAFR: a sample into its cell's running mean (AFR, or λ when measuring in lambda), when rpm &gt; 600,
