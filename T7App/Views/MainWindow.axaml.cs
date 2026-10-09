@@ -125,6 +125,12 @@ public partial class MainWindow : Window
             await Vm.ReadMapFromEcuAsync(viewer);
     }
 
+    private async void OnImportTuningPackage(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "Trionic 7 packages", "*.t7p") is { } file && Vm.ImportTuningPackage(file) is { } results)
+            await new ImportResultsWindow(results).ShowDialog(this);
+    }
+
     // ---- logs ----
 
     private async void OnOpenLog(object? sender, RoutedEventArgs e)

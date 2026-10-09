@@ -571,6 +571,48 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void TuningPackagesImportAndEdit()
+        {
+            string file = Path.Combine(s_dir, "package.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                var ign = vm.Binary!.Find("IgnNormCal.Map")!;
+                vm.OpenSymbolByName("IgnNormCal.Map");
+                var viewer = (MapViewerViewModel)vm.SelectedViewer!;
+
+                // the editor: a symbol in, its viewer saves into the row, saved as a package
+                vm.EditTuningPackageCommand.Execute(null);
+                var editor = (TuningPackageEditorViewModel)vm.SelectedViewer!;
+                editor.Add([ign]);
+                Assert.AreEqual(ign.Length, editor.Rows.Single().Length);
+                editor.OpenRow(editor.Rows[0]);
+                var pkgViewer = vm.Viewers.OfType<MapViewerViewModel>().Single(v => v.Title.StartsWith("Tuning package symbol: IgnNormCal.Map"));
+                Assert.IsNull(pkgViewer.EcuReadCommand);
+                pkgViewer.Map.Set([(0, pkgViewer.Map[0] + 5)]);
+                await pkgViewer.SaveCommand.ExecuteAsync(null);
+                string pkg = Path.Combine(s_dir, "edited.t7p");
+                editor.Save(pkg);
+                Assert.AreNotEqual(viewer.Map[0], pkgViewer.Map[0]);
+
+                // importing it changes the bin and the open viewer
+                var results = vm.ImportTuningPackage(pkg)!;
+                Assert.IsTrue(results.Single().Success);
+                Assert.AreEqual(pkgViewer.Map[0], viewer.Map[0]);
+                var dialog = new ImportResultsWindow(results);
+                dialog.Show();
+                Save(dialog, "importresults");
+                dialog.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");

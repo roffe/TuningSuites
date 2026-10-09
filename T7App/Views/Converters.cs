@@ -101,3 +101,28 @@ public class AutotuneBrushConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
+
+/// <summary>Import results: Success fades from green, Fail from red, as frmImportResults' gradient cells.</summary>
+public class ResultBrushConverter : IValueConverter
+{
+    public static readonly ResultBrushConverter Instance = new();
+
+    private static IBrush Fade(Color c) => new Avalonia.Media.Immutable.ImmutableLinearGradientBrush(
+        [new Avalonia.Media.Immutable.ImmutableGradientStop(0, c), new Avalonia.Media.Immutable.ImmutableGradientStop(1, Colors.White)],
+        startPoint: new Avalonia.RelativePoint(0, 0, Avalonia.RelativeUnit.Relative), endPoint: new Avalonia.RelativePoint(1, 0, Avalonia.RelativeUnit.Relative));
+
+    private static readonly IBrush Ok = Fade(Colors.LimeGreen), Failed = Fade(Colors.IndianRed);
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true ? Ok : Failed;
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+public class ResultTextConverter : IValueConverter
+{
+    public static readonly ResultTextConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true ? "Success" : "Fail";
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}

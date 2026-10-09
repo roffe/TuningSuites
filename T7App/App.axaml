@@ -63,6 +63,9 @@
         <DataTemplate DataType="vm:AirmassResultViewModel">
             <v:AirmassResultView />
         </DataTemplate>
+        <DataTemplate DataType="vm:TuningPackageEditorViewModel">
+            <v:TuningPackageEditorView />
+        </DataTemplate>
         <DataTemplate DataType="vm:SearchResultsViewModel">
             <v:SearchResultsView />
         </DataTemplate>

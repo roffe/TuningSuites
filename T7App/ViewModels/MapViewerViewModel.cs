@@ -44,15 +44,18 @@ public partial class MapViewerViewModel : DocumentViewModel
     public bool CanSaveToFile => Address >= 0 || SaveTo != null;
 
     /// <summary>Where a map that isn't in the bin saves and reloads (the AFR target map's .afr file).</summary>
-    public Action<byte[]>? SaveTo { get; init; }
-    public Func<byte[]>? ReadFrom { get; init; }
+    public Action<byte[]>? SaveTo { get; set; }
+    public Func<byte[]>? ReadFrom { get; set; }
 
     /// <summary>AFR maps live in files of their own, not in the ECU.</summary>
     public bool IsAfrMap { get; init; }
 
     /// <summary>The viewer's Read from ECU / Save to ECU buttons, none for AFR maps.</summary>
-    public IAsyncRelayCommand? EcuReadCommand => IsAfrMap ? null : ReadEcuCommand;
-    public IAsyncRelayCommand? EcuWriteCommand => IsAfrMap ? null : WriteEcuCommand;
+    public IAsyncRelayCommand? EcuReadCommand => IsAfrMap || NoEcu ? null : ReadEcuCommand;
+    public IAsyncRelayCommand? EcuWriteCommand => IsAfrMap || NoEcu ? null : WriteEcuCommand;
+
+    /// <summary>No ECU buttons (a tuning package's map).</summary>
+    public bool NoEcu { get; set; }
 
     /// <summary>The viewer's Close button: the same question about unsaved changes as the window's.</summary>
     [RelayCommand]

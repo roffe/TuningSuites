@@ -36,6 +36,8 @@
                 <MenuItem Header="Import XML descriptor" Click="OnImportXml" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import CSV descriptor" Click="OnImportCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import AS2 descriptor" Click="OnImportAs2" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import tuning package" Click="OnImportTuningPackage" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Settings" Click="OnSettings" />
                 <Separator />

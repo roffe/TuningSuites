@@ -209,6 +209,41 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedViewer = document;
     }
 
+    /// <summary>
+    /// File → Import tuning package: the .t7p's symbols and search &amp; replace patterns into the bin (transaction entries in a
+    /// project), one checksum update; open viewers show the new data. The results for the "Import results" list.
+    /// </summary>
+    public List<PackageResult>? ImportTuningPackage(string file)
+    {
+        if (Binary is not { } bin) return null;
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        try
+        {
+            List<PackageResult> results = TuningPackage.Read(file, bin).Apply(bin, Settings.AutoFixFooter, TransactionLog);
+            TransactionsAdded(before);
+            RefreshViewers(bin.FileName);
+            return results;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowInfo("Failed to import the tuning package: " + e.Message);
+            return null;
+        }
+    }
+
+    /// <summary>File → Edit a tuning package (one at a time, as T7Suite).</summary>
+    [RelayCommand]
+    private void EditTuningPackage()
+    {
+        if (Binary is not { } bin) return;
+        if (Viewers.OfType<TuningPackageEditorViewModel>().FirstOrDefault() is { } open)
+        {
+            SelectedViewer = open;
+            return;
+        }
+        ShowDocument(new TuningPackageEditorViewModel(this, bin));
+    }
+
     /// <summary>Actions → Airmass result viewer, when the bin has the tables it needs (T7Suite silently did nothing otherwise).</summary>
     [RelayCommand]
     private void ShowAirmassResult()
