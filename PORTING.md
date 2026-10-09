@@ -30,7 +30,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`, one tag prefix per suite, upstream's release tags (`T7suite_v2.0.0`, later `T8suite_v`, `T5suite_v`), set by the app project's `VersionTagPrefix`, so a tag versions one suite; libraries and tests build as `0.0.0-<sha>`. One repo for all suites (revisit splitting after the T8 port, then with NuGet packages rather than submodules); self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
 | Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, menus, clipboard) follows T7Suite; from txlogger the meshgrid 3D projection/drawing, the graph2d layout and the colour scale (green → yellow → red over the map's min..max; T7Suite's raw ÷ max made a fuel map red from its lowest cell). T7Suite's red-white option and online tint stay |
-| Shared T7/T8 code | `SuiteCore` (no UI: the lifted CommonSuite code, `SuiteBinary` which T7Binary and T8Binary derive from, `SuiteProject`, compare / transfer, map search, symbol files, tuning packages, My Maps, the update check, the DTC catalog) and `SuiteApp` (Avalonia: the main window and its view model, symbol list, map viewer, workspace, status bar, project dialogs, the offline tuning windows, the settings base, theme, dialogs). Each app keeps its menus and what only its suite has. The rest of T7Core / T7App moves there in the chunk where T8 needs it, so each piece is generalised against a second real consumer (T7 and T8 share 67 file names but only 8 identical files) |
+| Shared T7/T8 code | `SuiteCore` (no UI: the lifted CommonSuite code, `SuiteBinary` which T7Binary and T8Binary derive from, `SuiteProject`, compare / transfer, map search, symbol files, tuning packages, My Maps, the ECU worker thread and adapter setup, the update check, the DTC catalog) and `SuiteApp` (Avalonia: the main window and its view model with its ECU half, symbol list, map viewer, workspace, status bar, project dialogs, the offline tuning windows, the fault codes window, the settings base, theme, dialogs). The ECU protocols stay per suite (T7Ecu over KWP, T8Ecu over GMLAN). Each app keeps its menus and what only its suite has. The rest of T7Core / T7App moves there in the chunk where T8 needs it, so each piece is generalised against a second real consumer (T7 and T8 share 67 file names but only 8 identical files) |
 
 ## Layout (new projects)
 
@@ -39,7 +39,7 @@ TuningSuites.slnx          new solution (the old *.sln files stay for reference)
 Directory.Build.props      from the flasher, plus $(TrionicDir) = Trionic (submodule)
 WidebandSupport/           vendored, net10
 SuiteCore/                 shared, no UI: the lifted CommonSuite code (Common/, namespace CommonSuite), SuiteBinary, SuiteProject, compare,
-                           search, symbol files, tuning packages, My Maps, update check, DTC catalog
+                           search, symbol files, tuning packages, My Maps, EcuWorker / CanAdapters, update check, DTC catalog
 SuiteCoreTest/             MSTest: settings, crypto, S19, VIN decoder, transaction log, update check, source encoding
 SuiteApp/                  shared Avalonia library: the main window (SuiteMainWindow) and MainWindowViewModel, symbol list, map viewer,
                            workspace, status bar, project dialogs, compare / search / package / My Maps / part lookup / VIN decoder
@@ -367,12 +367,34 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - Compare rows name a symbol by the name it was matched on (the same as before for named symbols).
 
 ### 5. ECU
-- [ ] `T8Ecu`: Trionic8 on its own thread, as T7Ecu. Connect, Read ECU / Flash (Legion bootloader by default), Recover ECU (with `SetCANFilterIds(FilterIdRecovery)` as the flasher does), Get ECU information, fault codes and clear, SRAM maps read / written through `readMemoryNew` / `writeMemoryNew`, UserPrompt wired for the Legion questions
-- Known T8Suite bugs to fix:
-  - every action built a new adapter without closing the last;
-  - ReadFlash hung when security access was refused;
-  - the "attempt to recover?" answer was compared with OK, so recovery never started;
-  - the fault codes window's Clear did nothing.
+- [x] Per suite, as the protocols are: T7 speaks KWP2000 over CAN, T8 GMLAN, T5 its own, and TrionicCANLib's Trionic5 / 7 / 8 classes share little beyond `ITrionic` (adapter setup, progress events, Cleanup). Shared is only what doesn't touch the wire:
+  - **SuiteCore:** `EcuWorker<T>` (the library object on one thread of its own, its events passed on, the closing) and `CanAdapters` (the adapter types and the setup from the settings). T7Ecu and T8Ecu derive.
+  - **SuiteApp:** the ECU half of the main view model (`MainWindowViewModel.Ecu.cs`): the connection state and Connect / Disconnect, the viewers' Read from / Save to ECU and their auto update, maps that only live in SRAM, the .RAM file and Read from SRAM file, the flasher's busy state, the checks before a flash, the fault code descriptions. The fault codes window and the connection part of the settings dialog moved there too. A suite supplies the session calls (connect, read and write a map, read / flash, fault codes).
+  - T7's tests pass and its renders are unchanged.
+- [x] `T8Ecu` (T8Core): Trionic8 on its own thread (T8Suite ran it on its GUI thread).
+  - **Connect** (Realtime menu): a session with security access at level FD and the keep-alive; the status bar shows "Connected: <software version>".
+  - **ECU menu** (the Programmer page's CAN Flasher group): Read ECU, Flash current file to ECU, Recover ECU, with the Legion bootloader unless Settings → "Use Legion Bootloader" is off. The library's BackgroundWorker-shaped calls run on the ECU thread and their Result is the outcome.
+  - **Get ECU information:** frmECUInformation's fields in a window.
+  - **Get fault codes (OBDII)** with T8Suite's DTC files (DTC_SaabHSTRC / LSTRC / TRC); **Clear DTC and knock counters**.
+  - **SRAM maps:** read and written with `readMemoryNew` / `writeMemoryNew` in 0x40-byte blocks; the viewer's ECU buttons only for symbols with an SRAM address, as T8Suite; the auto update only for the maps that live in SRAM alone.
+  - **Actions → Import SRAM file** and the symbol menu's Read from SRAM file.
+  - **Settings:** the realtime group's connection (adapter type, adapter, serial speed, Only P-bus connection), Use Legion Bootloader, Auto update SRAM viewers.
+- [x] T8CoreTest: T8Ecu's thread, no adapter means nothing starts (and a flasher session isn't left busy), ReadDTC's lines, the DTC catalog. T8AppTest: connect without an adapter, the ECU buttons per symbol, an SRAM file, the fault codes and ECU information windows.
+- Deliberate differences:
+  - Every action closes what the last one left open first, and the flasher sessions, ECU information and fault codes close their device afterwards (T8Suite left them open).
+  - The viewer's Read from / Save to ECU connect first, as T7Suite did and as T8Suite's double-click did (T8Suite's buttons asked for a connection instead). A write the ECU refuses says so (T8Suite: "Could not write SRAM" in the status bar).
+  - Flash current file to ECU points out unsaved map changes and fixes or offers to fix the checksum first, as in the T7 port.
+  - Recover ECU takes only a T8 bin whose checksum verifies, as TrionicCANFlasher checks (T8Suite took any file).
+  - Read ECU, ECU information and fault codes say why they failed (T8Suite stayed silent or showed an empty window).
+  - The Legion options stay at the library's defaults, as in T8Suite (the flasher has settings for them).
+  - Not here: T8Suite's SRAM snapshot button had no handler since 2017; TrionicCANFlasher reads SRAM.
+- Known T8Suite bugs fixed:
+  - **Adapters:** every action built a new adapter without closing the last; now the last one is closed first.
+  - **Read ECU:** it waited forever when security access was refused; that's now a failure.
+  - **Flash → recover:** the "attempt to recover?" answer was compared with OK, so recovery never started. Yes now recovers with the same file.
+  - **Recover ECU:** the adapters filtered out the ECU's 0x011 / 0x311 answers; now `SetCANFilterIds(FilterIdRecovery)` is set first, as the flasher does.
+  - **Fault codes window:** Clear worked on a device that had been closed, so it did nothing; it now opens its own session.
+- Not on a bench yet: the T8 ECU features need a test with an adapter and an ECU.
 
 ### 6. Realtime
 - [ ] Dynamic live data (`3B 17` / `1A 18` list) with the fallback to reads by address, `.t8l` logs (T7's format), log viewer, matrix from log, knock count map / misfire tab, wideband, notifications
@@ -397,6 +419,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
+
+- 2026-10-09: T8 chunk 5 implemented: T8Ecu over GMLAN (connect, Read ECU / Flash / Recover with the Legion bootloader, ECU information, fault codes, SRAM maps) on a shared ECU worker; the protocol stays per suite, the view model's ECU half, the fault codes window and the connection settings are shared. Waiting for a bench test.
 
 - 2026-10-09: T8 chunk 4 done: compare, transfer, search, symbol imports and exports, tuning packages, My Maps and the quick map menu moved into the shared projects and serve both apps; T8App has them with T8Suite's menus and rules, plus its settings, part number lookup, VIN decoder and firmware editing. The sidecar now keeps names imported into T8 bins.
 
