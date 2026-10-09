@@ -23,6 +23,33 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _requestProjectNotes;
     [ObservableProperty] private string _projectFolder;
 
+    // realtime settings: the connection
+    [ObservableProperty] private string _adapterType;
+    [ObservableProperty] private string? _adapter;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAdapters))]
+    private string[] _adapters = [];
+
+    public bool HasAdapters => Adapters.Length > 0;
+    [ObservableProperty] private bool _adapterNeedsBaudrate;
+    [ObservableProperty] private int _baudrate;
+    [ObservableProperty] private bool _onlyPBus;
+    [ObservableProperty] private bool _autoUpdateSRAMViewers;
+    [ObservableProperty] private decimal? _autoUpdateInterval;
+
+    public string[] AdapterTypes { get; } = T7.T7Ecu.AdapterTypes;
+
+    // frmComportSettings' speeds, plus the SLCAN ones the flasher offers
+    public int[] Baudrates { get; } = [9600, 38400, 115200, 230400, 1000000, 2000000, 3000000];
+
+    partial void OnAdapterTypeChanged(string value)
+    {
+        TrionicCANLib.API.CANBusAdapter? type = T7.T7Ecu.AdapterFromDescription(value);
+        Adapters = type is { } t ? TrionicCANLib.API.ITrionic.GetAdapterNames(t) ?? [] : [];
+        if (Adapter == null || !System.Array.Exists(Adapters, a => a == Adapter)) Adapter = Adapters.Length > 0 ? Adapters[0] : null;
+        AdapterNeedsBaudrate = type is TrionicCANLib.API.CANBusAdapter.ELM327 or TrionicCANLib.API.CANBusAdapter.JUST4TRIONIC or TrionicCANLib.API.CANBusAdapter.SLCAN;
+    }
+
     public string[] ViewTypes { get; } = ["Hexadecimal view", "Decimal view", "Easy view"];
     public string[] ClosedLoopIndicators { get; } = ["No closed loop indicator", "Square closed loop indicator", "Triangle closed loop indicator"];
 
@@ -42,6 +69,13 @@ public partial class SettingsViewModel : ObservableObject
         _autoFixFooter = s.AutoFixFooter;
         _requestProjectNotes = s.RequestProjectNotes;
         _projectFolder = s.ProjectFolder;
+        _adapter = s.Adapter;
+        _baudrate = s.Baudrate;
+        _onlyPBus = s.OnlyPBus;
+        _autoUpdateSRAMViewers = s.AutoUpdateSRAMViewers;
+        _autoUpdateInterval = System.Math.Clamp(s.AutoUpdateInterval, 5, 60);
+        // not the field: the setter fills the adapter list
+        AdapterType = System.Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
     }
 
     /// <summary>OK: every value back into AppSettings (each setter saves).</summary>
@@ -59,6 +93,12 @@ public partial class SettingsViewModel : ObservableObject
         s.ShowAddressesInHex = ShowAddressesInHex;
         s.AutoFixFooter = AutoFixFooter;
         s.RequestProjectNotes = RequestProjectNotes;
+        s.AdapterType = AdapterType;
+        s.Adapter = Adapter ?? "";
+        s.Baudrate = Baudrate;
+        s.OnlyPBus = OnlyPBus;
+        s.AutoUpdateSRAMViewers = AutoUpdateSRAMViewers;
+        s.AutoUpdateInterval = (int)(AutoUpdateInterval ?? 20);
         // an empty folder fell back to <program>\Projects; the program folder isn't writable on Linux, so the default instead
         s.ProjectFolder = string.IsNullOrWhiteSpace(ProjectFolder)
             ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "TxSuite", "Projects")

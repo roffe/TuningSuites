@@ -32,6 +32,19 @@ public partial class MapViewerViewModel : DocumentViewModel
     [ObservableProperty]
     private MapViewType _viewType;
 
+    /// <summary>Showing the ECU's SRAM (IsRAMViewer / OnlineMode: blue colours).</summary>
+    [ObservableProperty]
+    private bool _onlineMode;
+
+    /// <summary>Maps that only live in SRAM have no file to save to.</summary>
+    public bool CanSaveToFile => Address >= 0;
+
+    [RelayCommand]
+    private Task ReadEcu() => Owner.ReadMapFromEcuAsync(this);
+
+    [RelayCommand]
+    private Task WriteEcu() => Owner.WriteMapToEcuAsync(this);
+
     public bool IsReadOnly { get; init; }
     public bool IsRedWhite { get; init; }
     public bool DisableColors { get; init; }
@@ -51,6 +64,7 @@ public partial class MapViewerViewModel : DocumentViewModel
     [RelayCommand]
     private async Task Save()
     {
+        if (!CanSaveToFile) return;
         // only writes into the project's own binary get transaction entries
         bool projectFile = Owner.Binary?.FileName == FileName && Owner.TransactionLog != null;
         string note = projectFile ? await Owner.AskTransactionNoteAsync() : "";
@@ -75,6 +89,7 @@ public partial class MapViewerViewModel : DocumentViewModel
     [RelayCommand]
     private void Read()
     {
+        if (!CanSaveToFile) return;
         if (Binary.ReadSymbol(Symbol) is { } content) Map.Load(content);
     }
 
@@ -88,13 +103,15 @@ public partial class MapViewerViewModel : DocumentViewModel
     /// Null when the map has no data in the file (it only lives in the ECU's SRAM). content replaces the file's bytes (a
     /// difference map), readOnly makes a compare viewer, title replaces "Symbol: name [file]".
     /// </summary>
-    public static MapViewerViewModel? Create(MainWindowViewModel owner, T7Binary bin, SymbolHelper sh, byte[]? content = null, bool readOnly = false, string? title = null)
+    public static MapViewerViewModel? Create(MainWindowViewModel owner, T7Binary bin, SymbolHelper sh, byte[]? content = null, bool readOnly = false,
+        string? title = null, bool sram = false)
     {
         AppSettings settings = owner.Settings;
         string name = sh.SmartVarname;
-        int address = bin.FileAddress(sh);
+        // sram: the content came from the ECU or a snapshot, not from the file
+        int address = sram ? -1 : bin.FileAddress(sh);
         content ??= bin.ReadSymbol(sh);
-        if (address < 0 || content == null || content.Length == 0) return null;
+        if ((address < 0 && !sram) || content == null || content.Length == 0) return null;
 
         var (xAxis, yAxis, xDescr, yDescr, zDescr) = T7Binary.AxisSymbols(name);
         double[] x = bin.GetXaxisValues(name).Select(v => (double)v).ToArray();

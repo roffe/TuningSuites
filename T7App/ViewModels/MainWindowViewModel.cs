@@ -101,6 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         Trionic7File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Percentage >= 55 ? "" : e.Info);
         LoadRecent();
+        InitEcu();
     }
 
     /// <summary>A .bin on the command line, else the last file when AutoLoadLastFile is set (frmMain_Load).</summary>
@@ -186,10 +187,11 @@ public partial class MainWindowViewModel : ObservableObject
         }
         if (MapViewerViewModel.Create(this, bin, sh) is not { } viewer)
         {
-            // ponytail: SRAM-only symbols need the ECU connection (chunk 5)
-            Info?.Invoke($"{sh.SmartVarname} only lives in the ECU's SRAM, reading it needs a connection to the ECU.");
+            // only in SRAM (not in the file): read it from the ECU
+            _ = OpenSramSymbolAsync(bin, sh);
             return;
         }
+        viewer.OnlineMode = Ecu.IsConnected;
         Viewers.Add(viewer);
         SelectedViewer = viewer;
     }
@@ -321,6 +323,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         Symbols?.Refresh();
+        RestartSramTimer();
     }
 
     /// <summary>A descriptor import changed names: the list shows them (the import saved &lt;bin&gt;.xml).</summary>

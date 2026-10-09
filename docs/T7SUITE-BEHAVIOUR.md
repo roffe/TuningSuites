@@ -577,3 +577,103 @@ There is no checksum update of the result.
   - Cells from B3: value×factor+offset, 2 decimals, data rows flipped.
   - Saved as `<bin>~<map>.xls`.
   - 16-bit cells are negative only when the high byte is 0xFF.
+
+## ECU (everything but the realtime dashboard)
+
+All of this ran on the GUI thread in T7Suite, except flash read/write and the keep-alive timer.
+
+**Events.**
+- Read/write progress → `barProgress`.
+- `onCanInfo`: its text goes to the progress caption. On FinishedFlashing or FinishedDownloadingFlash: `Cleanup`, caption "Idle", then "Flash sequence done" / "Download done". The box says that whether the operation worked or not.
+- `onCanFrame` is only logged.
+
+**Connecting.**
+- **Status:** the status-bar ECU field (SetCANStatus): "Initializing CANbus interface" → "Connected" / "Failed to start KWP session". The Realtime tab's "Connect ECU" / "Disconnect ECU" button.
+- **SetupCanAdapter(latency):**
+  - Sets OnlyPBus (default true) and Latency.
+  - The adapter is chosen by its description. ELM327 ("OBDLink SX") and Just4Trionic also get ForcedBaudrate = Baudrate (default 38400).
+  - There is no SLCAN branch, which crashed with a null reference.
+  - SetSelectedAdapter(Adapter), or "Check settings, no CAN adapter has been selected!" unless the adapter is Combi.
+  - UseFlasherOnDevice is never set, so the Combi's on-board flasher isn't used.
+- **RealtimeCheckAndConnect:** SetupCanAdapter(Latency.Low), then openDevice. Sets m_RealtimeConnectedToECU. Used by every SRAM and DTC feature.
+- **FlasherConnect** (flash read/write, snapshot): Cleanup if open, then SetupCanAdapter(Latency.Default), then openDevice. It doesn't set connected.
+- **Connect button:** connect, then ResumeAlivePolling. **Disconnect:** SuspendAlivePolling, then Cleanup.
+- **Alive polling:** a 1 s keep-alive timer in the library (KWPHandler) once resumed.
+- **openDevice info texts:** "Open called in Trionic 7", "Canbus channel opened", "Session started", "Unable to start session. Wait for previous session to timeout (10 seconds) and try again!", "Unable to open canbus channel", "Open failed in Trionic 7".
+
+**Programmer tab, "CAN Flasher":**
+- **Read ECU:**
+  1. Disconnect realtime.
+  2. Save dialog (*.bin).
+  3. FlasherConnect, then ReadFlash(path). It returns at once; completion comes through onCanInfo.
+  - Failure: "An active CAN bus connection is needed to read flash".
+  - The file is not opened afterwards.
+  - Library texts: "Starting download of FLASH", then "Finished download of FLASH" / "No security access granted" / "Failed to download FLASH content". A failed read deletes the file.
+- **Flash current file to ECU:**
+  - "No file has been loaded" when there is no file. Otherwise FlasherConnect, then WriteFlash(current file).
+  - No checksum check, no confirmation, no save of pending edits.
+  - Library texts: "FLASHing: <file>", then "Finished FLASH session" / "No security access granted" / "An erase error occured" / "File not found" / "A write error occured, please retry to FLASH without cutting power to the ECU".
+- **Get SRAM snapshot:**
+  - FlasherConnect, then GetSRAMSnapshot (64 KB from 0xF00000, blocking).
+  - File: `<bin dir>/SRAM<yyyyMMddHHmmssfff>.RAM`, or `<project>/Snapshots/Snapshot<MMddyyyyHHmmss>.RAM`.
+  - "Snapshot downloaded and saved to: <file>".
+- **P&E micro group:**
+  - "Write to ECU": checks the checksum. AutoChecksum fixes it; otherwise "Invalid checksum..." / "File checksum is incorrect !!" with "Correct checksum!" / "Close". Then bin→S19 and a batch file.
+  - "Read from ECU": batch file, FROM_ECU.S19.
+
+**SRAM maps.**
+- **ReadMapFromSRAM(sh):** `ReadMapfromSRAM(sh.Start_address, sh.Length, true)`. It never fails: you get a zero/partial buffer.
+- **WriteMapToSRAM(name, data):**
+  - Start_address < 0xF00000 → `WriteSymbolToSRAM(Symbol_number, data)`.
+  - Otherwise → `WriteMapToSRAM(name, data, true, Start_address, Symbol_number)`.
+  - Results are ignored.
+- **Which viewer opens:**
+  - Open software: realtime viewer when connected, offline otherwise.
+  - Normal software with Flash_start_address > file size: connect first, then read from SRAM.
+  - Otherwise the normal viewer.
+  - A viewer opened while connected is a RAM viewer (OnlineMode: blue colours).
+- **ShowRealtimeMapFromECU(name):** connect, read, open the normal viewer ("Symbol: <name> [<bin>]") and fill it with the SRAM data. Used by:
+  - "View knock count map" KnkDetAdap.KnkCntMap
+  - "View misfire map" MissfAdap.MissfCntMap
+  - "View real knock map" F_KnkDetAdap.RKnkCntMap
+  - "View false knock map" F_KnkDetAdap.FKnkCntMap
+  - "Set ethanol content" E85.X_EthAct_Tech2, or "No E85 adaption symbol in this binary file"
+- **Viewer "Read from ECU" / "Save to ECU":** connect, read or write; refreshes every viewer of that map.
+  - Read failure: "An active CAN bus connection is needed to get data from the ECU".
+  - Write failure: "An active CAN bus connection is needed to write data to the ECU".
+- **AutoUpdateSRAMViewers** (default off): a RAM viewer re-reads every AutoUpdateInterval seconds (default 20) while unedited.
+- **Symbol list menu:** "Read symbol from ECU", or "Read symbol from binary file" when connected.
+
+**.RAM files.**
+- "Import SRAM snapshot" sets the SRAM file; the status shows "SRAM: <name>".
+- "Read from SRAM file" opens "SRAM Symbol: <name> [<ramfile>]". It reads at Start_address & 0xFFFF, modulo the file length, as a RAM viewer.
+
+**Tuning in realtime:**
+- **Synchronize to binary:** "This will overwrite data in your binary file. Are you sure you want to proceed?" (OK/Cancel, "Warning!"). Every calibration symbol with Start_address > 0x80000 is read from SRAM into the file, then the checksum is updated.
+- **Synchronize to ECU:** "This will overwrite data in your ECU. ...". The file's bytes go to SRAM.
+- **Upload tuning package to ECU:** a .t7p's maps go to SRAM.
+- **Generate tuning package from ECU:** about 60 maps read from SRAM into a .t7p.
+- Failures: "An active CAN bus connection is needed to get data from the ECU" / "... upload a tuning package" / "... download a tuning package".
+
+**DTCs.**
+- **"Get fault codes (OBDII)":**
+  - "An active CAN bus connection is needed to read faultcodes" when not connected.
+  - Reads obdFaults: length ≤ 4 via `ReadValueFromSRAM(Start_address, len)` (data from byte 1); else via `ReadSymbolNumber(number)`.
+  - Byte pairs until 00 00 become "P" + hex + hex.
+  - It doesn't use ReadDTC.
+  - "Cannot find symbolnumber for symbol obdFaults, ECU binary must be loaded" when the symbol is missing.
+- **frmFaultcodes** ("Fault codes", modeless): Code and Description columns, Clear and Close.
+  - Descriptions come from the DTC_*.xml files next to the exe (validated against DTCDescription.xsd; 7-character WIS codes cut to 5; first match wins).
+  - Codes without a description are not shown.
+  - Clear: `ClearDTCCode(hex of the code)`, then re-read.
+- **"Clear DTC and knock counters":** ReadDTC (ignored), then ClearDTCCodes, with no message.
+
+**Other.**
+- "Extra functions" (seatbelt ping, double unlocking, SID test, engine data, alarm level ...) run the external SaabOpenTech.exe with arguments.
+- GetADCValue / GetThermoValue are realtime (Combi).
+- GetECUInfo, ResetECU and the E85 API are unused.
+
+**Library threading:**
+- ReadFlash / WriteFlash return at once. A 1 s timer reports progress and the final onCanInfo.
+- Every other call blocks its caller.
+- The KWP handler's mutex is thread-affine: a session has to stay on one thread.

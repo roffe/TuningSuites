@@ -50,6 +50,16 @@ public class MapViewer : UserControl
     public static readonly StyledProperty<ICommand?> SaveCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(SaveCommand));
     public static readonly StyledProperty<ICommand?> ReadCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(ReadCommand));
     public static readonly StyledProperty<ICommand?> EditAxisCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(EditAxisCommand));
+    public static readonly StyledProperty<ICommand?> ReadEcuCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(ReadEcuCommand));
+    public static readonly StyledProperty<ICommand?> WriteEcuCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(WriteEcuCommand));
+    public static readonly StyledProperty<bool> CanSaveToFileProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(CanSaveToFile), true);
+
+    /// <summary>MapViewerEx's Read from ECU / Save to ECU (SRAM); the buttons show when a command is set.</summary>
+    public ICommand? ReadEcuCommand { get => GetValue(ReadEcuCommandProperty); set => SetValue(ReadEcuCommandProperty, value); }
+    public ICommand? WriteEcuCommand { get => GetValue(WriteEcuCommandProperty); set => SetValue(WriteEcuCommandProperty, value); }
+
+    /// <summary>False for a map that only lives in SRAM: no Save to file / Read from file.</summary>
+    public bool CanSaveToFile { get => GetValue(CanSaveToFileProperty); set => SetValue(CanSaveToFileProperty, value); }
 
     /// <summary>MapViewerEx's Save to file / Read from file buttons.</summary>
     public ICommand? SaveCommand { get => GetValue(SaveCommandProperty); set => SetValue(SaveCommandProperty, value); }
@@ -74,6 +84,8 @@ public class MapViewer : UserControl
     private readonly TextBox m_selectValues = new() { PlaceholderText = "Select values", Width = 120 };
     private readonly StackPanel m_editTools = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
     private readonly MenuItem m_editX = new() { Header = "Edit x-axis" }, m_editY = new() { Header = "Edit y-axis" };
+    private readonly Button m_readEcu = new() { Content = "Read from ECU" }, m_writeEcu = new() { Content = "Save to ECU" };
+    private readonly Button[] m_fileButtons;
     private bool m_syncing;
 
     public MapViewer()
@@ -88,6 +100,10 @@ public class MapViewer : UserControl
 
         var save = new Button { Content = "Save to file" };
         var read = new Button { Content = "Read from file" };
+        m_fileButtons = [save, read];
+        m_readEcu.Click += (_, _) => ReadEcuCommand?.Execute(null);
+        m_writeEcu.Click += (_, _) => WriteEcuCommand?.Execute(null);
+        m_readEcu.IsVisible = m_writeEcu.IsVisible = false;
         var execute = new Button { Content = "Execute" };
         save.Click += (_, _) => SaveCommand?.Execute(null);
         read.Click += (_, _) => ReadCommand?.Execute(null);
@@ -102,7 +118,7 @@ public class MapViewer : UserControl
         };
         m_editTools.Children.AddRange([save, read, m_operation, m_operand, execute]);
         var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(4) };
-        toolbar.Children.AddRange([m_viewType, m_editTools, m_selectValues]);
+        toolbar.Children.AddRange([m_viewType, m_editTools, m_readEcu, m_writeEcu, m_selectValues]);
 
         m_editX.Click += (_, _) => EditAxisCommand?.Execute(true);
         m_editY.Click += (_, _) => EditAxisCommand?.Execute(false);
@@ -169,6 +185,12 @@ public class MapViewer : UserControl
         {
             Grid.IsReadOnly = IsReadOnly;
             m_editTools.IsVisible = !IsReadOnly;
+        }
+        else if (change.Property == ReadEcuCommandProperty) m_readEcu.IsVisible = ReadEcuCommand != null;
+        else if (change.Property == WriteEcuCommandProperty) m_writeEcu.IsVisible = WriteEcuCommand != null && !IsReadOnly;
+        else if (change.Property == CanSaveToFileProperty)
+        {
+            foreach (Button b in m_fileButtons) b.IsVisible = CanSaveToFile;
         }
         else if (change.Property == CanEditXAxisProperty) m_editX.IsEnabled = CanEditXAxis;
         else if (change.Property == CanEditYAxisProperty) m_editY.IsEnabled = CanEditYAxis;

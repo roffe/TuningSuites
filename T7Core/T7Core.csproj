@@ -20,7 +20,7 @@
 
   <!-- looked up next to the executable: known symbol lists Trionic7File offers for EU0AF01C / EU09F01C bins, tuning pack public key -->
   <ItemGroup>
-    <Content Include="EU0AF01C.xml;EU09F01C.xml;T8Pub.pem" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="EU0AF01C.xml;EU09F01C.xml;T8Pub.pem;DTC_Descriptions.xml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

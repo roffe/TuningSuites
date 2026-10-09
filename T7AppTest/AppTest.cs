@@ -317,6 +317,56 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void EcuWithoutHardware()
+        {
+            string file = Path.Combine(s_dir, "ecu.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                var infos = new System.Collections.Generic.List<string>();
+                vm.Info += infos.Add;
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+
+                // no adapter configured: T7Suite's message, not connected
+                vm.Settings.Adapter = "";
+                Assert.IsFalse(await vm.EnsureConnectedAsync());
+                CollectionAssert.Contains(infos, "Check settings, no CAN adapter has been selected!");
+                Assert.IsFalse(vm.IsConnected);
+                Assert.AreEqual("Connect ECU", vm.ConnectCaption);
+
+                // an SRAM snapshot: the symbol's bytes at its SRAM address
+                var sh = vm.Binary!.Find("IgnNormCal.Map");
+                var ram = new byte[0x10000];
+                int start = (int)(sh.Start_address & 0xFFFF);
+                for (int i = 0; i < sh.Length; i++) ram[(start + i) % ram.Length] = (byte)(i % 7);
+                string ramFile = Path.Combine(s_dir, "snap.RAM");
+                File.WriteAllBytes(ramFile, ram);
+                vm.ImportSramSnapshot(ramFile);
+                Assert.AreEqual("SRAM: snap", vm.SramFileText);
+                vm.OpenFromSramFile(sh);
+                var viewer = (MapViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("SRAM Symbol: IgnNormCal.Map [snap.RAM]", viewer.Title);
+                Assert.IsTrue(viewer.OnlineMode);
+                Assert.IsFalse(viewer.CanSaveToFile);
+                CollectionAssert.AreEqual(Enumerable.Range(0, sh.Length).Select(i => (byte)(i % 7)).ToArray(), viewer.Map.ToBytes());
+                Save(window, "sram-viewer");
+
+                StringAssert.StartsWith(Path.GetFileName(vm.SnapshotFileName()), "SRAM");
+                Assert.AreEqual(Path.GetDirectoryName(file), Path.GetDirectoryName(vm.SnapshotFileName()));
+
+                var faults = new FaultCodesWindow(vm, [new FaultCode("P0300", "Random misfire"), new FaultCode("P1A0F", "")]);
+                faults.Show();
+                Save(faults, "faultcodes");
+                faults.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void OpenBinaryAndMap()
         {
             s_session!.Dispatch(async () =>

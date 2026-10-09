@@ -65,6 +65,21 @@
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
             </MenuItem>
+            <MenuItem Header="_ECU">
+                <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
+                <Separator />
+                <MenuItem Header="Read ECU" Click="OnReadEcu" />
+                <MenuItem Header="Flash current file to ECU" Click="OnFlashEcu" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Get SRAM snapshot" Command="{Binding GetSramSnapshotCommand}" />
+                <Separator />
+                <MenuItem Header="Get fault codes (OBDII)" Click="OnFaultCodes" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Clear DTC and knock counters" Command="{Binding ClearDtcAndKnockCountersCommand}" />
+                <Separator />
+                <MenuItem Header="Synchronize to binary" Click="OnSyncToBinary" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Synchronize to ECU" Click="OnSyncToEcu" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="Import SRAM snapshot" Click="OnImportSram" />
+            </MenuItem>
             <MenuItem Header="_Information">
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
             </MenuItem>
@@ -72,11 +87,13 @@
 
         <!-- ribbonStatusBar1: open/normal binary, file name, progress, read-only state -->
         <Border DockPanel.Dock="Bottom" Padding="8,3" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                 <TextBlock Grid.Column="0" Text="{Binding OpenClosedText}" Margin="0,0,16,0" />
                 <TextBlock Grid.Column="1" Text="{Binding FileNameText}" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="2" Text="{Binding ProgressText}" HorizontalAlignment="Right" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="3" Text="{Binding ReadOnlyText}" />
+                <TextBlock Grid.Column="2" Text="{Binding SramFileText}" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="3" Text="{Binding CanStatus}" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="4" Text="{Binding ProgressText}" HorizontalAlignment="Right" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="5" Text="{Binding ReadOnlyText}" />
             </Grid>
         </Border>
 
@@ -90,6 +107,8 @@
                           DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded">
                     <DataGrid.ContextMenu>
                         <ContextMenu>
+                            <MenuItem Header="Read symbol from ECU" Click="OnReadSymbolFromEcu" />
+                            <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
                             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
                             <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
                             <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
@@ -140,6 +159,8 @@
                         <DataTemplate DataType="vm:MapViewerViewModel">
                             <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
                                           SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
+                                          ReadEcuCommand="{Binding ReadEcuCommand}" WriteEcuCommand="{Binding WriteEcuCommand}"
+                                          OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
                                           CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
                                           IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
                                           DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
