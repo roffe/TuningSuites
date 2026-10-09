@@ -1,0 +1,43 @@
+<sv:SuiteSettingsWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T8App.ViewModels"
+        xmlns:sv="using:SuiteApp.Views"
+        x:Class="T8App.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <!-- T8Suite's groups and columns, the settings that do something here; the realtime group comes with the ECU -->
+    <StackPanel Margin="16" Spacing="12">
+        <HeaderedContentControl Header="User interface settings">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
+                    <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
+                    <CheckBox Grid.Row="1" Grid.Column="0" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}" />
+                    <CheckBox Grid.Row="2" Grid.Column="0" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}" />
+                    <CheckBox Grid.Row="0" Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}" />
+                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}" />
+                    <CheckBox Grid.Row="0" Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}" />
+                    <CheckBox Grid.Row="1" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" />
+                    <CheckBox Grid.Row="2" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" />
+                    <CheckBox Grid.Row="3" Grid.Column="2" Content="Auto mapdetection active" IsChecked="{Binding MapDetectionActive}"
+                              ToolTip.Tip="When checked, T8Suite will try to add names to symbols in binaries without symboltables. This is a guesstimate routine." />
+                </Grid>
+                <TextBlock Text="Default view type for maps" Margin="0,8,0,0" />
+                <ComboBox ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" MinWidth="220" />
+            </StackPanel>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Project settings">
+            <StackPanel Spacing="2">
+                <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}" />
+                <TextBlock Text="Project folder" Margin="0,8,0,0" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="..." Margin="4,0,0,0" Click="OnBrowse" />
+                    <TextBox Text="{Binding ProjectFolder}" MinWidth="420" />
+                </DockPanel>
+            </StackPanel>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+        </StackPanel>
+    </StackPanel>
+</sv:SuiteSettingsWindow>

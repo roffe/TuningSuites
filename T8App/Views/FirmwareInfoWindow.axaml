@@ -1,11 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:t8="using:T8SuitePro"
+        xmlns:vm="using:T8App.ViewModels"
         x:Class="T8App.Views.FirmwareInfoWindow"
-        x:DataType="t8:FirmwareInfo"
+        x:DataType="vm:FirmwareInfoViewModel"
         Title="Trionic 8 firmware information" Width="600" SizeToContent="Height" CanResize="False" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner">
-    <!-- frmFirmwareInformation, read only for now: editing the software version, VIN and immobilizer code comes with the offline tuning -->
+    <!-- frmFirmwareInformation: double-clicking "Software version", "Serial number" or "Chassis ID" unlocks the edits -->
     <StackPanel Margin="12" Spacing="10">
         <HeaderedContentControl Header="Firmware details">
             <Grid ColumnDefinitions="185,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
@@ -13,47 +13,51 @@
                     <Style Selector="TextBlock">
                         <Setter Property="VerticalAlignment" Value="Center" />
                     </Style>
-                    <Style Selector="TextBox">
+                    <Style Selector="TextBox.info">
                         <Setter Property="IsReadOnly" Value="True" />
                     </Style>
                 </Grid.Styles>
                 <TextBlock Grid.Row="0" Text="Engine type by sw version" />
-                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EngineTypeBySoftwareVersion, Mode=OneWay}" />
+                <TextBox Grid.Row="0" Grid.Column="1" Classes="info" Text="{Binding Info.EngineTypeBySoftwareVersion, Mode=OneWay}" />
                 <TextBlock Grid.Row="1" Text="Engine type by VIN" />
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EngineTypeByVin, Mode=OneWay}" />
-                <TextBlock Grid.Row="2" Text="Software version" />
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SoftwareVersion, Mode=OneWay}" />
+                <TextBox Grid.Row="1" Grid.Column="1" Classes="info" Text="{Binding Info.EngineTypeByVin, Mode=OneWay}" />
+                <TextBlock Grid.Row="2" Text="Software version" DoubleTapped="OnSoftwareVersionLabel" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SoftwareVersion}" IsReadOnly="{Binding !EditSoftwareVersion}"
+                         MaxLength="{Binding SoftwareVersionLength}" />
                 <TextBlock Grid.Row="3" Text="Partnumber" />
-                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PartNumber, Mode=OneWay}" />
-                <TextBlock Grid.Row="4" Text="Serial number" />
-                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SerialNumber, Mode=OneWay}" />
-                <TextBlock Grid.Row="5" Text="Chassis ID" />
-                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding ChassisId, Mode=OneWay}" />
+                <TextBox Grid.Row="3" Grid.Column="1" Classes="info" Text="{Binding Info.PartNumber, Mode=OneWay}" />
+                <TextBlock Grid.Row="4" Text="Serial number" DoubleTapped="OnVinLabel" />
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SerialNumber}" IsEnabled="{Binding EditVinAndImmo}" MaxLength="16" />
+                <TextBlock Grid.Row="5" Text="Chassis ID" DoubleTapped="OnVinLabel" />
+                <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <TextBox Text="{Binding ChassisId}" IsEnabled="{Binding EditVinAndImmo}" MaxLength="17" />
+                    <Button Grid.Column="1" Content="Clear" Click="OnClearVin" IsEnabled="{Binding EditVinAndImmo}" />
+                </Grid>
                 <TextBlock Grid.Row="6" Text="Programming device" />
-                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding ProgrammingDevice, Mode=OneWay}" />
+                <TextBox Grid.Row="6" Grid.Column="1" Classes="info" Text="{Binding Info.ProgrammingDevice, Mode=OneWay}" />
                 <TextBlock Grid.Row="7" Text="Programmer name" />
-                <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding ProgrammerName, Mode=OneWay}" />
+                <TextBox Grid.Row="7" Grid.Column="1" Classes="info" Text="{Binding Info.ProgrammerName, Mode=OneWay}" />
                 <TextBlock Grid.Row="8" Text="Release date" />
-                <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding ReleaseDate, Mode=OneWay}" />
+                <TextBox Grid.Row="8" Grid.Column="1" Classes="info" Text="{Binding Info.ReleaseDate, Mode=OneWay}" />
                 <TextBlock Grid.Row="9" Text="Hardware ID" />
-                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding HardwareId, Mode=OneWay}" />
+                <TextBox Grid.Row="9" Grid.Column="1" Classes="info" Text="{Binding Info.HardwareId, Mode=OneWay}" />
                 <TextBlock Grid.Row="10" Text="Hardware type" />
-                <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding HardwareType, Mode=OneWay}" />
+                <TextBox Grid.Row="10" Grid.Column="1" Classes="info" Text="{Binding Info.HardwareType, Mode=OneWay}" />
                 <TextBlock Grid.Row="11" Text="ECU description" />
-                <TextBox Grid.Row="11" Grid.Column="1" Text="{Binding EcuDescription, Mode=OneWay}" />
+                <TextBox Grid.Row="11" Grid.Column="1" Classes="info" Text="{Binding Info.EcuDescription, Mode=OneWay}" />
                 <TextBlock Grid.Row="12" Text="Interface device" />
-                <TextBox Grid.Row="12" Grid.Column="1" Text="{Binding InterfaceDevice, Mode=OneWay}" />
+                <TextBox Grid.Row="12" Grid.Column="1" Classes="info" Text="{Binding Info.InterfaceDevice, Mode=OneWay}" />
                 <TextBlock Grid.Row="13" Text="#Flash blocks" />
                 <Grid Grid.Row="13" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                    <TextBox Text="{Binding FlashBlockCount, Mode=OneWay}" />
+                    <TextBox Classes="info" Text="{Binding Info.FlashBlockCount, Mode=OneWay}" />
                     <!-- the button edit's ellipsis: the flash block browser -->
                     <Button Grid.Column="1" Content="..." Click="OnFlashBlocks" />
                 </Grid>
             </Grid>
         </HeaderedContentControl>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnClose" />
-            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnClose" />
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
         </StackPanel>
     </StackPanel>
 </Window>

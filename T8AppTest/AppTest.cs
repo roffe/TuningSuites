@@ -119,7 +119,7 @@ namespace T8AppTest
                 FirmwareInfo info = vm.FirmwareInfo()!;
                 Assert.AreEqual("FA56_C_FME2_37_FIEF_81c", info.SoftwareVersion);
                 Assert.AreEqual("B207L MY2004/2005 MY03-06 Gasoline / front wheel drive", info.EngineTypeBySoftwareVersion);
-                var firmware = new FirmwareInfoWindow { DataContext = info };
+                var firmware = new FirmwareInfoWindow { DataContext = new FirmwareInfoViewModel(info) };
                 firmware.Show();
                 Save(firmware, "firmware");
                 firmware.Close();
@@ -127,6 +127,92 @@ namespace T8AppTest
                 blocks.Show();
                 Save(blocks, "flashblocks");
                 blocks.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+    
+        [TestMethod]
+        public void OfflineTuning()
+        {
+            string file = CopyOfStockBin("tune.BIN"), other = CopyOfStockBin("other.BIN");
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T8MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+
+                // compare with a copy whose ignition map differs
+                T8Binary copy = T8Binary.Open(other, false);
+                SymbolHelper ign = copy.Find("IgnAbsCal.fi_NormalMAP");
+                byte[] data = copy.ReadSymbol(ign);
+                data[1] ^= 1;
+                copy.WriteSymbol(copy.FileAddress(ign), data);
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                await vm.CompareToFileAsync(other);
+                var compare = (CompareResultsViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Compare results: other.BIN", compare.Title);
+                Assert.AreEqual("IgnAbsCal.fi_NormalMAP", compare.Rows.Cast<CompareRow>().Single().SymbolName);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "compare");
+
+                vm.SearchMaps(new MapSearchOptions(false, 0, true, "fi_NormalMAP", true, false, false, 0));
+                Assert.AreEqual("Search results:  string fi_NormalMAP", vm.SelectedViewer!.Title);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "search");
+
+                // the Tuning menu with DynamicTuningMenu's captions for an old calibration, opening its maps
+                var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var airmass = (MenuItem)quick.Items[0]!;
+                Assert.AreEqual("Airmass controller", airmass.Header);
+                var manual = (MenuItem)airmass.Items[0]!;
+                Assert.AreEqual("Max airmass map (manual)", manual.Header);
+                manual.Command!.Execute(manual.CommandParameter);
+                Assert.AreEqual("Symbol: BstKnkCal.MaxAirmass [tune.BIN]", vm.SelectedViewer!.Title);
+
+                // My Maps: T8Suite's defaults for a new file, Add to MyMaps under "Directly added"
+                Assert.AreEqual("BFuelCal.LambdaOneFacMap", vm.MyMapsToEdit()[0].Symbol);
+                vm.AddToMyMaps(vm.Binary!.Find("IgnAbsCal.fi_NormalMAP"));
+                var my = window.FindControl<MenuItem>("MyMapsMenu")!;
+                var directly = my.Items.OfType<MenuItem>().Single(i => (string?)i.Header == "Directly added");
+                // escaped: a menu header's single underscore marks the access key
+                Assert.AreEqual("IgnAbsCal.fi__NormalMAP", ((MenuItem)directly.Items[0]!).Header);
+
+                var settings = new SettingsViewModel(vm.Settings) { MapDetectionActive = true };
+                var settingsWindow = new SettingsWindow { DataContext = settings };
+                settingsWindow.Show();
+                Save(settingsWindow, "settings");
+                settingsWindow.Close();
+                settings.Apply(vm.Settings);
+                Assert.IsTrue(vm.Settings.MapDetectionActive);
+
+                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails) { PartNumber = "55353231_FA56_C_FME2_37_FIEF_81c" };
+                lookup.Lookup();
+                Assert.AreEqual("Saab93", lookup.Info!.CarModel);
+                Assert.AreEqual("B207L", lookup.Info.EngineType);
+                var lookupWindow = new SuiteApp.Views.PartLookupWindow { DataContext = lookup };
+                lookupWindow.Show();
+                Save(lookupWindow, "partlookup");
+                lookupWindow.Close();
+
+                // VIN and immobilizer code from the firmware dialog, then the checksum as on open
+                var firmware = new FirmwareInfoViewModel(vm.FirmwareInfo()!);
+                firmware.StartVinAndImmoEdit();
+                firmware.ChassisId = "YS3FB45F431012345";
+                var firmwareWindow = new FirmwareInfoWindow { DataContext = firmware };
+                firmwareWindow.Show();
+                Save(firmwareWindow, "firmware-edit");
+                firmwareWindow.Close();
+                await vm.ApplyFirmwareAsync(firmware.ToEdit());
+                Assert.AreEqual("YS3FB45F431012345", vm.FirmwareInfo()!.ChassisId);
+                Assert.AreEqual("Checksum: OK", vm.ChecksumText);
+
+                var vin = new VinDecoderViewModel(vm.FirmwareInfo()!.ChassisId);
+                Assert.AreEqual("Valid", vin.Decoded.Checksum);
+                var vinWindow = new SuiteApp.Views.VinDecoderWindow { DataContext = vin };
+                vinWindow.Show();
+                Save(vinWindow, "vindecoder");
+                vinWindow.Close();
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();

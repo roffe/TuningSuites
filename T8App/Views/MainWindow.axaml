@@ -9,6 +9,16 @@
         Icon="/T8Suite.ico"
         Width="1400" Height="900"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <!-- the symbol list's row menu (gridViewSymbols' context menu), the ported items -->
+        <ContextMenu x:Key="SymbolListMenu" x:DataType="vm:T8MainWindowViewModel">
+            <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
+            <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
+            <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
+            <MenuItem Header="Edit an existing tuning package" Command="{Binding EditTuningPackageCommand}" />
+            <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
+        </ContextMenu>
+    </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <!-- T8Suite's ribbon: its pages as menus, a page's groups between separators, buttons column by column; the ported ones so far -->
@@ -18,7 +28,7 @@
                     <MenuItem.Styles>
                         <!-- only Recent's own entries; "MenuItem > MenuItem" would also match Recent itself, which sits inside File -->
                         <Style Selector="MenuItem#RecentMenu > MenuItem" x:DataType="svm:RecentFile">
-                            <Setter Property="Header" Value="{Binding Name}" />
+                            <Setter Property="Header" Value="{Binding Name, Converter={x:Static sv:MenuTextConverter.Instance}}" />
                             <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
                             <Setter Property="Command" Value="{Binding $parent[Window].((vm:T8MainWindowViewModel)DataContext).OpenRecentCommand}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
@@ -27,7 +37,19 @@
                 </MenuItem>
                 <MenuItem Header="Save all" Command="{Binding SaveAllCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Save as..." Click="OnSaveAs" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Export to S19" Click="OnExportS19" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Create backup file" Command="{Binding CreateBackupFileCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import..." IsEnabled="{Binding HasFile}">
+                    <MenuItem Header="Import XML descriptor file" Click="OnImportXml" />
+                    <MenuItem Header="Import CSV descriptor file" Click="OnImportCsv" />
+                    <MenuItem Header="Import AS2 descriptor file" Click="OnImportAs2" />
+                </MenuItem>
+                <MenuItem Header="Import tuning package" Click="OnImportTuningPackage" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="Settings" Click="OnSettings" />
+                <MenuItem Header="Lookup partnumber" Click="OnLookupPartnumber" />
                 <Separator />
                 <MenuItem Header="_Project">
                     <MenuItem Header="Create a project" Click="OnCreateProject" />
@@ -51,7 +73,18 @@
                 <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="VIN decoder" Click="OnVinDecoder" />
+                <Separator />
+                <MenuItem Header="Compare symbols with other binary" Click="OnCompareToFile" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare binary outside symbolrange" Click="OnBinaryCompareOutsideSymbols" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare binary with other binary" Click="OnBinaryCompare" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Transfer maps to another binary" Click="OnTransferMaps" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Copy address table to another binary" Click="OnCopyAddressTable" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
             </MenuItem>
+            <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}" />
+            <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
             <MenuItem Header="_Skin">
                 <MenuItem Header="Light" Click="OnSkin" Tag="Light" />
                 <MenuItem Header="Dark" Click="OnSkin" Tag="Dark" />
