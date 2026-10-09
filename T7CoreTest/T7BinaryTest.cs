@@ -48,7 +48,7 @@ namespace T7CoreTest
             Assert.HasCount(16, y);
             Assert.AreEqual(500, y[0]);   // rpm
             Assert.IsLessThan(x[17], x[0]); // mg/c rising
-            var (_, _, xd, yd, _) = T7Binary.AxisSymbols(map);
+            var (_, _, xd, yd, _) = m_bin.AxisSymbols(map);
             Assert.AreEqual("mg/c", xd);
             Assert.AreEqual("rpm", yd);
             Assert.HasCount(32, m_bin.OpenLoopTable(map));

@@ -13,24 +13,22 @@ namespace T7
     /// GetX/YaxisValues, GetTableMatrixWitdhByName, isSixteenBitTable, GetMapCorrectionFactor, GetSymbolAddress with the
     /// open-software SRAM mapping, TryToAddOpenLoopTables), lifted from frmMain.cs.
     /// </summary>
-    public class T7Binary
+    public class T7Binary : SuiteBinary
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        public string FileName { get; }
-        public SymbolCollection Symbols { get; }
         public string SoftwareVersion { get; }
         public int SramOffset { get; }
-        public bool IsSoftwareOpen { get; }
         public bool IsBioPower { get; }
         public int Language { get; }
 
-        private readonly int m_fileSize = (int)FileT7.Length;
+        /// <summary>Settings → Auto fix footer, for the checksum updates of the windows' writes (T7Core's own take it as a parameter).</summary>
+        public bool AutoFixFooter { get; set; }
 
-        private T7Binary(string fileName, SymbolCollection symbols, string softwareVersion, int sramOffset, int language)
+        public override int FileLength => (int)FileT7.Length;
+
+        private T7Binary(string fileName, SymbolCollection symbols, string softwareVersion, int sramOffset, int language) : base(fileName, symbols)
         {
-            FileName = fileName;
-            Symbols = symbols;
             SoftwareVersion = softwareVersion;
             SramOffset = sramOffset;
             Language = language;
@@ -49,6 +47,8 @@ namespace T7
 
         /// <summary>A file to read and write bytes of, without parsing its symbols (rebuild, transfer targets).</summary>
         public static T7Binary OpenRaw(string fileName) => new(fileName, new SymbolCollection(), "", 0, 0);
+
+        public override SuiteBinary RawFile(string fileName) => new T7Binary(fileName, new SymbolCollection(), "", 0, 0) { AutoFixFooter = AutoFixFooter };
 
         /// <summary>frmMain.TryToOpenFileUsingClass for the working file.</summary>
         public static T7Binary Open(string fileName, int language, bool autoFixFooter)
@@ -71,7 +71,7 @@ namespace T7
             var file = new Trionic7File();
             SymbolCollection symbols = file.ExtractFile(fileName, language, softwareVersion);
             if (sramOffset == 0) sramOffset = file.SramOffsetForOpenFile;
-            var binary = new T7Binary(fileName, symbols, softwareVersion, sramOffset, language);
+            var binary = new T7Binary(fileName, symbols, softwareVersion, sramOffset, language) { AutoFixFooter = autoFixFooter };
 
             // BioPower bins carry the E85 fuel map under the start map's name
             if (binary.IsBioPower)
@@ -93,15 +93,11 @@ namespace T7
             return binary;
         }
 
-        public SymbolHelper Find(string symbolname) => Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.SmartVarname == symbolname);
-
         /// <summary>By name or user description, as frmMain's feature checks matched symbols.</summary>
         public SymbolHelper FindAny(string symbolname) =>
             Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.Userdescription == symbolname);
 
-        public bool Has(string symbolname) => FindAny(symbolname) != null;
-
-        public int SymbolLength(string symbolname) => Find(symbolname)?.Length ?? 0;
+        public override bool Has(string symbolname) => FindAny(symbolname) != null;
 
         // GetOpenFileOffset: the header's SRAM offset, or the usual one
         private int OpenFileOffset => SramOffset > 0 ? SramOffset : 0xEFFC04;
@@ -111,11 +107,11 @@ namespace T7
             || symbolname.Contains("Cal4.") || symbolname.StartsWith("X_Acc") || symbolname.StartsWith("DisplAdap.");
 
         /// <summary>Flash address; in open software, calibration symbols listed at their SRAM address map back into the file.</summary>
-        public long SymbolAddress(string symbolname) => Find(symbolname) is { } sh ? AddressOf(sh) : 0;
+        public override long SymbolAddress(string symbolname) => Find(symbolname) is { } sh ? AddressOf(sh) : 0;
 
         public long AddressOf(SymbolHelper sh)
         {
-            if (IsSoftwareOpen && IsSymbolCalibration(sh.SmartVarname) && sh.Length < 0x400 && sh.Flash_start_address > m_fileSize)
+            if (IsSoftwareOpen && IsSymbolCalibration(sh.SmartVarname) && sh.Length < 0x400 && sh.Flash_start_address > FileLength)
                 return sh.Flash_start_address - OpenFileOffset;
             return sh.Flash_start_address;
         }
@@ -123,19 +119,16 @@ namespace T7
         /// <summary>The symbol's bytes at its (open-software mapped) address.</summary>
         public byte[] ReadValue(SymbolHelper sh) => Read((int)AddressOf(sh), sh.Length);
 
-        public byte[] Read(int address, int length) => Trionic7File.readdatafromfile(FileName, address, length);
+        public override byte[] Read(int address, int length) => Trionic7File.readdatafromfile(FileName, address, length);
 
         /// <summary>Where a map's data sits in the file (StartTableViewer's Map_address), -1 if it only lives in SRAM.</summary>
-        public int FileAddress(SymbolHelper sh)
+        public override int FileAddress(SymbolHelper sh)
         {
             int address = (int)sh.Flash_start_address;
             if (address == 0) return -1;
             if (address < 0x0F00000) return address;
             return IsSoftwareOpen ? address - OpenFileOffset : -1;
         }
-
-        /// <summary>A map's content as StartTableViewer read it, null if it only lives in SRAM.</summary>
-        public byte[] ReadSymbol(SymbolHelper sh) => FileAddress(sh) is var a and >= 0 ? Read(a, sh.Length) : null;
 
         /// <summary>
         /// tabdet_onSymbolSave: savedatatobinary (only inside the 0x80000 file, a transaction entry when a project log is
@@ -152,6 +145,8 @@ namespace T7
         /// checksum, which can lie inside the FB range, so a write that changes the FW checksum leaves FB stale; T7Suite never
         /// noticed because it updated after every single write. Throws if it still doesn't verify.
         /// </summary>
+        public override void UpdateChecksum() => UpdateChecksum(AutoFixFooter);
+
         public void UpdateChecksum(bool autoFixFooter)
         {
             for (int pass = 0; pass < 3; pass++)
@@ -162,29 +157,16 @@ namespace T7
             throw new InvalidOperationException($"The checksum of {Path.GetFileName(FileName)} does not verify after updating it.");
         }
 
-        /// <summary>savedatatobinary without the checksum update.</summary>
-        public void WriteData(int address, byte[] data, TrionicTransactionLog log = null, string note = "")
-        {
-            if (address <= 0 || address >= m_fileSize) return;
-            byte[] before = Read(address, data.Length);
-            using (var fs = new FileStream(FileName, FileMode.Open, FileAccess.Write))
-            {
-                fs.Position = address;
-                fs.Write(data, 0, data.Length);
-            }
-            log?.AddToTransactionLog(new TransactionEntry(DateTime.Now, address, data.Length, before, data, 0, 0, note));
-        }
-
         private byte[] ReadAxis(int address, int length) =>
             address < 0x0F00000 || !IsSoftwareOpen ? Read(address, length) : Read(address - SramOffset, length);
 
-        public static (string xAxis, string yAxis, string xDescr, string yDescr, string zDescr) AxisSymbols(string symbolname)
+        public override (string xAxis, string yAxis, string xDescr, string yDescr, string zDescr) AxisSymbols(string symbolname)
         {
             new SymbolAxesTranslator().GetAxisSymbols(symbolname, out string x, out string y, out string xd, out string yd, out string zd);
             return (x, y, xd, yd, zd);
         }
 
-        public int[] GetXaxisValues(string symbolname)
+        public override int[] GetXaxisValues(string symbolname)
         {
             int[] retval = [0];
             var (x_axis, _, _, _, _) = AxisSymbols(symbolname);
@@ -213,7 +195,7 @@ namespace T7
             return retval;
         }
 
-        public int[] GetYaxisValues(string symbolname)
+        public override int[] GetYaxisValues(string symbolname)
         {
             int[] retval = new int[SymbolLength(symbolname)];
             var (_, y_axis, _, _, _) = AxisSymbols(symbolname);
@@ -247,7 +229,7 @@ namespace T7
         }
 
         /// <summary>GetTableMatrixWitdhByName: the number of columns, by name or else by byte length.</summary>
-        public int TableWidth(string symbolname)
+        public override int TableWidth(string symbolname)
         {
             switch (symbolname)
             {
@@ -285,7 +267,7 @@ namespace T7
             };
         }
 
-        public bool IsSixteenBitTable(string symbolname)
+        public override bool IsSixteenBitTable(string symbolname)
         {
             switch (symbolname)
             {
@@ -300,7 +282,7 @@ namespace T7
         }
 
         /// <summary>"Resolution is X" from the symbol's help text, a few hard-coded ones, else 1.</summary>
-        public double GetMapCorrectionFactor(string symbolname) => CorrectionFactor(symbolname, Language);
+        public override double GetMapCorrectionFactor(string symbolname) => CorrectionFactor(symbolname, Language);
 
         public static double CorrectionFactor(string symbolname, int language)
         {
@@ -333,8 +315,6 @@ namespace T7
             return returnvalue;
         }
 
-        public static double GetMapCorrectionOffset(string symbolname) => 0;
-
         // digits with at most one '.' or ',', up to the first other character
         private static string ClearToNumber(string value)
         {
@@ -361,7 +341,7 @@ namespace T7
             double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d) ? d : 0;
 
         /// <summary>TryToAddOpenLoopTables: LambdaCal.MaxLoadNormTab, or the E85 one for the E85 maps.</summary>
-        public byte[] OpenLoopTable(string mapname)
+        public override byte[] OpenLoopTable(string mapname)
         {
             string table = mapname == "IgnE85Cal.fi_AbsMap" || mapname == "BFuelCal.E85Map" ? "LambdaCal.MaxLoadE85Tab" : "LambdaCal.MaxLoadNormTab";
             int length = SymbolLength(table);
@@ -369,6 +349,6 @@ namespace T7
         }
 
         // never corrects; a null "should I update?" callback would crash the library on a mismatch
-        public ChecksumResult VerifyChecksum() => ChecksumT7.VerifyChecksum(FileName, false, false, (_, _, _) => false);
+        public override ChecksumResult VerifyChecksum() => ChecksumT7.VerifyChecksum(FileName, false, false, (_, _, _) => false);
     }
 }

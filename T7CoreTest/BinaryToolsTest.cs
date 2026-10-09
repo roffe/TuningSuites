@@ -23,7 +23,7 @@ namespace T7CoreTest
                 File.Copy(a, b);
                 T7Binary bin = T7Binary.Open(a, 0, false);
 
-                string backup = BinaryTools.Backup(bin, null!);
+                string backup = CommonSuite.SuiteProject.Backup(bin, null!);
                 StringAssert.EndsWith(backup, ".binarybackup");
                 CollectionAssert.AreEqual(File.ReadAllBytes(a), File.ReadAllBytes(backup));
 

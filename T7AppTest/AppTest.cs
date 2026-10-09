@@ -181,7 +181,7 @@ namespace T7AppTest
                     (new TransactionLogWindow { DataContext = new TransactionLogViewModel(vm) }, "transactionlog"),
                     (new LogbookWindow { DataContext = new LogbookViewModel(vm.Project) }, "logbook"),
                     (new ProjectPropertiesWindow { DataContext = ProjectPropertiesViewModel.From(vm.Project.Properties) }, "projectproperties"),
-                    (new ProjectSelectionWindow(T7.T7Project.List(vm.Settings.ProjectFolder)), "projectselection"),
+                    (new ProjectSelectionWindow(SuiteProject.List(vm.Settings.ProjectFolder)), "projectselection"),
                     (new RebuildWindow { DataContext = new RebuildViewModel() }, "rebuild"),
                 })
                 {
@@ -194,7 +194,7 @@ namespace T7AppTest
                 Assert.IsNull(vm.Rebuild(DateTime.Now.AddMinutes(1), true));
 
                 // reopen from the list, then a plain file closes the project
-                Assert.HasCount(1, T7.T7Project.List(vm.Settings.ProjectFolder));
+                Assert.HasCount(1, SuiteProject.List(vm.Settings.ProjectFolder));
                 Assert.IsTrue(await vm.OpenProjectAsync("5168646 EA1WF0LC.47D"));
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 Assert.IsFalse(vm.IsProjectOpen);

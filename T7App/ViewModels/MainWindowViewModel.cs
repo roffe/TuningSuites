@@ -71,7 +71,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>The open project, null when a plain file is open.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsProjectOpen))]
-    private T7Project? _project;
+    private SuiteProject? _project;
 
     public bool IsProjectOpen => Project != null;
 
@@ -306,7 +306,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (Binary is not { } bin) return;
         try
         {
-            ShowInfo("Backup created: " + BinaryTools.Backup(bin, Project));
+            ShowInfo("Backup created: " + SuiteProject.Backup(bin, Project));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -615,7 +615,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>OpenProject: the project's binary, its transaction log (purge offered above 2000 entries), a backup.</summary>
     public async Task<bool> OpenProjectAsync(string name)
     {
-        if (T7Project.Open(Settings.ProjectFolder, name) is not { } project) return false;
+        if (SuiteProject.Open(Settings.ProjectFolder, name) is not { } project) return false;
         Settings.LastOpenedType = 1;
         if (!await OpenFileAsync(project.BinaryFile, false)) return false;
         int count = project.TransactionLog.TransCollection.Count;
@@ -665,7 +665,7 @@ public partial class MainWindowViewModel : ObservableObject
         string name;
         try
         {
-            name = T7Project.Create(Settings.ProjectFolder, p.ToProperties(), p.BinaryFile);
+            name = SuiteProject.Create(Settings.ProjectFolder, p.ToProperties(), p.BinaryFile);
         }
         catch (Exception e) when (e is InvalidOperationException or IOException or ArgumentException)
         {
@@ -723,7 +723,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (Project is not { } project || Binary is not { } bin) return;
         try
         {
-            project.Roll(bin, entry, back, Settings.AutoFixFooter);
+            project.Roll(bin, entry, back);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -762,8 +762,8 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Rebuild file: replace the project's binary, or return the rebuilt file for the view to save elsewhere.</summary>
     public string? Rebuild(DateTime upTo, bool storeAsCurrent)
     {
-        if (Project is not { } project) return null;
-        string rebuilt = project.Rebuild(upTo, Settings.AutoFixFooter);
+        if (Project is not { } project || Binary is not { } bin) return null;
+        string rebuilt = project.Rebuild(upTo, bin);
         if (!storeAsCurrent) return rebuilt;
         File.Copy(rebuilt, project.BinaryFile, true);
         File.Delete(rebuilt);

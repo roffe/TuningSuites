@@ -13,22 +13,9 @@ namespace T7
     public sealed record PartInfo(string PartNumber, string CarModel, string EngineType, int Bhp, int Torque, bool TwoLiter, bool TwoPointThreeLiter,
         bool Turbo, bool FullPressureTurbo, string Binary);
 
-    /// <summary>The remaining File / Actions / Information tools of frmMain: backups, the address table copy, the axis browser.</summary>
+    /// <summary>The remaining File / Actions / Information tools of frmMain: the address table copy, the axis browser.</summary>
     public static class BinaryTools
     {
-        /// <summary>
-        /// Create backup file: in a project its Backups folder (logbook entry), else &lt;bin&gt;yyyyMMddHHmmss.binarybackup next to
-        /// the file.
-        /// </summary>
-        public static string Backup(T7Binary bin, T7Project project)
-        {
-            if (project != null && string.Equals(Path.GetFullPath(project.BinaryFile), Path.GetFullPath(bin.FileName), StringComparison.Ordinal))
-                return project.CreateBackup();
-            string file = Path.Combine(Path.GetDirectoryName(bin.FileName) ?? "", Path.GetFileNameWithoutExtension(bin.FileName) + DateTime.Now.ToString("yyyyMMddHHmmss") + ".binarybackup");
-            File.Copy(bin.FileName, file, true);
-            return file;
-        }
-
         /// <summary>GetStartOfAddressTableOffset: from 0x30000, the 0x20 that ends eight zero bytes; 0 when there is none.</summary>
         public static int AddressTableOffset(byte[] data)
         {
@@ -72,7 +59,7 @@ namespace T7
             foreach (string name in bin.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Distinct().OrderBy(n => n))
             {
                 if (only != null && name != only) continue;
-                var (x, y, xd, yd, _) = T7Binary.AxisSymbols(name);
+                var (x, y, xd, yd, _) = bin.AxisSymbols(name);
                 if (x == "" && y == "") continue;
                 rows.Add(new AxisInfo(name, SymbolTranslator.ToHelpText(name, bin.Language), x, xd, y, yd));
             }

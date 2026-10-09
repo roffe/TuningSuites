@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Shared by the suites, no UI: the CommonSuite code lifted from CommonSuite/ (Common/, its namespace kept so the files diff
-       against the old ones), the update check and the DTC descriptions. T7Core and T8Core build on it. -->
+       against the old ones), SuiteBinary and SuiteProject, the update check, the DTC descriptions. T7Core and T8Core build on it. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>CommonSuite</RootNamespace>
@@ -16,6 +16,10 @@
 
   <ItemGroup>
     <PackageReference Include="NLog" Version="6.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(TrionicDir)\TrionicCANLib\TrionicCANLib.csproj" />
   </ItemGroup>
 
   <!-- looked up next to the executable: the tuning packs' public key (Crypto) -->

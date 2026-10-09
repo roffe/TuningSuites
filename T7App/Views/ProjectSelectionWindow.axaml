@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:t7="using:T7"
+        xmlns:cs="using:CommonSuite"
         x:Class="T7App.Views.ProjectSelectionWindow"
         Title="Select a project to open" Width="760" Height="420" WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">
@@ -11,11 +11,11 @@
         <TextBlock DockPanel.Dock="Top" Text="Select a project" FontWeight="SemiBold" Margin="0,0,0,6" />
         <DataGrid x:Name="Grid" IsReadOnly="True" SelectionMode="Single" GridLinesVisibility="Horizontal" DoubleTapped="OnDoubleTapped">
             <DataGrid.Columns>
-                <DataGridTextColumn x:DataType="t7:ProjectSummary" Header="Projectname" Binding="{Binding Projectname}" Width="*" />
-                <DataGridTextColumn x:DataType="t7:ProjectSummary" Header="NumberBackups" Binding="{Binding NumberBackups}" />
-                <DataGridTextColumn x:DataType="t7:ProjectSummary" Header="NumberTransactions" Binding="{Binding NumberTransactions}" />
-                <DataGridTextColumn x:DataType="t7:ProjectSummary" Header="DateTimeModified" Binding="{Binding DateTimeModified}" />
-                <DataGridTextColumn x:DataType="t7:ProjectSummary" Header="Version" Binding="{Binding Version}" />
+                <DataGridTextColumn x:DataType="cs:ProjectSummary" Header="Projectname" Binding="{Binding Projectname}" Width="*" />
+                <DataGridTextColumn x:DataType="cs:ProjectSummary" Header="NumberBackups" Binding="{Binding NumberBackups}" />
+                <DataGridTextColumn x:DataType="cs:ProjectSummary" Header="NumberTransactions" Binding="{Binding NumberTransactions}" />
+                <DataGridTextColumn x:DataType="cs:ProjectSummary" Header="DateTimeModified" Binding="{Binding DateTimeModified}" />
+                <DataGridTextColumn x:DataType="cs:ProjectSummary" Header="Version" Binding="{Binding Version}" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

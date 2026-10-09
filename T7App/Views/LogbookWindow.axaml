@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
-        xmlns:t7="using:T7"
+        xmlns:cs="using:CommonSuite"
         x:Class="T7App.Views.LogbookWindow"
         x:DataType="vm:LogbookViewModel"
         Title="Project logbook" Width="900" Height="500" WindowStartupLocation="CenterOwner">
@@ -10,9 +10,9 @@
         <TextBlock DockPanel.Dock="Top" Text="Logbook entries" FontWeight="SemiBold" Margin="0,0,0,6" />
         <DataGrid ItemsSource="{Binding Lines}" IsReadOnly="True" GridLinesVisibility="Horizontal">
             <DataGrid.Columns>
-                <DataGridTextColumn x:DataType="t7:T7Project+LogbookLine" Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay, StringFormat='dd/MM/yyyy HH:mm:ss'}" />
-                <DataGridTextColumn x:DataType="t7:T7Project+LogbookLine" Header="Type" Binding="{Binding Type}" />
-                <DataGridTextColumn x:DataType="t7:T7Project+LogbookLine" Header="Description" Binding="{Binding Description}" Width="*" />
+                <DataGridTextColumn x:DataType="cs:SuiteProject+LogbookLine" Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay, StringFormat='dd/MM/yyyy HH:mm:ss'}" />
+                <DataGridTextColumn x:DataType="cs:SuiteProject+LogbookLine" Header="Type" Binding="{Binding Type}" />
+                <DataGridTextColumn x:DataType="cs:SuiteProject+LogbookLine" Header="Description" Binding="{Binding Description}" Width="*" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

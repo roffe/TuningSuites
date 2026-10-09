@@ -105,7 +105,7 @@ namespace T8CoreTest
                 string name = sh.SmartVarname;
                 var (x, y, xd, yd, zd) = b.AxisSymbols(name);
                 sb.Append(string.Join("|", "map " + name, b.TableWidth(name), b.IsSixteenBitTable(name),
-                    T8Binary.GetMapCorrectionFactor(name).ToString("R", CultureInfo.InvariantCulture), x, y, xd, yd, zd,
+                    b.GetMapCorrectionFactor(name).ToString("R", CultureInfo.InvariantCulture), x, y, xd, yd, zd,
                     string.Join(",", b.GetXaxisValues(name)), string.Join(",", b.GetYaxisValues(name)))).Append('\n');
             }
 

@@ -569,7 +569,7 @@ public partial class MainWindow : Window
 
     private async void OnOpenProject(object? sender, RoutedEventArgs e)
     {
-        var projects = T7.T7Project.List(Vm.Settings.ProjectFolder);
+        var projects = CommonSuite.SuiteProject.List(Vm.Settings.ProjectFolder);
         if (projects.Count == 0)
         {
             await Dialogs.Info(this, "No projects were found, please create one first!", "T7Suite");

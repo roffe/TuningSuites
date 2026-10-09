@@ -14,14 +14,11 @@ namespace T8SuitePro
     /// lifted from Form1.cs. SRAM addresses were mapped to the file once at open (Trionic8File.TranslateAddressOffsets), so a
     /// symbol at 0x100000 or above only lives in SRAM. Lookups go by SmartVarname, as Form1's did.
     /// </summary>
-    public class T8Binary
+    public class T8Binary : SuiteBinary
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        public string FileName { get; }
-        public SymbolCollection Symbols { get; }
         public T8Header Header { get; }
-        public bool IsSoftwareOpen { get; }
         public int AddressOffset { get; }
         public int SecondaryOffset { get; }
 
@@ -38,11 +35,11 @@ namespace T8SuitePro
 
         private const int FileSize = (int)FileT8.Length;
 
+        public override int FileLength => FileSize;
+
         private T8Binary(string fileName, SymbolCollection symbols, T8Header header, Trionic8File file, PidCollection pids, PidCollection tems,
-            bool symbolListLoaded)
+            bool symbolListLoaded) : base(fileName, symbols)
         {
-            FileName = fileName;
-            Symbols = symbols;
             Header = header;
             IsSoftwareOpen = file.IsSoftwareOpen;
             AddressOffset = file.AddressOffset;
@@ -93,53 +90,26 @@ namespace T8SuitePro
             return new T8Binary(fileName, symbols, header, file, pids, tems, loaded);
         }
 
-        public SymbolHelper Find(string symbolname) => Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.SmartVarname == symbolname);
+        // a project's rebuild: bytes only, no symbols or header
+        private T8Binary(string fileName) : base(fileName, new SymbolCollection()) => Header = new T8Header();
 
-        /// <summary>Form1.SymbolExists.</summary>
-        public bool Has(string symbolname) => Find(symbolname) != null;
-
-        public int SymbolLength(string symbolname) => Find(symbolname)?.Length ?? 0;
+        public override SuiteBinary RawFile(string fileName) => new T8Binary(fileName);
 
         /// <summary>Form1.GetSymbolAddress: the file address, 0 for a symbol that only lives in SRAM (or isn't there).</summary>
-        public long SymbolAddress(string symbolname) => Find(symbolname) is { } sh && sh.Flash_start_address < FileSize ? sh.Flash_start_address : 0;
+        public override long SymbolAddress(string symbolname) => Find(symbolname) is { } sh && sh.Flash_start_address < FileSize ? sh.Flash_start_address : 0;
 
         /// <summary>Where a map's data sits in the file (StartTableViewer's Map_address), -1 if it only lives in SRAM.</summary>
-        public int FileAddress(SymbolHelper sh) => sh.Flash_start_address is > 0 and < FileSize ? (int)sh.Flash_start_address : -1;
-
-        /// <summary>A map's content as StartTableViewer read it, null if it only lives in SRAM.</summary>
-        public byte[] ReadSymbol(SymbolHelper sh) => FileAddress(sh) is var a and >= 0 ? Read(a, sh.Length) : null;
+        public override int FileAddress(SymbolHelper sh) => sh.Flash_start_address is > 0 and < FileSize ? (int)sh.Flash_start_address : -1;
 
         /// <summary>Form1.readdatafromfile: a length of 0 gives one byte.</summary>
-        public byte[] Read(int address, int length) => length <= 0 ? new byte[1] : Trionic8File.readdatafromfile(FileName, address, length);
-
-        /// <summary>
-        /// tabdet_onSymbolSave: savedatatobinary (a transaction entry when a project log is given) and then the checksum, which
-        /// T8Suite always corrected after a map save whatever AutoChecksum said. Throws when the file can't be written (read-only).
-        /// </summary>
-        public void WriteSymbol(int address, byte[] data, TrionicTransactionLog log = null, string note = "")
-        {
-            WriteData(address, data, log, note);
-            UpdateChecksum();
-        }
-
-        /// <summary>savedatatobinary without the checksum update: only inside the file.</summary>
-        public void WriteData(int address, byte[] data, TrionicTransactionLog log = null, string note = "")
-        {
-            if (address <= 0 || address >= FileSize) return;
-            byte[] before = Read(address, data.Length);
-            using (var fs = new FileStream(FileName, FileMode.Open, FileAccess.Write))
-            {
-                fs.Position = address;
-                fs.Write(data, 0, data.Length);
-            }
-            log?.AddToTransactionLog(new TransactionEntry(DateTime.Now, address, data.Length, before, data, 0, 0, note));
-        }
+        public override byte[] Read(int address, int length) => length <= 0 ? new byte[1] : Trionic8File.readdatafromfile(FileName, address, length);
 
         /// <summary>
         /// UpdateChecksum(file, true): ChecksumT8 corrects both layers in one pass (the PI area it writes to lies outside them).
-        /// Throws when the file can't be corrected, which T8Suite's status bar left unsaid.
+        /// Throws when the file can't be corrected, which T8Suite's status bar left unsaid. A map save always corrects it, as
+        /// T8Suite did whatever AutoChecksum said.
         /// </summary>
-        public void UpdateChecksum()
+        public override void UpdateChecksum()
         {
             ChecksumResult result = ChecksumT8.VerifyChecksum(FileName, true, (_, _, _) => true);
             if (result != ChecksumResult.Ok || VerifyChecksum() != ChecksumResult.Ok)
@@ -147,13 +117,13 @@ namespace T8SuitePro
         }
 
         // never corrects; a null "should I update?" callback would crash the library on a mismatch
-        public ChecksumResult VerifyChecksum() => ChecksumT8.VerifyChecksum(FileName, false, (_, _, _) => false);
+        public override ChecksumResult VerifyChecksum() => ChecksumT8.VerifyChecksum(FileName, false, (_, _, _) => false);
 
         /// <summary>
         /// The axis symbols and units (GetAxisDescriptions / StartTableViewer): SymbolDictionary's, with the duplicate's x axis when
         /// the listed one isn't in the file. The units are those of the listed axes, as T8Suite showed them.
         /// </summary>
-        public (string xAxis, string yAxis, string xDescr, string yDescr, string zDescr) AxisSymbols(string symbolname)
+        public override (string xAxis, string yAxis, string xDescr, string yDescr, string zDescr) AxisSymbols(string symbolname)
         {
             new SymbolAxesTranslator().GetAxisSymbols(symbolname, out string x, out string y, out string xd, out string yd, out string zd);
             if (SymbolDictionary.doesDuplicateExist(symbolname, out _, out string alt) && !Has(x)) x = alt;
@@ -164,7 +134,7 @@ namespace T8SuitePro
         /// Form1.GetXaxisValues: raw (no correction factor), unsigned; "N : v1 v2 …" axes from the dictionary as they are. A map
         /// without a y axis gets no x values either (SymbolAxesTranslator returns false then), as in T8Suite.
         /// </summary>
-        public int[] GetXaxisValues(string symbolname)
+        public override int[] GetXaxisValues(string symbolname)
         {
             int[] retval = new int[0];
             int xaxisaddress = 0;
@@ -209,7 +179,7 @@ namespace T8SuitePro
         }
 
         /// <summary>Form1.GetYaxisValues: raw, above 0x8000 negative; "N : v1 v2 …" axes from the dictionary as they are.</summary>
-        public int[] GetYaxisValues(string symbolname)
+        public override int[] GetYaxisValues(string symbolname)
         {
             int[] retval = new int[0];
             int yaxisaddress = 0;
@@ -267,7 +237,7 @@ namespace T8SuitePro
         /// The number of columns the viewer shows: GetTableMatrixWitdhByName (by name, else by byte length; support point and
         /// table symbols one column), then the x axis' length when it has more than one value, as StartTableViewer did.
         /// </summary>
-        public int TableWidth(string symbolname)
+        public override int TableWidth(string symbolname)
         {
             int length = SymbolLength(symbolname);
             int columns = symbolname switch
@@ -293,7 +263,7 @@ namespace T8SuitePro
         }
 
         /// <summary>Form1.isSixteenBitTable: 16-bit unless listed, of odd length, or 336 bytes outside PurgeCal.</summary>
-        public bool IsSixteenBitTable(string symbolname)
+        public override bool IsSixteenBitTable(string symbolname)
         {
             switch (symbolname)
             {
@@ -313,8 +283,6 @@ namespace T8SuitePro
         /// Form1.GetMapCorrectionFactor's result: the dictionary's unit factor (1 when unknown). The "Resolution is" parsing and the
         /// hard-coded list before it were overwritten by this line in T8Suite.
         /// </summary>
-        public static double GetMapCorrectionFactor(string symbolname) => SymbolDictionary.GetSymbolUnit(symbolname);
-
-        public static double GetMapCorrectionOffset(string symbolname) => 0;
+        public override double GetMapCorrectionFactor(string symbolname) => SymbolDictionary.GetSymbolUnit(symbolname);
     }
 }

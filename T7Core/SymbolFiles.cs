@@ -170,7 +170,7 @@ namespace T7
             byte[] data = bin.ReadSymbol(sh) ?? [];
             int cols = bin.TableWidth(name);
             bool sixteen = bin.IsSixteenBitTable(name);
-            double factor = bin.GetMapCorrectionFactor(name), offset = T7Binary.GetMapCorrectionOffset(name);
+            double factor = bin.GetMapCorrectionFactor(name), offset = bin.GetMapCorrectionOffset(name);
             int size = sixteen ? 2 : 1, values = data.Length / size, rows = (values + cols - 1) / cols;
             int[] x = bin.GetXaxisValues(name), y = bin.GetYaxisValues(name);
             string F(double d) => Math.Round(d, 2).ToString(CultureInfo.InvariantCulture);

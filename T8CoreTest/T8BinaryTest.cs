@@ -37,7 +37,7 @@ namespace T8CoreTest
                 Assert.HasCount(576, bin.ReadSymbol(map));
                 Assert.AreEqual(18, bin.TableWidth("IgnAbsCal.fi_NormalMAP"));
                 Assert.IsTrue(bin.IsSixteenBitTable("IgnAbsCal.fi_NormalMAP"));
-                Assert.AreEqual(0.1, T8Binary.GetMapCorrectionFactor("IgnAbsCal.fi_NormalMAP"));
+                Assert.AreEqual(0.1, bin.GetMapCorrectionFactor("IgnAbsCal.fi_NormalMAP"));
                 Assert.AreEqual(("IgnAbsCal.m_AirNormXSP", "IgnAbsCal.n_EngNormYSP", "mg/c", "rpm", "°"), bin.AxisSymbols("IgnAbsCal.fi_NormalMAP"));
                 CollectionAssert.AreEqual(new[] { 500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500 },
                     bin.GetYaxisValues("IgnAbsCal.fi_NormalMAP"));

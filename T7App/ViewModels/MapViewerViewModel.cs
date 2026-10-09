@@ -137,13 +137,13 @@ public partial class MapViewerViewModel : DocumentViewModel
         content ??= bin.ReadSymbol(sh);
         if ((address < 0 && !sram) || content == null || content.Length == 0) return null;
 
-        var (xAxis, yAxis, xDescr, yDescr, zDescr) = T7Binary.AxisSymbols(name);
+        var (xAxis, yAxis, xDescr, yDescr, zDescr) = bin.AxisSymbols(name);
         double[] x = bin.GetXaxisValues(name).Select(v => (double)v).ToArray();
         double[] y = bin.GetYaxisValues(name).Select(v => (double)v).ToArray();
         var map = new MapData(name, content, bin.TableWidth(name), bin.IsSixteenBitTable(name))
         {
             Factor = bin.GetMapCorrectionFactor(name),
-            Offset = T7Binary.GetMapCorrectionOffset(name),
+            Offset = bin.GetMapCorrectionOffset(name),
             UpsideDown = true,
             XAxis = x,
             YAxis = y,
@@ -188,7 +188,7 @@ public partial class MapViewerViewModel : DocumentViewModel
         T7Binary bin = afr.Binary;
         if (bin.FindAny("BFuelCal.Map") is not { } fuel) return null;
         byte[] content = kind switch { "TargetAFR" => afr.Target, "FeedbackAFR" => afr.Feedback, _ => afr.Counter };
-        var (_, _, xDescr, yDescr, _) = T7Binary.AxisSymbols("BFuelCal.Map");
+        var (_, _, xDescr, yDescr, _) = bin.AxisSymbols("BFuelCal.Map");
         var map = new MapData(kind, content, AfrFeedback.Columns, true)
         {
             Factor = kind == "FeedbackCounter" ? 1 : 0.1,

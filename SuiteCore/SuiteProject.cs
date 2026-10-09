@@ -4,9 +4,7 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using CommonSuite;
-
-namespace T7
+namespace CommonSuite
 {
     /// <summary>projectproperties.xml: one DataTable "T5PROJECT" row, every column a string.</summary>
     public record ProjectProperties(string CarMake, string CarModel, string CarMY, string CarVIN, string Name, string BinFile, string Version)
@@ -42,10 +40,10 @@ namespace T7
     public record ProjectSummary(string Projectname, string NumberBackups, string NumberTransactions, string DateTimeModified, string Version);
 
     /// <summary>
-    /// A T7Suite project (frmMain 1170-1823): &lt;ProjectFolder&gt;/&lt;name&gt;/ with projectproperties.xml, a copy of the binary,
-    /// TransActionLogV2.ttl, ProjectLogbook.log and Backups/.
+    /// A suite project (T7Suite's frmMain 1170-1823, T8Suite's Form1 8952-9618 work the same): &lt;ProjectFolder&gt;/&lt;name&gt;/ with
+    /// projectproperties.xml, a copy of the binary, TransActionLogV2.ttl, ProjectLogbook.log and Backups/.
     /// </summary>
-    public class T7Project
+    public class SuiteProject
     {
         public string ProjectFolder { get; }
         public string Name { get; private set; }
@@ -54,7 +52,7 @@ namespace T7
         public TrionicTransactionLog TransactionLog { get; } = new();
         public TrionicProjectLog Logbook { get; } = new();
 
-        private T7Project(string projectFolder, string name)
+        private SuiteProject(string projectFolder, string name)
         {
             ProjectFolder = projectFolder;
             Name = name;
@@ -108,11 +106,11 @@ namespace T7
         }
 
         /// <summary>OpenProject without the UI: properties, logbook, transaction log. Null when the project doesn't exist.</summary>
-        public static T7Project Open(string projectFolder, string name)
+        public static SuiteProject Open(string projectFolder, string name)
         {
             string dir = Path.Combine(projectFolder, name);
             if (!Directory.Exists(dir) || !File.Exists(PropertiesFile(dir)) || ProjectProperties.Read(PropertiesFile(dir)) is not { } p) return null;
-            var project = new T7Project(projectFolder, name) { Properties = p };
+            var project = new SuiteProject(projectFolder, name) { Properties = p };
             project.Logbook.OpenProjectLog(dir);
             if (project.TransactionLog.OpenTransActionLog(projectFolder, name)) project.TransactionLog.ReadTransactionFile();
             return project;
@@ -135,10 +133,10 @@ namespace T7
         }
 
         /// <summary>SignalTransactionLogChanged's logbook entry: "&lt;symbol at the address, or the address&gt; &lt;note&gt;".</summary>
-        public void LogTransaction(T7Binary bin, TransactionEntry entry) =>
+        public void LogTransaction(SuiteBinary bin, TransactionEntry entry) =>
             Logbook.WriteLogbookEntry(LogbookEntryType.TransactionExecuted, SymbolNameByAddress(bin, entry.SymbolAddress) + " " + entry.Note);
 
-        public static string SymbolNameByAddress(T7Binary bin, long address) =>
+        public static string SymbolNameByAddress(SuiteBinary bin, long address) =>
             bin.Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Flash_start_address == address)?.Varname ?? address.ToString(CultureInfo.InvariantCulture);
 
         /// <summary>The ribbon's Roll back: the last entry not rolled back.</summary>
@@ -148,19 +146,19 @@ namespace T7
         public TransactionEntry RedoTarget => TransactionLog.TransCollection.Cast<TransactionEntry>().FirstOrDefault(e => e.IsRolledBack);
 
         /// <summary>RollBack / RollForward: the entry's before / after bytes back into the file (no new entry), the flag, a logbook line.</summary>
-        public void Roll(T7Binary bin, TransactionEntry entry, bool back, bool autoFixFooter)
+        public void Roll(SuiteBinary bin, TransactionEntry entry, bool back)
         {
             int address = entry.SymbolAddress;
             while (address > FileLength(bin)) address -= FileLength(bin);
             bin.WriteData(address, back ? entry.DataBefore : entry.DataAfter);
-            bin.UpdateChecksum(autoFixFooter);
+            bin.UpdateChecksum();
             if (back) TransactionLog.SetEntryRolledBack(entry.TransactionNumber);
             else TransactionLog.SetEntryRolledForward(entry.TransactionNumber);
             Logbook.WriteLogbookEntry(back ? LogbookEntryType.TransactionRolledback : LogbookEntryType.TransactionRolledforward,
                 SymbolNameByAddress(bin, entry.SymbolAddress) + " " + entry.Note + " " + entry.TransactionNumber);
         }
 
-        private static int FileLength(T7Binary bin) => (int)new FileInfo(bin.FileName).Length;
+        private static int FileLength(SuiteBinary bin) => (int)new FileInfo(bin.FileName).Length;
 
         /// <summary>Edit project: new properties; a new name moves the folder and the binary path with it.</summary>
         public void Edit(ProjectProperties edited)
@@ -182,9 +180,9 @@ namespace T7
         /// <summary>
         /// Rebuild file: the newest backup up to the date (else the current file) with every transaction between that file's time
         /// and the date applied. Returns the rebuilt temp file; the caller replaces the project file or saves it elsewhere.
-        /// The checksum is updated, which T7Suite didn't do.
+        /// The checksum is updated (bin is the project's open binary, which knows how), which T7Suite didn't do.
         /// </summary>
-        public string Rebuild(DateTime upTo, bool autoFixFooter)
+        public string Rebuild(DateTime upTo, SuiteBinary bin)
         {
             string backups = Path.Combine(Dir, "Backups");
             string source = Directory.Exists(backups)
@@ -197,7 +195,7 @@ namespace T7
             CreateBackup();
             File.Copy(source, tmp);
             DateTime from = File.GetLastAccessTime(source);
-            var rebuilt = T7Binary.OpenRaw(tmp);
+            SuiteBinary rebuilt = bin.RawFile(tmp);
             foreach (TransactionEntry e in TransactionLog.TransCollection)
             {
                 if (e.EntryDateTime < from || e.EntryDateTime > upTo) continue;
@@ -205,9 +203,22 @@ namespace T7
                 while (address > FileLength(rebuilt)) address -= FileLength(rebuilt);
                 rebuilt.WriteData(address, e.DataAfter);
             }
-            rebuilt.UpdateChecksum(autoFixFooter);
+            rebuilt.UpdateChecksum();
             Logbook.WriteLogbookEntry(LogbookEntryType.ProjectFileRecreated, "Reconstruct upto " + upTo.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture) + " selected file " + source);
             return tmp;
+        }
+
+        /// <summary>
+        /// Create backup file: the project's backup when the bin is the project's, else &lt;bin&gt;&lt;yyyyMMddHHmmss&gt;.binarybackup
+        /// next to it.
+        /// </summary>
+        public static string Backup(SuiteBinary bin, SuiteProject project)
+        {
+            if (project != null && string.Equals(Path.GetFullPath(project.BinaryFile), Path.GetFullPath(bin.FileName), StringComparison.Ordinal))
+                return project.CreateBackup();
+            string file = Path.Combine(Path.GetDirectoryName(bin.FileName) ?? "", Path.GetFileNameWithoutExtension(bin.FileName) + DateTime.Now.ToString("yyyyMMddHHmmss") + ".binarybackup");
+            File.Copy(bin.FileName, file, true);
+            return file;
         }
 
         public record LogbookLine(DateTime Timestamp, string Type, string Description);

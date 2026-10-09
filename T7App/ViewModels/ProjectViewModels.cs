@@ -53,7 +53,7 @@ public partial class TransactionLogViewModel : ObservableObject
         if (m_owner.Project is not { } project || m_owner.Binary is not { } bin) return;
         foreach (TransactionEntry e in project.TransactionLog.TransCollection.Cast<TransactionEntry>().OrderByDescending(e => e.EntryDateTime))
         {
-            e.SymbolName = T7Project.SymbolNameByAddress(bin, e.SymbolAddress);
+            e.SymbolName = SuiteProject.SymbolNameByAddress(bin, e.SymbolAddress);
             Entries.Add(e);
         }
         Selected = keep != null && Entries.Contains(keep) ? keep : Entries.FirstOrDefault();
@@ -73,9 +73,9 @@ public partial class TransactionLogViewModel : ObservableObject
 }
 
 /// <summary>frmProjectLogbook: the logbook, newest first.</summary>
-public class LogbookViewModel(T7Project project)
+public class LogbookViewModel(SuiteProject project)
 {
-    public T7Project.LogbookLine[] Lines { get; } = project.ReadLogbook().OrderByDescending(l => l.Timestamp).ToArray();
+    public SuiteProject.LogbookLine[] Lines { get; } = project.ReadLogbook().OrderByDescending(l => l.Timestamp).ToArray();
 }
 
 /// <summary>frmRebuildFileParameters.</summary>

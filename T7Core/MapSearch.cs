@@ -34,7 +34,7 @@ namespace T7
                     byte[] data = bin.Read((int)sh.Flash_start_address, sh.Length);
                     if (o.SearchForNumericValues)
                     {
-                        float factor = (float)bin.GetMapCorrectionFactor(sh.Varname), offset = (float)T7Binary.GetMapCorrectionOffset(sh.Varname), target = (float)o.NumericValue;
+                        float factor = (float)bin.GetMapCorrectionFactor(sh.Varname), offset = (float)bin.GetMapCorrectionOffset(sh.Varname), target = (float)o.NumericValue;
                         bool sixteen = bin.IsSixteenBitTable(sh.Varname);
                         for (int i = 0; i + (sixteen ? 1 : 0) < data.Length && !hit; i += sixteen ? 2 : 1)
                         {

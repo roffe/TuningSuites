@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using T7;
+using CommonSuite;
 
 namespace T7App.Views;
 
