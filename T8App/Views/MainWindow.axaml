@@ -9,9 +9,14 @@
         Icon="/T8Suite.ico"
         Width="1400" Height="900"
         WindowStartupLocation="CenterScreen">
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" />
+        <KeyBinding Gesture="F6" Command="{Binding WriteLogMarkerCommand}" />
+    </Window.KeyBindings>
     <Window.Resources>
         <!-- the symbol list's row menu (gridViewSymbols' context menu), the ported items -->
         <ContextMenu x:Key="SymbolListMenu" x:DataType="vm:T8MainWindowViewModel">
+            <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
             <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
             <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
@@ -47,6 +52,7 @@
                 </MenuItem>
                 <MenuItem Header="Import tuning package" Click="OnImportTuningPackage" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Setup log filters" Click="OnLogFilters" />
                 <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Settings" Click="OnSettings" />
@@ -89,9 +95,19 @@
             <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
             <MenuItem Header="_Realtime">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
+                <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Export logfile to LogWorks" Click="OnExportLogDif" />
+                <MenuItem Header="Load trionic 8 logfile" Click="OnOpenLog" />
+                <MenuItem Header="View matrix from logfile" Click="OnLogMatrix" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Set symbol colors" Click="OnSymbolColors" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Get ECU information" Click="OnEcuInformation" />
                 <MenuItem Header="Get fault codes (OBDII)" Click="OnFaultCodes" />
                 <MenuItem Header="Clear DTC and knock counters" Command="{Binding ClearDtcAndKnockCountersCommand}" />
+                <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
+                <MenuItem Header="Export logfile to CSV" Click="OnExportLogCsv" />
+                <Separator />
+                <MenuItem Header="View knock count map" Command="{Binding ShowEcuMapCommand}" CommandParameter="KnkDetAdap.KnkCntMAP" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="View misfire tab" Command="{Binding ShowEcuMapCommand}" CommandParameter="MisfAdap.N_MisfCountCyl" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <!-- the Programmer page's CAN Flasher group -->
             <MenuItem Header="E_CU">

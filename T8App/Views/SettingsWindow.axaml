@@ -26,7 +26,7 @@
             </StackPanel>
         </HeaderedContentControl>
         <HeaderedContentControl Header="Realtime settings">
-            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
                 <TextBlock Grid.Row="0" Text="CANBus adapter type" VerticalAlignment="Center" />
                 <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
                 <TextBlock Grid.Row="1" Text="Adapter" VerticalAlignment="Center" />
@@ -38,12 +38,21 @@
                 <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="24">
                     <CheckBox Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}" />
                     <CheckBox Content="Use Legion Bootloader" IsChecked="{Binding UseLegionBootloader}" />
+                    <CheckBox Content="Prefer dynamic retrieval of live data" IsChecked="{Binding PreferDynamicLiveData}"
+                              ToolTip.Tip="Massive boost to sample rate if the binary is compatible" />
                 </StackPanel>
                 <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
                     <CheckBox Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}" />
                     <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="110" />
                     <TextBlock Text="seconds" VerticalAlignment="Center" />
                 </StackPanel>
+                <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}" />
+                <TextBlock Grid.Row="6" Text="Wideband device" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                <TextBlock Grid.Row="7" Text="Wideband port" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
             </Grid>
         </HeaderedContentControl>
         <HeaderedContentControl Header="Project settings">
