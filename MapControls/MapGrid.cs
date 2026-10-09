@@ -35,6 +35,10 @@ public class MapGrid : Control
     public static readonly StyledProperty<IBrush?> ForegroundProperty = TextElement.ForegroundProperty.AddOwner<MapGrid>();
     public static readonly StyledProperty<double> FontSizeProperty = TextElement.FontSizeProperty.AddOwner<MapGrid>();
     public static readonly StyledProperty<FontFamily> FontFamilyProperty = TextElement.FontFamilyProperty.AddOwner<MapGrid>();
+    public static readonly StyledProperty<IBrush?> HeaderBackgroundProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(HeaderBackground));
+    public static readonly StyledProperty<IBrush?> HeaderForegroundProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(HeaderForeground));
+    public static readonly StyledProperty<IBrush?> HeaderLinesProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(HeaderLines));
+    public static readonly StyledProperty<IBrush?> GridLinesProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(GridLines));
 
     public MapData? Map { get => GetValue(MapProperty); set => SetValue(MapProperty, value); }
     public MapViewType ViewType { get => GetValue(ViewTypeProperty); set => SetValue(ViewTypeProperty, value); }
@@ -46,6 +50,11 @@ public class MapGrid : Control
     public IBrush? Foreground { get => GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
     public double FontSize { get => GetValue(FontSizeProperty); set => SetValue(FontSizeProperty, value); }
     public FontFamily FontFamily { get => GetValue(FontFamilyProperty); set => SetValue(FontFamilyProperty, value); }
+    /// <summary>Header fill, text and cell lines, and the lines between the cells; unset they're shades of the foreground and the headers have no lines.</summary>
+    public IBrush? HeaderBackground { get => GetValue(HeaderBackgroundProperty); set => SetValue(HeaderBackgroundProperty, value); }
+    public IBrush? HeaderForeground { get => GetValue(HeaderForegroundProperty); set => SetValue(HeaderForegroundProperty, value); }
+    public IBrush? HeaderLines { get => GetValue(HeaderLinesProperty); set => SetValue(HeaderLinesProperty, value); }
+    public IBrush? GridLines { get => GetValue(GridLinesProperty); set => SetValue(GridLinesProperty, value); }
 
     /// <summary>The selection changed (data indices in <see cref="SelectedCells"/>).</summary>
     public event EventHandler? SelectionChanged;
@@ -70,7 +79,8 @@ public class MapGrid : Control
     static MapGrid()
     {
         FocusableProperty.OverrideDefaultValue<MapGrid>(true);
-        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, OpenLoopMarkProperty, ForegroundProperty);
+        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, OpenLoopMarkProperty, ForegroundProperty,
+            HeaderBackgroundProperty, HeaderForegroundProperty, HeaderLinesProperty, GridLinesProperty);
         AffectsMeasure<MapGrid>(MapProperty, ViewTypeProperty, FontSizeProperty, FontFamilyProperty);
     }
 
@@ -236,22 +246,23 @@ public class MapGrid : Control
         if (map == null) return;
         Layout(map);
         IBrush fg = Foreground ?? Brushes.Black;
-        var headerBg = new ImmutableSolidColorBrush(fg is ISolidColorBrush s ? Color.FromArgb(28, s.Color.R, s.Color.G, s.Color.B) : Color.FromArgb(28, 0, 0, 0));
-        var gridLine = new ImmutableSolidColorBrush(fg is ISolidColorBrush s2 ? Color.FromArgb(60, s2.Color.R, s2.Color.G, s2.Color.B) : Colors.Gray);
+        IBrush headerBg = HeaderBackground ?? new ImmutableSolidColorBrush(fg is ISolidColorBrush s ? Color.FromArgb(28, s.Color.R, s.Color.G, s.Color.B) : Color.FromArgb(28, 0, 0, 0));
+        IBrush headerFg = HeaderForeground ?? fg;
+        IBrush gridLine = GridLines ?? new ImmutableSolidColorBrush(fg is ISolidColorBrush s2 ? Color.FromArgb(60, s2.Color.R, s2.Color.G, s2.Color.B) : Colors.Gray);
 
         // headers
         context.FillRectangle(headerBg, new Rect(0, 0, Bounds.Width, m_headerH));
         context.FillRectangle(headerBg, new Rect(0, 0, m_headerW, Bounds.Height));
         for (int c = 0; c < map.Cols; c++)
         {
-            var t = Text(XLabel(c), fg);
+            var t = Text(XLabel(c), headerFg);
             // a squeezed column cuts its text at the cell like the DevExpress grid did, instead of writing over its neighbours
             using (context.PushClip(new Rect(m_headerW + c * m_cellW, 0, m_cellW, m_headerH)))
                 context.DrawText(t, new Point(m_headerW + c * m_cellW + Math.Max(1, (m_cellW - t.Width) / 2), (m_headerH - t.Height) / 2));
         }
         for (int r = 0; r < map.Rows; r++)
         {
-            var t = Text(YLabel(r), fg);
+            var t = Text(YLabel(r), headerFg);
             context.DrawText(t, new Point(4, m_headerH + r * m_cellH + (m_cellH - t.Height) / 2));
         }
 
@@ -313,6 +324,16 @@ public class MapGrid : Control
             context.FillRectangle(gridLine, new Rect(Math.Min(ColX(c), right - px), top, px, bottom - top));
         for (int r = 0; r <= map.Rows; r++)
             context.FillRectangle(gridLine, new Rect(left, Math.Min(RowY(r), bottom - px), right - left, px));
+        if (HeaderLines is { } headerLine)
+        {
+            // the header cells framed like the DevExpress grid's
+            context.FillRectangle(headerLine, new Rect(left, 0, right - left, px));
+            for (int c = 0; c <= map.Cols; c++)
+                context.FillRectangle(headerLine, new Rect(Math.Min(ColX(c), right - px), 0, px, top));
+            context.FillRectangle(headerLine, new Rect(0, top, px, bottom - top));
+            for (int r = 0; r <= map.Rows; r++)
+                context.FillRectangle(headerLine, new Rect(0, Math.Min(RowY(r), bottom - px), left, px));
+        }
 
         if (m_selected.Count > 0)
         {

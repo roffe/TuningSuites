@@ -12,6 +12,13 @@
         <Style Selector="TextBlock.onDark">
             <Setter Property="Foreground" Value="White" />
         </Style>
+        <!-- the selected row's text: T7Suite's MediumBlue in the light skin, the usual colours in the dark one -->
+        <Style Selector="DataGridRow:selected DataGridCell">
+            <Setter Property="Foreground" Value="{DynamicResource T7SymbolSelectedForeground}" />
+        </Style>
+        <Style Selector="DataGridRow:selected TextBlock.onLight">
+            <Setter Property="Foreground" Value="{DynamicResource T7SymbolSelectedNameForeground}" />
+        </Style>
     </UserControl.Styles>
     <DockPanel>
         <TextBox DockPanel.Dock="Top" Margin="6,6,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />

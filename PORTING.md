@@ -219,6 +219,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: The light skin follows T7Suite's DevExpress one: grey workspace, white inner windows with blue titles, grey buttons, white map table headers framed in light steel blue, the symbol list's selected row in MediumBlue on light blue whether focused or not. Dark is unchanged. Not matched: DevExpress's thicker window frame and denser spacing, the white gutters between map cells, Fluent scrollbars / check boxes / tab strips.
 - 2026-10-09: The 3D view draws with txlogger's meshgrid shader ported to SkSL on GPU canvases; the triangle renderer stays for CPU canvases, single columns and grids too large for the shader's loop.
 - 2026-10-09: Inner windows measured at the workspace's size by Dock's MDI panel (the real cause of the off-centre, clipped 3D graph and cut tables): documents are now measured at their own size, map tables shrink their text to fit, the 3D view and its scales follow the light / dark skin; Set symbol colors and the disassembly's linked hex view added.
 - 2026-10-09: Chunk 7 done: disassembler, hex view and interrupt vectors; tuning packs, SID, ESP / TCM, matrix from log and the smaller tools before that.
