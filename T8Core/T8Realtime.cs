@@ -201,6 +201,7 @@ namespace T8SuitePro
             return ecu.RunAsync(t => { t.StallKeepAlive = true; });
         }
 
+        // a disconnect ends the stall itself (T8Ecu.Close)
         public override async Task EndAsync()
         {
             if (ecu.IsConnected) await ecu.RunAsync(t => { t.StallKeepAlive = false; });
@@ -208,6 +209,7 @@ namespace T8SuitePro
 
         protected override Task<RealtimeSample> PassAsync(RealtimeSymbol[] rows, double fps) => ecu.RunAsync(t =>
         {
+            if (!ecu.IsConnected) return null;
             Dictionary<RealtimeSymbol, byte[]> dynamic = m_byAddress ? null : Dynamic(t, rows);
             return Realtime.Cycle(rows, row => dynamic != null && dynamic.TryGetValue(row, out byte[] d) ? d : ByAddress(t, row), DateTime.Now,
                 T8Realtime.Rules, fps, everyPass: dynamic != null);

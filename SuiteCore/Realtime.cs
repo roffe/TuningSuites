@@ -250,7 +250,10 @@ namespace CommonSuite
 
         protected abstract bool Connected { get; }
 
-        /// <summary>One pass over the rows, on the ECU thread.</summary>
+        /// <summary>
+        /// One pass over the rows, on the ECU thread; null when the session closed before it ran. A Disconnect queued behind the
+        /// last pass runs before this one, while the loop still saw the session open.
+        /// </summary>
         protected abstract Task<RealtimeSample> PassAsync(RealtimeSymbol[] rows, double fps);
 
         /// <summary>Before the first pass (T7: the alive polling stops, the passes keep the session alive).</summary>
@@ -272,6 +275,7 @@ namespace CommonSuite
                     continue;
                 }
                 RealtimeSample sample = await PassAsync(rows, fps).ConfigureAwait(false);
+                if (sample == null) break;
                 if (Extra?.Invoke() is { } extra) sample = sample with { Values = [.. sample.Values, .. extra] };
                 double seconds = watch.Elapsed.TotalSeconds;
                 watch.Restart();

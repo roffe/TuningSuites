@@ -23,6 +23,13 @@ namespace T8SuitePro
         {
         }
 
+        // the next session starts with the keep-alive running, also when the realtime panel was polling at the disconnect
+        protected override void Close(Trionic8 t)
+        {
+            t.StallKeepAlive = false;
+            base.Close(t);
+        }
+
         // SetCanAdapter, after closing the last device; Trionic8 has no latency
         private void Setup(Trionic8 t, AppSettings settings, AccessLevel level)
         {

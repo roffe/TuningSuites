@@ -131,7 +131,10 @@ namespace T7
 
         public override async Task EndAsync()
         {
-            if (ecu.IsConnected) await ecu.RunAsync(t => t.ResumeAlivePolling());
+            if (ecu.IsConnected) await ecu.RunAsync(t =>
+            {
+                if (ecu.IsConnected) t.ResumeAlivePolling();
+            });
         }
 
         protected override Task<RealtimeSample> PassAsync(RealtimeSymbol[] rows, double fps)
@@ -139,6 +142,8 @@ namespace T7
             bool mode = ++m_pass % 21 == 0 && PerformanceMode != null;
             return ecu.RunAsync(t =>
             {
+                // the session closed while this pass waited (see RealtimeEngine.PassAsync)
+                if (!ecu.IsConnected) return null;
                 int? performance = mode ? ReadPerformanceMode(t, PerformanceMode) : null;
                 return Realtime.Cycle(rows, row => T7Realtime.Read(t, row), System.DateTime.Now, T7Realtime.Rules, fps, performance);
             });
