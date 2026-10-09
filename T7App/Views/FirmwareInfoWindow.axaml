@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
+        xmlns:sv="using:SuiteApp.Views"
         x:Class="T7App.Views.FirmwareInfoWindow"
         x:DataType="vm:FirmwareInfoViewModel"
         Title="Trionic 7 firmware information"
@@ -72,26 +73,7 @@
         </HeaderedContentControl>
 
         <Expander Header="VIN decoder">
-            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
-                <TextBlock Classes="label" Grid.Row="0" Text="Car model" />
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Vin.CarModel}" />
-                <TextBlock Classes="label" Grid.Row="1" Text="Engine type" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Vin.EngineType}" />
-                <TextBlock Classes="label" Grid.Row="2" Text="Turbo" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Turbo}" />
-                <TextBlock Classes="label" Grid.Row="3" Text="Makeyear" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Vin.Makeyear}" />
-                <TextBlock Classes="label" Grid.Row="4" Text="Assembly plant" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Vin.PlantInfo}" />
-                <TextBlock Classes="label" Grid.Row="5" Text="Series" />
-                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Vin.Series}" />
-                <TextBlock Classes="label" Grid.Row="6" Text="Body" />
-                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Vin.Body}" />
-                <TextBlock Classes="label" Grid.Row="7" Text="Gearbox" />
-                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Vin.GearboxDescription}" />
-                <TextBlock Classes="label" Grid.Row="8" Text="VIN checksum" />
-                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding VinChecksum}" />
-            </Grid>
+            <sv:VinDecoderView DataContext="{Binding Decoded}" />
         </Expander>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

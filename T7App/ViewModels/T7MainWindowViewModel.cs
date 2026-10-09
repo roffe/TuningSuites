@@ -17,7 +17,7 @@ namespace T7App.ViewModels;
 
 /// <summary>
 /// T7Suite's main window (frmMain): T7 binaries, and the features only T7Suite has or that aren't shared yet (ECU, realtime,
-/// logs, compare, tuning packages, SID, the tools).
+/// logs, SID, the tools).
 /// </summary>
 public partial class T7MainWindowViewModel : MainWindowViewModel
 {
@@ -38,6 +38,26 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
     protected override string ReleaseTagPrefix => "T7suite_v";
 
     protected override string? LegacyMruKey => @"Software\T7SuitePro\MRUList";
+
+    public override string PackageFilesName => "Trionic 7 packages";
+
+    public override string PackageExtension => "t7p";
+
+    // the footer of a file to compare with isn't fixed
+    protected override SuiteBinary OpenCompareBinary(string path) => T7Binary.Open(path, Settings.ApplicationLanguage, false);
+
+    public override PartInfo? LookupPartNumber(string partNumber) => BinaryTools.LookupPartNumber(partNumber);
+
+    public override IReadOnlyList<MapShortcut> MyMapsDefaults { get; } =
+        [new("Fuel", "Main fuel map", "BFuelCal.Map"), new("Boost", "Boost bias map", "BoostCal.RegMap"), new("Boost", "P factors map", "BoostCal.PMap")];
+
+    /// <summary>My Maps' "targetafr" / "feedbackafr" entries were T7Suite's AFR maps, which need the realtime features.</summary>
+    protected override bool OpenSpecialShortcut(MapShortcut shortcut)
+    {
+        if (shortcut.Symbol is not ("targetafr" or "feedbackafr")) return false;
+        ShowInfo("The AFR maps come with the realtime features.");
+        return true;
+    }
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
@@ -70,41 +90,6 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
         RestartSramTimer();
         OnPropertyChanged(nameof(FeedbackMapCaption));
         OnPropertyChanged(nameof(ClearFeedbackCaption));
-    }
-
-    /// <summary>
-    /// File → Import tuning package: the .t7p's symbols and search &amp; replace patterns into the bin (transaction entries in a
-    /// project), one checksum update; open viewers show the new data. The results for the "Import results" list.
-    /// </summary>
-    public List<PackageResult>? ImportTuningPackage(string file)
-    {
-        if (Binary is not T7Binary bin) return null;
-        int before = TransactionLog?.TransCollection.Count ?? 0;
-        try
-        {
-            List<PackageResult> results = TuningPackage.Read(file, bin).Apply(bin, Settings.AutoFixFooter, TransactionLog);
-            TransactionsAdded(before);
-            RefreshViewers(bin.FileName);
-            return results;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            ShowInfo("Failed to import the tuning package: " + e.Message);
-            return null;
-        }
-    }
-
-    /// <summary>File → Edit a tuning package (one at a time, as T7Suite).</summary>
-    [RelayCommand]
-    private void EditTuningPackage()
-    {
-        if (Binary is not T7Binary bin) return;
-        if (Viewers.OfType<TuningPackageEditorViewModel>().FirstOrDefault() is { } open)
-        {
-            SelectedViewer = open;
-            return;
-        }
-        ShowDocument(new TuningPackageEditorViewModel(this, bin));
     }
 
     /// <summary>Information → Browse axis information (the symbol list's "Browse axis info" passes one symbol).</summary>
@@ -161,114 +146,11 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
         ShowDocument(new AirmassResultViewModel(this, bin));
     }
 
-    // ---- map menus ----
-
-    public string MyMapsFile => Path.Combine(SettingsKey.Folder(Suite), "mymaps.xml");
-
-    /// <summary>My Maps changed: the view rebuilds its menu.</summary>
-    public event Action? MyMapsChanged;
-
-    public void SaveMyMaps(IEnumerable<MapShortcut> maps)
-    {
-        MapMenus.SaveMyMaps(MyMapsFile, maps);
-        MyMapsChanged?.Invoke();
-    }
-
-    public void AddToMyMaps(SymbolHelper sh)
-    {
-        MapMenus.AddToMyMaps(MyMapsFile, sh.Varname);
-        MyMapsChanged?.Invoke();
-    }
-
-    /// <summary>A map button (quick maps / My Maps). The AFR feedback maps of My Maps need the realtime features.</summary>
-    [RelayCommand]
-    private void OpenShortcut(MapShortcut shortcut)
-    {
-        if (shortcut.Symbol is "targetafr" or "feedbackafr")
-        {
-            ShowInfo("The AFR maps come with the realtime features.");
-            return;
-        }
-        OpenSymbolByName(shortcut.Symbol);
-    }
-
-    /// <summary>A descriptor import changed names: the list shows them (the import saved &lt;bin&gt;.xml).</summary>
-    public void ImportSymbols(Action<T7Binary> import)
-    {
-        if (Binary is not T7Binary bin) return;
-        try
-        {
-            import(bin);
-        }
-        catch (Exception e) when (e is IOException or System.Data.DataException or System.Xml.XmlException)
-        {
-            ShowInfo("Failed to import: " + e.Message);
-        }
-        Symbols?.Refresh();
-    }
-
-    /// <summary>Search map content: "No results found..." or a results tab.</summary>
-    public void SearchMaps(MapSearchOptions options)
-    {
-        if (Binary is not T7Binary bin) return;
-        List<SymbolHelper> hits = MapSearch.Find(bin, options);
-        if (hits.Count == 0) ShowInfo("No results found...");
-        else ShowDocument(new SearchResultsViewModel(this, bin.FileName, hits));
-    }
-
-    // ---- compare ----
-
-    /// <summary>"Compare symbols with other binary": the results open as a tab.</summary>
-    public async Task CompareToFileAsync(string otherFile)
-    {
-        if (Binary is not T7Binary bin || bin.Symbols.Count == 0) return;
-        if (!T7Binary.IsValidFile(otherFile))
-        {
-            ShowInfo("File is not a Trionic 7 binary file!");
-            return;
-        }
-        IsBusy = true;
-        try
-        {
-            var (other, rows) = await Task.Run(() =>
-            {
-                T7Binary o = T7Binary.Open(otherFile, Settings.ApplicationLanguage, false);
-                return (o, T7Compare.Compare(bin, o, Settings.ApplicationLanguage));
-            });
-            ShowDocument(CompareResultsViewModel.Binaries(this, bin, other, rows));
-        }
-        finally
-        {
-            IsBusy = false;
-            ProgressText = "";
-        }
-    }
-
     /// <summary>"Compare to original file": the stock bin with this part number, when Binaries has exactly one.</summary>
-    public string? OriginalFile => Binary is T7Binary bin ? T7Compare.OriginalFile(bin) : null;
+    public string? OriginalFile => Binary is T7Binary bin ? bin.OriginalFile() : null;
 
     [RelayCommand]
     private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
-
-    /// <summary>Transfer maps: the selection remembered between runs (T7Suite's TransferSettings key).</summary>
-    public HashSet<string> LastTransferSelection()
-    {
-        using var key = SettingsKey.Open(Suite, "TransferSettings");
-        return key.GetValueNames().ToHashSet();
-    }
-
-    public List<string> TransferMaps(string target, HashSet<string> selected)
-    {
-        using (var key = SettingsKey.Open(Suite, "TransferSettings"))
-        {
-            foreach (string old in key.GetValueNames()) key.DeleteValue(old);
-            foreach (string name in selected) key.SetValue(name, "1");
-        }
-        int before = TransactionLog?.TransCollection.Count ?? 0;
-        List<string> report = T7Compare.TransferMaps((T7Binary)Binary!, target, selected, Settings.ApplicationLanguage, Settings.AutoFixFooter, TransactionLog);
-        TransactionsAdded(before);
-        return report;
-    }
 
     // ---- firmware information ----
 

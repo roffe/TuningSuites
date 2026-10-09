@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using CommonSuite;
 using NLog;
 using TrionicCANLib.Checksum;
@@ -644,40 +645,28 @@ Len: 0C Type = 10   EOLStation2		//programmed by device                 * */
             return retval;*/
         }
 
+        /// <summary>
+        /// The immobilizer code (16 characters, space padded) at +10 of every info record in both MFS halves. T8Suite dropped
+        /// PadRight's result and threw on a shorter code, after the VIN was already written.
+        /// </summary>
         internal bool UpdateSerialNumber(string serialNumber)
         {
             if (fbc != null)
             {
-                int pc = 0;
-                byte[] serialBytes = new byte[16];
-                m_SerialNumber.PadRight(16, ' ');
-                for (pc = 0; pc < 16; pc++)
+                byte[] serialBytes = serialNumber.PadRight(16)[..16].Select(c => (byte)c).ToArray();
+                for (int i = 0; i < lowtypes.Length; i++)
                 {
-                    serialBytes[pc] = Convert.ToByte(serialNumber[pc]);
-                }
-                for(int i = 0; i < lowtypes.Length; i ++)
-                {
-                    // get the type of block?
                     if (lowtypes[i] == 0xFF && lowaddress[i] != 0 && lowaddress[i] != 0xFFFF)
                     {
                         logger.Debug("Updating for serialNumber: " + lowaddress[i].ToString("X8"));
-                        for (pc = 0; pc < 16; pc++)
-                        {
-                            serialBytes[pc] = Convert.ToByte(m_SerialNumber[pc]);
-                        }
                         savedatatobinary(lowaddress[i] + 10, 16, serialBytes, m_fileName);
                     }
                 }
-                for(int i = 0; i < hightypes.Length; i ++)
+                for (int i = 0; i < hightypes.Length; i++)
                 {
-                    // get the type of block?
                     if (hightypes[i] == 0xFF && highaddress[i] != 0 && highaddress[i] != 0xFFFF)
                     {
                         logger.Debug("Updating for serialNumber: " + highaddress[i].ToString("X8"));
-                        for (pc = 0; pc < 16; pc++)
-                        {
-                            serialBytes[pc] = Convert.ToByte(m_SerialNumber[pc]);
-                        }
                         savedatatobinary(highaddress[i] + 10, 16, serialBytes, m_fileName);
                     }
                 }
@@ -690,7 +679,8 @@ Len: 0C Type = 10   EOLStation2		//programmed by device                 * */
             if (fbc != null)
             {
                 if (VINNumber.Length > 17) return false;
-                if (VINNumber.Length < 17) VINNumber.PadRight(17, '0');
+                // T8Suite dropped PadRight's result and threw on a shorter VIN
+                VINNumber = VINNumber.PadRight(17, '0');
                 foreach (FlashBlock fb in fbc)
                 {
                     fb.SetVin(VINNumber);

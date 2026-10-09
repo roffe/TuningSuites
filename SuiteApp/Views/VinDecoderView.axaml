@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             x:Class="SuiteApp.Views.VinDecoderView"
+             x:DataType="vm:VinDecoding">
+    <!-- frmDecodeVIN's fields -->
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+        </Style>
+    </UserControl.Styles>
+    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
+        <TextBlock Classes="label" Grid.Row="0" Text="Car model" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Car.CarModel}" />
+        <TextBlock Classes="label" Grid.Row="1" Text="Engine type" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Car.EngineType}" />
+        <TextBlock Classes="label" Grid.Row="2" Text="Turbo" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Turbo}" />
+        <TextBlock Classes="label" Grid.Row="3" Text="Makeyear" />
+        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Car.Makeyear}" />
+        <TextBlock Classes="label" Grid.Row="4" Text="Assembly plant" />
+        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Car.PlantInfo}" />
+        <TextBlock Classes="label" Grid.Row="5" Text="Series" />
+        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Car.Series}" />
+        <TextBlock Classes="label" Grid.Row="6" Text="Body" />
+        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Car.Body}" />
+        <TextBlock Classes="label" Grid.Row="7" Text="Gearbox" />
+        <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Car.GearboxDescription}" />
+        <TextBlock Classes="label" Grid.Row="8" Text="VIN checksum" />
+        <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding Checksum}" />
+    </Grid>
+</UserControl>

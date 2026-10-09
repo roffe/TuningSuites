@@ -318,6 +318,9 @@ namespace T8SuitePro
             return cnt;
         }
 
+        /// <summary>Form1's own GetAddrTableOffsetBySymbolTable + 7 (Copy address table): the same search, without the offsets.</summary>
+        public static int AddressTableStart(string filename) => GetFirstNqStringFromOffset(GetEndOfSymbolTable(filename), filename) + 21 + 7;
+
         private int GetAddrTableOffsetBySymbolTable(string filename)
         {
             int addrtaboffset = GetEndOfSymbolTable(filename);

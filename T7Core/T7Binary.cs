@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CommonSuite;
@@ -93,25 +94,30 @@ namespace T7
             return binary;
         }
 
-        /// <summary>By name or user description, as frmMain's feature checks matched symbols.</summary>
-        public SymbolHelper FindAny(string symbolname) =>
-            Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.Userdescription == symbolname);
-
         public override bool Has(string symbolname) => FindAny(symbolname) != null;
+
+        public override string Describe(string symbolname) => SymbolTranslator.ToHelpText(symbolname, Language);
+
+        public override bool ImportXmlSymbols(string file) => Trionic7File.TryToLoadAdditionalXMLSymbols(file, Symbols, Language);
+
+        /// <summary>T7Suite's compare name: the name, or the user description of a "Symbolnumber N"; never SymbolNames or LocalID.</summary>
+        public override string CompareName(SymbolHelper sh) =>
+            sh.Varname is "SymbolNames" or "LocalID" || sh.Userdescription is "SymbolNames" or "LocalID" ? ""
+            : sh.Varname.StartsWith("Symbolnumber") ? sh.Userdescription : sh.Varname;
+
+        public override bool IsCalibration(string name) => base.IsCalibration(name) || name.StartsWith("DisplAdap.");
 
         // GetOpenFileOffset: the header's SRAM offset, or the usual one
         private int OpenFileOffset => SramOffset > 0 ? SramOffset : 0xEFFC04;
 
-        private static bool IsSymbolCalibration(string symbolname) =>
-            symbolname.Contains("Cal.") || symbolname.Contains("Cal1.") || symbolname.Contains("Cal2.") || symbolname.Contains("Cal3.")
-            || symbolname.Contains("Cal4.") || symbolname.StartsWith("X_Acc") || symbolname.StartsWith("DisplAdap.");
+        public override int PackageAddressOffset => IsSoftwareOpen ? OpenFileOffset : 0;
 
         /// <summary>Flash address; in open software, calibration symbols listed at their SRAM address map back into the file.</summary>
         public override long SymbolAddress(string symbolname) => Find(symbolname) is { } sh ? AddressOf(sh) : 0;
 
-        public long AddressOf(SymbolHelper sh)
+        public override long AddressOf(SymbolHelper sh)
         {
-            if (IsSoftwareOpen && IsSymbolCalibration(sh.SmartVarname) && sh.Length < 0x400 && sh.Flash_start_address > FileLength)
+            if (IsSoftwareOpen && IsCalibration(sh.SmartVarname) && sh.Length < 0x400 && sh.Flash_start_address > FileLength)
                 return sh.Flash_start_address - OpenFileOffset;
             return sh.Flash_start_address;
         }
@@ -350,5 +356,102 @@ namespace T7
 
         // never corrects; a null "should I update?" callback would crash the library on a mismatch
         public override ChecksumResult VerifyChecksum() => ChecksumT7.VerifyChecksum(FileName, false, false, (_, _, _) => false);
+
+        /// <summary>
+        /// The Tuning page's map buttons in its group and button order, with DynamicTuningMenu's rules (BioPower names and E85
+        /// maps, B308 second maps, gas maps, boost control and cab gear limit only when the bin has them).
+        /// </summary>
+        public override List<MapShortcut> QuickMaps()
+        {
+            bool bio = IsBioPower, b308 = Has("IgnNormCal2.Map");
+            var m = new List<MapShortcut>
+            {
+                new("Fuel", bio ? "Petrol VE Map" : "VE map", "BFuelCal.Map"),
+                new("Fuel", bio ? "E85 VE Map" : "Startup VE map", bio ? "BFuelCal.E85Map" : "BFuelCal.StartMap"),
+                new("Fuel", "Injector constant", "InjCorrCal.InjectorConst"),
+            };
+            if (b308)
+            {
+                m.Add(new("Fuel", "VE map2", "BFuelCal2.Map"));
+                m.Add(new("Fuel", "Startup VE map2", "BFuelCal2.StartMap"));
+            }
+            if (Has("MyrtilosCal.Fuel_GasMap")) m.Add(new("Fuel", "Gas VE map", "MyrtilosCal.Fuel_GasMap"));
+            else if (Has("BFuelCal.GasMap")) m.Add(new("Fuel", "Gas VE map", "BFuelCal.GasMap"));
+
+            m.Add(new("Ignition", "Ignition map", "IgnNormCal.Map"));
+            if (b308) m.Add(new("Ignition", "Ignition map2", "IgnNormCal2.Map"));
+            if (bio) m.Add(new("Ignition", "Ignition for E85", "IgnE85Cal.fi_AbsMap"));
+            if (Has("IgnNormCal.GasMap")) m.Add(new("Ignition", "Ignition for gas", "IgnNormCal.GasMap"));
+            m.Add(new("Ignition", "Knock pull map", "IgnKnkCal.IndexMap"));
+            m.Add(new("Ignition", "Max knock pull", "KnkFuelCal.fi_MapMaxOff"));
+
+            m.Add(new("Airmass request", "Pedal request map", "PedalMapCal.m_RequestMap"));
+            m.Add(new("Airmass request", "Air/torque calibration", "TorqueCal.m_AirTorqMap"));
+            m.Add(new("Airmass request", "Nom. torque map", "TorqueCal.M_NominalMap"));
+            m.Add(new("Airmass request", "Pedal request airmass (Y)", "TorqueCal.m_PedYSP"));
+            m.Add(new("Airmass request", "Air/torque (X)", "TorqueCal.M_EngXSP"));
+            m.Add(new("Airmass request", "Nom. torque map (X)", "TorqueCal.m_AirXSP"));
+
+            if (Has("BoostCal.RegMap"))
+            {
+                m.Add(new("Boost control", "Boost calibr.", "BoostCal.RegMap"));
+                m.Add(new("Boost control", "P factors", "BoostCal.PMap"));
+                m.Add(new("Boost control", "I factors", "BoostCal.IMap"));
+                m.Add(new("Boost control", "D factors", "BoostCal.DMap"));
+            }
+
+            m.Add(new("Knock", "Knock enrichment", "KnkFuelCal.EnrichmentMap"));
+            m.Add(new("Knock", "Knock sensitivity", "KnkDetCal.RefFactorMap"));
+
+            m.Add(new("Limiters", "Airmass (M)", "BstKnkCal.MaxAirmass"));
+            m.Add(new("Limiters", "Airmass (A)", "BstKnkCal.MaxAirmassAu"));
+            m.Add(new("Limiters", "RPM limiter", "MaxSpdCal.n_EngLimAir"));
+            m.Add(new("Limiters", "Engine trq (M)", "TorqueCal.M_EngMaxTab"));
+            m.Add(new("Limiters", "Engine trq (A)", "TorqueCal.M_EngMaxAutTab"));
+            m.Add(new("Limiters", "Fuel cut", "FCutCal.m_AirInletLimit"));
+            if (bio) m.Add(new("Limiters", "Engine trq for E85", "TorqueCal.M_EngMaxE85Tab"));
+            if (bio && Has("TorqueCal.M_EngMaxE85TabAut")) m.Add(new("Limiters", "Engine trq for E85 (A)", "TorqueCal.M_EngMaxE85TabAut"));
+            m.Add(new("Limiters", "Speed limiter", "MaxVehicCal.v_MaxSpeed"));
+            m.Add(new("Limiters", "Gear trq (M)", "TorqueCal.M_ManGearLim"));
+            m.Add(new("Limiters", "Gear trq (5th)", "TorqueCal.M_5GearLimTab"));
+            if (Has("TorqueCal.M_CabGearLim")) m.Add(new("Limiters", "Gear trq (cab)", "TorqueCal.M_CabGearLim"));
+            m.Add(new("Limiters", "Overboost", "TorqueCal.M_OverBoostTab"));
+            return m;
+        }
+
+        /// <summary>Export fixed tuning package: the maps a stage tune touches.</summary>
+        public override IReadOnlyList<string> FixedPackageSymbols { get; } =
+        [
+            "LimEngCal.TurboSpeedTab", "LimEngCal.p_AirSP", "AirCtrlCal.m_MaxAirTab", "TempLimPosCal.Airmass", "BoostCal.RegMap",
+            "BoostCal.SetLoadXSP", "BoostCal.n_EngSP", "PedalMapCal.m_RequestMap", "PedalMapCal.n_EngineMap", "PedalMapCal.X_PedalMap",
+            "BstKnkCal.MaxAirmass", "BstKnkCal.OffsetXSP", "BstKnkCal.n_EngYSP", "BstKnkCal.MaxAirmassAu", "TorqueCal.M_EngMaxAutTab",
+            "TorqueCal.M_EngMaxTab", "TorqueCal.M_EngMaxE85Tab", "TorqueCal.M_ManGearLim", "TorqueCal.M_CabGearLim", "TorqueCal.n_Eng5GearSP",
+            "TorqueCal.M_5GearLimTab", "TorqueCal.M_NominalMap", "TorqueCal.m_AirXSP", "TorqueCal.n_EngYSP", "TorqueCal.m_AirTorqMap",
+            "TorqueCal.M_EngXSP", "TorqueCal.m_PedYSP", "FCutCal.m_AirInletLimit", "BoosDiagCal.m_FaultDiff", "BoosDiagCal.ErrMaxMReq",
+            "BFuelCal.Map", "BFuelCal.StartMap", "BFuelCal.E85Map", "MyrtilosCal.Fuel_GasMap", "BFuelCal.GasMap", "BFuelCal.AirXSP",
+            "BFuelCal.RpmYSP", "InjCorrCal.BattCorrSP", "InjCorrCal.BattCorrTab", "InjCorrCal.InjectorConst", "IgnNormCal.Map",
+            "IgnE85Cal.fi_AbsMap", "IgnNormCal.GasMap", "IgnNormCal.m_AirXSP", "IgnNormCal.n_EngYSP", "IgnKnkCal.IndexMap",
+            "KnkFuelCal.fi_MapMaxOff", "KnkFuelCal.m_AirXSP", "BoostCal.PMap", "BoostCal.IMap", "BoostCal.DMap", "BoostCal.PIDXSP",
+            "BoostCal.PIDYSP", "TorqueCal.M_OverBoostTab", "TorqueCal.n_EngYSP", "KnkFuelCal.EnrichmentMap", "IgnKnkCal.m_AirXSP",
+            "IgnKnkCal.n_EngYSP", "KnkDetCal.RefFactorMap", "KnkDetCal.m_AirXSP", "KnkDetCal.n_EngYSP", "MaxSpdCal.T_EngineSP",
+            "MaxSpdCal.n_EngLimAir", "MaxVehicCal.v_MaxSpeed",
+        ];
+
+        public override string ExportIdc() => BinaryTools.ExportIdc(this);
+
+        public override int AddressTableStart(string file) => BinaryTools.AddressTableOffset(File.ReadAllBytes(file));
+
+        public override void CopyAddressTable(string target) => BinaryTools.CopyAddressTable(FileName, target, AutoFixFooter);
+
+        /// <summary>"Compare to original file": the stock bin with the part number in Binaries next to the executable.</summary>
+        public string OriginalFile()
+        {
+            var header = new T7FileHeader();
+            header.init(FileName, false);
+            string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
+            if (!Directory.Exists(dir)) return null;
+            string[] files = Directory.GetFiles(dir, header.getPartNumber().Trim() + ".bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive });
+            return files.Length == 1 ? files[0] : null;
+        }
     }
 }

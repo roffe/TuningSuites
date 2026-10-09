@@ -1,6 +1,7 @@
-<Window xmlns="https://github.com/avaloniaui"
+<sv:SuiteSettingsWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
+        xmlns:sv="using:SuiteApp.Views"
         x:Class="T7App.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
@@ -104,4 +105,4 @@
             <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
         </StackPanel>
     </Grid>
-</Window>
+</sv:SuiteSettingsWindow>

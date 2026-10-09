@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:cs="using:CommonSuite"
+        xmlns:v="using:SuiteApp.Views"
+        x:Class="SuiteApp.Views.ImportResultsWindow"
+        Title="Import results" Width="640" Height="460" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="12">
+        <Button DockPanel.Dock="Bottom" Content="Close" HorizontalAlignment="Right" MinWidth="80" Margin="0,8,0,0" IsCancel="True" IsDefault="True" Click="OnClose" />
+        <DataGrid x:Name="Grid" IsReadOnly="True" GridLinesVisibility="Horizontal">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="cs:PackageResult" Header="Map" Binding="{Binding Map, Mode=OneWay}" Width="2*" />
+                <DataGridTemplateColumn x:DataType="cs:PackageResult" Header="Result" Width="*">
+                    <DataTemplate x:DataType="cs:PackageResult">
+                        <Border Background="{Binding Success, Converter={x:Static v:ResultBrushConverter.Instance}}" Padding="6,2" ToolTip.Tip="{Binding Detail}">
+                            <TextBlock Text="{Binding Success, Converter={x:Static v:ResultTextConverter.Instance}}" Foreground="Black" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:DataType="cs:PackageResult" Header="Details" Binding="{Binding Detail, Mode=OneWay}" Width="2*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

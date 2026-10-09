@@ -9,11 +9,7 @@ namespace T7
     /// <summary>A row of the axis browser: a map, its description and its two axes.</summary>
     public sealed record AxisInfo(string Symbol, string Description, string XAxis, string XDescription, string YAxis, string YDescription);
 
-    /// <summary>Lookup partnumber's result; Binary is the stock file in Binaries when there is one.</summary>
-    public sealed record PartInfo(string PartNumber, string CarModel, string EngineType, int Bhp, int Torque, bool TwoLiter, bool TwoPointThreeLiter,
-        bool Turbo, bool FullPressureTurbo, string Binary);
-
-    /// <summary>The remaining File / Actions / Information tools of frmMain: the address table copy, the axis browser.</summary>
+    /// <summary>The remaining File / Actions / Information tools of frmMain: the address table copy, the axis browser, the Idc file.</summary>
     public static class BinaryTools
     {
         /// <summary>GetStartOfAddressTableOffset: from 0x30000, the 0x20 that ends eight zero bytes; 0 when there is none.</summary>
@@ -52,6 +48,13 @@ namespace T7
             return records;
         }
 
+        /// <summary>Generate Idc file: &lt;bin&gt;-autogen.idc next to the bin.</summary>
+        public static string ExportIdc(T7Binary bin)
+        {
+            IdaProIdcFile.create(bin.FileName, bin.Symbols);
+            return Path.Combine(Path.GetDirectoryName(bin.FileName), Path.GetFileNameWithoutExtension(bin.FileName) + "-autogen.idc");
+        }
+
         /// <summary>Browse axis information: every symbol with an x or y axis (one symbol when given).</summary>
         public static List<AxisInfo> Axes(T7Binary bin, string only = null)
         {
@@ -72,12 +75,8 @@ namespace T7
             partNumber = partNumber.Trim();
             ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
             if (!ecu.Valid) return null;
-            string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
-            string bin = Directory.Exists(dir)
-                ? Directory.GetFiles(dir, partNumber + ".bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()
-                : null;
             return new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), ecu.Bhp, ecu.Torque,
-                !ecu.Is2point3liter, ecu.Is2point3liter, ecu.Isturbo, ecu.Isfpt, bin);
+                !ecu.Is2point3liter, ecu.Is2point3liter, ecu.Isturbo, ecu.Isfpt, PartInfo.StockBinary(partNumber));
         }
     }
 }

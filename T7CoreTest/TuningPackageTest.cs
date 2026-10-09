@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7;
 using TrionicCANLib.Checksum;
@@ -48,7 +49,7 @@ namespace T7CoreTest
                     "symbol=IgnNormCal.Map\nlength=4\ndata=01,02,03,04,\n" +
                     "symbol=No.Such\nlength=1\ndata=00,\n" +
                     "searchreplace='Nothing',{0xDE,0xAD,0xBE,0xEF,0xDE,0xAD},{0x00,0x00,0x00,0x00,0x00,0x00},{{{,},{,}}}\n");
-                var results = TuningPackage.Read(pkg, bin).Apply(bin, false);
+                var results = TuningPackage.Read(pkg, bin).Apply(bin);
                 CollectionAssert.AreEqual(new[] { true, false, false, false }, results.Select(r => r.Success).ToArray());
                 StringAssert.Contains(results[1].Detail, "length 4");
                 Assert.AreEqual("Nothing: 0 replacements", results[3].Map);

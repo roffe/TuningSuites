@@ -29,6 +29,37 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
 
     protected override string ReleaseTagPrefix => "T8suite_v";
 
+    public override string PackageFilesName => "Trionic 8 packages";
+
+    public override string PackageExtension => "t8p";
+
+    // six fields, no user description
+    public override bool SymbolCsvUserDescription => false;
+
+    /// <summary>T8Suite's tab names the search ("Search results:  number 12").</summary>
+    protected override string SearchTitle(SuiteBinary bin, MapSearchOptions options) =>
+        "Search results: " + (options.SearchForNumericValues ? " number " + options.NumericValue : "") + (options.SearchForStringValues ? " string " + options.StringValue : "");
+
+    // T8Suite kept the last selection outside MattiasC
+    protected override string? LegacyTransferKey => @"Software\T8SuitePro\TransferSettings";
+
+    /// <summary>Lookup partnumber: "&lt;partnumber&gt;_&lt;software version&gt;", as the stock bins in Binaries are named; only the car and engine.</summary>
+    public override PartInfo? LookupPartNumber(string partNumber)
+    {
+        ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
+        return ecu.Valid
+            ? new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), 0, 0, false, false, false, false, PartInfo.StockBinary(partNumber))
+            : null;
+    }
+
+    public override bool PartDetails => false;
+
+    public override IReadOnlyList<MapShortcut> MyMapsDefaults { get; } =
+    [
+        new("Fuel", "Main fuel map", "BFuelCal.LambdaOneFacMap"), new("Boost", "Boost bias map", "AirCtrlCal.RegMap"),
+        new("Boost", "P factors map", "AirCtrlCal.Ppart_BoostMap"),
+    ];
+
     /// <summary>Form1.OpenFile ends with UpdateChecksum(file, AutoChecksum): checked on every open, the result in the status bar.</summary>
     protected override async Task OnOpenedAsync(SuiteBinary bin) => await CheckChecksumAsync(bin.FileName);
 
@@ -100,6 +131,24 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
         return true;
     }
 
-    /// <summary>Actions → Firmware information (read only so far).</summary>
+    /// <summary>Actions → Firmware information.</summary>
     public FirmwareInfo? FirmwareInfo() => Binary is { } bin && System.IO.File.Exists(bin.FileName) ? T8SuitePro.FirmwareInfo.Read(bin.FileName) : null;
+
+    /// <summary>The firmware dialog's OK: the edits (transactions in a project), then the checksum as on open (Form1 3608).</summary>
+    public async Task ApplyFirmwareAsync(FirmwareEdit edit)
+    {
+        if (Binary is not T8Binary bin) return;
+        try
+        {
+            int before = TransactionLog?.TransCollection.Count ?? 0;
+            T8SuitePro.FirmwareInfo.Apply(bin, edit, TransactionLog);
+            TransactionsAdded(before);
+        }
+        catch (System.Exception e) when (e is System.IO.IOException or System.UnauthorizedAccessException)
+        {
+            ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
+            return;
+        }
+        await CheckChecksumAsync(bin.FileName);
+    }
 }

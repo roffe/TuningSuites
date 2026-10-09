@@ -57,7 +57,8 @@ namespace CommonSuite
                 {
                     if (sh.Userdescription != "")
                     {
-                        if (sh.Userdescription == String.Format("Symbolnumber {0}", sh.Symbol_number))
+                        // a name swapped into Varname goes back under its placeholder; T8's placeholder is one less than Symbol_number
+                        if (sh.Userdescription.StartsWith("Symbolnumber "))
                         {
                             dt.Rows.Add(sh.Userdescription, sh.Symbol_number, sh.Flash_start_address, sh.Varname);
                         }

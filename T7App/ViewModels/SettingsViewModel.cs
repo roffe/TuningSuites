@@ -1,28 +1,18 @@
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
 /// <summary>
-/// frmSettings, the offline part: the settings that do something in this app (of the docking / window size options only
-/// Hide symbol window). Wideband and autotune have groups here instead of T7Suite's extra dialogs.
+/// frmSettings: the shared settings plus T7Suite's own (closed loop indicator, timestamp marker, footer fix, the connection).
+/// Wideband and autotune have groups here instead of T7Suite's extra dialogs.
 /// </summary>
-public partial class SettingsViewModel : ObservableObject
+public partial class SettingsViewModel : SuiteSettingsViewModel
 {
-    [ObservableProperty] private bool _showRedWhite;
-    [ObservableProperty] private bool _showGraphs;
-    [ObservableProperty] private bool _disableMapviewerColors;
-    [ObservableProperty] private bool _autoLoadLastFile;
-    [ObservableProperty] private int _defaultViewType;
-    [ObservableProperty] private bool _synchronizeMapviewers;
     [ObservableProperty] private int _standardFill;
     [ObservableProperty] private bool _writeTimestampInBinary;
-    [ObservableProperty] private bool _autoChecksum;
-    [ObservableProperty] private bool _showAddressesInHex;
     [ObservableProperty] private bool _autoFixFooter;
-    [ObservableProperty] private bool _requestProjectNotes;
-    [ObservableProperty] private bool _hideSymbolTable;
-    [ObservableProperty] private string _projectFolder;
 
     // realtime settings: the connection
     [ObservableProperty] private string _adapterType;
@@ -84,26 +74,13 @@ public partial class SettingsViewModel : ObservableObject
         AdapterNeedsBaudrate = type is TrionicCANLib.API.CANBusAdapter.ELM327 or TrionicCANLib.API.CANBusAdapter.JUST4TRIONIC or TrionicCANLib.API.CANBusAdapter.SLCAN;
     }
 
-    public string[] ViewTypes { get; } = ["Hexadecimal view", "Decimal view", "Easy view"];
     public string[] ClosedLoopIndicators { get; } = ["No closed loop indicator", "Square closed loop indicator", "Triangle closed loop indicator"];
 
-    public SettingsViewModel(AppSettings s)
+    public SettingsViewModel(AppSettings s) : base(s)
     {
-        _showRedWhite = s.ShowRedWhite;
-        _showGraphs = s.ShowGraphs;
-        _disableMapviewerColors = s.DisableMapviewerColors;
-        _autoLoadLastFile = s.AutoLoadLastFile;
-        // values past Easy (the bar views) show as Easy, like the old combo
-        _defaultViewType = System.Math.Min((int)s.DefaultViewType, 2);
-        _synchronizeMapviewers = s.SynchronizeMapviewers;
         _standardFill = System.Math.Clamp(s.StandardFill, 0, 2);
         _writeTimestampInBinary = s.WriteTimestampInBinary;
-        _autoChecksum = s.AutoChecksum;
-        _showAddressesInHex = s.ShowAddressesInHex;
         _autoFixFooter = s.AutoFixFooter;
-        _requestProjectNotes = s.RequestProjectNotes;
-        _hideSymbolTable = s.HideSymbolTable;
-        _projectFolder = s.ProjectFolder;
         _adapter = s.Adapter;
         _baudrate = s.Baudrate;
         _onlyPBus = s.OnlyPBus;
@@ -132,22 +109,12 @@ public partial class SettingsViewModel : ObservableObject
         AdapterType = System.Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
     }
 
-    /// <summary>OK: every value back into AppSettings (each setter saves).</summary>
-    public void Apply(AppSettings s)
+    public override void Apply(AppSettings s)
     {
-        s.ShowRedWhite = ShowRedWhite;
-        s.ShowGraphs = ShowGraphs;
-        s.DisableMapviewerColors = DisableMapviewerColors;
-        s.AutoLoadLastFile = AutoLoadLastFile;
-        s.DefaultViewType = (SuiteViewType)DefaultViewType;
-        s.SynchronizeMapviewers = SynchronizeMapviewers;
-        s.AutoChecksum = AutoChecksum;
+        base.Apply(s);
         s.StandardFill = StandardFill;
         s.WriteTimestampInBinary = WriteTimestampInBinary;
-        s.ShowAddressesInHex = ShowAddressesInHex;
         s.AutoFixFooter = AutoFixFooter;
-        s.RequestProjectNotes = RequestProjectNotes;
-        s.HideSymbolTable = HideSymbolTable;
         s.AdapterType = AdapterType;
         s.Adapter = Adapter ?? "";
         s.Baudrate = Baudrate;
@@ -173,9 +140,5 @@ public partial class SettingsViewModel : ObservableObject
         s.MaximumAdjustmentPerCyclePercentage = (int)(MaximumAdjustment ?? 10);
         s.AutoUpdateFuelMap = AutoUpdateFuelMap;
         s.DisableClosedLoopOnStartAutotune = DisableClosedLoopOnStartAutotune;
-        // an empty folder fell back to <program>\Projects; the program folder isn't writable on Linux, so the default instead
-        s.ProjectFolder = string.IsNullOrWhiteSpace(ProjectFolder)
-            ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "TxSuite", "Projects")
-            : ProjectFolder;
     }
 }

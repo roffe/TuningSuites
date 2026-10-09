@@ -22,7 +22,7 @@ namespace SuiteApp.Views;
 /// every suite has. Each app's MainWindow.axaml derives from it with its own menus (its ribbon's order and captions), a StatusBar,
 /// a SuiteWorkspace, and the symbol list's row menu as the window resource "SymbolListMenu"; menu items can name the handlers here.
 /// </summary>
-public class SuiteMainWindow : Window
+public partial class SuiteMainWindow : Window
 {
     private const string SymbolListKey = "SymbolListProportion";
     private const string SkinKey = "Skin";
@@ -76,6 +76,7 @@ public class SuiteMainWindow : Window
         };
         vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.SelectedViewer)) ActivateDocument(vm.SelectedViewer); };
         ApplyHideSymbolTable();
+        WatchMapMenus(vm);
         vm.Info += text => _ = Dialogs.Info(this, text, vm.Caption);
         vm.AskYesNoCancel = text => Dialogs.YesNoCancel(this, text, "Question");
         vm.AskText = caption => Dialogs.Prompt(this, caption);

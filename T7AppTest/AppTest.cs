@@ -233,7 +233,7 @@ namespace T7AppTest
                 await vm.CompareToFileAsync(b);
                 var results = (CompareResultsViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Compare results: cmp-b.bin", results.Title);
-                var row = results.Rows.Cast<T7.CompareRow>().Single(r => !r.MissingInCompareFile && !r.MissingInOriFile);
+                var row = results.Rows.Cast<CommonSuite.CompareRow>().Single(r => !r.MissingInCompareFile && !r.MissingInOriFile);
                 Assert.AreEqual("IgnNormCal.Map", row.SymbolName);
                 Assert.AreEqual(1, row.Differences); // one changed byte is one changed value (T7Suite showed 0)
                 Save(window, "compare");
@@ -303,7 +303,7 @@ namespace T7AppTest
                 settings2.Apply(vm.Settings);
                 vm.SettingsChanged();
 
-                var myMapsWindow = new MyMapsWindow { DataContext = new MyMapsViewModel(T7.MapMenus.LoadMyMaps(vm.MyMapsFile)) };
+                var myMapsWindow = new MyMapsWindow { DataContext = new MyMapsViewModel(CommonSuite.MapMenus.LoadMyMaps(vm.MyMapsFile)) };
                 myMapsWindow.Show();
                 Save(myMapsWindow, "mymaps");
                 myMapsWindow.Close();
@@ -312,7 +312,7 @@ namespace T7AppTest
                 var searchWindow = new SearchMapsWindow { DataContext = new SearchMapsViewModel() };
                 searchWindow.Show();
                 searchWindow.Close();
-                vm.SearchMaps(new T7.MapSearchOptions(false, 0, true, "IgnNormCal.Map", true, false, false, 0));
+                vm.SearchMaps(new CommonSuite.MapSearchOptions(false, 0, true, "IgnNormCal.Map", true, false, false, 0));
                 var found = (SearchResultsViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Search results: menus.bin", found.Title);
                 Save(window, "search");
@@ -323,7 +323,7 @@ namespace T7AppTest
                 string csv = Path.Combine(s_dir, "names.csv");
                 var target = vm.Binary!.Find("IgnNormCal.Map");
                 File.WriteAllText(csv, $"{target.Symbol_number};My.Ignition;;;\n");
-                vm.ImportSymbols(bin => T7.SymbolFiles.ImportCsv(bin, csv));
+                vm.ImportSymbols(bin => CommonSuite.SymbolFiles.ImportCsv(bin, csv));
                 Assert.AreEqual("My.Ignition", target.Userdescription);
                 window.Close();
                 return true;
@@ -750,7 +750,7 @@ namespace T7AppTest
                 Save(about, "about");
                 about.Close();
 
-                var lookup = new PartLookupViewModel { PartNumber = "5168646" };
+                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails) { PartNumber = "5168646" };
                 lookup.Lookup();
                 Assert.IsNotNull(lookup.Info);
                 lookup.PartNumber = "123";
@@ -841,7 +841,7 @@ namespace T7AppTest
                 await vm.CompareSramAsync(ramFile, ramFile2);
                 var results = (CompareResultsViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("SRAM compare results: snap.RAM snap2.RAM", results.Title);
-                var row = results.Rows.SourceCollection.Cast<T7.CompareRow>().Single(r => r.SymbolName == "IgnNormCal.Map");
+                var row = results.Rows.SourceCollection.Cast<CommonSuite.CompareRow>().Single(r => r.SymbolName == "IgnNormCal.Map");
                 results.Open(row);
                 Assert.AreEqual("SRAM Symbol: IgnNormCal.Map [snap2.RAM]", vm.SelectedViewer!.Title);
                 results.ShowDifferenceMap(row);

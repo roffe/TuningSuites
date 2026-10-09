@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             x:Class="SuiteApp.Views.TuningPackageEditorView"
+             x:DataType="vm:TuningPackageEditorViewModel">
+    <DockPanel Margin="6">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+            <Button Content="Open package..." Click="OnOpen" />
+            <Button Content="Add selected symbols" Click="OnAdd" />
+            <Button Content="Remove" Click="OnRemove" />
+            <Button Content="Save as..." Click="OnSave" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Margin="0,6,0,0" Opacity="0.7"
+                   Text="Double-click a row to open its map; saving that viewer updates the row. Del removes the selected rows." />
+        <DataGrid x:Name="Grid" ItemsSource="{Binding Rows}" GridLinesVisibility="Horizontal" SelectionMode="Extended" IsReadOnly="True"
+                  DoubleTapped="OnRowDoubleTapped" KeyDown="OnGridKeyDown">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="vm:TuningPackageRow" Header="Map" Binding="{Binding Map, Mode=OneWay}" Width="2*" />
+                <DataGridTextColumn x:DataType="vm:TuningPackageRow" Header="Length" Binding="{Binding Length, Mode=OneWay}" Width="80" />
+                <DataGridTextColumn x:DataType="vm:TuningPackageRow" Header="Data" Binding="{Binding Data, Mode=OneWay}" Width="4*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

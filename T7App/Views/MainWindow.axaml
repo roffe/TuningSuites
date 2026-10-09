@@ -35,7 +35,7 @@
                     <MenuItem.Styles>
                         <!-- only Recent's own entries; "MenuItem > MenuItem" would also match Recent itself, which sits inside File -->
                         <Style Selector="MenuItem#RecentMenu > MenuItem" x:DataType="svm:RecentFile">
-                            <Setter Property="Header" Value="{Binding Name}" />
+                            <Setter Property="Header" Value="{Binding Name, Converter={x:Static sv:MenuTextConverter.Instance}}" />
                             <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
                             <Setter Property="Command" Value="{Binding $parent[Window].((vm:T7MainWindowViewModel)DataContext).OpenRecentCommand}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />

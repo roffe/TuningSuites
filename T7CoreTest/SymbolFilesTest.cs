@@ -42,7 +42,7 @@ namespace T7CoreTest
         public void IdcAndPackageAndCsv()
         {
             T7Binary bin = Copy("5168646.bin");
-            string idc = SymbolFiles.ExportIdc(bin);
+            string idc = BinaryTools.ExportIdc(bin);
             StringAssert.Contains(File.ReadAllText(idc), "namevar(\"ROM_IgnNormCal.Map\"");
 
             string pkg = Path.Combine(m_dir, "stage.t7p");
@@ -54,7 +54,7 @@ namespace T7CoreTest
             Assert.StartsWith("data=", lines[i + 2]);
 
             string csv = Path.Combine(m_dir, "symbols.csv");
-            SymbolFiles.ExportSymbolCsv(bin, csv);
+            SymbolFiles.ExportSymbolCsv(bin, csv, true);
             Assert.HasCount(bin.Symbols.Count, File.ReadAllLines(csv));
 
             string map = Path.Combine(m_dir, "map.csv");

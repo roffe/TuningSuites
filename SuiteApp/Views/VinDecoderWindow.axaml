@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        xmlns:v="using:SuiteApp.Views"
+        x:Class="SuiteApp.Views.VinDecoderWindow"
+        x:DataType="vm:VinDecoderViewModel"
+        Title="VIN decoder" MinWidth="420" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="12" Spacing="10">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Text="VIN number" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding Vin}" MaxLength="17" KeyDown="OnKeyDown" />
+            <Button Grid.Column="2" Content="Decode" Click="OnDecode" />
+        </Grid>
+        <v:VinDecoderView DataContext="{Binding Decoded}" />
+        <Button Content="Close" HorizontalAlignment="Right" MinWidth="80" IsCancel="True" IsDefault="True" Click="OnClose" />
+    </StackPanel>
+</Window>

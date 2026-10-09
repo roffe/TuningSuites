@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TrionicCANLib.Checksum;
@@ -30,10 +31,31 @@ namespace CommonSuite
 
         public virtual bool Has(string symbolname) => Find(symbolname) != null;
 
+        /// <summary>By name or user description, as the feature checks and tuning packages matched symbols.</summary>
+        public SymbolHelper FindAny(string symbolname) =>
+            Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.Userdescription == symbolname);
+
+        /// <summary>The name compare and transfer match symbols by, "" leaves one out. T8Suite matched by SmartVarname.</summary>
+        public virtual string CompareName(SymbolHelper sh) => sh.SmartVarname;
+
+        /// <summary>Calibration symbols: compare lists the ones only one of the files has.</summary>
+        public virtual bool IsCalibration(string name) =>
+            name.Contains("Cal.") || name.Contains("Cal1.") || name.Contains("Cal2.") || name.Contains("Cal3.") || name.Contains("Cal4.")
+            || name.StartsWith("X_Acc");
+
+        /// <summary>The help text shown for a symbol name.</summary>
+        public abstract string Describe(string symbolname);
+
+        /// <summary>Import XML descriptor: names matched on name and flash address. False when the file holds no table.</summary>
+        public abstract bool ImportXmlSymbols(string file);
+
         public int SymbolLength(string symbolname) => Find(symbolname)?.Length ?? 0;
 
         /// <summary>The symbol's address in the file, 0 when it isn't there.</summary>
         public abstract long SymbolAddress(string symbolname);
+
+        /// <summary>Where compare, transfer and search read a symbol in the file.</summary>
+        public virtual long AddressOf(SymbolHelper sh) => sh.Flash_start_address;
 
         /// <summary>Where a map's data sits in the file, -1 if it only lives in SRAM.</summary>
         public abstract int FileAddress(SymbolHelper sh);
@@ -86,6 +108,27 @@ namespace CommonSuite
         public abstract double GetMapCorrectionFactor(string symbolname);
 
         public virtual double GetMapCorrectionOffset(string symbolname) => 0;
+
+        /// <summary>The factor an axis' values still need in an export: T7's come with it, T8's are raw.</summary>
+        public virtual double AxisFactor(string axisSymbol) => 1;
+
+        /// <summary>Export fixed tuning package: the maps a stage tune touches.</summary>
+        public abstract IReadOnlyList<string> FixedPackageSymbols { get; }
+
+        /// <summary>A tuning package export reads open software's SRAM-addressed calibration this much lower in the file.</summary>
+        public virtual int PackageAddressOffset => 0;
+
+        /// <summary>Copy address table: where a file's address table starts (the two files' should match), 0 when it has none.</summary>
+        public abstract int AddressTableStart(string file);
+
+        /// <summary>Copy address table to another binary, then that file's checksum. Throws when either file has no table.</summary>
+        public abstract void CopyAddressTable(string target);
+
+        /// <summary>Generate Idc file: &lt;bin&gt;-autogen.idc next to the bin, for IDA Pro. Its path.</summary>
+        public abstract string ExportIdc();
+
+        /// <summary>The quick maps menu (the Tuning page's map buttons) for this binary.</summary>
+        public virtual List<MapShortcut> QuickMaps() => [];
 
         /// <summary>The open-loop limits drawn on the map's load × rpm cells, null when the suite has none.</summary>
         public virtual byte[] OpenLoopTable(string mapname) => null;

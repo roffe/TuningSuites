@@ -21,9 +21,6 @@ public partial class MainWindow : SuiteMainWindow
     {
         base.OnDataContextChanged(e);
         if (DataContext is not T7MainWindowViewModel vm) return;
-        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildQuickMaps(); };
-        vm.MyMapsChanged += BuildMyMaps;
-        BuildMyMaps();
         vm.AcceptAutotune = percent =>
         {
             string map = string.IsNullOrEmpty(vm.Settings.AutoTuneFuelMap) ? "BFuelCal.Map" : vm.Settings.AutoTuneFuelMap;
@@ -101,11 +98,6 @@ public partial class MainWindow : SuiteMainWindow
             await Vm.ReadMapFromEcuAsync(viewer);
     }
 
-    private async void OnImportTuningPackage(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "Trionic 7 packages", "*.t7p") is { } file && Vm.ImportTuningPackage(file) is { } results)
-            await new ImportResultsWindow(results).ShowDialog(this);
-    }
 
     private async void OnSidInfo(object? sender, RoutedEventArgs e)
     {
@@ -161,41 +153,7 @@ public partial class MainWindow : SuiteMainWindow
         Vm.RefreshViewers(bin.FileName);
     }
 
-    private async void OnCopyAddressTable(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is not T7.T7Binary bin || await Dialogs.OpenFile(this, "T7 binary files", "*.bin") is not { } target) return;
-        int from = T7.BinaryTools.AddressTableOffset(System.IO.File.ReadAllBytes(bin.FileName));
-        int to = T7.BinaryTools.AddressTableOffset(System.IO.File.ReadAllBytes(target));
-        if (from != to && !await Dialogs.YesNo(this, "Address table start addresses are not equal, continue anyway?", "Attention!"))
-        {
-            await Dialogs.Info(this, "Transfer cancelled");
-            return;
-        }
-        try
-        {
-            T7.BinaryTools.CopyAddressTable(bin.FileName, target, Vm.Settings.AutoFixFooter);
-            await Dialogs.Info(this, "Transfer done");
-        }
-        catch (System.Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or System.InvalidOperationException)
-        {
-            await Dialogs.Info(this, ex.Message);
-        }
-    }
 
-    private async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
-    {
-        var lookup = new PartLookupViewModel();
-        string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(this);
-        if (action == null || lookup.Info?.Binary is not { } stock) return;
-        if (action == "open") await Vm.OpenFileAsync(stock, true);
-        else if (action == "compare") await Vm.CompareToFileAsync(stock);
-        else if (action.StartsWith("create:"))
-        {
-            string file = action[7..];
-            System.IO.File.Copy(stock, file, true);
-            await Vm.OpenFileAsync(file, true);
-        }
-    }
 
     private async void OnVectors(object? sender, RoutedEventArgs e)
     {
@@ -263,51 +221,6 @@ public partial class MainWindow : SuiteMainWindow
         if (Vm.SelectedSymbol is { } sh) Vm.OpenFromSramFile(sh);
     }
 
-    // ---- map menus ----
-
-    private MenuItem Shortcut(T7.MapShortcut m) =>
-        new() { Header = m.Caption, Command = Vm.OpenShortcutCommand, CommandParameter = m, [ToolTip.TipProperty] = m.Symbol };
-
-    // the ribbon's map buttons, grouped as the ribbon was, only the ones this bin has (DynamicTuningMenu)
-    private void BuildQuickMaps()
-    {
-        QuickMapsMenu.Items.Clear();
-        if (Vm.Binary is not T7.T7Binary bin) return;
-        foreach (var group in T7.MapMenus.QuickMaps(bin).GroupBy(m => m.Group))
-        {
-            var item = new MenuItem { Header = group.Key };
-            foreach (var m in group) item.Items.Add(Shortcut(m));
-            QuickMapsMenu.Items.Add(item);
-        }
-    }
-
-    private void BuildMyMaps()
-    {
-        MyMapsMenu.Items.Clear();
-        var define = new MenuItem { Header = "Define myMaps..." };
-        define.Click += OnDefineMyMaps;
-        MyMapsMenu.Items.Add(define);
-        var maps = T7.MapMenus.LoadMyMaps(Vm.MyMapsFile);
-        if (maps.Count > 0) MyMapsMenu.Items.Add(new Separator());
-        foreach (var group in maps.GroupBy(m => m.Group))
-        {
-            var item = new MenuItem { Header = group.Key };
-            foreach (var m in group) item.Items.Add(Shortcut(m));
-            MyMapsMenu.Items.Add(item);
-        }
-    }
-
-    private async void OnDefineMyMaps(object? sender, RoutedEventArgs e)
-    {
-        var maps = new MyMapsViewModel(T7.MapMenus.LoadMyMaps(Vm.MyMapsFile));
-        if (await new MyMapsWindow { DataContext = maps }.ShowDialog<bool>(this)) Vm.SaveMyMaps(maps.Maps);
-    }
-
-    private void OnAddToMyMaps(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.SelectedSymbol is { } sh) Vm.AddToMyMaps(sh);
-    }
-
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings);
@@ -316,105 +229,6 @@ public partial class MainWindow : SuiteMainWindow
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
         Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);
-    }
-
-    // ---- file actions, imports and exports ----
-
-    private async void OnExportS19(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is T7.T7Binary bin && await Dialogs.SaveFile(this, "S19 files", "S19", System.IO.Path.ChangeExtension(System.IO.Path.GetFileName(bin.FileName), ".S19")) is { } target)
-            T7.SymbolFiles.ExportS19(bin, target);
-    }
-
-    private async void OnGenerateIdc(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is T7.T7Binary bin) await Dialogs.Info(this, "Generated " + T7.SymbolFiles.ExportIdc(bin), Vm.Caption);
-    }
-
-    private async void OnImportXml(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "XML documents", "*.xml") is { } file) Vm.ImportSymbols(bin => T7.SymbolFiles.ImportXml(bin, file));
-    }
-
-    private async void OnImportCsv(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "CSV documents", "*.csv") is { } file) Vm.ImportSymbols(bin => T7.SymbolFiles.ImportCsv(bin, file));
-    }
-
-    private async void OnImportAs2(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "AS2 documents", "*.as2") is { } file) Vm.ImportSymbols(bin => T7.SymbolFiles.ImportAs2(bin, file));
-    }
-
-    private async void OnExportMapCsv(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is not T7.T7Binary bin) return;
-        if (Vm.SelectedSymbol is not { } sh)
-        {
-            await Dialogs.Info(this, "No symbol selected in the primary symbol list", Vm.Caption);
-            return;
-        }
-        string name = System.IO.Path.GetFileName(bin.FileName) + "~" + sh.SmartVarname + ".csv";
-        if (await Dialogs.SaveFile(this, "CSV files", "csv", name) is { } target) T7.SymbolFiles.ExportMapCsv(bin, sh, target);
-    }
-
-    private async void OnExportPackage(object? sender, RoutedEventArgs e)
-    {
-        var selected = Vm.SelectedSymbols.ToList();
-        if (Vm.Binary is T7.T7Binary bin && selected.Count > 0 && await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } target)
-            T7.SymbolFiles.ExportPackage(bin, selected, target);
-    }
-
-    private async void OnExportFixedPackage(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is T7.T7Binary bin && await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } target)
-            T7.SymbolFiles.ExportPackage(bin, T7.SymbolFiles.FixedPackage(bin), target);
-    }
-
-    private async void OnExportSymbolCsv(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is T7.T7Binary bin && await Dialogs.SaveFile(this, "CSV files", "csv") is { } target)
-        {
-            T7.SymbolFiles.ExportSymbolCsv(bin, target);
-            await Dialogs.Info(this, "Export done", Vm.Caption);
-        }
-    }
-
-    private async void OnSearchMaps(object? sender, RoutedEventArgs e)
-    {
-        var options = new SearchMapsViewModel();
-        if (Vm.Binary is T7.T7Binary bin && await new SearchMapsWindow { DataContext = options }.ShowDialog<bool>(this)) Vm.SearchMaps(options.ToOptions());
-    }
-
-    // ---- compare ----
-
-    private async void OnCompareToFile(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "binary files", "*.bin") is { } file) await Vm.CompareToFileAsync(file);
-    }
-
-    private async void OnBinaryCompare(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is not T7.T7Binary bin || await Dialogs.OpenFile(this, "binary files", "*.bin") is not { } file) return;
-        var lines = T7.T7Compare.BinaryDiff(bin.FileName, file);
-        var text = new System.Text.StringBuilder($"{System.IO.Path.GetFileName(bin.FileName)} / {System.IO.Path.GetFileName(file)}: {lines.Count} lines differ\n\n");
-        foreach (var (mine, theirs) in lines) text.Append(mine).Append('\n').Append(theirs).Append("\n\n");
-        await Dialogs.Text(this, "Binary compare", text.ToString());
-    }
-
-    private async void OnTransferMaps(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is not T7.T7Binary bin) return;
-        const string text = "This wizard assists you in transferring map contents from the current file to another binary.\n\n"
-            + "Make sure engine types and such are equal for both binaries!\n\n"
-            + "The author does not take responsibility for any damage done to your car or other objects in any form!\n\n"
-            + "Select the target binary now?";
-        if (!await Dialogs.YesNo(this, text, "Transfer maps to different binary wizard")) return;
-        if (await Dialogs.OpenFile(this, "binary files", "*.bin") is not { } target) return;
-        var selection = new TransferSelectionViewModel(T7.T7Compare.TransferCandidates(bin), Vm.LastTransferSelection());
-        if (!await new TransferSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) return;
-        var report = Vm.TransferMaps(target, selection.Selection);
-        await Dialogs.Text(this, "Data transfer report", string.Join('\n', report));
     }
 
     private void OnBrowseAxes(object? sender, RoutedEventArgs e)

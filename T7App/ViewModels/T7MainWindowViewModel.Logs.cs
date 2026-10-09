@@ -20,7 +20,7 @@ public partial class T7MainWindowViewModel
 
     /// <summary>Setup log filters offers the bin's non-calibration symbols, as T7Suite did.</summary>
     public IReadOnlyList<string> LogFilterSymbols =>
-        Binary?.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Where(n => !T7Compare.IsCalibration(n)).Distinct().OrderBy(n => n).ToList() ?? [];
+        Binary is { } bin ? bin.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Where(n => !bin.IsCalibration(n)).Distinct().OrderBy(n => n).ToList() : [];
 
     /// <summary>Set symbol colors lists the bin's symbols that have an SRAM address, as T7Suite did.</summary>
     public SymbolColorsViewModel SymbolColorChoices() =>

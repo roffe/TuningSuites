@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7;
 
@@ -19,7 +20,7 @@ namespace T7CoreTest
             {
                 string file = Path.Combine(dir, "5168646.bin");
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file);
-                var maps = MapMenus.QuickMaps(T7Binary.Open(file, 0, false));
+                var maps = T7Binary.Open(file, 0, false).QuickMaps();
                 Assert.AreEqual("VE map", maps.First(m => m.Symbol == "BFuelCal.Map").Caption);
                 Assert.IsFalse(maps.Any(m => m.Symbol == "IgnE85Cal.fi_AbsMap"));
                 CollectionAssert.AreEqual(new[] { "Fuel", "Ignition", "Airmass request", "Boost control", "Knock", "Limiters" },
@@ -61,9 +62,9 @@ namespace T7CoreTest
                 byte[] data = bin.ReadSymbol(map);
                 // the last value of a 16-bit map: T7Suite's loop never got past the first half
                 int last = data[^2] << 8 | data[^1];
-                var byValue = T7.MapSearch.Find(bin, new T7.MapSearchOptions(true, (decimal)(last * 0.1f), false, "", false, false, true, map.Length));
+                var byValue = MapSearch.Find(bin, new MapSearchOptions(true, (decimal)(last * 0.1f), false, "", false, false, true, map.Length));
                 Microsoft.VisualStudio.TestTools.UnitTesting.CollectionAssert.Contains(byValue, map);
-                var byName = T7.MapSearch.Find(bin, new T7.MapSearchOptions(false, 0, true, "IgnNormCal.Map", true, false, false, 0));
+                var byName = MapSearch.Find(bin, new MapSearchOptions(false, 0, true, "IgnNormCal.Map", true, false, false, 0));
                 Microsoft.VisualStudio.TestTools.UnitTesting.CollectionAssert.Contains(byName, map);
             }
             finally

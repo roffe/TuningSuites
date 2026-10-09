@@ -24,7 +24,7 @@ namespace T7CoreTest
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), a);
                 File.Copy(a, b);
                 T7Binary binA = T7Binary.Open(a, 0, false);
-                Assert.IsEmpty(T7Compare.Compare(binA, T7Binary.Open(b, 0, false), 0));
+                Assert.IsEmpty(SuiteCompare.Compare(binA, T7Binary.Open(b, 0, false)));
 
                 // change every value of the ignition map in b
                 T7Binary binB = T7Binary.Open(b, 0, false);
@@ -33,26 +33,26 @@ namespace T7CoreTest
                 byte[] changed = data.Select((x, i) => i % 2 == 1 ? (byte)(x + 1) : x).ToArray();
                 binB.WriteSymbol(binB.FileAddress(map), changed, false);
 
-                List<CompareRow> rows = T7Compare.Compare(binA, T7Binary.Open(b, 0, false), 0);
+                List<CompareRow> rows = SuiteCompare.Compare(binA, T7Binary.Open(b, 0, false));
                 CompareRow row = rows.Single(r => r.SymbolName == "IgnNormCal.Map");
                 Assert.AreEqual(288, row.Differences);          // every 16-bit value of the 18x16 map
                 Assert.AreEqual(100, row.Percentage);           // over values (T7Suite: over bytes, halved, which showed 25)
                 Assert.AreEqual("IgnNormCal", row.Category);
                 Assert.IsFalse(row.MissingInOriFile || row.MissingInCompareFile);
 
-                byte[] diff = T7Compare.DifferenceMap(changed, data, true)!;
+                byte[] diff = SuiteCompare.DifferenceMap(changed, data, true)!;
                 Assert.IsTrue(MapControlsFree.Decode16(diff).All(v => v <= 1));
-                Assert.IsNull(T7Compare.DifferenceMap(changed, data[..10], true));
+                Assert.IsNull(SuiteCompare.DifferenceMap(changed, data[..10], true));
 
                 // transfer the map back from a into b: equal again, checksum valid, a report line
-                List<string> report = T7Compare.TransferMaps(binA, b, new HashSet<string> { "IgnNormCal.Map" }, 0, false);
+                List<string> report = SuiteCompare.TransferMaps(binA, b, f => T7Binary.Open(f, 0, false), new HashSet<string> { "IgnNormCal.Map" });
                 CollectionAssert.Contains(report, "Transferred symbol IgnNormCal.Map successfully");
                 CollectionAssert.AreEqual(data, T7Binary.Open(b, 0, false).ReadSymbol(map));
                 Assert.AreEqual(ChecksumResult.Ok, T7Binary.OpenRaw(b).VerifyChecksum());
                 Assert.IsTrue(Directory.GetFiles(dir, "*beforetransferringmaps.bin").Length == 1);
-                Assert.IsNotEmpty(T7Compare.TransferCandidates(binA));
+                Assert.IsNotEmpty(SuiteCompare.TransferCandidates(binA));
 
-                Assert.IsNotEmpty(T7Compare.BinaryDiff(a, Path.Combine(Here(), "..", "T7Binaries", "5385356.bin")));
+                Assert.IsNotEmpty(SuiteCompare.BinaryDiff(a, Path.Combine(Here(), "..", "T7Binaries", "5385356.bin")));
             }
             finally
             {
@@ -68,15 +68,15 @@ namespace T7CoreTest
             byte[] data = bin.ReadSymbol(map);
             var ram = new byte[0x10000];
             for (int i = 0; i < data.Length; i++) ram[(map.Start_address + i) % ram.Length] = data[i];
-            CollectionAssert.AreEqual(data, T7Compare.ReadSram(ram, map.Start_address, map.Length));
-            Assert.IsEmpty(T7Compare.CompareSram(bin, ram, ram, 0));
-            Assert.IsFalse(T7Compare.CompareToSram(bin, ram, 0).Any(r => r.SymbolName == "IgnNormCal.Map"));
+            CollectionAssert.AreEqual(data, SuiteCompare.ReadSram(ram, map.Start_address, map.Length));
+            Assert.IsEmpty(SuiteCompare.CompareSram(bin, ram, ram));
+            Assert.IsFalse(SuiteCompare.CompareToSram(bin, ram).Any(r => r.SymbolName == "IgnNormCal.Map"));
 
             byte[] ram2 = (byte[])ram.Clone();
             ram2[(map.Start_address + 1) % ram.Length]++;
-            CompareRow row = T7Compare.CompareSram(bin, ram, ram2, 0).Single(r => r.SymbolName == "IgnNormCal.Map");
+            CompareRow row = SuiteCompare.CompareSram(bin, ram, ram2).Single(r => r.SymbolName == "IgnNormCal.Map");
             Assert.AreEqual(1, row.Differences);
-            Assert.IsTrue(T7Compare.CompareToSram(bin, ram2, 0).Any(r => r.SymbolName == "IgnNormCal.Map"));
+            Assert.IsTrue(SuiteCompare.CompareToSram(bin, ram2).Any(r => r.SymbolName == "IgnNormCal.Map"));
 
             // a package written the way Generate tuning package writes it reads back
             string pkg = Path.Combine(Directory.CreateTempSubdirectory("t7pkg").FullName, "ecu.t7p");
@@ -104,7 +104,7 @@ namespace T7CoreTest
                 string a = Path.Combine(dir, "a.bin"), b = Path.Combine(dir, "b.bin");
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), a);
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5385356.bin"), b);
-                List<CompareRow> rows = T7Compare.Compare(T7Binary.Open(a, 0, false), T7Binary.Open(b, 0, false), 0);
+                List<CompareRow> rows = SuiteCompare.Compare(T7Binary.Open(a, 0, false), T7Binary.Open(b, 0, false));
                 Assert.IsTrue(rows.Any(r => !r.MissingInOriFile && !r.MissingInCompareFile));
                 Assert.IsTrue(rows.Where(r => r.MissingInOriFile).All(r => r.Category == "Missing in original"));
             }

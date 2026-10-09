@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using CommonSuite;
 using NLog;
 
 namespace T8SuitePro
 {
+    /// <summary>The firmware dialog's edits, null where nothing changes: the software version, or the VIN with the immobilizer code.</summary>
+    public sealed record FirmwareEdit(string SoftwareVersion, string ChassisId, string SerialNumber);
+
     /// <summary>A row of the flash block browser (frmFlashBlockBrowser).</summary>
     public record FlashBlockRow(int Blocknumber, string Blocktype, string Address, string VIN, string EcuType, string Interface, string SecretCode);
 
@@ -54,6 +58,37 @@ namespace T8SuitePro
                 InterfaceDevice = header.InterfaceDevice,
                 FlashBlockCount = header.NumberOfFlashBlocks,
             };
+        }
+
+        /// <summary>
+        /// The firmware dialog's OK (Form1 3608): the VIN into every valid flash block and the immobilizer code into every info record
+        /// (UpdateVinAndImmoCode), then the software version's PI container (UpdateSoftwareVersion). The changed bytes go into the
+        /// project's transaction log (T8Suite kept none); the caller checks the checksum afterwards, as T8Suite did.
+        /// </summary>
+        public static void Apply(T8Binary bin, FirmwareEdit edit, TrionicTransactionLog log = null)
+        {
+            byte[] before = File.ReadAllBytes(bin.FileName);
+            var header = new T8Header();
+            header.init(bin.FileName);
+            if (edit.ChassisId != null)
+            {
+                header.UpdateVin(edit.ChassisId);
+                header.UpdateSerialNumber(edit.SerialNumber ?? header.SerialNumber);
+            }
+            if (edit.SoftwareVersion != null)
+            {
+                header.SoftwareVersion = edit.SoftwareVersion;
+                header.UpdateSoftwareVersion();
+            }
+            if (log == null) return;
+            byte[] after = File.ReadAllBytes(bin.FileName);
+            for (int i = 0; i < after.Length; i++)
+            {
+                if (after[i] == before[i]) continue;
+                int start = i;
+                while (i < after.Length && after[i] != before[i]) i++;
+                log.AddToTransactionLog(new TransactionEntry(DateTime.Now, start, i - start, before[start..i], after[start..i], 0, 0, "Firmware information"));
+            }
         }
 
         /// <summary>The flash block browser's rows (buttonEdit1_ButtonClick), the file read again.</summary>

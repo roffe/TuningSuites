@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CommonSuite;
@@ -284,5 +285,114 @@ namespace T8SuitePro
         /// hard-coded list before it were overwritten by this line in T8Suite.
         /// </summary>
         public override double GetMapCorrectionFactor(string symbolname) => SymbolDictionary.GetSymbolUnit(symbolname);
+
+        public override string Describe(string symbolname) => SymbolTranslator.ToDescription(symbolname);
+
+        public override bool ImportXmlSymbols(string file) => Trionic8File.TryToLoadAdditionalXMLSymbols(file, Symbols);
+
+        public override int AddressTableStart(string file) => Trionic8File.AddressTableStart(file);
+
+        public override string ExportIdc() => IdaProIdcFile.create(FileName, Symbols, IsSoftwareOpen);
+
+        /// <summary>
+        /// Copy address table to another binary (Form1 13268): the 10-byte records from 17 bytes before the table's start while
+        /// their last byte is zero, into the same place of the target, then the target's checksum (as T8Suite).
+        /// </summary>
+        public override void CopyAddressTable(string target)
+        {
+            int a = AddressTableStart(FileName), b = AddressTableStart(target);
+            if (a <= 17 || b <= 17) throw new InvalidOperationException("No address table found");
+            byte[] from = File.ReadAllBytes(FileName), to = File.ReadAllBytes(target);
+            for (int s = a - 17, d = b - 17; s + 10 <= from.Length && d + 10 <= to.Length && from[s + 9] == 0; s += 10, d += 10)
+                Array.Copy(from, s, to, d, 10);
+            File.WriteAllBytes(target, to);
+            RawFile(target).UpdateChecksum();
+        }
+
+        /// <summary>The viewer shows T8's axes raw; the Excel export applied the axis' dictionary factor.</summary>
+        public override double AxisFactor(string axisSymbol) => GetMapCorrectionFactor(axisSymbol);
+
+        /// <summary>Export fixed tuning package (Form1's list).</summary>
+        public override IReadOnlyList<string> FixedPackageSymbols { get; } =
+        [
+            "AirCtrlCal.PRatioMaxTab", "BstKnkCal.MaxAirmass", "BstKnkCal.MaxAirmassAu", "BFuelCal.TempEnrichFacMap", "BFuelCal.E85TempEnrichFacMap",
+            "KnkFuelCal.EnrichmentMap", "KnkFuelCal.fi_OffsetEnrichEnable", "KnkFuelCal.fi_MaxOffsetMap", "IgnAbsCal.fi_highOctanMAP",
+            "IgnAbsCal.fi_lowOctanMAP", "IgnAbsCal.fi_NormalMAP", "IgnAbsCal.fi_StartMAP", "DNCompCal.SlowDriveRelTAB", "TrqLimCal.Trq_ManGear",
+            "TrqLimCal.Trq_MaxEngineManTab1", "TrqLimCal.Trq_MaxEngineAutTab1", "TrqLimCal.Trq_MaxEngineManTab2", "TrqLimCal.Trq_MaxEngineAutTab2",
+            "TrqLimCal.Trq_OverBoostTab", "MaxEngSpdCal.n_EngMin", "TrqMastCal.Trq_NominalMap", "TrqMastCal.m_AirTorqMap", "TMCCal.Trq_MaxEngineTab",
+            "TMCCal.Trq_MaxEngineLowTab", "InjCorrCal.BattCorrSP", "InjCorrCal.BattCorrTab", "InjCorrCal.InjectorConst",
+        ];
+
+        /// <summary>
+        /// The Tuning page's map buttons in ribbon order, with DynamicTuningMenu's rules: software before FC (and FC01 open) has
+        /// the old calibration's captions and maps, BioPower software (not FA / FC / FE) the E85 limiters, and the gas and jerk
+        /// maps show only when the bin has them. T8Suite left the captions of a bin without a software version alone and threw
+        /// on the tagged buttons; that counts as old here.
+        /// </summary>
+        public override List<MapShortcut> QuickMaps()
+        {
+            string sw = SoftwareVersion.Trim();
+            bool old = sw.Length <= 2 || sw[1] < 'C' || sw.StartsWith("FC01_O");
+            bool e85 = !old && !(sw.StartsWith("FA") || sw.StartsWith("FC") || sw.StartsWith("FE"));
+            var m = new List<MapShortcut>();
+            void Add(string group, string caption, string symbol, bool show = true)
+            {
+                if (show) m.Add(new MapShortcut(group, caption, symbol));
+            }
+            void IfHas(string group, string caption, string symbol) => Add(group, caption, symbol, Has(symbol));
+
+            const string air = "Airmass controller", trq = "Torque controller", fuel = "Fuel controller", boost = "Boost controller",
+                ign = "Ignition controller", pedal = "Pedal controller";
+            Add(air, old ? "Max airmass map (manual)" : "Max air Petrol", "BstKnkCal.MaxAirmass");
+            Add(air, old ? "Max airmass map (auto)" : "Max air E85", old ? "BstKnkCal.MaxAirmassAu" : "FFAirCal.m_maxAirmass");
+            Add(air, "Airmass Fuelcut", "FCutCal.m_AirInletLimit");
+
+            Add(trq, "Nominal torque map", "TrqMastCal.Trq_NominalMap");
+            IfHas(trq, "Nominal Gas torque map", "TrqMastCal.Trq_NominalGasMap");
+            Add(trq, "Airmass torque map", "TrqMastCal.m_AirTorqMap");
+            IfHas(trq, "Airmass Gas torque map", "TrqMastCal.m_AirTorqGasMap");
+            Add(trq, "Ambient pressure trq limiter", "TrqLimCal.Trq_CompressorNoiseRedLimMAP");
+            Add(trq, "Trq limit in overboost", "TrqLimCal.Trq_OverBoostTab");
+            Add(trq, old ? "Trq limit auto 150 hp" : "Trq limit 150hp", old ? "TrqLimCal.Trq_MaxEngineAutTab2" : "TrqLimCal.Trq_MaxEngineTab2");
+            Add(trq, old ? "Trq limit auto 175+ hp" : "Trq limit 175/200hp", old ? "TrqLimCal.Trq_MaxEngineAutTab1" : "TrqLimCal.Trq_MaxEngineTab1");
+            Add(trq, old ? "Trq limit manual 150 hp" : "Trq limit E85 150hp", old ? "TrqLimCal.Trq_MaxEngineManTab2" : "FFTrqCal.FFTrq_MaxEngineTab2", old || e85);
+            Add(trq, old ? "Trq limit manual 175+ hp" : "Trq limit E85 175/200hp", old ? "TrqLimCal.Trq_MaxEngineManTab1" : "FFTrqCal.FFTrq_MaxEngineTab1", old || e85);
+            Add(trq, "Manual gear trq limit", "TrqLimCal.Trq_ManGear");
+            Add(trq, "FlexFuel torque limit", "FFTrqCal.M_maxMAP", e85);
+            Add(trq, "Max torque 150hp", "TMCCal.Trq_MaxEngineLowTab", !old);
+            Add(trq, "Max torque 175/200hp", "TMCCal.Trq_MaxEngineTab", !old);
+            Add(trq, "RPM limiter", "MaxEngSpdCal.n_EngLimTab");
+
+            Add(fuel, "Fuel correction map", "BFuelCal.LambdaOneFacMap");
+            Add(fuel, "Fuel knock map", "KnkFuelCal.EnrichmentMap");
+            Add(fuel, "Injection end angle map", "InjAnglCal.Map");
+            Add(fuel, "Enrichment Petrol", "BFuelCal.TempEnrichFacMap");
+            IfHas(fuel, "Enrichment E85", "FFFuelCal.TempEnrichFacMAP");
+            Add(fuel, "Inj. Constant", "InjCorrCal.InjectorConst");
+            Add(fuel, "Dead times", "InjCorrCal.BattCorrTab");
+            IfHas(fuel, "Enrichment Petrol", "BFuelCal.Lambda1FacMap");
+            IfHas(fuel, "Jerk Enrichment Petrol", "BFuelCal.m_AirJerkTab");
+            IfHas(fuel, "Jerk Enrichment Fuelmaster", "BFuelCal.JerkEnrichFacTab");
+
+            Add(boost, "P of PID controller", "AirCtrlCal.Ppart_BoostMap");
+            Add(boost, "I of PID Controller", "AirCtrlCal.Ipart_BoostMap");
+            Add(boost, "D of PID controller", "AirCtrlCal.Dpart_BoostMap");
+            Add(boost, "Boost regulation map", "AirCtrlCal.RegMap");
+
+            Add(ign, "Normal ignition map", "IgnAbsCal.fi_NormalMAP");
+            Add(ign, "High octane map", "IgnAbsCal.fi_highOctanMAP");
+            Add(ign, "Low octane map", "IgnAbsCal.fi_lowOctanMAP");
+            IfHas(ign, "Normal Gas ignition map", "IgnAbsCal.fi_NormalGasMAP");
+            Add(ign, "MBT ignition map", "IgnAbsCal.fi_IgnMBTMAP");
+            IfHas(ign, "MBT Gas ignition map", "IgnAbsCal.fi_IgnMBTGasMAP");
+            Add(ign, "Fuel cut ignition map", "IgnAbsCal.fi_FuelCutMAP");
+            Add(ign, "Startup map", "IgnAbsCal.fi_StartMAP");
+
+            Add(pedal, "Pedal position map", "TrqMastCal.X_AccPedalMAP");
+            Add(pedal, "Torque request map", "PedalMapCal.Trq_RequestMap");
+
+            Add("General", "EGT estimate map", "ExhaustCal.T_Lambda1Map");
+            return m;
+        }
     }
 }

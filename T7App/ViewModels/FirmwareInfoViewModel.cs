@@ -25,7 +25,7 @@ public partial class FirmwareInfoViewModel : ObservableObject
     [ObservableProperty] private string _softwareVersion;
     [ObservableProperty] private string _immobilizerID;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Vin), nameof(VinChecksum), nameof(Turbo))]
+    [NotifyPropertyChangedFor(nameof(Decoded))]
     private string _chassisID;
     [ObservableProperty] private string _sIDDate;
     [ObservableProperty] private string _programmingDate;
@@ -94,19 +94,8 @@ public partial class FirmwareInfoViewModel : ObservableObject
         if (value) Hint?.Invoke("You can edit the SID parameters in T7Suite by starting the SID editor via Actions -> SID information");
     }
 
-    public VINCarInfo Vin => VINDecoder.DecodeVINNumber(ChassisID.Trim());
-
-    public string VinChecksum
-    {
-        get
-        {
-            string vin = ChassisID.Trim();
-            if (Vin.CalculatedChecksum == '*' || vin.Length < 9) return "Not verified";
-            return Vin.CalculatedChecksum == vin[8] ? "Valid" : $"WRONG! Expected: {Vin.CalculatedChecksum} but found: {vin[8]}";
-        }
-    }
-
-    public string Turbo => Vin.TurboModel.ToString().Replace('_', '-');
+    /// <summary>The VIN decoder below the fields.</summary>
+    public SuiteApp.ViewModels.VinDecoding Decoded => new(ChassisID);
 
     /// <summary>"Import": the VIN and immobilizer code of another bin.</summary>
     public void Import(string file)
