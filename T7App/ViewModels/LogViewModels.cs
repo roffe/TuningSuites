@@ -109,3 +109,17 @@ public class LogFiltersViewModel
         return filters;
     }
 }
+
+/// <summary>frmMatrixSelection ("Select parameters for matrix"): x, y and z symbols and the view type.</summary>
+public partial class MatrixSelectionViewModel(IReadOnlyList<string> symbols) : ObservableObject
+{
+    public IReadOnlyList<string> Symbols { get; } = symbols;
+    public string[] Modes { get; } = ["Mean values", "Minimum values", "Maximum values"];
+
+    [ObservableProperty] private string? _x;
+    [ObservableProperty] private string? _y;
+    [ObservableProperty] private string? _z;
+    [ObservableProperty] private int _mode;
+
+    public bool IsComplete => X != null && Y != null && Z != null;
+}

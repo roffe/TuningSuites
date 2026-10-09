@@ -436,6 +436,21 @@ namespace T7AppTest
                 vm.ExportLogCsv(log, selection);
                 Assert.AreEqual("Time,ActualIn.n_Engine,IMPORTANTLINE,In.p_AirInlet", File.ReadLines(Path.ChangeExtension(log, ".csv")).First());
 
+                // a matrix of ignition over rpm and boost from the same log
+                string bin = Path.Combine(s_dir, "matrix.bin");
+                File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), bin, true);
+                Assert.IsTrue(await vm.OpenPlainFileAsync(bin, true));
+                var (matrixLines, matrix) = vm.MatrixSelection(log);
+                matrix.X = "ActualIn.n_Engine";
+                matrix.Y = "In.p_AirInlet";
+                matrix.Z = "Out.fi_Ignition";
+                vm.ShowMatrix(matrixLines, matrix);
+                var mv = (MapViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Matrix [ActualIn.n_Engine : In.p_AirInlet : Out.fi_Ignition] (Mean values)", mv.Title);
+                Assert.IsTrue(mv.IsReadOnly);
+                Assert.AreEqual("ActualIn.n_Engine", vm.Settings.LastXAxisFromMatrix);
+                Save(window, "matrix");
+
                 var filters = new LogFiltersWindow { DataContext = new LogFiltersViewModel(vm.LoadLogFilters(), ["ActualIn.n_Engine"]) };
                 filters.Show();
                 Save(filters, "logfilters");

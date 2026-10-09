@@ -156,6 +156,13 @@ public partial class MainWindow : Window
         if (await ChooseLogData() is var (file, selection)) Vm.ExportLogDif(file, selection);
     }
 
+    private async void OnLogMatrix(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "Trionic 7 logfiles", "*.t7l") is not { } file) return;
+        var (lines, selection) = Vm.MatrixSelection(file);
+        if (await new MatrixSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) Vm.ShowMatrix(lines, selection);
+    }
+
     private async void OnLogFilters(object? sender, RoutedEventArgs e)
     {
         var filters = new LogFiltersViewModel(Vm.LoadLogFilters(), Vm.LogFilterSymbols);

@@ -192,7 +192,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] TuneToStage and the tuning wizard left out (unreachable in T7Suite since 2017)
 - [ ] SID information and editing
 - [ ] Disassembler (AvaloniaEdit), hex view
-- [ ] Matrix from log (mean/min/max)
+- [x] Matrix from log (Realtime → View matrix from logfile): x / y / z and mean / minimum / maximum (last choice remembered), 16 × 16 between the logged extremes, shown in a read-only map viewer with the 3D surface. Deliberate differences: lines count once all three symbols have been seen (T7Suite counted the zeros before that); a real 0 isn't treated as an empty cell in minimum / maximum; numbers parse with either separator
 - [ ] From frmMain: SID, limiter, torque/power/airmass math (3948-4239, 13637-13950), TuneToStage (10269-10779), tuning packs (14465-15290, 17340-17518, 18644-19139), matrix from log (16460-16747)
 
 ### 8. Release
