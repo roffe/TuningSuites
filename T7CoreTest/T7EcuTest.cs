@@ -59,7 +59,7 @@ namespace T7CoreTest
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethod]
         public void CatalogHasTheShippedDescriptions()
         {
-            var catalog = T7.DtcCatalog.Load();
+            var catalog = CommonSuite.DtcCatalog.Load();
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsGreaterThan(100, catalog.Count);
             Microsoft.VisualStudio.TestTools.UnitTesting.Assert.AreEqual("Ox front sensor preheater control circuit", catalog["P0030"].Description);
         }

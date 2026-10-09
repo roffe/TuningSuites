@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared by the suites, no UI: the CommonSuite code lifted from CommonSuite/ (Common/, its namespace kept so the files diff
+       against the old ones), the update check and the DTC descriptions. T7Core and T8Core build on it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>CommonSuite</RootNamespace>
+    <AssemblyName>SuiteCore</AssemblyName>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SuiteCoreTest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog" Version="6.2.1" />
+  </ItemGroup>
+
+  <!-- looked up next to the executable: the tuning packs' public key (Crypto) -->
+  <ItemGroup>
+    <Content Include="T8Pub.pem" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -4,7 +4,7 @@ using System.IO;
 using System.Xml;
 using CommonSuite;
 
-namespace T7
+namespace CommonSuite
 {
     /// <summary>
     /// frmFaultcodes' descriptions: every DTC_*.xml next to the program, in name order, the first complete entry per code

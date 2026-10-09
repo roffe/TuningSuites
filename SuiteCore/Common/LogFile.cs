@@ -11,6 +11,10 @@ namespace CommonSuite
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
+        /// <summary>A logged number in either decimal separator; 0 when it doesn't parse, like the suites did.</summary>
+        public static double Number(string s) =>
+            double.TryParse(s.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d) ? d : 0;
+
         public static SymbolCollection FindSymbols(string filename, ref DateTime startDate, ref DateTime endDate)
         {
             SymbolCollection sc = new SymbolCollection();

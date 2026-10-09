@@ -23,7 +23,7 @@ namespace CommonSuite
         private double ConvertToDouble(string v)
         {
             // either decimal separator (the culture trick read "12.5" as 0 on sv-SE)
-            return T7.T7Log.Number(v);
+            return LogFile.Number(v);
         }
 
         private float FetchPreviousValueFromLine(string previousline, string varnametofetch)

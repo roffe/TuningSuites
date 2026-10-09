@@ -313,7 +313,7 @@ public partial class MainWindow : Window
     private async void OnCheckForUpdates(object? sender, RoutedEventArgs e) => await CheckForUpdatesAsync(false);
 
     // T7Suite's release notes viewer showed the updater's notes; they're the GitHub releases' now
-    private void OnReleaseNotes(object? sender, RoutedEventArgs e) => Dialogs.OpenWithShell(T7.UpdateCheck.ReleasesPage);
+    private void OnReleaseNotes(object? sender, RoutedEventArgs e) => Dialogs.OpenWithShell(CommonSuite.UpdateCheck.ReleasesPage);
 
     private async void OnAbout(object? sender, RoutedEventArgs e)
     {

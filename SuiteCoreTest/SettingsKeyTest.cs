@@ -3,7 +3,7 @@ using System.IO;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace T7CoreTest
+namespace SuiteCoreTest
 {
     [TestClass]
     public class SettingsKeyTest

@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using T7;
+using CommonSuite;
 using T7App.Services;
 
 namespace T7App.Views;

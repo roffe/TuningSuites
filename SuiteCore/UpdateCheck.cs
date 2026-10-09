@@ -2,25 +2,24 @@ using System;
 using System.Linq;
 using System.Text.Json;
 
-namespace T7
+namespace CommonSuite
 {
     /// <summary>A published release: its version (four parts), tag, page and Windows installer (null without one).</summary>
     public sealed record Release(Version Version, string Tag, string Page, string Msi);
 
     /// <summary>
-    /// frmMain's update check (msiupdater, which read develop.trionictuning.com) on GitHub releases, as the flasher's MsiUpdater
+    /// The suites' update check (msiupdater, which read develop.trionictuning.com) on GitHub releases, as the flasher's MsiUpdater
     /// does. The repo releases every suite, so GitHub's releases/latest is whichever suite went last: the newest published, non
-    /// pre-release release tagged T7suite_vX.Y[.Z[.W]] is taken from the release list instead.
+    /// pre-release release tagged with the suite's prefix and X.Y[.Z[.W]] (T7suite_v2.0.1) is taken from the release list instead.
     /// </summary>
     public static class UpdateCheck
     {
         public const string Repo = "roffe/TuningSuites";
-        public const string TagPrefix = "T7suite_v";
         public static readonly string ReleasesApi = $"https://api.github.com/repos/{Repo}/releases?per_page=100";
         public static readonly string ReleasesPage = $"https://github.com/{Repo}/releases";
 
         /// <summary>The newest release in a GitHub release list (JSON), null when there's none for this suite.</summary>
-        public static Release Newest(string json, string tagPrefix = TagPrefix)
+        public static Release Newest(string json, string tagPrefix)
         {
             using JsonDocument doc = JsonDocument.Parse(json);
             Release best = null;

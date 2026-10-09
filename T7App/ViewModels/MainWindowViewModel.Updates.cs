@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using T7;
+using CommonSuite;
 
 namespace T7App.ViewModels;
 
@@ -15,6 +15,9 @@ public partial class MainWindowViewModel
     /// <summary>The status bar's update field (barUpdateText), e.g. "No new version(s) found...".</summary>
     [ObservableProperty]
     private string _updateText = "";
+
+    /// <summary>T7Suite's releases (upstream's tag scheme, Directory.Build.props versions T7App by the same tags).</summary>
+    public const string ReleaseTagPrefix = "T7suite_v";
 
     /// <summary>This build's file version, the T7suite_v tag padded to four parts; 0.0.0.0 without a tag.</summary>
     public static Version BuildVersion => typeof(MainWindowViewModel).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
@@ -33,7 +36,7 @@ public partial class MainWindowViewModel
             };
             // GitHub's API refuses requests without a user agent
             http.DefaultRequestHeaders.UserAgent.ParseAdd("T7Suite/" + BuildVersion);
-            Release? newest = UpdateCheck.Newest(await http.GetStringAsync(UpdateCheck.ReleasesApi));
+            Release? newest = UpdateCheck.Newest(await http.GetStringAsync(UpdateCheck.ReleasesApi), ReleaseTagPrefix);
             Version current = UpdateCheck.Pad(BuildVersion);
             if (newest != null && newest.Version > current)
             {

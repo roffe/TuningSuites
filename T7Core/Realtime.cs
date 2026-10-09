@@ -214,8 +214,8 @@ namespace T7
                 if (f.Length < 9) continue;
                 var row = new RealtimeSymbol
                 {
-                    Name = f[0], Description = f.Length > 9 ? f[9] : f[0], Minimum = T7Log.Number(f[2]), Maximum = T7Log.Number(f[3]),
-                    Offset = T7Log.Number(f[4]), Correction = T7Log.Number(f[5]), UserDefined = true,
+                    Name = f[0], Description = f.Length > 9 ? f[9] : f[0], Minimum = LogFile.Number(f[2]), Maximum = LogFile.Number(f[3]),
+                    Offset = LogFile.Number(f[4]), Correction = LogFile.Number(f[5]), UserDefined = true,
                 };
                 if (bin?.FindAny(f[0]) is { } sh)
                 {
@@ -401,10 +401,6 @@ namespace T7
             return sb.Append("IMPORTANTLINE=").Append(marker ? '1' : '0').Append('|').ToString();
         }
 
-        /// <summary>A number in either decimal separator; 0 when it doesn't parse, like T7Suite.</summary>
-        public static double Number(string s) =>
-            double.TryParse(s.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double d) ? d : 0;
-
         /// <summary>A line's time (by position, any one-character separators) and its name=value fields, or false.</summary>
         public static bool TryParse(string line, out DateTime time, out List<(string Name, double Value)> values)
         {
@@ -426,7 +422,7 @@ namespace T7
             for (int i = 1; i < f.Length; i++)
             {
                 string[] kv = f[i].Split('=');
-                if (kv.Length == 2) values.Add((kv[0], Number(kv[1])));
+                if (kv.Length == 2) values.Add((kv[0], LogFile.Number(kv[1])));
             }
             return true;
         }

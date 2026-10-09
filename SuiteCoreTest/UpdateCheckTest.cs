@@ -1,8 +1,8 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using T7;
+using CommonSuite;
 
-namespace T7CoreTest
+namespace SuiteCoreTest
 {
     [TestClass]
     public class UpdateCheckTest
@@ -22,15 +22,16 @@ namespace T7CoreTest
                 Release("T7suite_v2.0.1"),
                 Release("T7suite_v2.0"),
                 Release("T7suite_v0.1.59.0", asset: "T7Suite.md5")) + "]";
-            T7.Release r = UpdateCheck.Newest(json);
+            Release r = UpdateCheck.Newest(json, "T7suite_v");
             Assert.AreEqual(new Version(2, 0, 1, 0), r.Version);
             Assert.AreEqual("T7suite_v2.0.1", r.Tag);
             Assert.AreEqual("https://github.com/roffe/TuningSuites/releases/download/T7suite_v2.0.1/T7Suite.msi", r.Msi);
             StringAssert.EndsWith(r.Page, "/tag/T7suite_v2.0.1");
 
-            Assert.IsNull(UpdateCheck.Newest("[" + Release("T8suite_v3.0.0") + "]"));
-            Assert.IsNull(UpdateCheck.Newest("[]"));
-            Assert.IsNull(UpdateCheck.Newest("[" + Release("T7suite_v0.1.59.0", asset: "T7Suite.md5") + "]").Msi);
+            Assert.IsNull(UpdateCheck.Newest("[" + Release("T8suite_v3.0.0") + "]", "T7suite_v"));
+            Assert.AreEqual(new Version(3, 0, 0, 0), UpdateCheck.Newest(json, "T8suite_v").Version);
+            Assert.IsNull(UpdateCheck.Newest("[]", "T7suite_v"));
+            Assert.IsNull(UpdateCheck.Newest("[" + Release("T7suite_v0.1.59.0", asset: "T7Suite.md5") + "]", "T7suite_v").Msi);
             Assert.AreEqual(new Version(2, 0, 0, 0), UpdateCheck.Pad(new Version(2, 0)));
         }
     }

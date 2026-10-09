@@ -4,7 +4,7 @@ using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TrionicCANLib.Firmware;
 
-namespace T7CoreTest
+namespace SuiteCoreTest
 {
     /// <summary>AppTool S19 to bin conversion, ported from CommonSuiteTest.</summary>
     [TestClass]

@@ -354,7 +354,7 @@ namespace T7
         private double ConvertToDouble(string v)
         {
             // either decimal separator: T7Suite wrote the current culture's, and its culture trick read "14.70" as 0 on Linux sv-SE
-            return T7Log.Number(v);
+            return CommonSuite.LogFile.Number(v);
         }
 
         private float[] LoadTargetAFRMap(string filename, int size)

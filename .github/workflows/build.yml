@@ -41,7 +41,11 @@ jobs:
     - name: Build
       run: dotnet build TuningSuites.slnx -c Release
 
-    # golden parse of every bin in T7Binaries, settings, crypto, S19, transaction log, update check
+    # the code the suites share: settings, crypto, S19, transaction log, update check, source encoding
+    - name: Test shared core
+      run: dotnet test SuiteCoreTest -c Release --no-build
+
+    # golden parse of every bin in T7Binaries and the T7 logic
     - name: Test
       run: dotnet test T7CoreTest -c Release --no-build
 

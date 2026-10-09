@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace T7CoreTest
+namespace SuiteCoreTest
 {
     [TestClass]
     public class CryptoTest
