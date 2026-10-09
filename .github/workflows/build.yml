@@ -37,7 +37,7 @@ jobs:
       with:
         dotnet-version: 10.x
 
-    # no -r: a solution can't be built for one RID, T7App picks x86 on Windows by itself
+    # no -r: a solution can't be built for one RID, T7App and T8App pick x86 on Windows by themselves
     - name: Build
       run: dotnet build TuningSuites.slnx -c Release
 

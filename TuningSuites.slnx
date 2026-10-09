@@ -12,5 +12,6 @@
   <Project Path="T7AppTest/T7AppTest.csproj" />
   <Project Path="T7Core/T7Core.csproj" />
   <Project Path="T7CoreTest/T7CoreTest.csproj" />
+  <Project Path="T8App/T8App.csproj" />
   <Project Path="WidebandSupport/WidebandSupport.csproj" />
 </Solution>

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>T8App</RootNamespace>
+    <AssemblyName>T8Suite</AssemblyName>
+    <!-- the version comes from the nearest T8suite_vX.Y.Z tag (Directory.Build.props), upstream's release tags -->
+    <VersionTagPrefix>T8suite_</VersionTagPrefix>
+    <ApplicationIcon>T8Suite.ico</ApplicationIcon>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!-- ponytail: Windows stays 32-bit as T7App (x86-only J2534 and Lawicel CANUSB drivers); only the launcher, the dll stays AnyCPU -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT'">
+    <DefaultAppHostRuntimeIdentifier>win-x86</DefaultAppHostRuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="T8Suite.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SuiteApp\SuiteApp.csproj" />
+  </ItemGroup>
+
+</Project>

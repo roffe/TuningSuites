@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="T8App.Views.MainWindow"
+        Icon="/T8Suite.ico"
+        Width="1400" Height="900"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+        </Menu>
+        <!-- ribbonStatusBar1, as T7App's -->
+        <Border DockPanel.Dock="Bottom" Padding="4,2" Background="{DynamicResource SystemAccentColorDark1}" TextElement.Foreground="White">
+            <TextBlock Padding="8,0" Text="No file loaded" />
+        </Border>
+        <Panel />
+    </DockPanel>
+</Window>
