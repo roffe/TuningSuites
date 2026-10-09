@@ -30,7 +30,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`, one tag prefix per suite, upstream's release tags (`T7suite_v2.0.0`, later `T8suite_v`, `T5suite_v`), set by the app project's `VersionTagPrefix`, so a tag versions one suite; libraries and tests build as `0.0.0-<sha>`. One repo for all suites (revisit splitting after the T8 port, then with NuGet packages rather than submodules); self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
 | Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, menus, clipboard) follows T7Suite; from txlogger the meshgrid 3D projection/drawing, the graph2d layout and the colour scale (green → yellow → red over the map's min..max; T7Suite's raw ÷ max made a fuel map red from its lowest cell). T7Suite's red-white option and online tint stay |
-| Shared T7/T8 code | `SuiteCore` (no UI: the lifted CommonSuite code, `SuiteBinary` which T7Binary and T8Binary derive from, `SuiteProject`, the update check, the DTC catalog) and `SuiteApp` (Avalonia: the main window and its view model, symbol list, map viewer, workspace, status bar, project dialogs, theme, dialogs). Each app keeps its menus and what only its suite has. The rest of T7Core / T7App moves there in the chunk where T8 needs it, so each piece is generalised against a second real consumer (T7 and T8 share 67 file names but only 8 identical files) |
+| Shared T7/T8 code | `SuiteCore` (no UI: the lifted CommonSuite code, `SuiteBinary` which T7Binary and T8Binary derive from, `SuiteProject`, compare / transfer, map search, symbol files, tuning packages, My Maps, the update check, the DTC catalog) and `SuiteApp` (Avalonia: the main window and its view model, symbol list, map viewer, workspace, status bar, project dialogs, the offline tuning windows, the settings base, theme, dialogs). Each app keeps its menus and what only its suite has. The rest of T7Core / T7App moves there in the chunk where T8 needs it, so each piece is generalised against a second real consumer (T7 and T8 share 67 file names but only 8 identical files) |
 
 ## Layout (new projects)
 
@@ -38,10 +38,12 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 TuningSuites.slnx          new solution (the old *.sln files stay for reference)
 Directory.Build.props      from the flasher, plus $(TrionicDir) = Trionic (submodule)
 WidebandSupport/           vendored, net10
-SuiteCore/                 shared, no UI: the lifted CommonSuite code (Common/, namespace CommonSuite), update check, DTC catalog
+SuiteCore/                 shared, no UI: the lifted CommonSuite code (Common/, namespace CommonSuite), SuiteBinary, SuiteProject, compare,
+                           search, symbol files, tuning packages, My Maps, update check, DTC catalog
 SuiteCoreTest/             MSTest: settings, crypto, S19, VIN decoder, transaction log, update check, source encoding
 SuiteApp/                  shared Avalonia library: the main window (SuiteMainWindow) and MainWindowViewModel, symbol list, map viewer,
-                           workspace, status bar, project dialogs, SuiteTheme.axaml (T7Suite's skin), ViewLocator, dialogs
+                           workspace, status bar, project dialogs, compare / search / package / My Maps / part lookup / VIN decoder
+                           windows, the settings base, SuiteTheme.axaml (T7Suite's skin), ViewLocator, dialogs
 T7Core/                    net10 class library, no UI: file, symbols, axes, checksum glue, projects, transaction log, realtime engine, tuning logic
 T7CoreTest/                MSTest, golden tests over T7Binaries/
 MapControls/               Avalonia controls: MapGrid, Surface3D, Graph2D, MapData codec
@@ -264,7 +266,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Lifted from T8Suite (namespace `T8SuitePro` kept): Trionic8File, T8Header, FlashBlock(Collection), pidCode, SymbolDictionary (converted from Windows-1252), SymbolTranslator, SymbolAxesTranslator, SymbolnamesDictionary, blowfish, SymbolFiller, T8SuiteRegistry.
   - Edits: MessageBox → `UserPrompt.Show`; the program folder for symbol lists is a parameter; SharpZipLib 1.4.2 without the code page line; no `C:\T8Decode` dumps or Console output (the header log goes to NLog at Trace).
   - Also: `using` streams (CountNq left a handle open on 10 of the stock bins); Trionic8File's open flag and offsets per instance; dead code dropped (four unused table finders, the DEBUG-only PI writer).
-  - Moved to the chunks that use them: Disassembler and IdaProIdcFile (7), PartNumberConverter and PartnumberCollection (4), AirmassLimitType (7).
+  - Moved to the chunks that use them: Disassembler (7), IdaProIdcFile and PartNumberConverter (4; PartnumberCollection only fed the part number list, not ported), AirmassLimitType (7).
   - Dropped: crc64 (unused), Plot3D, Settings, MapViewerFactory.
 - [x] `T8Binary` (`T8Core/T8Binary.cs`), lifted from Form1 as T7Binary was from frmMain:
   - open (TryToOpenFile 557: extract, a symbol list from the program folder by software-version prefix or `<bin>.xml`, SymbolFiller when map detection is on);
@@ -317,14 +319,52 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - Bit mask symbols say their viewer isn't ported yet (chunk 7), and maps that only live in SRAM say so (no ECU yet, chunk 5).
 
 ### 4. Offline tuning
-- [ ] Compare / transfer maps / copy address table / Compare binary outside symbolrange, search, imports (XML / CSV / AS2) and exports (S19, Idc, CSV instead of Excel), `.t8p` tuning packages, My Maps, the Tuning menu (DynamicTuningMenu's old / new calibration captions), settings window with T8's options, Lookup partnumber. Map saves, Verify checksum and projects came with chunk 3
-- [ ] Firmware editing: software version, VIN and immobilizer code
-- Known T8Suite bugs to fix:
-  - the placeholder name "Symbolnumber N" is one off from `Symbol_number` (N+1), so user names saved to `<bin>.xml` get lost on a later save;
-  - "Edit a tuning package" saved the open bin's bytes instead of the edited rows;
-  - "Clear" VIN wrote the file without a checksum update;
-  - a short VIN / serial threw after part of it was written;
-  - firmware edits after double-clicking "Serial number" were dropped.
+- [x] Shared now: moved from T7Core / T7App instead of copied, over `SuiteBinary`, which says what differs per suite (the compare name, the calibration test, the description, the XML import, the fixed package, the quick maps, the address table, the Idc file):
+  - **SuiteCore:** `SuiteCompare` (compare, SRAM compares, difference map, binary diff, transfer maps), `MapSearch`, `SymbolFiles` (XML / CSV / AS2 imports; S19, CSV and package exports), `TuningPackage` and `PackageExporter`, `MapMenus` (My Maps), `PartInfo`.
+  - **SuiteApp:** the compare and search results, the package editor, the search, transfer selection, import results, My Maps, part lookup and VIN decoder windows. Their menu handlers are on `SuiteMainWindow` and the view model's half is `MainWindowViewModel.Tuning.cs`. `SuiteSettingsViewModel` / `SuiteSettingsWindow` hold the settings both suites have.
+  - T7's tests pass with only the moved names changed, and its renders are identical (apart from the usual timestamps and expander).
+- [x] T8App's menus, in the ribbon's order:
+  - **File:** Export to S19, Import... (XML / CSV / AS2 descriptor files), Import tuning package, Edit a tuning package, Generate Idc file (T8Suite's MC68377 segments), Settings, Lookup partnumber.
+    - Settings has T8Suite's groups: user interface (with Auto mapdetection active) and project.
+    - Lookup partnumber takes T8Suite's 64 keys `<partnumber>_<software version>` and shows only the car model and engine.
+  - **Actions:** VIN decoder, Compare symbols with other binary, Compare binary outside symbolrange, Compare binary with other binary, Transfer maps to another binary, Search map content, Copy address table to another binary, Export map to CSV.
+    - Search names its results "Search results:  number n".
+    - Copy address table copies from 17 bytes before the table, as T8Suite.
+    - Export map to CSV applies the x axis' dictionary factor, as T8Suite's Excel export did.
+  - **Tuning:** the ribbon page's map buttons with DynamicTuningMenu's rules: the old / new calibration captions and maps, the BioPower limiters, and the gas / jerk maps only when the bin has them.
+  - **My Maps** (`<settings>/T8SuitePro/mymaps.xml`, T8Suite's defaults).
+  - **Symbol list menu:** Add to MyMaps, the three package items, Export symbollist as CSV (without the user description, as T8Suite).
+- [x] Firmware editing:
+  - Double-click "Software version" to edit the software version container; double-click "Chassis ID" or "Serial number" to edit the VIN and immobilizer code, with Clear.
+  - OK writes them (`FirmwareInfo.Apply`, transactions in a project) and checks the checksum as on open.
+- [x] T8CoreTest:
+  - compare, transfer and the outside-symbol diff;
+  - the quick maps for old, petrol and BioPower calibrations;
+  - search, a fixed package round trip, the S19 / Idc / CSV exports;
+  - imported names surviving the sidecar, copy address table, firmware edits.
+- [x] T8AppTest drives them headless and renders compare, search, settings, part lookup, firmware and the VIN decoder.
+- Deliberate differences:
+  - Imported names show in the Symbol name column at once, as T7Suite did (T8Suite only swapped them in on the next open).
+  - Compare and transfer files are binaries of their own, so the open file keeps its PID / TEM tables, SRAM file, captions and open status.
+  - A transfer target's checksum is corrected without asking, like a map save; T8Suite asked per layer when Auto update checksum was off. The status bar keeps the open file's checksum (T8Suite showed the target's).
+  - "Clear" blanks the VIN in the dialog and OK writes it. T8Suite wrote it at once, and Cancel didn't undo it.
+  - Firmware edits are transactions in a project.
+  - A bin without a software version gets the old calibration's Tuning menu. T8Suite kept the designer captions and threw on the old / new buttons.
+  - Compare results keep T7Suite's column order and show lengths in hex like the symbol list (T8Suite: Description first, lengths always decimal).
+  - The settings' realtime group comes with chunks 5-6; "Show map preview popup" comes with the map helper (chunk 7).
+- Known T8Suite bugs fixed:
+  - **"Symbolnumber N" one less than `Symbol_number`:** the shared sidecar writer puts swapped names back under their placeholder, so imported and detected names survive a save.
+  - **Edit a tuning package:** saves the edited rows (the shared editor).
+  - **Short VIN or immobilizer code:** no longer throws halfway; T8Header dropped PadRight's results.
+  - **"Serial number" double-click:** edits made after it are kept.
+  - **Idc file:** long names are cut as intended (Remove's result was dropped).
+  - **"Clear" VIN:** it skipped the checksum update, which turns out not to matter: the MFS area and the PI containers lie outside both checksum layers. OK checks the checksum anyway.
+- Not ported: Import map from Excel and the part number list (T7 has neither), Export as tuning package in the compare results, Toggle fullscreen. Moved: Import SRAM file / Read from SRAM file go to chunk 5 (with the snapshots), the Tuning Wizard to chunk 7.
+- T7 changes from the sharing:
+  - Define myMaps starts with T7Suite's defaults when there is no mymaps.xml yet (T7Suite created that file).
+  - Menu entries with underscores (Recent files, My Maps) keep them; a single underscore marked an access key and vanished.
+  - The part lookup window fits its buttons.
+  - Compare rows name a symbol by the name it was matched on (the same as before for named symbols).
 
 ### 5. ECU
 - [ ] `T8Ecu`: Trionic8 on its own thread, as T7Ecu. Connect, Read ECU / Flash (Legion bootloader by default), Recover ECU (with `SetCANFilterIds(FilterIdRecovery)` as the flasher does), Get ECU information, fault codes and clear, SRAM maps read / written through `readMemoryNew` / `writeMemoryNew`, UserPrompt wired for the Legion questions
@@ -339,7 +379,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Known T8Suite bug to fix: a row that can't go into the dynamic list shifted the matching, so every later row lost its value
 
 ### 7. Tools
-- [ ] TEM editor, PID editor, bitmask viewer, axis browser, hex view, disassembler / vectors / Idc (MC68377 map, 120 vectors), airmass result viewer and compressor map (T8's torque request → airmass and tables), tuning wizard (`.t8x` packs, signature checked as T7Core's Crypto does), Create binary from TIS file, map preview popup
+- [ ] TEM editor, PID editor, bitmask viewer, axis browser, hex view, disassembler / vectors (MC68377 map, 120 vectors; the Idc file came with chunk 4), airmass result viewer and compressor map (T8's torque request → airmass and tables), tuning wizard (`.t8x` packs, signature checked as T7Core's Crypto does), Create binary from TIS file, map preview popup
 - Not ported: the Debug ribbon group (registry-only DebugMode), "Tune me up™" and "Easy tune to stage III" (hidden in T8Suite)
 
 ### 8. Release
@@ -357,6 +397,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
+
+- 2026-10-09: T8 chunk 4 done: compare, transfer, search, symbol imports and exports, tuning packages, My Maps and the quick map menu moved into the shared projects and serve both apps; T8App has them with T8Suite's menus and rules, plus its settings, part number lookup, VIN decoder and firmware editing. The sidecar now keeps names imported into T8 bins.
 
 - 2026-10-09: T8 chunk 3 done: the main window is shared by both apps (SuiteBinary, SuiteProject, SuiteMainWindow and its view model in the shared projects), T7 unchanged; T8App opens bins with its symbol list, map viewers, projects and firmware information.
 - 2026-10-09: T8 chunk 1 done: T8Core with the lifted file logic and T8Binary, T8CoreTest with a golden test over the 72 stock bins; the shared symbol table decoder no longer mixes up two files decoding at once.
