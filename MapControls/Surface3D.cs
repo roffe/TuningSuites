@@ -55,6 +55,8 @@ public class Surface3D : Control
     private double m_camX, m_camY, m_camZ;
     private double m_scale = 1;
     private bool m_fitted;
+    // the user (or a synced viewer) moved the camera: resizes keep that view instead of fitting again
+    private bool m_cameraMoved;
     private Size m_size;
 
     private double m_cursorX, m_cursorY;
@@ -65,23 +67,36 @@ public class Surface3D : Control
 
     public SurfaceRenderMode RenderMode { get; set; } = SurfaceRenderMode.SolidWireframe;
 
-    /// <summary>Rotation, zoom and pan, to keep viewers of the same map looking the same way (T7Suite's surface view sync).</summary>
-    public readonly record struct CameraState(double[] Rotation, double Scale, double PanX, double PanY);
+    /// <summary>
+    /// Rotation, zoom and pan, to keep viewers of the same map looking the same way (T7Suite's surface view sync). Zoom is
+    /// relative to the viewer's own fit and pan a fraction of its size, so viewers of different sizes stay centred.
+    /// </summary>
+    public readonly record struct CameraState(double[] Rotation, double Zoom, double PanX, double PanY);
 
     /// <summary>The user rotated, zoomed or panned (raised on release and on each wheel step).</summary>
     public event EventHandler? CameraChanged;
 
     public CameraState Camera
     {
-        get => new([m_camera.M00, m_camera.M01, m_camera.M02, m_camera.M10, m_camera.M11, m_camera.M12, m_camera.M20, m_camera.M21, m_camera.M22], m_scale, m_camX, m_camY);
+        get
+        {
+            double fit = FitScaleForSize(m_size);
+            return new([m_camera.M00, m_camera.M01, m_camera.M02, m_camera.M10, m_camera.M11, m_camera.M12, m_camera.M20, m_camera.M21, m_camera.M22],
+                fit > 0 ? m_scale / fit : 1, m_size.Width > 0 ? m_camX / m_size.Width : 0, m_size.Height > 0 ? m_camY / m_size.Height : 0);
+        }
         set
         {
             double[] r = value.Rotation;
             m_camera = new M3(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]);
-            m_scale = value.Scale;
-            m_camX = value.PanX;
-            m_camY = value.PanY;
-            m_fitted = true;
+            m_cameraMoved = true;
+            UpdateVertexPositions();
+            if (m_size.Width > 0 && m_size.Height > 0)
+            {
+                m_scale = value.Zoom * FitScaleForSize(m_size);
+                m_camX = value.PanX * m_size.Width;
+                m_camY = value.PanY * m_size.Height;
+                m_fitted = true;
+            }
             UpdateVertexPositions();
             InvalidateVisual();
         }
@@ -156,6 +171,7 @@ public class Surface3D : Control
             m_camera = M3.Identity;
             m_camX = m_camY = m_camZ = 0;
             m_fitted = false;
+            m_cameraMoved = false;
             if (cols == 1)
             {
                 m_camera = M3.Rotation(0, 90, 0) * m_camera;
@@ -300,6 +316,13 @@ public class Surface3D : Control
         return (minX, maxX, minY, maxY);
     }
 
+    /// <summary>What is drawn, in control pixels (tests).</summary>
+    internal Rect DrawnBounds()
+    {
+        var (minX, maxX, minY, maxY) = ProjectedBounds();
+        return new Rect(m_size.Width * 0.5 + minX, m_size.Height * 0.5 + minY, maxX - minX, maxY - minY);
+    }
+
     private void CenterInView()
     {
         var (minX, maxX, minY, maxY) = ProjectedBounds();
@@ -324,8 +347,11 @@ public class Surface3D : Control
     private void AdaptZoom(Size oldSize, Size newSize)
     {
         if (newSize.Width <= 0 || newSize.Height <= 0) return;
-        if (!m_fitted)
+        if (!m_fitted || !m_cameraMoved)
         {
+            // untouched view: fit and centre for the new size (scaling the old fit drifted off centre and clipped the scales)
+            m_camX = m_camY = 0;
+            UpdateVertexPositions();
             m_scale = FitScaleForSize(newSize);
             m_fitted = true;
             UpdateVertexPositions();
@@ -357,18 +383,21 @@ public class Surface3D : Control
     // turntable orbit: spin around the mesh's vertical axis (model space), pitch around the camera X axis
     private void Orbit(double spin, double pitch)
     {
+        m_cameraMoved = true;
         m_camera = M3.RotX(pitch) * m_camera * M3.RotZ(spin);
         UpdateVertexPositions();
     }
 
     private void Roll(double roll)
     {
+        m_cameraMoved = true;
         m_camera = M3.RotZ(roll) * m_camera;
         UpdateVertexPositions();
     }
 
     private void Pan(double dx, double dy)
     {
+        m_cameraMoved = true;
         m_camX -= dx * PanScale;
         m_camY -= dy * PanScale;
         UpdateVertexPositions();
@@ -376,6 +405,7 @@ public class Surface3D : Control
 
     private void Zoom(double factor)
     {
+        m_cameraMoved = true;
         m_scale *= factor;
         UpdateVertexPositions();
         InvalidateVisual();
