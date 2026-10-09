@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.EspWindow"
+        x:DataType="vm:EspViewModel"
+        Title="ESP calibration selection" Width="520" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="12" Spacing="8">
+        <TextBlock Text="Select ESP calibration" />
+        <ComboBox ItemsSource="{Binding Names}" SelectedIndex="{Binding Selected}" HorizontalAlignment="Stretch" />
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

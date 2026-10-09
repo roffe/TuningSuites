@@ -75,6 +75,8 @@
                 <MenuItem Header="Import AFR feedback data" Command="{Binding ImportAfrFeedbackCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Airmass result viewer" Command="{Binding ShowAirmassResultCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="SID information" Click="OnSidInfo" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="ESP calibration" Click="OnEsp" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="TCM limit" Click="OnTcm" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}" />
             <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />

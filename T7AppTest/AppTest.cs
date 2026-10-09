@@ -665,6 +665,30 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void EspAndTcmDialogs()
+        {
+            s_session!.Dispatch(() =>
+            {
+                var esp = new EspViewModel(0x91);
+                Assert.AreEqual((byte)0x91, esp.Value);
+                Assert.IsNull(new EspViewModel(0x33).Value);                    // unknown: Ok needs a choice
+                var tcm = new TcmViewModel(new T7.TcmLimit(false, 0, true, 6, 0x13F));
+                Assert.AreEqual("Gear 2", tcm.Gears[tcm.Gear]);
+                tcm.ThresholdMod = true;
+                Assert.IsFalse(tcm.GearMod);                                     // the two modifications exclude each other
+                var w1 = new EspWindow { DataContext = esp };
+                w1.Show();
+                Save(w1, "esp");
+                w1.Close();
+                var w2 = new TcmWindow { DataContext = tcm };
+                w2.Show();
+                Save(w2, "tcm");
+                w2.Close();
+                return System.Threading.Tasks.Task.FromResult(true);
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");

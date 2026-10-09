@@ -152,6 +152,52 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnEsp(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is not { } bin) return;
+        if (T7.FirmwareTools.ReadEsp(bin) is not { } current)
+        {
+            await Dialogs.Info(this, "File not compatible!");
+            return;
+        }
+        var esp = new EspViewModel(current);
+        if (await new EspWindow { DataContext = esp }.ShowDialog<bool>(this) && esp.Value is { } value)
+            await WriteSafely(() => T7.FirmwareTools.WriteEsp(bin, value, Vm.Settings.AutoFixFooter));
+    }
+
+    private async void OnTcm(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is not { } bin) return;
+        if (bin.FindAny("VIOSCal.M_TCMOffset") == null)
+        {
+            await Dialogs.Info(this, "File not compatible, symbol VIOSCal.M_TCMOffset missing!");
+            return;
+        }
+        if (T7.FirmwareTools.ReadTcm(bin) is not { } before)
+        {
+            await Dialogs.Info(this, "File not compatible!");
+            return;
+        }
+        var tcm = new TcmViewModel(before);
+        if (!await new TcmWindow { DataContext = tcm }.ShowDialog<bool>(this)) return;
+        int count = Vm.TransactionLog?.TransCollection.Count ?? 0;
+        await WriteSafely(() => T7.FirmwareTools.WriteTcm(bin, before, tcm.After, Vm.Settings.AutoFixFooter, Vm.TransactionLog));
+        Vm.TransactionsAdded(count);
+        Vm.RefreshViewers(bin.FileName);
+    }
+
+    private async System.Threading.Tasks.Task WriteSafely(System.Action write)
+    {
+        try
+        {
+            write();
+        }
+        catch (System.Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or System.InvalidOperationException)
+        {
+            await Dialogs.Info(this, "Failed to write to binary. Is it read-only? Details: " + ex.Message);
+        }
+    }
+
     // ---- skin and help ----
 
     private const string SkinKey = "Skin";
