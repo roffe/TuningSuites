@@ -26,7 +26,11 @@ public partial class App : Application
             UserPrompt.Notify = (text, caption) => Dialogs.Wait(async () => { await Dialogs.Info(window, text, caption); return true; });
 
             string[] args = desktop.Args ?? [];
-            window.Opened += async (_, _) => await vm.StartupAsync(args);
+            window.Opened += async (_, _) =>
+            {
+                await vm.StartupAsync(args);
+                await window.CheckForUpdatesAsync(true);
+            };
         }
         base.OnFrameworkInitializationCompleted();
     }

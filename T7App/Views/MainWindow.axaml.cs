@@ -295,6 +295,26 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---- updates ----
+
+    /// <summary>
+    /// frmMain_Shown and Help → Check for updates: the dialog when a newer T7Suite release is out; OK downloads its setup in the
+    /// browser on Windows, elsewhere the release page lists the packages. A build without a T7suite_v tag (0.0.0) skips the
+    /// startup check, every release would be newer.
+    /// </summary>
+    public async System.Threading.Tasks.Task CheckForUpdatesAsync(bool startup)
+    {
+        if (startup && MainWindowViewModel.BuildVersion == new System.Version(0, 0, 0, 0)) return;
+        if (await Vm.CheckForUpdatesAsync() is not { } release) return;
+        if (await new UpdateAvailableWindow(release).ShowDialog<bool>(this))
+            Dialogs.OpenWithShell(System.OperatingSystem.IsWindows() && release.Msi != null ? release.Msi : release.Page);
+    }
+
+    private async void OnCheckForUpdates(object? sender, RoutedEventArgs e) => await CheckForUpdatesAsync(false);
+
+    // T7Suite's release notes viewer showed the updater's notes; they're the GitHub releases' now
+    private void OnReleaseNotes(object? sender, RoutedEventArgs e) => Dialogs.OpenWithShell(T7.UpdateCheck.ReleasesPage);
+
     private async void OnAbout(object? sender, RoutedEventArgs e)
     {
         string version = System.Reflection.Assembly.GetEntryAssembly()?

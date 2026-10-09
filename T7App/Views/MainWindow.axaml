@@ -139,13 +139,15 @@
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="About T7Suite" Click="OnAbout" />
+                <MenuItem Header="Check for updates" Click="OnCheckForUpdates" />
                 <Separator />
                 <MenuItem Header="User manual" Click="OnHelpFile" Tag="T7_manual.pdf" />
                 <MenuItem Header="Trionic 7 documentation" Click="OnHelpFile" Tag="Trionic 7.pdf" />
+                <MenuItem Header="Release notes" Click="OnReleaseNotes" />
             </MenuItem>
         </Menu>
 
-        <!-- ribbonStatusBar1: open/normal binary, file name, SRAM file, CAN status; progress and read-only state on the right.
+        <!-- ribbonStatusBar1: open/normal binary, file name, SRAM file, CAN status, update check; progress and read-only state on the right.
              The accent bar with white text and dividers is the ribbon skin's; empty items are hidden as T7Suite showed nothing for them -->
         <Border DockPanel.Dock="Bottom" Padding="4,2" Background="{DynamicResource SystemAccentColorDark1}" TextElement.Foreground="White">
             <Border.Styles>
@@ -169,6 +171,8 @@
                     <TextBlock Classes="status" Text="{Binding SramFileText}" />
                     <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding CanStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                     <TextBlock Classes="status" Text="{Binding CanStatus}" />
+                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Classes="status" Text="{Binding UpdateText}" />
                 </StackPanel>
             </DockPanel>
         </Border>
