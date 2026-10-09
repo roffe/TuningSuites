@@ -369,7 +369,7 @@ public partial class MainWindowViewModel : ObservableObject
                 T7Binary o = T7Binary.Open(otherFile, Settings.ApplicationLanguage, false);
                 return (o, T7Compare.Compare(bin, o, Settings.ApplicationLanguage));
             });
-            ShowDocument(new CompareResultsViewModel(this, bin, other, rows));
+            ShowDocument(CompareResultsViewModel.Binaries(this, bin, other, rows));
         }
         finally
         {

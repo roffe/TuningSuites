@@ -76,6 +76,27 @@ public partial class MainWindow : Window
         if (await Dialogs.OkCancel(this, "This will overwrite data in your ECU. Are you sure you want to proceed?", "Warning!")) await Vm.SyncToEcuAsync();
     }
 
+    private async void OnUploadPackage(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "Trionic 7 packages", "*.t7p") is { } file) await Vm.UploadPackageAsync(file);
+    }
+
+    private async void OnGeneratePackage(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } file) await Vm.GeneratePackageAsync(file);
+    }
+
+    private async void OnCompareToSram(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "SRAM dumps", "*.ram") is { } file) await Vm.CompareToSramAsync(file);
+    }
+
+    private async void OnCompareSram(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "First SRAM dump", "*.ram") is { } first && await Dialogs.OpenFile(this, "Second SRAM dump", "*.ram") is { } second)
+            await Vm.CompareSramAsync(first, second);
+    }
+
     private async void OnImportSram(object? sender, RoutedEventArgs e)
     {
         if (await Dialogs.OpenFile(this, "SRAM dump files", "*.RAM") is { } file) Vm.ImportSramSnapshot(file);

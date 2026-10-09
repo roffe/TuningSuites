@@ -60,13 +60,7 @@ namespace T7
                 if (cur.Length == comp.Length)
                 {
                     if (cur.AsSpan().SequenceEqual(comp)) continue;
-                    average = cur.Length == 0 ? 0 : cur.Average(b => (double)b) - comp.Average(b => (double)b);
-                    // values, not bytes: T7Suite halved the differing bytes of 16-bit tables (one changed byte showed 0) and took
-                    // the percentage over bytes (a 16-bit map changed everywhere showed 50)
-                    int size = current.IsSixteenBitTable(name) ? 2 : 1, values = cur.Length / size;
-                    for (int v = 0; v < values; v++)
-                        if (!cur.AsSpan(v * size, size).SequenceEqual(comp.AsSpan(v * size, size))) differences++;
-                    percentage = values == 0 ? 0 : differences * 100.0 / values;
+                    (differences, percentage, average) = Differences(cur, comp, current.IsSixteenBitTable(name));
                 }
                 rows.Add(new CompareRow(c.Varname, SymbolTranslator.ToHelpText(c.Varname, language), c.Length, percentage, differences, average,
                     o.Symbol_number, c.Symbol_number, o.Userdescription, false, false, CategoryOf(o), caddr, c.Start_address));
@@ -86,6 +80,53 @@ namespace T7
                 if (IsCalibration(name) && !otherNames.Contains(name))
                     rows.Add(new CompareRow(name, SymbolTranslator.ToHelpText(name, language), o.Length, 0, 0, 0, 0, o.Symbol_number, o.Userdescription,
                         false, true, "Missing in compare", o.Flash_start_address, o.Start_address));
+            }
+            return rows;
+        }
+
+        // values, not bytes: T7Suite halved the differing bytes of 16-bit tables (one changed byte showed 0) and took the
+        // percentage over bytes (a 16-bit map changed everywhere showed 50)
+        private static (int differences, double percentage, double average) Differences(byte[] a, byte[] b, bool sixteenBit)
+        {
+            int size = sixteenBit ? 2 : 1, values = a.Length / size, differences = 0;
+            for (int v = 0; v < values; v++)
+                if (!a.AsSpan(v * size, size).SequenceEqual(b.AsSpan(v * size, size))) differences++;
+            double average = a.Length == 0 ? 0 : a.Average(x => (double)x) - b.Average(x => (double)x);
+            return (differences, values == 0 ? 0 : differences * 100.0 / values, average);
+        }
+
+        /// <summary>readdatafromSRAMfile: the bytes at a symbol's SRAM address in a snapshot, the address wrapping at its size.</summary>
+        public static byte[] ReadSram(byte[] ram, long address, int length)
+        {
+            var data = new byte[length];
+            if (ram.Length == 0) return data;
+            for (int i = 0; i < length; i++) data[i] = ram[(address + i) % ram.Length];
+            return data;
+        }
+
+        /// <summary>
+        /// Compare to SRAM snapshot: the calibration symbols whose bytes in the file differ from the snapshot. T7Suite left the
+        /// difference columns at 0; they are filled in here.
+        /// </summary>
+        public static List<CompareRow> CompareToSram(T7Binary bin, byte[] ram, int language) =>
+            SramRows(bin, language, sh => sh.Flash_start_address > 0 && InFile(bin.AddressOf(sh)) ? bin.Read((int)bin.AddressOf(sh), sh.Length) : null, ram);
+
+        /// <summary>Compare SRAM snapshots: the calibration symbols that differ between two snapshots, laid out by the open bin.</summary>
+        public static List<CompareRow> CompareSram(T7Binary bin, byte[] ram1, byte[] ram2, int language) =>
+            SramRows(bin, language, sh => ReadSram(ram1, sh.Start_address, sh.Length), ram2);
+
+        private static List<CompareRow> SramRows(T7Binary bin, int language, Func<SymbolHelper, byte[]> first, byte[] ram)
+        {
+            var rows = new List<CompareRow>();
+            foreach (SymbolHelper sh in bin.Symbols)
+            {
+                string name = Name(sh);
+                if (sh.Start_address <= 0 || !IsCalibration(name) || first(sh) is not { } a) continue;
+                byte[] b = ReadSram(ram, sh.Start_address, sh.Length);
+                if (a.AsSpan().SequenceEqual(b)) continue;
+                var (differences, percentage, average) = Differences(a, b, bin.IsSixteenBitTable(name));
+                rows.Add(new CompareRow(name, SymbolTranslator.ToHelpText(name, language), sh.Length, percentage, differences, average,
+                    sh.Symbol_number, sh.Symbol_number, sh.Userdescription, false, false, CategoryOf(sh), sh.Flash_start_address, sh.Start_address));
             }
             return rows;
         }

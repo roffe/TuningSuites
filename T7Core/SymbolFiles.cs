@@ -133,6 +133,33 @@ namespace T7
             return list;
         }
 
+        /// <summary>A .t7p package's maps: "symbol=", "length=", "data=" hex bytes separated by commas. Broken entries are skipped.</summary>
+        public static List<(string name, byte[] data)> ReadPackage(string file)
+        {
+            var maps = new List<(string, byte[])>();
+            string name = "";
+            int length = 0;
+            foreach (string line in File.ReadLines(file))
+            {
+                if (line.StartsWith("symbol=")) name = line[7..];
+                else if (line.StartsWith("length=")) int.TryParse(line[7..], out length);
+                else if (line.StartsWith("data="))
+                {
+                    string[] bytes = line[5..].Split(',');
+                    if (bytes.Length < length) continue;
+                    try
+                    {
+                        maps.Add((name, bytes.Take(length).Select(b => Convert.ToByte(b, 16)).ToArray()));
+                    }
+                    catch (FormatException)
+                    {
+                        // ponytail: T7Suite logged and skipped a broken entry too
+                    }
+                }
+            }
+            return maps;
+        }
+
         /// <summary>
         /// "Export map to Excel", as CSV: "Data for &lt;map&gt;", the X axis (with its factor) across, the Y axis down (reversed, raw)
         /// and the values with the map's factor, 2 decimals, data rows flipped like the sheet.

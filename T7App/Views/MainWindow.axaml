@@ -60,6 +60,8 @@
                 <MenuItem Header="Compare symbols with other binary" Click="OnCompareToFile" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare to original file" Command="{Binding CompareToOriginalCommand}" IsEnabled="{Binding OriginalFile, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <MenuItem Header="Compare binary with other binary" Click="OnBinaryCompare" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare to SRAM snapshot" Click="OnCompareToSram" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare SRAM snapshots" Click="OnCompareSram" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Transfer maps" Click="OnTransferMaps" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
@@ -77,6 +79,9 @@
                 <Separator />
                 <MenuItem Header="Synchronize to binary" Click="OnSyncToBinary" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Synchronize to ECU" Click="OnSyncToEcu" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="Upload tuning package to ECU" Click="OnUploadPackage" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Generate tuning package from ECU" Click="OnGeneratePackage" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Import SRAM snapshot" Click="OnImportSram" />
             </MenuItem>

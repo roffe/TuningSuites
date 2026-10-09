@@ -292,14 +292,13 @@ public partial class MainWindowViewModel
     public void ImportSramSnapshot(string file) => SramFile = file;
 
     /// <summary>Read from SRAM file: the symbol's bytes at its SRAM address in the snapshot, as "SRAM Symbol: name [file]".</summary>
-    public void OpenFromSramFile(SymbolHelper sh)
+    public void OpenFromSramFile(SymbolHelper sh, string? file = null)
     {
-        if (Binary is not { } bin || SramFile is not { } file || !File.Exists(file)) return;
+        file ??= SramFile;
+        if (Binary is not { } bin || file == null || !File.Exists(file)) return;
         byte[] ram = File.ReadAllBytes(file);
         if (ram.Length == 0) return;
-        var data = new byte[sh.Length];
-        int start = (int)(sh.Start_address & 0xFFFF);
-        for (int i = 0; i < data.Length; i++) data[i] = ram[(start + i) % ram.Length];
+        byte[] data = T7Compare.ReadSram(ram, sh.Start_address, sh.Length);
         string title = $"SRAM Symbol: {sh.SmartVarname} [{Path.GetFileName(file)}]";
         if (MapViewerViewModel.Create(this, bin, sh, data, sram: true, title: title) is { } viewer)
         {
@@ -341,12 +340,84 @@ public partial class MainWindowViewModel
             ShowInfo("An active CAN bus connection is needed to get data from the ECU");
             return;
         }
+        var refused = new List<string>();
         foreach (SymbolHelper sh in SyncSymbols(bin))
         {
             ProgressText = "Sync to ECU: " + sh.SmartVarname;
-            await Ecu.WriteMapAsync(sh, bin.Read((int)bin.AddressOf(sh), sh.Length));
+            if (!await Ecu.WriteMapAsync(sh, bin.Read((int)bin.AddressOf(sh), sh.Length))) refused.Add(sh.SmartVarname);
         }
         ProgressText = "";
+        ReportRefused(refused);
+    }
+
+    private void ReportRefused(List<string> refused)
+    {
+        if (refused.Count > 0)
+            ShowInfo($"The ECU did not accept {refused.Count} map(s), starting with {refused[0]}. Writing to SRAM needs an open binary in the ECU.");
+    }
+
+    // ---- tuning packages ----
+
+    /// <summary>Upload tuning package to ECU: each map of a .t7p that the bin has into SRAM, not the checksum switch.</summary>
+    public async Task UploadPackageAsync(string file)
+    {
+        if (Binary is not { } bin) return;
+        if (!await EnsureConnectedAsync())
+        {
+            ShowInfo("An active CAN bus connection is needed to upload a tuning package");
+            return;
+        }
+        var refused = new List<string>();
+        foreach (var (name, data) in SymbolFiles.ReadPackage(file))
+        {
+            if (name == "MapChkCal.ST_Enable" || bin.FindAny(name) is not { } sh || bin.AddressOf(sh) <= 0) continue;
+            ProgressText = "Uploading: " + name;
+            if (!await Ecu.WriteMapAsync(sh, data)) refused.Add(name);
+        }
+        ProgressText = "";
+        ReportRefused(refused);
+    }
+
+    /// <summary>Generate tuning package from ECU: the fixed package's maps read from SRAM into a .t7p.</summary>
+    public async Task GeneratePackageAsync(string file)
+    {
+        if (Binary is not { } bin) return;
+        if (!await EnsureConnectedAsync())
+        {
+            ShowInfo("An active CAN bus connection is needed to download a tuning package");
+            return;
+        }
+        if (File.Exists(file)) File.Delete(file);
+        var exporter = new PackageExporter();
+        foreach (SymbolHelper sh in SymbolFiles.FixedPackage(bin))
+        {
+            ProgressText = "Downloading: " + sh.Varname;
+            exporter.ExportMap(file, sh.Varname, sh.Userdescription, sh.Length, await Ecu.ReadMapAsync(sh));
+        }
+        ProgressText = "";
+    }
+
+    // ---- SRAM compares ----
+
+    /// <summary>Compare to SRAM snapshot: "SRAM &lt;&gt; BIN Compare results", the bin's map and the snapshot's per symbol.</summary>
+    public async Task CompareToSramAsync(string file)
+    {
+        if (Binary is not { } bin) return;
+        List<CompareRow> rows = await Task.Run(() => T7Compare.CompareToSram(bin, File.ReadAllBytes(file), Settings.ApplicationLanguage));
+        string name = Path.GetFileName(file);
+        ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), CompareSide.Sram(this, bin, file), rows,
+            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]"));
+    }
+
+    /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
+    public async Task CompareSramAsync(string file1, string file2)
+    {
+        if (Binary is not { } bin) return;
+        List<CompareRow> rows = await Task.Run(() =>
+            T7Compare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2), Settings.ApplicationLanguage));
+        string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
+        ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Sram(this, bin, file1), CompareSide.Sram(this, bin, file2), rows,
+            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]"));
     }
 
     private static IEnumerable<SymbolHelper> SyncSymbols(T7Binary bin) =>

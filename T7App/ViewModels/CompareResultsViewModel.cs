@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -10,54 +11,88 @@ using T7;
 
 namespace T7App.ViewModels;
 
-/// <summary>CompareResults: the symbols that differ between the open bin and another, grouped by category.</summary>
+/// <summary>One side of a compare: a file's bytes for a symbol name, and how its viewer opens.</summary>
+public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<string> Open)
+{
+    /// <summary>The open bin: its own viewer, the one that edits.</summary>
+    public static CompareSide Bin(MainWindowViewModel owner, T7Binary bin) =>
+        new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
+            name => { if (bin.FindAny(name) is { } sh) owner.OpenSymbolByName(sh.SmartVarname); });
+
+    /// <summary>Another bin: a read-only compare viewer.</summary>
+    public static CompareSide OtherBin(MainWindowViewModel owner, T7Binary bin) =>
+        new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
+            name =>
+            {
+                if (bin.FindAny(name) is { } sh && MapViewerViewModel.Create(owner, bin, sh, readOnly: true) is { } viewer) owner.ShowDocument(viewer);
+            });
+
+    /// <summary>An SRAM snapshot, laid out by the open bin's symbols: "SRAM Symbol" viewers.</summary>
+    public static CompareSide Sram(MainWindowViewModel owner, T7Binary bin, string file)
+    {
+        byte[] ram = File.ReadAllBytes(file);
+        return new(file, name => bin.FindAny(name) is { } sh ? T7Compare.ReadSram(ram, sh.Start_address, sh.Length) : null,
+            name => { if (bin.FindAny(name) is { } sh) owner.OpenFromSramFile(sh, file); });
+    }
+}
+
+/// <summary>
+/// CompareResults / SRAMCompareResults: the symbols that differ between two sides (bin and bin, bin and SRAM snapshot, two
+/// snapshots), grouped by category. Viewers use the open bin's symbols and axes.
+/// </summary>
 public partial class CompareResultsViewModel : DocumentViewModel
 {
     private readonly MainWindowViewModel m_owner;
+    private readonly string m_title, m_differenceTitle;
 
     public T7Binary Current { get; }
-    public T7Binary Other { get; }
+    public CompareSide First { get; }
+    public CompareSide Second { get; }
     public DataGridCollectionView Rows { get; }
 
     [ObservableProperty]
     private CompareRow? _selected;
 
-    public override string Title => $"Compare results: {Path.GetFileName(Other.FileName)}";
+    public override string Title => m_title;
 
-    public CompareResultsViewModel(MainWindowViewModel owner, T7Binary current, T7Binary other, List<CompareRow> rows)
+    public CompareResultsViewModel(MainWindowViewModel owner, T7Binary current, CompareSide first, CompareSide second, List<CompareRow> rows,
+        string title, string differenceTitle)
     {
         m_owner = owner;
         Current = current;
-        Other = other;
+        First = first;
+        Second = second;
+        m_title = title;
+        m_differenceTitle = differenceTitle;
         Rows = new DataGridCollectionView(rows);
         Rows.GroupDescriptions.Add(new DataGridPathGroupDescription(nameof(CompareRow.Category)));
     }
 
-    /// <summary>
-    /// Double-click / Enter (tabdet_onSymbolSelect): the map of the open file, and the other file's map in a read-only
-    /// compare viewer.
-    /// </summary>
+    /// <summary>Compare with another bin: "Compare results: other.bin".</summary>
+    public static CompareResultsViewModel Binaries(MainWindowViewModel owner, T7Binary current, T7Binary other, List<CompareRow> rows) =>
+        new(owner, current, CompareSide.Bin(owner, current), CompareSide.OtherBin(owner, other), rows,
+            $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]");
+
+    /// <summary>Double-click / Enter (tabdet_onSymbolSelect): both sides' viewers.</summary>
     public void Open(CompareRow? row)
     {
         if (row == null) return;
-        if (Current.FindAny(row.SymbolName) is { } mine) m_owner.OpenSymbolByName(mine.SmartVarname);
-        if (Other.FindAny(row.SymbolName) is { } theirs && MapViewerViewModel.Create(m_owner, Other, theirs, readOnly: true) is { } viewer)
-            m_owner.ShowDocument(viewer);
+        First.Open(row.SymbolName);
+        Second.Open(row.SymbolName);
     }
 
-    /// <summary>"Show differences map": |other − open file| per value, read-only, axes from the open file.</summary>
+    /// <summary>"Show differences map": |second − first| per value, read-only, axes from the open file.</summary>
     public void ShowDifferenceMap(CompareRow? row)
     {
         if (row == null || Current.FindAny(row.SymbolName) is not { } mine) return;
-        byte[] theirs = Other.Read((int)row.FlashAddress, row.LengthBytes);
-        byte[]? ours = Current.ReadSymbol(mine);
-        byte[]? diff = ours == null ? null : T7Compare.DifferenceMap(theirs, ours, Current.IsSixteenBitTable(mine.SmartVarname));
+        byte[]? a = First.Read(row.SymbolName), b = Second.Read(row.SymbolName);
+        byte[]? diff = a == null || b == null ? null : T7Compare.DifferenceMap(b, a, Current.IsSixteenBitTable(mine.SmartVarname));
         if (diff == null)
         {
             m_owner.ShowInfo("Map lengths don't match...");
             return;
         }
-        string title = $"Symbol difference: {mine.SmartVarname} [{Path.GetFileName(Other.FileName)}]";
+        string title = string.Format(m_differenceTitle, mine.SmartVarname);
         if (MapViewerViewModel.Create(m_owner, Current, mine, diff, readOnly: true, title: title) is { } viewer) m_owner.ShowDocument(viewer);
     }
 

@@ -354,6 +354,19 @@ namespace T7AppTest
                 CollectionAssert.AreEqual(Enumerable.Range(0, sh.Length).Select(i => (byte)(i % 7)).ToArray(), viewer.Map.ToBytes());
                 Save(window, "sram-viewer");
 
+                // compare snapshots: one row, both snapshots' viewers
+                ram[start]++;
+                string ramFile2 = Path.Combine(s_dir, "snap2.RAM");
+                File.WriteAllBytes(ramFile2, ram);
+                await vm.CompareSramAsync(ramFile, ramFile2);
+                var results = (CompareResultsViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("SRAM compare results: snap.RAM snap2.RAM", results.Title);
+                var row = results.Rows.SourceCollection.Cast<T7.CompareRow>().Single(r => r.SymbolName == "IgnNormCal.Map");
+                results.Open(row);
+                Assert.AreEqual("SRAM Symbol: IgnNormCal.Map [snap2.RAM]", vm.SelectedViewer!.Title);
+                results.ShowDifferenceMap(row);
+                Assert.AreEqual("SRAM symbol difference: IgnNormCal.Map [snap.RAM vs snap2.RAM]", vm.SelectedViewer!.Title);
+
                 StringAssert.StartsWith(Path.GetFileName(vm.SnapshotFileName()), "SRAM");
                 Assert.AreEqual(Path.GetDirectoryName(file), Path.GetDirectoryName(vm.SnapshotFileName()));
 

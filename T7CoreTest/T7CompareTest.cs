@@ -61,6 +61,41 @@ namespace T7CoreTest
         }
 
         [TestMethod]
+        public void SramComparesAndPackages()
+        {
+            T7Binary bin = T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
+            SymbolHelper map = bin.Find("IgnNormCal.Map");
+            byte[] data = bin.ReadSymbol(map);
+            var ram = new byte[0x10000];
+            for (int i = 0; i < data.Length; i++) ram[(map.Start_address + i) % ram.Length] = data[i];
+            CollectionAssert.AreEqual(data, T7Compare.ReadSram(ram, map.Start_address, map.Length));
+            Assert.IsEmpty(T7Compare.CompareSram(bin, ram, ram, 0));
+            Assert.IsFalse(T7Compare.CompareToSram(bin, ram, 0).Any(r => r.SymbolName == "IgnNormCal.Map"));
+
+            byte[] ram2 = (byte[])ram.Clone();
+            ram2[(map.Start_address + 1) % ram.Length]++;
+            CompareRow row = T7Compare.CompareSram(bin, ram, ram2, 0).Single(r => r.SymbolName == "IgnNormCal.Map");
+            Assert.AreEqual(1, row.Differences);
+            Assert.IsTrue(T7Compare.CompareToSram(bin, ram2, 0).Any(r => r.SymbolName == "IgnNormCal.Map"));
+
+            // a package written the way Generate tuning package writes it reads back
+            string pkg = Path.Combine(Directory.CreateTempSubdirectory("t7pkg").FullName, "ecu.t7p");
+            try
+            {
+                new PackageExporter().ExportMap(pkg, "IgnNormCal.Map", "", data.Length, data);
+                File.AppendAllText(pkg, "symbol=Broken.Map\nlength=4\ndata=01,ZZ,03,04,\n");
+                var maps = SymbolFiles.ReadPackage(pkg);
+                Assert.HasCount(1, maps);
+                Assert.AreEqual("IgnNormCal.Map", maps[0].name);
+                CollectionAssert.AreEqual(data, maps[0].data);
+            }
+            finally
+            {
+                Directory.Delete(Path.GetDirectoryName(pkg), true);
+            }
+        }
+
+        [TestMethod]
         public void DifferentSoftwareListsMissingSymbols()
         {
             string dir = Directory.CreateTempSubdirectory("t7cmp2").FullName;
