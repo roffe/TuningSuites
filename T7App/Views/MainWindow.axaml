@@ -145,16 +145,32 @@
             </MenuItem>
         </Menu>
 
-        <!-- ribbonStatusBar1: open/normal binary, file name, progress, read-only state -->
-        <Border DockPanel.Dock="Bottom" Padding="8,3" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding OpenClosedText}" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="1" Text="{Binding FileNameText}" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="2" Text="{Binding SramFileText}" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="3" Text="{Binding CanStatus}" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="4" Text="{Binding ProgressText}" HorizontalAlignment="Right" Margin="0,0,16,0" />
-                <TextBlock Grid.Column="5" Text="{Binding ReadOnlyText}" />
-            </Grid>
+        <!-- ribbonStatusBar1: open/normal binary, file name, SRAM file, CAN status; progress and read-only state on the right.
+             The accent bar with white text and dividers is the ribbon skin's; empty items are hidden as T7Suite showed nothing for them -->
+        <Border DockPanel.Dock="Bottom" Padding="4,2" Background="{DynamicResource SystemAccentColorDark1}" TextElement.Foreground="White">
+            <Border.Styles>
+                <Style Selector="TextBlock.status">
+                    <Setter Property="Padding" Value="8,0" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="IsVisible" Value="{Binding $self.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </Style>
+            </Border.Styles>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock Classes="status" Text="{Binding ProgressText}" />
+                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Classes="status" Text="{Binding ReadOnlyText}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Classes="status" Text="{Binding OpenClosedText}" />
+                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding OpenClosedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Classes="status" Text="{Binding FileNameText}" />
+                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding SramFileText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Classes="status" Text="{Binding SramFileText}" />
+                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding CanStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    <TextBlock Classes="status" Text="{Binding CanStatus}" />
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <!-- T7Suite's workspace: a dockable symbol list and the documents as inner windows (or tabs) -->
