@@ -4,8 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace T7App.ViewModels;
 
 /// <summary>
-/// frmSettings, the offline part: the settings that do something in this app. The docking / window size options don't
-/// apply to tabs. Wideband and autotune have groups here instead of T7Suite's extra dialogs.
+/// frmSettings, the offline part: the settings that do something in this app (of the docking / window size options only
+/// Hide symbol window). Wideband and autotune have groups here instead of T7Suite's extra dialogs.
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
@@ -21,6 +21,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _showAddressesInHex;
     [ObservableProperty] private bool _autoFixFooter;
     [ObservableProperty] private bool _requestProjectNotes;
+    [ObservableProperty] private bool _hideSymbolTable;
     [ObservableProperty] private string _projectFolder;
 
     // realtime settings: the connection
@@ -100,6 +101,7 @@ public partial class SettingsViewModel : ObservableObject
         _showAddressesInHex = s.ShowAddressesInHex;
         _autoFixFooter = s.AutoFixFooter;
         _requestProjectNotes = s.RequestProjectNotes;
+        _hideSymbolTable = s.HideSymbolTable;
         _projectFolder = s.ProjectFolder;
         _adapter = s.Adapter;
         _baudrate = s.Baudrate;
@@ -143,6 +145,7 @@ public partial class SettingsViewModel : ObservableObject
         s.ShowAddressesInHex = ShowAddressesInHex;
         s.AutoFixFooter = AutoFixFooter;
         s.RequestProjectNotes = RequestProjectNotes;
+        s.HideSymbolTable = HideSymbolTable;
         s.AdapterType = AdapterType;
         s.Adapter = Adapter ?? "";
         s.Baudrate = Baudrate;

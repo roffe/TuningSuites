@@ -26,7 +26,8 @@
                     <CheckBox Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" Margin="0,0,24,0" />
                     <CheckBox Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" Margin="0,0,24,0" />
                     <CheckBox Content="Auto fix footer" IsChecked="{Binding AutoFixFooter}" Margin="0,0,24,0" />
-                    <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}" />
+                    <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}" Margin="0,0,24,0" />
+                    <CheckBox Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}" />
                 </WrapPanel>
                 <TextBlock Text="Project folder" Margin="0,8,0,0" />
                 <DockPanel>

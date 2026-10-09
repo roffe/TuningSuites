@@ -43,6 +43,7 @@ public partial class MainWindow : Window
                 }
             };
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.SelectedViewer)) ActivateDocument(vm.SelectedViewer); };
+            ApplyHideSymbolTable();
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildQuickMaps(); };
             vm.MyMapsChanged += BuildMyMaps;
             BuildMyMaps();
@@ -417,6 +418,18 @@ public partial class MainWindow : Window
         if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
         settings.Apply(Vm.Settings);
         Vm.SettingsChanged();
+        ApplyHideSymbolTable();
+    }
+
+    /// <summary>
+    /// Hide symbol window: the symbol list pinned to the side (T7Suite's auto hide), sliding out when its tab is pointed at;
+    /// opening a map slides it back in (ActivateDocument).
+    /// </summary>
+    private void ApplyHideSymbolTable()
+    {
+        if (DockFactory!.IsDockablePinned(SymbolTool) == Vm.Settings.HideSymbolTable) return;
+        if (Vm.Settings.HideSymbolTable) DockFactory.PinDockable(SymbolTool);
+        else DockFactory.UnpinDockable(SymbolTool);
     }
 
     // ---- file actions, imports and exports ----
@@ -675,6 +688,7 @@ public partial class MainWindow : Window
     private void ActivateDocument(DocumentViewModel? viewer)
     {
         if (viewer == null) return;
+        if (Vm.Settings.HideSymbolTable && Workspace.Layout is Dock.Model.Controls.IRootDock root) DockFactory!.HidePreviewingDockables(root);
         if (m_floating.TryGetValue(viewer, out var floating))
         {
             floating.Activate();

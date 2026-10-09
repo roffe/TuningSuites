@@ -180,8 +180,8 @@
             </DockControl.Factory>
             <RootDock Id="Root" IsCollapsable="False" CanDrop="False" DefaultDockable="{Binding #MainLayout}">
                 <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal" IsCollapsable="False" CanDrop="False">
-                    <ToolDock x:Name="SymbolPane" Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="False" CanDrop="False" CanFloat="False">
-                        <Tool Id="SymbolList" Title="Symbol list" CanClose="False" CanFloat="False" CanDrag="False" x:DataType="Tool">
+                    <ToolDock x:Name="SymbolPane" Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="True" CanDrop="False" CanFloat="False">
+                        <Tool x:Name="SymbolTool" Id="SymbolList" Title="Symbol list" CanClose="False" CanFloat="False" CanDrag="False" x:DataType="Tool">
                             <v:SymbolListView DataContext="{Binding $parent[Window].DataContext}" />
                         </Tool>
                     </ToolDock>
