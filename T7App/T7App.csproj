@@ -15,9 +15,10 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
-  <!-- ponytail: Windows stays 32-bit like the flasher, most J2534 and the Lawicel CANUSB drivers only ship x86 DLLs -->
+  <!-- ponytail: Windows stays 32-bit like the flasher, most J2534 and the Lawicel CANUSB drivers only ship x86 DLLs. Only the
+       launcher (T7Suite.exe) is x86, the dll stays AnyCPU: T7AppTest's 64-bit test host loads it (x86 failed every app test) -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT'">
-    <PlatformTarget>x86</PlatformTarget>
+    <DefaultAppHostRuntimeIdentifier>win-x86</DefaultAppHostRuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
