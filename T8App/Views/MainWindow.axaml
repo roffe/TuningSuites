@@ -13,6 +13,7 @@
         <!-- the symbol list's row menu (gridViewSymbols' context menu), the ported items -->
         <ContextMenu x:Key="SymbolListMenu" x:DataType="vm:T8MainWindowViewModel">
             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
+            <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
             <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
             <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
             <MenuItem Header="Edit an existing tuning package" Command="{Binding EditTuningPackageCommand}" />
@@ -82,9 +83,22 @@
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Copy address table to another binary" Click="OnCopyAddressTable" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import SRAM file" Click="OnImportSram" />
             </MenuItem>
             <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}" />
             <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
+            <MenuItem Header="_Realtime">
+                <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
+                <MenuItem Header="Get ECU information" Click="OnEcuInformation" />
+                <MenuItem Header="Get fault codes (OBDII)" Click="OnFaultCodes" />
+                <MenuItem Header="Clear DTC and knock counters" Command="{Binding ClearDtcAndKnockCountersCommand}" />
+            </MenuItem>
+            <!-- the Programmer page's CAN Flasher group -->
+            <MenuItem Header="E_CU">
+                <MenuItem Header="Read ECU" Click="OnReadEcu" />
+                <MenuItem Header="Flash current file to ECU" Click="OnFlashEcu" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Recover ECU" Click="OnRecoverEcu" />
+            </MenuItem>
             <MenuItem Header="_Skin">
                 <MenuItem Header="Light" Click="OnSkin" Tag="Light" />
                 <MenuItem Header="Dark" Click="OnSkin" Tag="Dark" />

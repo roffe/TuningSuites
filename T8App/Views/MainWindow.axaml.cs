@@ -22,6 +22,16 @@ public partial class MainWindow : SuiteMainWindow
         ("Actitis H., Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, G-ice, General Failure and Mattias Claesson",
          "Currently no e-mail support, check out www.trionictuning.com and www.ecuproject.com", "Special thanks to Just4pLeisure.");
 
+    private async void OnRecoverEcu(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "Binary files", "*.bin") is { } file) await Vm.RecoverEcuAsync(file);
+    }
+
+    private async void OnEcuInformation(object? sender, RoutedEventArgs e)
+    {
+        if (await Vm.ReadEcuInfoAsync() is { } rows) new EcuInfoWindow(rows).Show(this);
+    }
+
     // the file's VIN, from the last valid flash block
     private async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
         await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.FirmwareInfo()?.ChassisId ?? "") }.ShowDialog(this);

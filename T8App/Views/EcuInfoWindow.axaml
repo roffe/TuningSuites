@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:t8="using:T8SuitePro"
+        x:Class="T8App.Views.EcuInfoWindow"
+        Title="ECU information" Width="640" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <!-- frmECUInformation: two groups of read-only fields, some with a second value -->
+    <Window.Styles>
+        <Style Selector="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+        </Style>
+    </Window.Styles>
+    <Window.DataTemplates>
+        <DataTemplate DataType="t8:EcuInfoRow">
+            <Grid ColumnDefinitions="160,*,*" ColumnSpacing="4" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" Text="{Binding Value, Mode=OneWay}" />
+                <TextBox Grid.Column="2" Text="{Binding Value2, Mode=OneWay}" IsVisible="{Binding Value2, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </Grid>
+        </DataTemplate>
+    </Window.DataTemplates>
+    <StackPanel Margin="12" Spacing="10">
+        <HeaderedContentControl Header="ECU related data">
+            <ItemsControl x:Name="EcuRows" />
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Calibration data">
+            <ItemsControl x:Name="CalibrationRows" />
+        </HeaderedContentControl>
+        <Button Content="Close" HorizontalAlignment="Right" MinWidth="80" IsCancel="True" IsDefault="True" Click="OnClose" />
+    </StackPanel>
+</Window>

@@ -106,7 +106,10 @@ namespace T8AppTest
                 Assert.IsTrue(viewer.Map.SixteenBit);
                 Assert.AreEqual(0.1, viewer.Map.Factor);
                 Assert.AreEqual("mg/c", viewer.Map.XName);
+                // T8Suite's rule: the ECU buttons only for symbols in SRAM; a closed bin's calibration lives in the flash alone
                 Assert.IsNull(viewer.EcuReadCommand);
+                SymbolHelper ramOnly = vm.Binary.Symbols.Cast<SymbolHelper>().First(sh => sh.Flash_start_address >= 0x100000 && sh.Length > 1);
+                Assert.IsNotNull(MapViewerViewModel.Create(vm, vm.Binary, ramOnly, new byte[ramOnly.Length], sram: true)!.EcuReadCommand);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "main");
 
@@ -213,6 +216,59 @@ namespace T8AppTest
                 vinWindow.Show();
                 Save(vinWindow, "vindecoder");
                 vinWindow.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+    
+        [TestMethod]
+        public void EcuWithoutAnAdapter()
+        {
+            string file = CopyOfStockBin("ecu.BIN");
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T8MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+
+                // no adapter in the settings: nothing goes on the wire
+                vm.Settings.Adapter = "";
+                Assert.IsFalse(await vm.EnsureConnectedAsync());
+                Assert.IsFalse(vm.IsConnected);
+                Assert.AreEqual("Connect ECU", vm.ConnectCaption);
+                Assert.IsNull(await vm.ReadEcuInfoAsync());
+                Assert.IsNull(await vm.ReadFaultCodesAsync());
+                Assert.IsNull(vm.CloseBlocker);
+
+                // Import SRAM file / Read from SRAM file: a 32 KB dump read at the symbol's SRAM address
+                SymbolHelper live = vm.Binary!.Symbols.Cast<SymbolHelper>().First(sh => sh.Start_address >= 0x100000 && sh.Length >= 16);
+                byte[] data = Enumerable.Range(1, live.Length).Select(i => (byte)i).ToArray();
+                var ram = new byte[0x8000];
+                data.CopyTo(ram, (int)(live.Start_address % ram.Length));
+                string ramFile = Path.Combine(s_dir, "snap.RAM");
+                File.WriteAllBytes(ramFile, ram);
+                vm.ImportSramSnapshot(ramFile);
+                Assert.AreEqual("SRAM: snap", vm.SramFileText);
+                Assert.IsTrue(vm.HasSramFile);
+                vm.OpenFromSramFile(live);
+                var sram = (MapViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual($"SRAM Symbol: {live.SmartVarname} [snap.RAM]", sram.Title);
+                CollectionAssert.AreEqual(data, sram.Map.ToBytes());
+
+                var faults = new SuiteApp.Views.FaultCodesWindow(vm, [new FaultCode("P0335", "Crankshaft Position Sensor Circuit, Crank Time Based Circuit"), new FaultCode("U0100", "")]);
+                faults.Show();
+                Save(faults, "faultcodes");
+                faults.Close();
+
+                var info = new EcuInfoWindow([
+                    new("ECU related data", "ECU description", "Trionic 8 P6.8", "GMPT 0100"), new("ECU related data", "Build date", "2003-07-09"),
+                    new("Calibration data", "Software version", "FA56_C_FME2_37_FIEF_81c"), new("Calibration data", "Software IDs", "12345678", "87654321"),
+                    new("Calibration data", "Speedlimit", "250 km/h"),
+                ]);
+                info.Show();
+                Save(info, "ecuinfo");
+                info.Close();
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();

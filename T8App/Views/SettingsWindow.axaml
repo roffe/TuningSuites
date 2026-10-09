@@ -5,7 +5,7 @@
         x:Class="T8App.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
-    <!-- T8Suite's groups and columns, the settings that do something here; the realtime group comes with the ECU -->
+    <!-- T8Suite's groups and columns, the settings that do something here; the rest of the realtime group comes with realtime -->
     <StackPanel Margin="16" Spacing="12">
         <HeaderedContentControl Header="User interface settings">
             <StackPanel Spacing="4">
@@ -24,6 +24,27 @@
                 <TextBlock Text="Default view type for maps" Margin="0,8,0,0" />
                 <ComboBox ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" MinWidth="220" />
             </StackPanel>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Realtime settings">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <TextBlock Grid.Row="0" Text="CANBus adapter type" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Adapter" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding HasAdapters}" />
+                <TextBlock Grid.Row="2" Text="Serial speed" VerticalAlignment="Center" IsVisible="{Binding AdapterNeedsBaudrate}" />
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Baudrates}" SelectedItem="{Binding Baudrate}" HorizontalAlignment="Stretch"
+                          IsVisible="{Binding AdapterNeedsBaudrate}" />
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="24">
+                    <CheckBox Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}" />
+                    <CheckBox Content="Use Legion Bootloader" IsChecked="{Binding UseLegionBootloader}" />
+                </StackPanel>
+                <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}" />
+                    <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="110" />
+                    <TextBlock Text="seconds" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
         </HeaderedContentControl>
         <HeaderedContentControl Header="Project settings">
             <StackPanel Spacing="2">
