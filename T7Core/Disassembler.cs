@@ -2361,7 +2361,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
             return false;
         }
 
-        public bool DisassembleFileRtf(string inputfile, string outputfile, long endaddress, SymbolCollection symbols)
+        public bool DisassembleFileRtf(string inputfile, string outputfile, long endaddress, SymbolCollection symbols, bool rtf = true)
         {
             for (int temp = 0; temp < 8; temp++)
             {
@@ -2387,7 +2387,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
             const long offaddr = 0;
             fsbr.Position = addr;
             // start rtf file.
-            sw.Write(@"{\rtf1\ansi\ansicpg1252\deff0\deflang1043{\fonttbl{\f0\fswiss\fcharset0 Courier new;}}{\colortbl ;\red255\green0\blue0;\red0\green128\blue0;\red0\green0\blue255;}{\*\generator Msftedit 5.41.15.1507;}\viewkind4\uc1\pard\lang1033\f0\fs20 ");
+            if (rtf) sw.Write(@"{\rtf1\ansi\ansicpg1252\deff0\deflang1043{\fonttbl{\f0\fswiss\fcharset0 Courier new;}}{\colortbl ;\red255\green0\blue0;\red0\green128\blue0;\red0\green0\blue255;}{\*\generator Msftedit 5.41.15.1507;}\viewkind4\uc1\pard\lang1033\f0\fs20 ");
             /* Parse starting from address addr */
             bool issub = false;
             bool isjump = false;
@@ -2475,7 +2475,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                             sw.Close();
                             return false;
                     }
-                    sw.WriteLine(myline + @"\par");
+                    sw.WriteLine(rtf ? myline + @"\par" : myline);
                 }
                 catch (Exception E)
                 {
@@ -2483,7 +2483,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                     addr++;
                 }
             }
-            sw.Write(@"\lang1043\par}");
+            if (rtf) sw.Write(@"\lang1043\par}");
             br.Close();
             fsbr.Close();
             sw.Close();

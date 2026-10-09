@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T7App.ViewModels"
+             xmlns:ae="using:AvaloniaEdit"
+             x:Class="T7App.Views.DisassemblyView"
+             x:DataType="vm:DisassemblyViewModel">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="4">
+            <Button Content="Save" Click="OnSave" />
+            <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="Ctrl+F finds, Ctrl+H replaces" />
+        </StackPanel>
+        <ae:TextEditor x:Name="Editor" ShowLineNumbers="True" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13" />
+    </DockPanel>
+</UserControl>

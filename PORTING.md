@@ -53,6 +53,7 @@ SetupT7/                   WiX MSI (chunk 8)
 | DevExpress XtraGrid (map tables) | `MapGrid`: our own control, a `Render(DrawingContext)` override modelled on txlogger's mapviewer |
 | DevExpress XtraGrid (symbol list, compare lists) | Avalonia `DataGrid` |
 | Nevron 3D and 2D, XtraCharts | `Surface3D`: port meshgrid's CPU rasterizer and axes to Skia `DrawVertices` in an `ICustomDrawOperation`. Port the GLSL shader to SkSL later if needed. `Graph2D`: port txlogger's graph2d |
+| ICSharpCode.TextEditor, Be.HexBox | Avalonia.AvaloniaEdit 12 and AvaloniaHex (both MIT) |
 | XtraBars ribbon and docking, XtraTab | Menu bar; Dock.Avalonia 12.1 (MIT) for the workspace: documents as MDI inner windows or tabs, the symbol list as a dockable tool pane |
 | XtraWizard | A plain step-by-step view |
 | XtraReports (TuningReport) | Drop it. Export HTML if anyone misses it |
@@ -193,9 +194,9 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] SID information and editing (Actions → SID information): the "All" and "New" tables grouped by mode, short name (max 4), symbol (fills code, address, description, ID), ID, address, matched symbol (red when different), Export / Import SIDi settings (.sid); Ok writes the tables and the checksum. Deliberate differences: a short name longer than 4 is refused in place; the dialog no longer renames the binary's "Symbolnumber" symbols as a side effect
 - [x] ESP calibration and TCM limit (Actions): the ESP byte with T7Suite's four choices; TCM MOD v1 (threshold) or v2 (per gear), mutually exclusive, the limit into VIOSCal.M_TCMOffset with a transaction entry. Deliberate differences: Ok needs a known ESP choice (T7Suite wrote 0x00 for an unknown value); a bin without VIOSCal.M_TCMOffset stops there
 - [x] Smaller tools: File → Save all, Create backup file, Lookup partnumber (open / compare / create new from Binaries); Actions → Copy address table to another binary (now also updates the target's checksum, which T7Suite left stale), Browse axis information (also from the symbol list; double-click opens the map or the clicked axis); Realtime → Set ethanol content. Not ported: Set symbol colors (the log viewer uses the stored and default colours), P&E micro programmer, screenshot / fullscreen
-- [ ] Disassembler (AvaloniaEdit), hex view
+- [x] Disassembler and hex view (Actions): Show interrupt vectors, Show disassembly (<bin>.asm, asked to redo when it exists), Show full disassembly (<bin>_full.asm, plain text instead of RTF) in AvaloniaEdit with T7Suite's ASM colours (converted to the current .xshd format), search / replace and Save; View file in hex (AvaloniaHex, MIT) for the bin and the imported SRAM file with the symbol under the caret, saved in place after a backup copy, asks on close. Not ported: the disassembly's side-by-side hex view with caret sync
 - [x] Matrix from log (Realtime → View matrix from logfile): x / y / z and mean / minimum / maximum (last choice remembered), 16 × 16 between the logged extremes, shown in a read-only map viewer with the 3D surface. Deliberate differences: lines count once all three symbols have been seen (T7Suite counted the zeros before that); a real 0 isn't treated as an empty cell in minimum / maximum; numbers parse with either separator
-- [ ] From frmMain: SID, limiter, torque/power/airmass math (3948-4239, 13637-13950), TuneToStage (10269-10779), tuning packs (14465-15290, 17340-17518, 18644-19139), matrix from log (16460-16747)
+- [x] From frmMain: SID, limiter, torque/power/airmass math, tuning packs, matrix from log (TuneToStage left out)
 
 ### 8. Release
 - [ ] WiX MSI, Linux tar.gz, macOS zip, nightly and tagged releases
@@ -218,6 +219,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 7 done: disassembler, hex view and interrupt vectors; tuning packs, SID, ESP / TCM, matrix from log and the smaller tools before that.
 - 2026-10-09: Menus in T7Suite's ribbon order: File (with Project), Actions (with firmware information), Tuning, My Maps, Realtime, ECU (in Programmer's place), Skin (light / dark / system and window layout), Help (manuals, About).
 - 2026-10-09: Chunk 7: airmass result viewer with the dyno graph and compressor map; TuneToStage / tuning wizard found unreachable in T7Suite.
 - 2026-10-09: Chunk 7: docking workspace (MDI inner windows / tabs, dockable symbol list).

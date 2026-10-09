@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<!-- T7Suite's ASM-Mode.xshd in AvaloniaEdit's format: the same keyword groups and colours -->
+<SyntaxDefinition name="ASM" extensions=".asm" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Comment" foreground="SlateGray" fontStyle="italic" />
+  <Color name="Label" foreground="MidnightBlue" fontWeight="bold" />
+  <Color name="Digits" foreground="DarkBlue" fontWeight="bold" />
+  <Color name="Keyword1" foreground="Blue" />
+  <Color name="Keyword2" foreground="DarkBlue" fontWeight="bold" />
+  <Color name="Keyword3" foreground="DarkRed" fontWeight="bold" />
+  <Color name="Keyword4" foreground="Red" fontWeight="bold" />
+  <Color name="Puntuation" foreground="Green" fontWeight="bold" />
+  <RuleSet>
+    <Span color="Comment" begin=";" />
+    <Rule color="Label">[A-Za-z_][A-Za-z0-9_.]*(?=:)</Rule>
+    <Keywords color="Keyword1">
+      <Word>JMP</Word>
+      <Word>BEQ</Word>
+      <Word>BRA</Word>
+      <Word>JSR</Word>
+      <Word>ORI</Word>
+      <Word>CHK2</Word>
+      <Word>CMP2</Word>
+      <Word>BTST</Word>
+      <Word>BCHG</Word>
+      <Word>BCLR</Word>
+      <Word>BSET</Word>
+      <Word>ANDI</Word>
+      <Word>SUBI</Word>
+      <Word>ADDI</Word>
+      <Word>EORI</Word>
+      <Word>CPMI</Word>
+      <Word>MOVES</Word>
+      <Word>MOVEA</Word>
+      <Word>MOVE</Word>
+      <Word>BGND</Word>
+      <Word>RESET</Word>
+      <Word>NOP</Word>
+      <Word>STOP</Word>
+      <Word>RTE</Word>
+      <Word>RTD</Word>
+      <Word>RTS</Word>
+      <Word>RTR</Word>
+      <Word>MOVEC</Word>
+      <Word>NEGX</Word>
+      <Word>CHK</Word>
+      <Word>LEA</Word>
+      <Word>CLR</Word>
+      <Word>NEG</Word>
+      <Word>NOT</Word>
+      <Word>NBCD</Word>
+      <Word>LINK</Word>
+      <Word>SWAP</Word>
+      <Word>BKPT</Word>
+      <Word>PEA</Word>
+      <Word>EXT</Word>
+      <Word>MOVEM</Word>
+      <Word>TST</Word>
+      <Word>TAS</Word>
+      <Word>MUL</Word>
+      <Word>DIV</Word>
+      <Word>UNLK</Word>
+      <Word>ADDQ</Word>
+      <Word>DB</Word>
+      <Word>TRAP</Word>
+      <Word>SUBQ</Word>
+      <Word>BSR</Word>
+      <Word>MOVEQ</Word>
+      <Word>OR</Word>
+      <Word>SBCD</Word>
+      <Word>DIVU</Word>
+      <Word>DIVS</Word>
+      <Word>SUBA</Word>
+      <Word>SUBX</Word>
+      <Word>SUB</Word>
+      <Word>CMP</Word>
+      <Word>CMPA</Word>
+      <Word>EOR</Word>
+      <Word>CMPM</Word>
+      <Word>AND</Word>
+      <Word>MULU</Word>
+      <Word>MULS</Word>
+      <Word>ABCD</Word>
+      <Word>EXG</Word>
+      <Word>ADDA</Word>
+      <Word>ADDX</Word>
+      <Word>ADD</Word>
+      <Word>AS</Word>
+      <Word>LS</Word>
+      <Word>ROX</Word>
+      <Word>RO</Word>
+      <Word>TBL</Word>
+    </Keywords>
+    <Keywords color="Keyword2">
+      <Word>SECTION</Word>
+      <Word>BITS</Word>
+      <Word>ALIGN</Word>
+    </Keywords>
+    <Keywords color="Keyword3">
+      <Word>iret</Word>
+      <Word>resb</Word>
+      <Word>ret</Word>
+      <Word>retn</Word>
+    </Keywords>
+    <Rule color="Keyword3">\.B|\.W|\.L</Rule>
+    <Keywords color="Keyword4">
+      <Word>A0</Word>
+      <Word>A1</Word>
+      <Word>A2</Word>
+      <Word>A3</Word>
+      <Word>A4</Word>
+      <Word>A5</Word>
+      <Word>A6</Word>
+      <Word>A7</Word>
+      <Word>D0</Word>
+      <Word>D1</Word>
+      <Word>D2</Word>
+      <Word>D3</Word>
+      <Word>D4</Word>
+      <Word>D5</Word>
+      <Word>D6</Word>
+      <Word>D7</Word>
+      <Word>SP</Word>
+      <Word>PC</Word>
+      <Word>QPDR</Word>
+    </Keywords>
+    <Rule color="Puntuation">\)|\)|\{|\}|\[|\]|=|!|\+|\-|/|\*|&gt;|&lt;|\&amp;|\||\^|\~|\.|,|;|\?|:|&#x27;|`</Rule>
+    <Rule color="Digits">\b(0x[0-9A-Fa-f]+|[0-9][0-9A-Fa-f]*)\b</Rule>
+  </RuleSet>
+</SyntaxDefinition>

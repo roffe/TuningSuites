@@ -275,6 +275,40 @@ public partial class MainWindowViewModel : ObservableObject
         if (Binary is { } bin) ShowDocument(new AxisBrowserViewModel(this, bin, symbol));
     }
 
+    /// <summary>
+    /// Show disassembly (full: the linear sweep): &lt;bin&gt;.asm / &lt;bin&gt;_full.asm next to the bin, redone when asked or when
+    /// it isn't there yet, then shown.
+    /// </summary>
+    public async Task ShowDisassemblyAsync(bool full, Func<string, Task<bool>> redo)
+    {
+        if (Binary is not { } bin) return;
+        string file = Path.Combine(Path.GetDirectoryName(bin.FileName) ?? "", Path.GetFileNameWithoutExtension(bin.FileName) + (full ? "_full.asm" : ".asm"));
+        if (!File.Exists(file) || await redo("Assemblerfile already exists, do you want to redo the disassembly?"))
+        {
+            IsBusy = true;
+            ProgressText = "Disassembling...";
+            try
+            {
+                await Task.Run(() => full ? Disassembly.Full(bin, file) : Disassembly.Functions(bin, file));
+            }
+            finally
+            {
+                IsBusy = false;
+                ProgressText = "";
+            }
+        }
+        ShowDocument(new DisassemblyViewModel(file));
+    }
+
+    /// <summary>View file in hex: the bin, and the imported SRAM snapshot next to it.</summary>
+    [RelayCommand]
+    private void ViewHex()
+    {
+        if (Binary is not { } bin) return;
+        ShowDocument(new HexViewerViewModel(bin.FileName, bin));
+        if (SramFile is { } ram && File.Exists(ram)) ShowDocument(new HexViewerViewModel(ram, bin, sram: true));
+    }
+
     /// <summary>Actions → Airmass result viewer, when the bin has the tables it needs (T7Suite silently did nothing otherwise).</summary>
     [RelayCommand]
     private void ShowAirmassResult()
@@ -360,6 +394,12 @@ public partial class MainWindowViewModel : ObservableObject
                 await map.SaveCommand.ExecuteAsync(null);
                 if (map.Map.Mutated) return false; // the save failed, keep the changes on screen
             }
+        }
+        if (viewer is HexViewerViewModel { IsModified: true } hex && AskYesNoCancel != null)
+        {
+            bool? save = await AskYesNoCancel("Do you want to save changes?");
+            if (save == null) return false;
+            if (save == true) hex.Save();
         }
         if (viewer is RealtimeViewModel realtime) realtime.Stop();
         int i = Viewers.IndexOf(viewer);

@@ -726,6 +726,41 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void DisassemblyAndHex()
+        {
+            string dir = Path.Combine(s_dir, "asm");
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, "asm.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                await vm.ShowDisassemblyAsync(false, _ => Task.FromResult(true));
+                var asm = (DisassemblyViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Disassembly: asm.asm", asm.Title);
+                StringAssert.Contains(asm.Document.Text, "0x000");
+                Save(window, "disassembly");
+
+                vm.ViewHexCommand.Execute(null);
+                var hex = (HexViewerViewModel)vm.SelectedViewer!;
+                var ign = vm.Binary!.Find("IgnNormCal.Map")!;
+                hex.CaretAt((ulong)ign.Flash_start_address);
+                StringAssert.Contains(hex.Status, "IgnNormCal.Map");
+                Save(window, "hexviewer");
+                hex.Document.WriteBytes(0x100, new byte[] { 0x12 });
+                Assert.IsTrue(hex.IsModified);
+                hex.Save();
+                Assert.AreEqual(0x12, File.ReadAllBytes(file)[0x100]);
+                Assert.HasCount(1, Directory.GetFiles(dir, "asm.bin-backup*"));
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");

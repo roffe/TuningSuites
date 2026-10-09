@@ -21,6 +21,7 @@
   <ItemGroup>
     <AvaloniaResource Include="T7Suite.ico" />
     <AvaloniaResource Include="Assets\Compressormaps\*" />
+    <AvaloniaResource Include="Assets\ASM-Mode.xshd" />
     <!-- Help → User manual / Trionic 7 documentation -->
     <None Include="..\T7_manual.pdf" Link="T7_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Trionic 7.pdf" Link="Trionic 7.pdf" CopyToOutputDirectory="PreserveNewest" />
@@ -36,6 +37,9 @@
     <PackageReference Include="Dock.Avalonia" Version="12.1.0.7" />
     <PackageReference Include="Dock.Model.Avalonia" Version="12.1.0.7" />
     <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0.7" />
+    <!-- MIT; the disassembly text (ASM highlighting, search) and the hex view -->
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
+    <PackageReference Include="AvaloniaHex" Version="0.1.13" />
   </ItemGroup>
 
   <ItemGroup>

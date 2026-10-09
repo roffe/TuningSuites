@@ -234,6 +234,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnVectors(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is { } bin) await new VectorsWindow(T7.Disassembly.Vectors(bin)).ShowDialog(this);
+    }
+
+    private async void OnDisassembly(object? sender, RoutedEventArgs e) =>
+        await Vm.ShowDisassemblyAsync(false, text => Dialogs.YesNo(this, text, "Question"));
+
+    // the full sweep is reused when it exists, as T7Suite did
+    private async void OnFullDisassembly(object? sender, RoutedEventArgs e) =>
+        await Vm.ShowDisassemblyAsync(true, _ => System.Threading.Tasks.Task.FromResult(false));
+
     // ---- skin and help ----
 
     private const string SkinKey = "Skin";
