@@ -1,0 +1,20 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="T7App.App"
+             RequestedThemeVariant="Default">
+    <Application.Styles>
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <!-- same neutral dark palette as TrionicCANFlasher, Fluent's own is built on pure black -->
+                <ColorPaletteResources x:Key="Dark"
+                                       RegionColor="#FF202020"
+                                       AltHigh="#FF1B1B1B" AltMediumHigh="#CC1B1B1B" AltMedium="#991B1B1B"
+                                       AltMediumLow="#661B1B1B" AltLow="#331B1B1B"
+                                       ChromeLow="#FF1E1E1E" ChromeMedium="#FF282828" ChromeMediumLow="#FF323232"
+                                       ChromeBlackHigh="#FF141414" ChromeBlackMedium="#CC141414"
+                                       ChromeBlackMediumLow="#99141414" ChromeBlackLow="#33141414"
+                                       BaseLow="#1CFFFFFF" BaseMediumLow="#40FFFFFF" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+    </Application.Styles>
+</Application>

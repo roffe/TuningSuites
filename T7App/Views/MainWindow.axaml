@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Icon="/T7Suite.ico"
+        Width="1280" Height="800"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
+            </MenuItem>
+        </Menu>
+        <Border DockPanel.Dock="Bottom" Padding="8,4" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <TextBlock Text="{Binding Status}" />
+        </Border>
+        <Panel />
+    </DockPanel>
+</Window>

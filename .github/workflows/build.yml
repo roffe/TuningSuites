@@ -1,0 +1,42 @@
+name: Build
+on:
+  push:
+    branches: [net10]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        path: TuningSuites
+        fetch-depth: 0 # history and tags, the version comes from the nearest v* tag (Directory.Build.props)
+
+    # TrionicCANLib is referenced from a sibling checkout (Directory.Build.props TrionicDir)
+    # ponytail: tracks the Trionic net10 branch, pin a sha or move to a submodule once it is merged
+    - uses: actions/checkout@v7
+      with:
+        repository: roffe/Trionic
+        ref: net10
+        path: Trionic
+
+    - uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.x
+
+    # no -r: a solution can't be built for one RID, T7App picks x86 on Windows by itself
+    - name: Build
+      run: dotnet build TuningSuites/TuningSuites.slnx -c Release
