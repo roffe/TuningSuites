@@ -1,3 +1,4 @@
+using Avalonia;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -22,7 +23,16 @@ public partial class MainWindow : Window
         base.OnDataContextChanged(e);
         if (DataContext is MainWindowViewModel vm)
         {
-            Documents.ItemsSource = vm.Viewers;
+            Documents.ItemsSource = vm.DockedViewers;
+            vm.Viewers.CollectionChanged += (_, e) =>
+            {
+                foreach (DocumentViewModel d in e.NewItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged += OnFloatingChanged;
+                foreach (DocumentViewModel d in e.OldItems?.OfType<DocumentViewModel>() ?? [])
+                {
+                    d.PropertyChanged -= OnFloatingChanged;
+                    if (m_floating.Remove(d, out var w)) w.CloseQuietly();
+                }
+            };
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.SelectedViewer)) ActivateDocument(vm.SelectedViewer); };
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildQuickMaps(); };
             vm.MyMapsChanged += BuildMyMaps;
@@ -399,8 +409,6 @@ public partial class MainWindow : Window
 
     private Dock.Model.Core.IFactory? DockFactory => Workspace.Factory;
 
-    private const string LayoutKey = "DocumentLayout";
-
     private void InitWorkspace()
     {
         // the close button goes through the view model, which asks about unsaved maps and then drops the document
@@ -414,14 +422,65 @@ public partial class MainWindow : Window
         {
             if (!m_syncingDock && e.Dockable?.Context is DocumentViewModel doc) Vm.SelectedViewer = doc;
         };
-        using var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite);
-        if (settings.GetValue(LayoutKey) is "Tabbed") Documents.LayoutMode = Dock.Model.Core.DocumentLayoutMode.Tabbed;
+        // a window dragged by its title bar and let go outside the main window floats (T7Suite's floating panels)
+        AddHandler(PointerPressedEvent, OnWorkspacePressed, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
+        AddHandler(PointerReleasedEvent, OnWorkspaceReleased, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
+    }
+
+    private DocumentViewModel? m_titleDrag;
+    private readonly System.Collections.Generic.Dictionary<DocumentViewModel, FloatingDocumentWindow> m_floating = [];
+    private Avalonia.PixelPoint m_floatAt;
+
+    private void OnWorkspacePressed(object? sender, PointerPressedEventArgs e)
+    {
+        m_titleDrag = null;
+        if (e.Source is not Avalonia.Visual source) return;
+        bool header = Avalonia.VisualTree.VisualExtensions.GetSelfAndVisualAncestors(source).OfType<Control>().Any(c => c.Name == "PART_Header");
+        if (header && Avalonia.VisualTree.VisualExtensions.FindAncestorOfType<Dock.Avalonia.Controls.MdiDocumentWindow>(source)?.DataContext is Dock.Model.Core.IDockable { Context: DocumentViewModel doc })
+            m_titleDrag = doc;
+    }
+
+    private void OnWorkspaceReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        DocumentViewModel? doc = m_titleDrag;
+        m_titleDrag = null;
+        Point p = e.GetPosition(this);
+        if (doc == null || new Rect(Bounds.Size).Contains(p)) return;
+        Float(doc, this.PointToScreen(p));
+    }
+
+    /// <summary>A document into a window of its own at a screen position.</summary>
+    public void Float(DocumentViewModel doc, Avalonia.PixelPoint at)
+    {
+        m_floatAt = at;
+        doc.IsFloating = true;
+    }
+
+    private void OnFloatingChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(DocumentViewModel.IsFloating) || sender is not DocumentViewModel doc) return;
+        if (doc.IsFloating && !m_floating.ContainsKey(doc))
+        {
+            var window = new FloatingDocumentWindow(Vm, doc) { WindowStartupLocation = WindowStartupLocation.Manual, Position = m_floatAt };
+            m_floating[doc] = window;
+            window.Show(this);
+        }
+        else if (!doc.IsFloating && m_floating.Remove(doc, out var window))
+        {
+            window.CloseQuietly();
+            ActivateDocument(doc);
+        }
     }
 
     // a document shown from the view model comes to the front (the dock's own document appears after the collection change)
     private void ActivateDocument(DocumentViewModel? viewer)
     {
         if (viewer == null) return;
+        if (m_floating.TryGetValue(viewer, out var floating))
+        {
+            floating.Activate();
+            return;
+        }
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (Documents.VisibleDockables?.FirstOrDefault(d => d.Context == viewer) is not { } dockable) return;
@@ -451,17 +510,6 @@ public partial class MainWindow : Window
             }
         });
     }
-
-    private void SetLayout(Dock.Model.Core.DocumentLayoutMode mode)
-    {
-        Documents.LayoutMode = mode;
-        using var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite);
-        settings.SetValue(LayoutKey, mode.ToString());
-    }
-
-    private void OnFloatingWindows(object? sender, RoutedEventArgs e) => SetLayout(Dock.Model.Core.DocumentLayoutMode.Mdi);
-
-    private void OnTabbedDocuments(object? sender, RoutedEventArgs e) => SetLayout(Dock.Model.Core.DocumentLayoutMode.Tabbed);
 
     private void OnCascade(object? sender, RoutedEventArgs e) => Documents.CascadeDocuments?.Execute(null);
 

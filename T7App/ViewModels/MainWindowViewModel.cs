@@ -102,6 +102,7 @@ public partial class MainWindowViewModel : ObservableObject
         Trionic7File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Percentage >= 55 ? "" : e.Info);
         LoadRecent();
         InitEcu();
+        WatchFloating();
     }
 
     /// <summary>A .bin on the command line, else the last file when AutoLoadLastFile is set (frmMain_Load).</summary>
@@ -219,6 +220,40 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
         ShowDocument(new AirmassResultViewModel(this, bin));
+    }
+
+    /// <summary>The documents inside the main window (the workspace's inner windows); floating ones are left out.</summary>
+    public ObservableCollection<DocumentViewModel> DockedViewers { get; } = [];
+
+    // DockedViewers follows Viewers and each document's IsFloating, keeping Viewers' order
+    private void SyncDocked()
+    {
+        var wanted = Viewers.Where(v => !v.IsFloating).ToList();
+        foreach (DocumentViewModel gone in DockedViewers.Except(wanted).ToList()) DockedViewers.Remove(gone);
+        for (int i = 0; i < wanted.Count; i++)
+            if (!DockedViewers.Contains(wanted[i])) DockedViewers.Insert(Math.Min(i, DockedViewers.Count), wanted[i]);
+    }
+
+    private void WatchFloating()
+    {
+        Viewers.CollectionChanged += (_, e) =>
+        {
+            foreach (DocumentViewModel d in e.NewItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged += OnDocumentChanged;
+            foreach (DocumentViewModel d in e.OldItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged -= OnDocumentChanged;
+            SyncDocked();
+        };
+    }
+
+    private void OnDocumentChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DocumentViewModel.IsFloating)) SyncDocked();
+    }
+
+    /// <summary>Window → Dock all floating windows.</summary>
+    [RelayCommand]
+    private void DockAll()
+    {
+        foreach (DocumentViewModel d in Viewers.Where(v => v.IsFloating).ToList()) d.IsFloating = false;
     }
 
     /// <summary>The symbol list's selected rows (Export as tuning package).</summary>

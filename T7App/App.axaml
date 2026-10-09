@@ -25,6 +25,10 @@
         </FluentTheme>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
         <DockFluentTheme />
+        <!-- the whole MDI title bar moves the window; its title part was Dock's drag-to-dock handle (tabs, splits) -->
+        <Style Selector="MdiDocumentWindow /template/ Border#PART_DragHandle">
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
         <Style Selector="DockControl">
             <Setter Property="(ControlRecyclingDataTemplate.ControlRecycling)" Value="{StaticResource DocumentRecycling}" />
         </Style>

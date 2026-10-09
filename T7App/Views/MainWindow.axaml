@@ -113,8 +113,7 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="_Window">
-                <MenuItem Header="Floating windows" Click="OnFloatingWindows" />
-                <MenuItem Header="Tabbed documents" Click="OnTabbedDocuments" />
+                <MenuItem Header="Dock all floating windows" Command="{Binding DockAllCommand}" />
                 <Separator />
                 <MenuItem Header="Cascade" Click="OnCascade" />
                 <MenuItem Header="Tile horizontally" Click="OnTileHorizontal" />

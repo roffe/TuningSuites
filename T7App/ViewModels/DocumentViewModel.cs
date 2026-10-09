@@ -10,4 +10,8 @@ public abstract partial class DocumentViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>Dragged out of the main window into a window of its own (T7Suite's floating panels).</summary>
+    [ObservableProperty]
+    private bool _isFloating;
 }

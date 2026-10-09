@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -472,6 +473,31 @@ namespace T7AppTest
                 Assert.IsFalse(dock.CanDrop);
                 docs.Factory!.SetActiveDockable(dock.VisibleDockables!.First(d => d.Context != ign));
                 Assert.AreNotSame(ign, vm.SelectedViewer);
+
+                // the whole title bar moves the window (the title text isn't Dock's drag-to-dock handle any more)
+                var mdiWindows = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Dock.Avalonia.Controls.MdiDocumentWindow>().ToList();
+                Assert.IsTrue(mdiWindows.SelectMany(w => Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(w)).OfType<Control>()
+                    .Where(c => c.Name == "PART_DragHandle").All(c => !c.IsHitTestVisible));
+
+                // a title bar dragged out of the main window floats the document; Dock back returns it
+                var fuel = (MapViewerViewModel)vm.Viewers[1];
+                var fuelWindow = mdiWindows.First(w => (w.DataContext as Dock.Model.Core.IDockable)?.Context == fuel);
+                var header = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(fuelWindow).OfType<Control>().First(c => c.Name == "PART_Header");
+                var titlePoint = header.TranslatePoint(new Point(30, header.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(titlePoint, MouseButton.Left, RawInputModifiers.None);
+                window.MouseMove(new Point(-40, 20), RawInputModifiers.LeftMouseButton);
+                window.MouseUp(new Point(-40, 20), MouseButton.Left, RawInputModifiers.None);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.IsTrue(fuel.IsFloating);
+                Assert.DoesNotContain(fuel, vm.DockedViewers);
+                Assert.Contains(fuel, vm.Viewers);
+                var floating = window.OwnedWindows.OfType<FloatingDocumentWindow>().Single();
+                Save(floating, "floating");
+                vm.DockAllCommand.Execute(null);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.IsFalse(fuel.IsFloating);
+                Assert.Contains(fuel, vm.DockedViewers);
+                Assert.IsEmpty(window.OwnedWindows);
 
                 // the window's close button asks about unsaved changes: Cancel keeps it, No closes it
                 ign.Map.Set([(0, ign.Map[0] + 1)]);
