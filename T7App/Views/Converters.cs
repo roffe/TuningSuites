@@ -127,13 +127,17 @@ public class ResultTextConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
-/// <summary>Black text on the symbol name's category colour (the theme's white disappears on yellow); the theme's colour otherwise.</summary>
-public class SymbolForegroundConverter : IValueConverter
+/// <summary>
+/// Whether the symbol name's category colour is light (parameter "light", black text) or dark ("dark", white text). Without a
+/// colour both classes are off and the text keeps the theme's inherited colour (a binding's UnsetValue would reset it to black).
+/// </summary>
+public class SymbolShadeConverter : IValueConverter
 {
-    public static readonly SymbolForegroundConverter Instance = new();
+    public static readonly SymbolShadeConverter Instance = new();
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        SymbolColorConverter.Instance.Convert(value, targetType, parameter, culture) != null ? Brushes.Black : Avalonia.AvaloniaProperty.UnsetValue;
+        SymbolColorConverter.Instance.Convert(value, targetType, null, culture) is ISolidColorBrush { Color: var c } &&
+        (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B > 110) == (parameter as string == "light");
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }

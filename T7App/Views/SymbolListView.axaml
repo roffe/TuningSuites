@@ -5,6 +5,14 @@
              xmlns:cs="using:CommonSuite"
              x:Class="T7App.Views.SymbolListView"
              x:DataType="vm:MainWindowViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.onLight">
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+        <Style Selector="TextBlock.onDark">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </UserControl.Styles>
     <DockPanel>
         <TextBox DockPanel.Dock="Top" Margin="6,6,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
         <!-- the auto filter row: one box per column -->
@@ -40,7 +48,8 @@
                 <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
                     <DataTemplate x:DataType="cs:SymbolHelper">
                         <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
-                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Foreground="{Binding Varname, Converter={x:Static v:SymbolForegroundConverter.Instance}}" />
+                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Classes.onLight="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=light}"
+                                       Classes.onDark="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=dark}" />
                         </Border>
                     </DataTemplate>
                 </DataGridTemplateColumn>

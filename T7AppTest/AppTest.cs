@@ -479,10 +479,16 @@ namespace T7AppTest
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
                     menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
 
-                // dark theme: the coloured symbol names keep black text
+                // dark theme: the coloured symbol names get black text, the others keep the theme's light text
                 Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
-                vm.SearchText = "MAFCal";
+                vm.SearchText = "MAF";
                 Save(window, "symbols-dark");
+                var grid = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
+                var names = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(grid).OfType<TextBlock>().Where(t => t.Classes.Contains("onLight") || t.Text?.StartsWith("MAF") == true).ToList();
+                Assert.IsTrue(names.Any(t => t.Text!.StartsWith("MAFCal.")) && names.Any(t => !t.Text!.StartsWith("MAFCal.")));
+                foreach (TextBlock t in names)
+                    Assert.AreEqual(t.Text!.StartsWith("MAFCal.") ? Avalonia.Media.Colors.Black : Avalonia.Media.Colors.White,
+                        ((Avalonia.Media.ISolidColorBrush)t.Foreground!).Color, t.Text);
                 Avalonia.Application.Current.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
                 vm.SearchText = "";
                 var docs = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!;
