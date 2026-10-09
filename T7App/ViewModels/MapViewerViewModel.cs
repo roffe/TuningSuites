@@ -54,6 +54,10 @@ public partial class MapViewerViewModel : DocumentViewModel
     public IAsyncRelayCommand? EcuReadCommand => IsAfrMap ? null : ReadEcuCommand;
     public IAsyncRelayCommand? EcuWriteCommand => IsAfrMap ? null : WriteEcuCommand;
 
+    /// <summary>The viewer's Close button: the same question about unsaved changes as the window's.</summary>
+    [RelayCommand]
+    private Task Close() => Owner.CloseViewerAsync(this);
+
     [RelayCommand]
     private Task ReadEcu() => Owner.ReadMapFromEcuAsync(this);
 

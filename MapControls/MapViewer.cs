@@ -48,6 +48,7 @@ public class MapViewer : UserControl
     public bool CanEditXAxis { get => GetValue(CanEditXAxisProperty); set => SetValue(CanEditXAxisProperty, value); }
     public bool CanEditYAxis { get => GetValue(CanEditYAxisProperty); set => SetValue(CanEditYAxisProperty, value); }
 
+    public static readonly StyledProperty<ICommand?> CloseCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(CloseCommand));
     public static readonly StyledProperty<ICommand?> SaveCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(SaveCommand));
     public static readonly StyledProperty<ICommand?> ReadCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(ReadCommand));
     public static readonly StyledProperty<ICommand?> EditAxisCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(EditAxisCommand));
@@ -61,6 +62,9 @@ public class MapViewer : UserControl
 
     /// <summary>False for a map that only lives in SRAM: no Save to file / Read from file.</summary>
     public bool CanSaveToFile { get => GetValue(CanSaveToFileProperty); set => SetValue(CanSaveToFileProperty, value); }
+
+    /// <summary>The Close button at the bottom; hidden without a command.</summary>
+    public ICommand? CloseCommand { get => GetValue(CloseCommandProperty); set => SetValue(CloseCommandProperty, value); }
 
     /// <summary>MapViewerEx's Save to file / Read from file buttons.</summary>
     public ICommand? SaveCommand { get => GetValue(SaveCommandProperty); set => SetValue(SaveCommandProperty, value); }
@@ -90,6 +94,7 @@ public class MapViewer : UserControl
     private readonly MenuItem m_editX = new() { Header = "Edit x-axis" }, m_editY = new() { Header = "Edit y-axis" };
     private readonly Button m_readEcu = new() { Content = "Read from ECU" }, m_writeEcu = new() { Content = "Save to ECU" };
     private readonly Button[] m_fileButtons;
+    private readonly Button m_close = new() { Content = "Close", IsVisible = false };
     private bool m_syncing;
 
     public MapViewer()
@@ -104,7 +109,8 @@ public class MapViewer : UserControl
 
         var save = new Button { Content = "Save to file" };
         var read = new Button { Content = "Read from file" };
-        m_fileButtons = [save, read];
+        m_fileButtons = [read, save];
+        m_close.Click += (_, _) => CloseCommand?.Execute(null);
         m_readEcu.Click += (_, _) => ReadEcuCommand?.Execute(null);
         m_writeEcu.Click += (_, _) => WriteEcuCommand?.Execute(null);
         m_readEcu.IsVisible = m_writeEcu.IsVisible = false;
@@ -120,9 +126,12 @@ public class MapViewer : UserControl
             Grid.Focus();
             e.Handled = true;
         };
-        m_editTools.Children.AddRange([save, read, m_operation, m_operand, execute]);
+        m_editTools.Children.AddRange([m_operation, m_operand, execute]);
         var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(4) };
-        toolbar.Children.AddRange([m_viewType, m_editTools, m_readEcu, m_writeEcu, m_selectValues]);
+        toolbar.Children.AddRange([m_viewType, m_editTools, m_selectValues]);
+        // the ECU / file / close buttons sit under the graphs and stay visible whatever the viewer's size
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(4), HorizontalAlignment = HorizontalAlignment.Right };
+        buttons.Children.AddRange([m_readEcu, m_writeEcu, read, save, m_close]);
 
         m_editX.Click += (_, _) => EditAxisCommand?.Execute(true);
         m_editY.Click += (_, _) => EditAxisCommand?.Execute(false);
@@ -151,7 +160,9 @@ public class MapViewer : UserControl
 
         var root = new DockPanel();
         DockPanel.SetDock(toolbar, Dock.Top);
+        DockPanel.SetDock(buttons, Dock.Bottom);
         root.Children.Add(toolbar);
+        root.Children.Add(buttons);
         root.Children.Add(m_split);
         Content = root;
     }
@@ -194,13 +205,10 @@ public class MapViewer : UserControl
         {
             Grid.IsReadOnly = IsReadOnly;
             m_editTools.IsVisible = !IsReadOnly;
+            UpdateButtons();
         }
-        else if (change.Property == ReadEcuCommandProperty) m_readEcu.IsVisible = ReadEcuCommand != null;
-        else if (change.Property == WriteEcuCommandProperty) m_writeEcu.IsVisible = WriteEcuCommand != null && !IsReadOnly;
-        else if (change.Property == CanSaveToFileProperty)
-        {
-            foreach (Button b in m_fileButtons) b.IsVisible = CanSaveToFile;
-        }
+        else if (change.Property == ReadEcuCommandProperty || change.Property == WriteEcuCommandProperty || change.Property == CanSaveToFileProperty
+            || change.Property == CloseCommandProperty) UpdateButtons();
         else if (change.Property == CanEditXAxisProperty) m_editX.IsEnabled = CanEditXAxis;
         else if (change.Property == CanEditYAxisProperty) m_editY.IsEnabled = CanEditYAxis;
         else if (change.Property == GraphVisibleProperty)
@@ -208,6 +216,15 @@ public class MapViewer : UserControl
             m_split.RowDefinitions[1].Height = new GridLength(GraphVisible ? 4 : 0);
             m_split.RowDefinitions[2].Height = GraphVisible ? GridLength.Star : new GridLength(0);
         }
+    }
+
+    // read-only viewers (compare, differences) can't be saved or reloaded
+    private void UpdateButtons()
+    {
+        m_readEcu.IsVisible = ReadEcuCommand != null;
+        m_writeEcu.IsVisible = WriteEcuCommand != null && !IsReadOnly;
+        foreach (Button b in m_fileButtons) b.IsVisible = CanSaveToFile && !IsReadOnly;
+        m_close.IsVisible = CloseCommand != null;
     }
 
     /// <summary>MapViewerEx's Execute: add / multiply / divide / fill the selection with the typed value.</summary>
