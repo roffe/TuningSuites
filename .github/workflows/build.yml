@@ -40,3 +40,7 @@ jobs:
     # no -r: a solution can't be built for one RID, T7App picks x86 on Windows by itself
     - name: Build
       run: dotnet build TuningSuites/TuningSuites.slnx -c Release
+
+    # golden parse of every bin in T7Binaries, settings, crypto, S19, transaction log
+    - name: Test
+      run: dotnet test TuningSuites/T7CoreTest -c Release --no-build

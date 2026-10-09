@@ -3,4 +3,6 @@
     <Project Path="../Trionic/TrionicCANLib/TrionicCANLib.csproj" />
   </Folder>
   <Project Path="T7App/T7App.csproj" />
+  <Project Path="T7Core/T7Core.csproj" />
+  <Project Path="T7CoreTest/T7CoreTest.csproj" />
 </Solution>

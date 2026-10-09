@@ -67,14 +67,16 @@ SetupT7/                   WiX MSI (chunk 8)
 
 ## Compatibility to preserve
 
-- [ ] Settings and MRU imported from the registry on Windows
-- [ ] Symbol XML (`DataTable` XML) next to the bin and in `repository/`; ship EU0AF01C.xml and EU09F01C.xml
+- [x] Settings imported from the registry on Windows (`SettingsKey`: the whole `HKCU\Software\MattiasC\T7SuitePro` tree incl. Channels, SymbolColors, LogFilters, into one `settings.json`). Not tried on Windows yet
+- [ ] MRU list, it lives under a different key (`HKCU\Software\T7SuitePro\MRUList`), with the main window
+- [x] Symbol XML (`DataTable` XML) next to the bin and in `repository/` next to the executable; EU0AF01C.xml and EU09F01C.xml ship from T7Core
 - [ ] Projects: projectproperties.xml, TransActionLogV2.ttl (binary, auto-upgraded from v1), ProjectLogbook.log, backups
 - [ ] rtsymbols.txt / .t7rtl, mymaps.xml. SymbolViewLayout.xml is a DevExpress layout and is dropped
 - [ ] `.t7l` logs: write with the same format. Values use the system's decimal separator today, so read both `,` and `.`
-- [ ] `.afr` maps, `.t7p` / `.t7x` tuning packs (AES with a hardcoded key, RSA check against T8Pub.pem)
-- [ ] `Encoding.Default` in T7SidEdit is ANSI on .NET Framework and UTF-8 on .NET 10. Pin `Encoding.Latin1` or code page 1252
-- [ ] Replace about 94 `"\\"` path joins with `Path.Combine`, and `Application.StartupPath` with `AppContext.BaseDirectory`
+- [ ] `.afr` maps, `.t7p` / `.t7x` tuning packs. The crypto is ported and tested against the shipped packs (T8Pub.pem ships from T7Core); reading and applying packs comes with chunk 7
+- [x] `Encoding.Default` in T7SidEdit was ANSI on .NET Framework and is UTF-8 on .NET 10, now `Encoding.Latin1` (maps every byte 1:1; writing was ASCII anyway)
+- [x] Source files: the old compiler read them in the ANSI code page, the SDK reads UTF-8. 24 old files are Windows-1252 and garble their non-ASCII literals ("Trollhättan") when lifted as they are. Convert with `iconv -f CP1252 -t UTF-8`; `SourceEncodingTest` fails on any new project file that isn't UTF-8
+- [ ] Replace about 94 `"\\"` path joins with `Path.Combine`, and `Application.StartupPath` with `AppContext.BaseDirectory`. Done in T7Core; the rest are in frmMain and go with each extraction
 
 ## Chunks: T7Suite
 
@@ -82,32 +84,25 @@ SetupT7/                   WiX MSI (chunk 8)
 - [x] `TuningSuites.slnx`, `Directory.Build.props` (no `.gitignore` changes needed, `[Bb]in/` and `[Oo]bj/` were already ignored)
 - [x] ProjectReference to `$(TrionicDir)/TrionicCANLib`
 - [x] Empty `T7App` window (MVVM: `MainWindowViewModel`, File > Exit, status bar), runs on Linux. Windows not tried yet
-- [x] CI: `.github/workflows/build.yml` builds the solution on ubuntu and windows, with roffe/Trionic `net10` checked out side by side. Tests get added with T7CoreTest. Not run on GitHub yet
+- [x] CI: `.github/workflows/build.yml` builds the solution and runs T7CoreTest on ubuntu and windows, with roffe/Trionic `net10` checked out side by side. Not run on GitHub yet
 - [ ] Tag a version (e.g. `v0.2.0`). Until then every build warns about the missing tag and uses `0.0.0-<sha>`. The old T7Suite was 0.1.60.1
 
 ### 1. T7Core (can run in parallel with chunk 2)
-- [ ] Lift the pure-logic files.
-  - From T7Suite: SymbolTranslator, PartNumberConverter, Disassembler, SymbolAxesTranslator, AFRMap, PartnumberCollection, SIDTranslator, TCMLimitEdit, SIDICollection, AFRMeasurement(Collection), IdaProIdcFile, SIDInformationTable, T7EspEdit, SIDIHelper, SymbolMapParser, PackageExporter, FuelMap(Information), Symbol, AirmassLimitType.
-  - From CommonSuite: BitStream, VINDecoder, TrionicTransactionLog, TrionicSymbolDecompressor, CSVGenerator, SymbolCollection, TransactionCollection/Entry, CellHelper(Collection), MNemonic*, LogFilter(Collection), Srecord, XDFWriter, PressureToTorque, EngineStatus, SortableCollectionBase, DTCDescription, TrionicProjectLog, SymbolXMLFile, LogFile, ViewEnums, TurboType.
-- [ ] Untangle the lightly coupled files:
-  - Trionic7File: replace MessageBox with a prompt callback; drop `DoEvents`.
-  - AppSettings, Channels, LogFilters, SymbolColors: move to JSON settings.
-  - DifGenerator, SymbolHelper: keep using `Color` through a plain struct.
-  - Crypto: replace the P/Invoke PEM import with `RSA.ImportFromPem`.
-  - T7SidEdit: fix the encoding.
-- [ ] Pull frmMain's logic out into services:
-  - file open, save and import (504-890, 5126-6030)
-  - projects and transaction log (1170-1823)
-  - compare (1827-3261)
-  - SID, limiter and airmass math (3948-4239, 13637-13950)
-  - SRAM and axis metadata (6032-6658)
-  - checksum and feature detection/patching (8082-9042)
-  - status codes and realtime table persistence (9129-9553)
-  - TuneToStage (10269-10779)
-  - tuning packs (14465-15290, 17340-17518, 18644-19139)
-  - AFR and autotune (15292-15777, 17833-18234)
-- [ ] Golden tests: dump symbol list, addresses, lengths, axes and checksum result for all 256 bins with the old app's logic and compare. Capture the reference output by running the lifted code once on master logic, then freeze it
-- [ ] Tests for transaction log round-trip, `.t7l` round-trip and S19
+- [x] Lifted the pure-logic files into `T7Core/` (from T7Suite) and `T7Core/Common/` (from CommonSuite), original namespaces `T7` / `CommonSuite` kept so they diff against the old files.
+  - From T7Suite: SymbolTranslator, PartNumberConverter, Disassembler, SymbolAxesTranslator, AFRMap, PartnumberCollection, SIDTranslator, TCMLimitEdit, SIDICollection, AFRMeasurement(Collection), IdaProIdcFile, SIDInformationTable, T7EspEdit, SIDIHelper, SymbolMapParser, PackageExporter, FuelMap(Information), Symbol, AirmassLimitType, T7SuiteRegistry, Trionic7File, T7SidEdit.
+  - From CommonSuite: BitStream, VINDecoder, TrionicTransactionLog, TrionicSymbolDecompressor, CSVGenerator, DifGenerator, SymbolCollection, SymbolHelper, TransactionCollection/Entry, CellHelper(Collection), MNemonic*, LogFilter(Collection), Srecord, XDFWriter, PressureToTorque, EngineStatus, SortableCollectionBase, DTCDescription, TrionicProjectLog, SymbolXMLFile, LogFile, ViewEnums, TurboType, SuiteRegistry, AppSettings, Channels, LogFilters, SymbolColors, Crypto.
+  - Dropped: Plot3D (replaced by Surface3D), FunctionCompiler (dead), Settings.cs (empty).
+- [x] Untangled the lightly coupled files:
+  - Trionic7File: MessageBox → `TrionicCANLib.API.UserPrompt.AskYesNo` (the app wires it to a dialog; unset = No); `DoEvents` dropped; `StartupPath` → `AppContext.BaseDirectory`.
+  - AppSettings, Channels, LogFilters, SymbolColors: registry → `SettingsKey` (`T7Core/Common/SettingsKey.cs`), which keeps the registry's names and string values so the parsing code is unchanged. `RealtimeFont` is now the font string the registry held (`System.Drawing.Font` is Windows-only); the UI parses it.
+  - DifGenerator, SymbolHelper, SymbolColors: `System.Drawing.Color` / `ColorTranslator` are in System.Drawing.Primitives and work everywhere, so they stay.
+  - Crypto: rewritten to 40 lines on `Aes` / `RSA.ImportFromPem`, the crypt32/advapi32 P/Invoke is gone.
+  - T7SidEdit: encoding, `DoEvents`.
+  - BitStream: `ReadExactly` for its two whole-stream reads.
+  - Path joins in TrionicTransactionLog, TrionicProjectLog, DifGenerator, CSVGenerator, AppSettings' default project folder.
+- [x] Golden test (`T7CoreTest/BinGoldenTest.cs`): parses all 256 bins in `T7Binaries/` (header, checksum, symbols, addresses, lengths, axes, descriptions; 123 bins have stripped symbol names, 4 pull in the shipped EU0AF01C/EU09F01C lists) and compares a hash per bin with `golden.txt`. The baseline was taken from the lifted code before any refactor, which only had the MessageBox / `DoEvents` / path edits. `T7_GOLDEN_UPDATE=1` rewrites it, `T7_GOLDEN_DUMP=<dir>` writes readable dumps for diffing. Checked that it catches a one-off change in an address calculation.
+- [x] Tests for settings (incl. subkeys), tuning-pack crypto against the 17 shipped .t8x (one experimental pack doesn't match its signature and is pinned as such), S19 (ported from CommonSuiteTest), VINDecoder (ported), transaction log round-trip and byte layout, source encoding. CI runs them on Linux and Windows (the golden dump avoids `AppendLine` so the hashes match on both).
+- Changed plan: frmMain's logic gets pulled out in the chunk whose view needs it (listed there with line ranges), so every service is built against a real consumer and tested there instead of guessed up front. The `.t7l` round-trip test moved to chunk 6 with the logging code.
 
 ### 2. MapControls (can run in parallel with chunk 1)
 - [ ] `MapData` codec: bytes ↔ raw ↔ physical; 8/16-bit big-endian; Hex/Decimal/Easy/ASCII; factor and offset; the >0xF000 signed rule; upside-down
@@ -126,9 +121,11 @@ SetupT7/                   WiX MSI (chunk 8)
 - [ ] Tests: codec round-trip, edit operations, clipboard round-trip, projection and axis geometry (port meshgrid's)
 
 ### 3. Read-only app (first usable release)
-- [ ] Main window: open a bin, symbol list (DataGrid with search and filter), maps open in tabs
+- [ ] Main window: open a bin, symbol list (DataGrid with search and filter), maps open in tabs, MRU
 - [ ] Map viewer view: MapGrid with Surface3D or Graph2D, view type, axis lock
 - [ ] Firmware information view
+- [ ] Wire `UserPrompt.YesNo` / `Notify` to dialogs
+- [ ] From frmMain: file open and import (504-890, 5126-6030), axis/symbol metadata (6032-6658), firmware information (4686-5093)
 
 ### 4. Offline tuning (replaces the old T7Suite for offline work)
 - [ ] Edit and save the bin; checksum verify and update
@@ -136,13 +133,15 @@ SetupT7/                   WiX MSI (chunk 8)
 - [ ] Compare against a file: list of differing symbols, difference map
 - [ ] Symbol import from XML, CSV and AS2; mymaps
 - [ ] Settings view
-- [ ] Export: CSV, XDF, S19, IDC
+- [ ] Export: CSV, XDF, S19, IDC (Excel COM export 3263-3611 becomes CSV)
+- [ ] From frmMain: save, projects and transaction log (1170-1823), compare (1827-3261), checksum and binary feature detection/patching (8082-9042), search map content (3756-3941)
 
 ### 5. ECU
 - [ ] Adapter selection via `setCANDevice((CANBusAdapter)index)`. This also fixes the missing SLCAN branch
 - [ ] Read and write flash with progress
 - [ ] Read and write maps in SRAM, auto-poll, SRAM snapshot and compare
 - [ ] DTC read and clear
+- [ ] From frmMain: CAN adapter setup, flash read/write, DTCs (9057-9127, 13514-13603, 14161-14253), SRAM read/write (6032-6658), CAN callbacks (188-500)
 - [ ] Tested on a bench ECU
 
 ### 6. Realtime
@@ -153,6 +152,7 @@ SetupT7/                   WiX MSI (chunk 8)
 - [ ] Live cell tracking in open map viewers
 - [ ] Autotune and AFR feedback maps
 - [ ] Log viewer (replaces RealtimeGraph)
+- [ ] From frmMain: realtime engine (10929-12607), status codes and realtime table persistence (9129-9553), AFR and autotune (15292-15777, 17833-18234). `.t7l` round-trip test (decimal separator!)
 
 ### 7. Tools
 - [ ] TuneToStage and the tuning wizard
@@ -162,6 +162,7 @@ SetupT7/                   WiX MSI (chunk 8)
 - [ ] SID information and editing
 - [ ] Disassembler (AvaloniaEdit), hex view
 - [ ] Matrix from log (mean/min/max)
+- [ ] From frmMain: SID, limiter, torque/power/airmass math (3948-4239, 13637-13950), TuneToStage (10269-10779), tuning packs (14465-15290, 17340-17518, 18644-19139), matrix from log (16460-16747)
 
 ### 8. Release
 - [ ] WiX MSI, Linux tar.gz, macOS zip, nightly and tagged releases
@@ -184,3 +185,4 @@ SetupT7/                   WiX MSI (chunk 8)
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 1 done: T7Core with the lifted logic and JSON settings, T7CoreTest with the golden baseline over 256 bins (28 tests, ~22 s). frmMain extraction moved into chunks 3-7.
