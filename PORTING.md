@@ -163,9 +163,9 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] ECU menu: Connect / Disconnect ECU, Read ECU, Flash current file to ECU, Get SRAM snapshot (`SRAM<time>.RAM` next to the bin, `Snapshots/Snapshot<time>.RAM` in a project), Get fault codes (OBDII), Clear DTC and knock counters, Synchronize to binary / to ECU (with T7Suite's warnings), Import SRAM snapshot; status bar shows the CAN status and the SRAM file
 - [x] Map viewer: Read from ECU / Save to ECU (every viewer of the map follows), maps that only live in SRAM are read from the ECU when opened (no file buttons), viewers opened while connected are online (T7Suite's colours), auto update of online viewers; symbol list: Read symbol from ECU, Read from SRAM file ("SRAM Symbol: name [file]")
 - [x] Fault codes window (Code / Description from `DTC_*.xml` next to the program, Clear selected, Close)
-- Deliberate differences: flash read / write report the library's actual result (T7Suite said "Download done" / "Flash sequence done" whatever happened); flashing first fixes (AutoChecksum) or offers to fix a checksum that doesn't verify, and warns about unsaved map changes (T7Suite flashed the file as it was, unchecked); fault codes without a description are listed (T7Suite hid them); the DTC description loader no longer stops reading a file at its first incomplete entry
+- Deliberate differences: flash read / write report the library's actual result (T7Suite said "Download done" / "Flash sequence done" whatever happened); flashing first fixes (AutoChecksum) or offers to fix a checksum that doesn't verify, and warns about unsaved map changes (T7Suite flashed the file as it was, unchecked); a map write the ECU refuses (closed binary) is reported (T7Suite ignored the answer); closing the app is blocked while a read / flash / snapshot runs, and closing always releases the adapter; fault codes without a description are listed (T7Suite hid them); the DTC description loader no longer stops reading a file at its first incomplete entry
 - [ ] Upload tuning package to ECU / Generate tuning package from ECU; Compare binary to SRAM snapshot / Compare SRAM snapshots; SaabOpenTech "Extra functions"
-- [ ] Tested on a bench ECU: connect, read flash, flash, SRAM read / write, snapshot, fault codes. Nothing here has run against hardware yet; the tests cover the threading, settings, parsing and snapshot files only
+- [x] Tested on a bench ECU: connect, read flash (identical to the flashed file), flash, SRAM write on an open binary, refused write reported on a closed one. Snapshot and fault codes not yet
 
 ### 6. Realtime
 - [ ] Realtime engine on a worker thread (the old one is a WinForms timer doing synchronous CAN on the UI thread)
@@ -209,6 +209,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
 - 2026-10-09: Chunk 5 implemented (ECU session, flashing, SRAM maps, snapshots, fault codes, sync); waiting for a bench test.
+- 2026-10-09: Chunk 5 bench tested: flash read and write, SRAM writes; refused SRAM writes are now reported and closing waits for a running flash session.
 - 2026-10-09: Chunk 4 done: plus compare / transfer maps, symbol imports and exports, settings window, My Maps and the quick map menu.
 - 2026-10-09: Chunk 4 in progress: map saving with the viewer toolbar, verify checksum, user descriptions, firmware editing, projects and the transaction log; checksum updates now repeat until the file verifies.
 - 2026-10-09: Chunk 3 done: T7Binary and FirmwareInfo in T7Core, the main window with symbol list, map viewer tabs (MapViewer composite with sync) and firmware information, T7AppTest driving the app headless.

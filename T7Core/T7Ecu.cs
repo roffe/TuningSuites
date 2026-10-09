@@ -26,6 +26,9 @@ namespace T7
         /// <summary>m_RealtimeConnectedToECU: a KWP session is open.</summary>
         public bool IsConnected { get; private set; }
 
+        /// <summary>A read, flash or snapshot session is running; closing the app now would leave it half done.</summary>
+        public bool IsFlashing { get; private set; }
+
         public event EventHandler<ITrionic.CanInfoEventArgs> Info;
         public event EventHandler<int> Progress;
 
@@ -135,8 +138,11 @@ namespace T7
             {
                 if (e.Type == finished) done.TrySetResult(e.Info);
             }
-            bool opened = await OpenFlasherAsync(settings);
-            if (!opened) return (false, "Failed to start KWP session");
+            IsFlashing = true;
+            bool opened;
+            try { opened = await OpenFlasherAsync(settings); }
+            catch { IsFlashing = false; throw; }
+            if (!opened) { IsFlashing = false; return (false, "Failed to start KWP session"); }
             Info += OnInfo;
             try
             {
@@ -152,6 +158,7 @@ namespace T7
             {
                 Info -= OnInfo;
                 await RunAsync(t => t.Cleanup());
+                IsFlashing = false;
             }
         }
 
@@ -172,14 +179,16 @@ namespace T7
         /// <summary>Get SRAM snapshot: the 64 KB of SRAM to a .RAM file, in a flasher session.</summary>
         public async Task<bool> SnapshotAsync(AppSettings settings, string file)
         {
-            if (!await OpenFlasherAsync(settings)) return false;
+            IsFlashing = true;
             try
             {
+                if (!await OpenFlasherAsync(settings)) return false;
                 return await RunAsync(t => t.GetSRAMSnapshot(file));
             }
             finally
             {
                 await RunAsync(t => t.Cleanup());
+                IsFlashing = false;
             }
         }
 
@@ -188,12 +197,20 @@ namespace T7
         /// <summary>ReadMapFromSRAM: the symbol's SRAM bytes (the library never reports a failed read, it returns zeros).</summary>
         public Task<byte[]> ReadMapAsync(SymbolHelper sh) => RunAsync(t => t.ReadMapfromSRAM(sh.Start_address, sh.Length, true));
 
-        /// <summary>WriteMapToSRAM: by symbol number below 0xF00000, else in 64-byte chunks at the SRAM address.</summary>
-        public Task WriteMapAsync(SymbolHelper sh, byte[] data) => RunAsync(t =>
+        /// <summary>
+        /// WriteMapToSRAM: by symbol number below 0xF00000, else in 64-byte chunks at the SRAM address. False when the ECU
+        /// refused a write (a closed binary does); T7Suite ignored the answer and said nothing. The chunks are written here
+        /// because the library's chunked writer only logs a refusal.
+        /// </summary>
+        public Task<bool> WriteMapAsync(SymbolHelper sh, byte[] data) => RunAsync(t =>
         {
-            if (sh.Symbol_number < 0) return;
-            if (sh.Start_address < 0xF00000) t.WriteSymbolToSRAM((uint)sh.Symbol_number, data);
-            else t.WriteMapToSRAM(sh.SmartVarname, data, true, (uint)sh.Start_address, sh.Symbol_number);
+            if (sh.Symbol_number < 0) return false;
+            if (sh.Start_address < 0xF00000) return t.WriteSymbolToSRAM((uint)sh.Symbol_number, data);
+            for (int i = 0; i < data.Length; i += 64)
+            {
+                if (!t.WriteMapToSRAM((uint)(sh.Start_address + i), data[i..Math.Min(i + 64, data.Length)])) return false;
+            }
+            return true;
         });
 
         /// <summary>Get fault codes: obdFaults read from SRAM, "Pxxxx" per byte pair until 00 00.</summary>
@@ -234,12 +251,13 @@ namespace T7
             t.ClearDTCCodes();
         });
 
+        /// <summary>
+        /// Closes whatever session is open (realtime or flasher) so the library's adapter threads end and the process can exit.
+        /// </summary>
         public void Dispose()
         {
-            if (IsConnected)
-            {
-                try { DisconnectAsync().Wait(TimeSpan.FromSeconds(5)); } catch (Exception e) { logger.Debug(e); }
-            }
+            if (m_work.IsAddingCompleted) return;
+            try { DisconnectAsync().Wait(TimeSpan.FromSeconds(5)); } catch (Exception e) { logger.Debug(e); }
             m_work.CompleteAdding();
         }
     }

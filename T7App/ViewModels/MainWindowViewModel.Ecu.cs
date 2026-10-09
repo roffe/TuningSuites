@@ -124,7 +124,8 @@ public partial class MainWindowViewModel
             ShowInfo("An active CAN bus connection is needed to write data to the ECU");
             return;
         }
-        await Ecu.WriteMapAsync(viewer.Symbol, viewer.Map.ToBytes());
+        if (!await Ecu.WriteMapAsync(viewer.Symbol, viewer.Map.ToBytes()))
+            ShowInfo($"The ECU did not accept {viewer.MapName}. Writing to SRAM needs an open binary in the ECU.");
     }
 
     /// <summary>AutoUpdateSRAMViewers: online viewers without edits re-read every AutoUpdateInterval seconds.</summary>

@@ -316,6 +316,13 @@ public partial class MainWindow : Window
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
+        if (DataContext is MainWindowViewModel { Ecu.IsFlashing: true } busy)
+        {
+            // stopping a flash halfway leaves the ECU without a working program
+            e.Cancel = true;
+            busy.ShowInfo("Wait until the ECU operation has finished before closing T7Suite.");
+            return;
+        }
         if (m_closeConfirmed || DataContext is not MainWindowViewModel vm || !vm.Viewers.OfType<MapViewerViewModel>().Any(v => v.Map.Mutated)) return;
         e.Cancel = true;
         if (!await vm.CloseMutatedViewersAsync()) return;
