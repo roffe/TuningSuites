@@ -55,9 +55,8 @@ public class MapGrid : Control
 
     private static readonly IBrush Highlight = new ImmutableSolidColorBrush(Colors.Yellow);
     private static readonly IBrush SelectionFill = new ImmutableSolidColorBrush(Color.FromArgb(90, 0x33, 0x66, 0xFF));
-    private static readonly IPen SelectionPen = new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0x33, 0x66, 0xFF)), 1);
-    private static readonly IPen FocusPen = new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0x10, 0x30, 0xC0)), 2);
-    private static readonly IPen OpenLoopPen = new ImmutablePen(Brushes.Black, 2);
+    private static readonly IBrush SelectionLine = new ImmutableSolidColorBrush(Color.FromRgb(0x33, 0x66, 0xFF));
+    private static readonly IBrush FocusLine = new ImmutableSolidColorBrush(Color.FromRgb(0x10, 0x30, 0xC0));
     private static readonly IBrush OpenLoopCorner = new ImmutableSolidColorBrush(Colors.SeaGreen);
 
     private readonly HashSet<int> m_selected = new();
@@ -174,7 +173,8 @@ public class MapGrid : Control
         for (int c = 0; c < map.Cols; c++) widest = Math.Max(widest, Text(XLabel(c), b).Width);
         double rowHeader = 0;
         for (int r = 0; r < map.Rows; r++) rowHeader = Math.Max(rowHeader, Text(YLabel(r), b).Width);
-        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - 4;
+        // the open-loop box takes 3 px on each side of the text
+        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (OpenLoopMark == OpenLoopMark.Box ? 10 : 4);
         if (widest > 0 && room < widest) m_textScale = Math.Clamp(room / widest, 0.6, 1);
         double headerW = 0;
         for (int r = 0; r < map.Rows; r++) headerW = Math.Max(headerW, Text(YLabel(r), b).Width);
@@ -184,8 +184,26 @@ public class MapGrid : Control
         m_cellH = Math.Max(1, (Bounds.Height - m_headerH) / map.Rows);
     }
 
-    private Rect CellRect(int displayRow, int col) =>
-        new(m_headerW + col * m_cellW, m_headerH + displayRow * m_cellH, m_cellW, m_cellH);
+    // cell edges on whole device pixels, and lines as filled strips of whole pixels: fractional column widths left every edge
+    // between two pixels, antialiased into a blurry double line (T7Suite's GDI grid drew on whole pixels)
+    private double Scale => TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
+    private double Snap(double v) => Math.Round(v * Scale) / Scale;
+    private double Pixels(int n) => n / Scale;
+    private double ColX(int col) => Snap(m_headerW + col * m_cellW);
+    private double RowY(int displayRow) => Snap(m_headerH + displayRow * m_cellH);
+
+    internal Rect CellRect(int displayRow, int col) =>
+        new(new Point(ColX(col), RowY(displayRow)), new Point(ColX(col + 1), RowY(displayRow + 1)));
+
+    // a frame inside rect, its strips whole pixels thick
+    private void Frame(DrawingContext context, IBrush brush, Rect r, int pixels)
+    {
+        double t = Pixels(pixels);
+        context.FillRectangle(brush, new Rect(r.X, r.Y, r.Width, t));
+        context.FillRectangle(brush, new Rect(r.X, r.Bottom - t, r.Width, t));
+        context.FillRectangle(brush, new Rect(r.X, r.Y, t, r.Height));
+        context.FillRectangle(brush, new Rect(r.Right - t, r.Y, t, r.Height));
+    }
 
     internal Point CellCenter(int displayRow, int col) => CellRect(displayRow, col).Center;
 
@@ -219,7 +237,7 @@ public class MapGrid : Control
         Layout(map);
         IBrush fg = Foreground ?? Brushes.Black;
         var headerBg = new ImmutableSolidColorBrush(fg is ISolidColorBrush s ? Color.FromArgb(28, s.Color.R, s.Color.G, s.Color.B) : Color.FromArgb(28, 0, 0, 0));
-        var gridPen = new Pen(new ImmutableSolidColorBrush(fg is ISolidColorBrush s2 ? Color.FromArgb(60, s2.Color.R, s2.Color.G, s2.Color.B) : Colors.Gray), 1);
+        var gridLine = new ImmutableSolidColorBrush(fg is ISolidColorBrush s2 ? Color.FromArgb(60, s2.Color.R, s2.Color.G, s2.Color.B) : Colors.Gray);
 
         // headers
         context.FillRectangle(headerBg, new Rect(0, 0, Bounds.Width, m_headerH));
@@ -256,7 +274,8 @@ public class MapGrid : Control
                 {
                     if (OpenLoopMark == OpenLoopMark.Box)
                     {
-                        context.DrawRectangle(OpenLoopPen, rect.Deflate(2));
+                        // T7Suite's 2 px black frame inside the grid line
+                        Frame(context, Brushes.Black, rect.Deflate(Pixels(1)), 2);
                     }
                     else
                     {
@@ -288,19 +307,21 @@ public class MapGrid : Control
                     context.DrawText(t, new Point(x, rect.Y + (rect.Height - t.Height) / 2));
             }
 
+        // the lines on the pixel left of / above each edge, the last one inside the table
+        double px = Pixels(1), top = RowY(0), bottom = RowY(map.Rows), left = ColX(0), right = ColX(map.Cols);
         for (int c = 0; c <= map.Cols; c++)
-            context.DrawLine(gridPen, new Point(m_headerW + c * m_cellW, m_headerH), new Point(m_headerW + c * m_cellW, m_headerH + map.Rows * m_cellH));
+            context.FillRectangle(gridLine, new Rect(Math.Min(ColX(c), right - px), top, px, bottom - top));
         for (int r = 0; r <= map.Rows; r++)
-            context.DrawLine(gridPen, new Point(m_headerW, m_headerH + r * m_cellH), new Point(m_headerW + map.Cols * m_cellW, m_headerH + r * m_cellH));
+            context.FillRectangle(gridLine, new Rect(left, Math.Min(RowY(r), bottom - px), right - left, px));
 
         if (m_selected.Count > 0)
         {
             foreach (int i in m_selected)
             {
                 var (r, c) = map.Cell(i);
-                context.DrawRectangle(SelectionPen, CellRect(r, c));
+                Frame(context, SelectionLine, CellRect(r, c), 1);
             }
-            if (IsFocused) context.DrawRectangle(FocusPen, CellRect(m_focusRow, m_focusCol).Deflate(1));
+            if (IsFocused) Frame(context, FocusLine, CellRect(m_focusRow, m_focusCol), 2);
         }
     }
 

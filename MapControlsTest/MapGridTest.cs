@@ -31,6 +31,25 @@ namespace MapControlsTest
         }
 
         [TestMethod]
+        public void OpenLoopBoxIsOnWholePixels()
+        {
+            Headless.Run(() =>
+            {
+                MapData map = IgnitionMapData();
+                var grid = new MapGrid { Map = map, OpenLoopMark = OpenLoopMark.Box };
+                // 641 px leaves fractional column widths, which used to blur every frame edge into grey
+                var frame = Headless.Render(grid, 641, 420, "mapgrid-openloop-box");
+                int open = Enumerable.Range(0, map.Rows * map.Cols).First(map.IsOpenLoop);
+                var (r, c) = map.Cell(open);
+                Avalonia.Rect cell = grid.CellRect(r, c);
+                int x = (int)cell.Center.X, top = (int)Math.Round(cell.Y);
+                Assert.AreEqual(0xFF000000u, Headless.Pixel(frame, x, top + 1), "frame, first pixel");
+                Assert.AreEqual(0xFF000000u, Headless.Pixel(frame, x, top + 2), "frame, second pixel");
+                Assert.AreEqual(Headless.Pixel(frame, x, top + 4), Headless.Pixel(frame, x, top + 3), "the cell colour right after the frame");
+            });
+        }
+
+        [TestMethod]
         public void SelectTypeStepUndo()
         {
             Headless.Run(() =>
