@@ -30,7 +30,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`, one tag prefix per suite, upstream's release tags (`T7suite_v2.0.0`, later `T8suite_v`, `T5suite_v`), set by the app project's `VersionTagPrefix`, so a tag versions one suite; libraries and tests build as `0.0.0-<sha>`. One repo for all suites (revisit splitting after the T8 port, then with NuGet packages rather than submodules); self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
 | Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, menus, clipboard) follows T7Suite; from txlogger the meshgrid 3D projection/drawing, the graph2d layout and the colour scale (green → yellow → red over the map's min..max; T7Suite's raw ÷ max made a fuel map red from its lowest cell). T7Suite's red-white option and online tint stay |
-| Shared T7/T8 code | `SuiteCore` (no UI: the lifted CommonSuite code, `SuiteBinary` which T7Binary and T8Binary derive from, `SuiteProject`, compare / transfer, map search, symbol files, tuning packages, My Maps, the ECU worker thread and adapter setup, the update check, the DTC catalog) and `SuiteApp` (Avalonia: the main window and its view model with its ECU half, symbol list, map viewer, workspace, status bar, project dialogs, the offline tuning windows, the fault codes window, the settings base, theme, dialogs). The ECU protocols stay per suite (T7Ecu over KWP, T8Ecu over GMLAN). Each app keeps its menus and what only its suite has. The rest of T7Core / T7App moves there in the chunk where T8 needs it, so each piece is generalised against a second real consumer (T7 and T8 share 67 file names but only 8 identical files) |
+| Shared T7/T8 code | `SuiteCore` (no UI: the lifted CommonSuite code, `SuiteBinary` which T7Binary and T8Binary derive from, `SuiteProject`, compare / transfer, map search, symbol files, tuning packages, My Maps, the ECU worker thread and adapter setup, the realtime table, engine loop and logs, the update check, the DTC catalog) and `SuiteApp` (Avalonia: the main window and its view model with its ECU and realtime halves, symbol list, map viewer, workspace, status bar, project dialogs, the offline tuning windows, the realtime panel and log windows, the fault codes window, the settings base, theme, dialogs). The ECU protocols stay per suite (T7Ecu over KWP, T8Ecu over GMLAN). Each app keeps its menus and what only its suite has. The rest of T7Core / T7App moves there in the chunk where T8 needs it, so each piece is generalised against a second real consumer (T7 and T8 share 67 file names but only 8 identical files) |
 
 ## Layout (new projects)
 
@@ -39,11 +39,13 @@ TuningSuites.slnx          new solution (the old *.sln files stay for reference)
 Directory.Build.props      from the flasher, plus $(TrionicDir) = Trionic (submodule)
 WidebandSupport/           vendored, net10
 SuiteCore/                 shared, no UI: the lifted CommonSuite code (Common/, namespace CommonSuite), SuiteBinary, SuiteProject, compare,
-                           search, symbol files, tuning packages, My Maps, EcuWorker / CanAdapters, update check, DTC catalog
+                           search, symbol files, tuning packages, My Maps, EcuWorker / CanAdapters, the realtime table and
+                           engine, logs and matrix, update check, DTC catalog
 SuiteCoreTest/             MSTest: settings, crypto, S19, VIN decoder, transaction log, update check, source encoding
 SuiteApp/                  shared Avalonia library: the main window (SuiteMainWindow) and MainWindowViewModel, symbol list, map viewer,
                            workspace, status bar, project dialogs, compare / search / package / My Maps / part lookup / VIN decoder
-                           windows, the settings base, SuiteTheme.axaml (T7Suite's skin), ViewLocator, dialogs
+                           windows, the realtime panel and log windows, the settings base, SuiteTheme.axaml (T7Suite's skin),
+                           ViewLocator, dialogs
 T7Core/                    net10 class library, no UI: file, symbols, axes, checksum glue, projects, transaction log, realtime engine, tuning logic
 T7CoreTest/                MSTest, golden tests over T7Binaries/
 MapControls/               Avalonia controls: MapGrid, Surface3D, Graph2D, MapData codec
@@ -352,6 +354,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - A bin without a software version gets the old calibration's Tuning menu. T8Suite kept the designer captions and threw on the old / new buttons.
   - Compare results keep T7Suite's column order and show lengths in hex like the symbol list (T8Suite: Description first, lengths always decimal).
   - The settings' realtime group comes with chunks 5-6; "Show map preview popup" comes with the map helper (chunk 7).
+  - Lookup partnumber's "not recognized" message names T8Suite (T8Suite's said T7Suite).
 - Known T8Suite bugs fixed:
   - **"Symbolnumber N" one less than `Symbol_number`:** the shared sidecar writer puts swapped names back under their placeholder, so imported and detected names survive a save.
   - **Edit a tuning package:** saves the edited rows (the shared editor).
@@ -394,11 +397,31 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - **Flash → recover:** the "attempt to recover?" answer was compared with OK, so recovery never started. Yes now recovers with the same file.
   - **Recover ECU:** the adapters filtered out the ECU's 0x011 / 0x311 answers; now `SetCANFilterIds(FilterIdRecovery)` is set first, as the flasher does.
   - **Fault codes window:** Clear worked on a device that had been closed, so it did nothing; it now opens its own session.
-- Not on a bench yet: the T8 ECU features need a test with an adapter and an ECU.
+- Bench, 2026-10-10: Read ECU, Flash current file to ECU, Connect ECU, Get ECU information and Get fault codes work. A bin flashed with TrionicCANFlasher read back identical in the application and HWIO areas; NVDM differed only by the ECU's new programming-history record, and boot by the bench ECU's own bootloader (not flashed). Still to test: the fault codes' Clear, SRAM map read / write, Recover.
 
 ### 6. Realtime
-- [ ] Dynamic live data (`3B 17` / `1A 18` list) with the fallback to reads by address, `.t8l` logs (T7's format), log viewer, matrix from log, knock count map / misfire tab, wideband, notifications
-- Known T8Suite bug to fix: a row that can't go into the dynamic list shifted the matching, so every later row lost its value
+- [x] Shared now (moved from T7Core / T7App):
+  - **SuiteCore:** `Realtime.cs` (the table's rows and passes, the `RealtimeEngine` loop, layouts, live cell tracking, the wideband conversions), `RealtimeLog.cs` (the .t7l / .t8l format, reader, sections, filters, CSV export and the writer) and `LogMatrix`. A suite's `RealtimeRules` gives its names and conventions: the signed list, the per-cylinder counters, the default rows, the "Add to realtime list" presets, the status texts, the maps whose cell is tracked, and the log and layout extensions.
+  - **SuiteApp:** the panel (`RealtimeViewModel` / `RealtimeView`), the add / edit symbol dialog, the log viewer, log selection, matrix, log filters and symbol colours windows, and the Realtime menu's half of the main window. T7's AutoTune, AFR maps and Eco / Norm / Sport are its panel's subclass (`T7RealtimeViewModel`); the view locator falls back to a base class's view.
+  - T7's tests pass with the moved names, and its renders are unchanged.
+- [x] T8 (`T8Realtime`, `T8RealtimeEngine` in T8Core):
+  - **Passes over GMLAN:** with "Prefer dynamic retrieval of live data" (default on) the table is one dynamic list (3B 17, read with 1A 18). Rows it can't hold are read by address. After a failure of the list everything is read by address for the rest of the session, as in T8Suite. The library's keep-alive rests while the panel polls.
+  - **T8Suite's table:** its rows (battery voltage first, its names, no fuel consumption), signed list, per-cylinder counters (KnockCyl as bytes, KnkCntCyl, MisfCyl), status texts, the maps whose cell is tracked, and the "Add to realtime list" presets.
+  - **Logs:** `<bin>-yyyyMMdd-CanTraceExt.t8l`, Load trionic 8 logfile, the CSV and LogWorks exports (LogWorks without a wideband symbol, as in T8Suite), matrix, log filters, Set symbol colors, Write log marker [F6], Toggle realtime panel [Shift+F1], layouts (.t8rtl).
+  - **Menus in T8Suite's order:** the Realtime menu ending with View knock count map (KnkDetAdap.KnkCntMAP) and View misfire tab (MisfAdap.N_MisfCountCyl); File → Setup log filters; the symbol list's Add to realtime list.
+  - **Settings:** Prefer dynamic retrieval of live data, and Use wideband O2 on com port with device and port (shared with T7 now).
+- [x] T8CoreTest: the dashboard rows on a stock bin, the cell tracking, per-cylinder counters, status texts, the log's name, the dynamic list's data going to its rows. T8AppTest: the panel without hardware, a pass on screen, a .t8l in the log viewer.
+- Deliberate differences:
+  - The dashboard displays keep T7Suite's decimals (T8Suite showed all nine without).
+  - The AFR display toggles AFR / λ on a click, as in T7Suite (T8Suite's didn't react).
+  - Rows the dynamic list can't hold (more than 16 bytes, no SRAM address) are read by address in the same pass; T8Suite didn't read them while the list was in use.
+  - When the panel stops, the library's keep-alive resumes; T8Suite left it stalled for the rest of the connection.
+  - A log line's time is the start of its pass, as in T7Suite (T8Suite: the end).
+- Known T8Suite bugs fixed:
+  - **Dynamic list:** the data was matched to the rows by counting, so a row that couldn't go into the list shifted every later row's value; the data now goes to the rows it was read for.
+  - **Boost map cell:** the tracking rule misspelt AirCtrlCal (AirCrtlCal), so the boost map never showed its cell.
+- T7 fix from the sharing: the per-cylinder rows (KnockCyl1-4, MisfCyl1-4) and the serial wideband's row are marked as derived. After the table changed (a symbol added, moved or removed) the engine used to poll them as rows of their own, which put 0 on screen over their values.
+- Not yet: sound notifications and the Combi adapter's ADC / thermocouple channels (for both suites, see After T7). Not on a bench yet.
 
 ### 7. Tools
 - [ ] TEM editor, PID editor, bitmask viewer, axis browser, hex view, disassembler / vectors (MC68377 map, 120 vectors; the Idc file came with chunk 4), airmass result viewer and compressor map (T8's torque request → airmass and tables), tuning wizard (`.t8x` packs, signature checked as T7Core's Crypto does), Create binary from TIS file, map preview popup
@@ -419,6 +442,10 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
+
+- 2026-10-10: T8 chunk 6 implemented: the realtime table, engine loop, panel and log tools moved into the shared projects; T8 reads over GMLAN's dynamic list (by address as the fallback) with T8Suite's rows, names and texts, and logs .t8l. Waiting for a bench test.
+
+- 2026-10-10: T8 ECU bench tested: Read ECU (a bin flashed with TrionicCANFlasher reads back identical in the application and HWIO areas), Flash, Connect, ECU information and fault codes work.
 
 - 2026-10-09: T8 chunk 5 implemented: T8Ecu over GMLAN (connect, Read ECU / Flash / Recover with the Legion bootloader, ECU information, fault codes, SRAM maps) on a shared ECU worker; the protocol stays per suite, the view model's ECU half, the fault codes window and the connection settings are shared. Waiting for a bench test.
 
