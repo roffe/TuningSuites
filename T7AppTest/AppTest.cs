@@ -689,6 +689,43 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void SmallTools()
+        {
+            string file = Path.Combine(s_dir, "tools.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                var infos = new System.Collections.Generic.List<string>();
+                vm.Info += infos.Add;
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+
+                await vm.SaveAllCommand.ExecuteAsync(null);
+                Assert.AreEqual("Binary was already up to date!", infos[^1]);
+                vm.CreateBackupFileCommand.Execute(null);
+                StringAssert.StartsWith(infos[^1], "Backup created: ");
+
+                vm.BrowseAxesCommand.Execute(null);
+                var axes = (AxisBrowserViewModel)vm.SelectedViewer!;
+                axes.Open("IgnNormCal.m_AirXSP");
+                Assert.AreEqual("IgnNormCal.m_AirXSP", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
+                vm.SelectedViewer = axes;
+                Save(window, "axisbrowser");
+
+                var lookup = new PartLookupViewModel { PartNumber = "5168646" };
+                lookup.Lookup();
+                Assert.IsNotNull(lookup.Info);
+                lookup.PartNumber = "123";
+                lookup.Lookup();
+                Assert.AreEqual("The entered partnumber was not recognized by T7Suite", lookup.Message);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");

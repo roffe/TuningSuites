@@ -55,12 +55,17 @@
                 <MenuItem Header="Import tuning package" Click="OnImportTuningPackage" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
+                <MenuItem Header="Save all" Command="{Binding SaveAllCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Create backup file" Command="{Binding CreateBackupFileCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Lookup partnumber" Click="OnLookupPartnumber" />
+                <Separator />
                 <MenuItem Header="Settings" Click="OnSettings" />
                 <Separator />
                 <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem Header="_Actions">
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Browse axis information" Command="{Binding BrowseAxesCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Compare symbols with other binary" Click="OnCompareToFile" IsEnabled="{Binding HasFile}" />
@@ -69,6 +74,7 @@
                 <MenuItem Header="Compare to SRAM snapshot" Click="OnCompareToSram" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare SRAM snapshots" Click="OnCompareSram" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Transfer maps" Click="OnTransferMaps" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Copy address table to another binary" Click="OnCopyAddressTable" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
@@ -94,6 +100,7 @@
                 <MenuItem Header="View false knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.FKnkCntMap" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="View real knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.RKnkCntMap" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="View misfire map" Command="{Binding ShowEcuMapCommand}" CommandParameter="MissfAdap.MissfCntMap" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Set ethanol content" Command="{Binding ShowEcuMapCommand}" CommandParameter="E85.X_EthAct_Tech2" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="AFR maps" IsEnabled="{Binding HasFile}">
                     <MenuItem Header="Show AFR target map" Command="{Binding ShowAfrTargetMapCommand}" />

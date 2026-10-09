@@ -66,6 +66,9 @@
         <DataTemplate DataType="vm:TuningPackageEditorViewModel">
             <v:TuningPackageEditorView />
         </DataTemplate>
+        <DataTemplate DataType="vm:AxisBrowserViewModel">
+            <v:AxisBrowserView />
+        </DataTemplate>
         <DataTemplate DataType="vm:SearchResultsViewModel">
             <v:SearchResultsView />
         </DataTemplate>

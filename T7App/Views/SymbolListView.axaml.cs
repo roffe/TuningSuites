@@ -49,5 +49,10 @@ public partial class SymbolListView : UserControl
     private void OnAddToMyMaps(object? sender, RoutedEventArgs e) => Main?.OnAddToMyMaps(sender, e);
     private void OnExportPackage(object? sender, RoutedEventArgs e) => Main?.OnExportPackage(sender, e);
     private void OnExportFixedPackage(object? sender, RoutedEventArgs e) => Main?.OnExportFixedPackage(sender, e);
+    private void OnBrowseAxes(object? sender, RoutedEventArgs e)
+    {
+        if (Vm?.SelectedSymbol is { } sh) Vm.BrowseAxes(sh.SmartVarname);
+    }
+
     private void OnExportSymbolCsv(object? sender, RoutedEventArgs e) => Main?.OnExportSymbolCsv(sender, e);
 }

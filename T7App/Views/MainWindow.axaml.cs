@@ -198,6 +198,42 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnCopyAddressTable(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, "T7 binary files", "*.bin") is not { } target) return;
+        int from = T7.BinaryTools.AddressTableOffset(System.IO.File.ReadAllBytes(bin.FileName));
+        int to = T7.BinaryTools.AddressTableOffset(System.IO.File.ReadAllBytes(target));
+        if (from != to && !await Dialogs.YesNo(this, "Address table start addresses are not equal, continue anyway?", "Attention!"))
+        {
+            await Dialogs.Info(this, "Transfer cancelled");
+            return;
+        }
+        try
+        {
+            T7.BinaryTools.CopyAddressTable(bin.FileName, target, Vm.Settings.AutoFixFooter);
+            await Dialogs.Info(this, "Transfer done");
+        }
+        catch (System.Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or System.InvalidOperationException)
+        {
+            await Dialogs.Info(this, ex.Message);
+        }
+    }
+
+    private async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
+    {
+        var lookup = new PartLookupViewModel();
+        string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(this);
+        if (action == null || lookup.Info?.Binary is not { } stock) return;
+        if (action == "open") await Vm.OpenFileAsync(stock, true);
+        else if (action == "compare") await Vm.CompareToFileAsync(stock);
+        else if (action.StartsWith("create:"))
+        {
+            string file = action[7..];
+            System.IO.File.Copy(stock, file, true);
+            await Vm.OpenFileAsync(file, true);
+        }
+    }
+
     // ---- skin and help ----
 
     private const string SkinKey = "Skin";

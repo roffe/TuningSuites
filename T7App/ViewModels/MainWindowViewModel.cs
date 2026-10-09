@@ -244,6 +244,37 @@ public partial class MainWindowViewModel : ObservableObject
         ShowDocument(new TuningPackageEditorViewModel(this, bin));
     }
 
+    /// <summary>File → Save all: every viewer with changes saved; T7Suite's two messages.</summary>
+    [RelayCommand]
+    private async Task SaveAll()
+    {
+        var mutated = Viewers.OfType<MapViewerViewModel>().Where(v => v.Map.Mutated && v.CanSaveToFile).ToList();
+        foreach (MapViewerViewModel v in mutated) await v.SaveCommand.ExecuteAsync(null);
+        ShowInfo(mutated.Count > 0 ? "All pending changes saved to binary" : "Binary was already up to date!");
+    }
+
+    /// <summary>File → Create backup file.</summary>
+    [RelayCommand]
+    private void CreateBackupFile()
+    {
+        if (Binary is not { } bin) return;
+        try
+        {
+            ShowInfo("Backup created: " + BinaryTools.Backup(bin, Project));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Failed to create a backup: " + e.Message);
+        }
+    }
+
+    /// <summary>Information → Browse axis information (the symbol list's "Browse axis info" passes one symbol).</summary>
+    [RelayCommand]
+    public void BrowseAxes(string? symbol)
+    {
+        if (Binary is { } bin) ShowDocument(new AxisBrowserViewModel(this, bin, symbol));
+    }
+
     /// <summary>Actions → Airmass result viewer, when the bin has the tables it needs (T7Suite silently did nothing otherwise).</summary>
     [RelayCommand]
     private void ShowAirmassResult()
