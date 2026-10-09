@@ -74,6 +74,7 @@
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import AFR feedback data" Command="{Binding ImportAfrFeedbackCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Airmass result viewer" Command="{Binding ShowAirmassResultCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="SID information" Click="OnSidInfo" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <MenuItem Header="_ECU">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />

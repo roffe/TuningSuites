@@ -6,7 +6,7 @@ using CommonSuite;
 
 namespace T7
 {
-    class SIDICollection : SortableCollectionBase, ICustomTypeDescriptor
+    public class SIDICollection : SortableCollectionBase, ICustomTypeDescriptor
     {
         #region CollectionBase implementation
 

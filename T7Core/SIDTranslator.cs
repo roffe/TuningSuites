@@ -5,7 +5,7 @@ using System.Text;
 namespace T7
 {
 
-    class SIDTranslator
+    public class SIDTranslator
     {
         /*
 Rpm In.n_Engine  Engine speed UNIT : rpm MAX : 8000 MIN : 25 (set to 10 when engine starts to move) TRANS : V = P. Resolution is 1. Interval is Every combustion / 5 ms when engine is still.  

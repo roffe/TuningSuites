@@ -131,6 +131,26 @@ public partial class MainWindow : Window
             await new ImportResultsWindow(results).ShowDialog(this);
     }
 
+    private async void OnSidInfo(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is not { } bin) return;
+        if (T7.SidInfo.Read(bin) is not { } rows)
+        {
+            await Dialogs.Info(this, "File not compatible!");
+            return;
+        }
+        var sid = new SidInfoViewModel(bin, rows);
+        if (!await new SidInfoWindow { DataContext = sid }.ShowDialog<bool>(this)) return;
+        try
+        {
+            sid.Save(Vm.Settings.AutoFixFooter);
+        }
+        catch (System.Exception ex) when (ex is System.IO.IOException or System.UnauthorizedAccessException or System.InvalidOperationException)
+        {
+            await Dialogs.Info(this, "Failed to write to binary. Is it read-only? Details: " + ex.Message);
+        }
+    }
+
     // ---- logs ----
 
     private async void OnOpenLog(object? sender, RoutedEventArgs e)

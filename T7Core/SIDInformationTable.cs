@@ -4,7 +4,7 @@ using System.Text;
 
 namespace T7
 {
-    class SIDInformationTable
+    public class SIDInformationTable
     {
         public SIDICollection GetSIDInformation()
         {

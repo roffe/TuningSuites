@@ -634,6 +634,32 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void SidInformation()
+        {
+            string file = Path.Combine(s_dir, "sid.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                var sid = new SidInfoViewModel(vm.Binary!, T7.SidInfo.Read(vm.Binary!)!);
+                Assert.IsFalse(sid.Rows[0].CanEdit);
+                var choice = vm.Binary!.FindAny("In.v_Vehicle")!;
+                sid.Rows[2].T7Symbol = "In.v_Vehicle";
+                Assert.AreEqual(choice.Flash_start_address.ToString("X6"), sid.Rows[2].AddressText);
+                sid.Rows[2].Symbol = "Toolong";
+                Assert.AreNotEqual("Toolong", sid.Rows[2].Symbol);
+                var window = new SidInfoWindow { DataContext = sid };
+                window.Show();
+                Save(window, "sidinfo");
+                window.Close();
+                sid.Save(false);
+                Assert.AreEqual("In.v_Vehicle", T7.SidInfo.Read(T7.T7Binary.Open(file, 0, false))![2].FoundT7Symbol);
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace T7
 {
-    class SIDIHelper
+    public class SIDIHelper
     {
         private string _value = string.Empty;
 
