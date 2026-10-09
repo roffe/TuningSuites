@@ -26,6 +26,55 @@ namespace T7App.Services
         public static Task<bool> YesNo(Window owner, string text, string caption = "") =>
             Show(owner, text, caption, "Yes", "No", false);
 
+        /// <summary>Yes / No / Cancel: true, false, or null for Cancel and the title bar's close.</summary>
+        public static async Task<bool?> YesNoCancel(Window owner, string text, string caption = "")
+        {
+            var dlg = new Window
+            {
+                Title = caption,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                MinWidth = 320,
+                MaxWidth = 640,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false,
+            };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+            foreach (var (label, result) in new (string, bool?)[] { ("Yes", true), ("No", false), ("Cancel", null) })
+            {
+                var b = new Button { Content = label, MinWidth = 80, IsDefault = result == true, IsCancel = result == null };
+                b.Click += (_, _) => dlg.Close(result);
+                buttons.Children.Add(b);
+            }
+            var body = new StackPanel { Margin = new Thickness(16), Spacing = 16 };
+            body.Children.Add(new SelectableTextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            return await dlg.ShowDialog<bool?>(owner);
+        }
+
+        /// <summary>One line of text (frmChangeNote "Remark for change"); null when cancelled.</summary>
+        public static async Task<string?> Prompt(Window owner, string caption)
+        {
+            var dlg = new Window
+            {
+                Title = caption,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false,
+            };
+            var text = new TextBox { MinWidth = 360 };
+            var ok = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
+            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            ok.Click += (_, _) => dlg.Close(text.Text ?? "");
+            cancel.Click += (_, _) => dlg.Close(null);
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Children = { ok, cancel } };
+            dlg.Content = new StackPanel { Margin = new Thickness(16), Spacing = 12, Children = { text, buttons } };
+            dlg.Opened += (_, _) => text.Focus();
+            return await dlg.ShowDialog<string?>(owner);
+        }
+
         static async Task<bool> Show(Window owner, string text, string caption, string yes, string? no, bool yesIsDefault)
         {
             var dlg = new Window

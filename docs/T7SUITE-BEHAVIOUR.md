@@ -267,3 +267,313 @@ Every symbol write goes through `savedatatobinary`. It only writes 0 < address <
 **VIN decoder** (frmDecodeVIN, display only):
 - Shows car model, engine type, turbo, makeyear, assembly plant, series, body and gearbox.
 - Checksum line: "Valid", "WRONG! Expected: X but found: Y", or "Not verified".
+
+## Projects
+
+**Settings and ribbon.**
+- Settings: `ProjectFolder` (default MyDocuments/TxSuite/Projects), `RequestProjectNotes`, `LastOpenedType` (0 file, 1 project), `Lastprojectname` (registry name "LastProjectname"), `AutoLoadLastFile`.
+- Ribbon "Projects": Create, Open, Close, Show transaction log, Roll back/undo, Roll forward/redo, Rebuild file, Edit project, Add note to project log, Show project logbook, Produce latest binary. Everything except Create and Open starts disabled.
+
+**Disk layout** (P = ProjectFolder, N = project dir):
+```
+P/N/projectproperties.xml      DataTable "T5PROJECT" in <DocumentElement>, one row, string columns
+                               CARMAKE CARMODEL CARMY CARVIN NAME BINFILE VERSION (BINFILE = absolute path of the copy)
+P/N/<bin file name>            the working binary, copied in at create
+P/N/TransActionLogV2.ttl       (a V1 TransActionLog.ttl is migrated, then deleted)
+P/N/TransActionLogV2-yyyyMMddHHmmss.btl   copy made on purge
+P/N/ProjectLogbook.log
+P/N/Backups/<binbase>-backup-MMddyyyyHHmmss.BIN
+P/N/Snapshots/SnapshotMMddyyyyHHmmss.RAM
+P/Nrebuild.bin                 rebuild temp file (no separator: next to the project folder)
+```
+`MakeDirName` strips `\ / : * ? > < |`.
+
+**Create.**
+- frmProjectProperties, "Trionic project properties":
+  - Car make (default "SAAB"), Car model, Car MY, Car VIN.
+  - Project name, Version (default "1.00.000"), Binary file (*.bin).
+- Prefilled from the open file: binary = current file, car model = car description, project name = "<partnumber> <software version>".
+- On OK:
+  1. mkdir P.
+  2. If P/MakeDirName(name) already exists: "The chosen projectname already exists, please choose another one" and stop.
+  3. mkdir P/MakeDirName(name) and copy the binary in.
+  4. Write the xml.
+  5. `OpenProject(name)`, with the raw name: stripped characters make it miss.
+
+**OpenProject(name):**
+1. Return if P/name is missing.
+2. `LastOpenedType=1`, open the logbook, `OpenFile(BINFILE)`.
+3. Open the transaction log (an empty one is created if missing).
+4. More than 2000 entries offers a purge. The dialog says "reduce to 500"; the code keeps 1000.
+5. Enable the project buttons, `CreateProjectBackupFile`, `UpdateRollbackForwardControls`.
+6. Lastprojectname = name; title "T7SuitePro [Project: name]".
+
+There is no pending-changes check, and a previous project isn't closed first.
+
+**Open dialog.**
+- Lists every P/* with a projectproperties.xml: Projectname, NumberBackups (count of Backups/*.bin), NumberTransactions, DateTimeModified (the BINFILE's LastAccessTime), Version.
+- No projects: "No projects were found, please create one first!".
+- frmProjectSelection: "Select a project to open".
+
+**Close.**
+- Clears the current file, the symbol grid, the status ("No file"), Lastfilename and the project buttons; title "T7SuitePro".
+- The Close button also clears Lastprojectname. FormClosing keeps it.
+- Bug: the transaction log object stays, so later plain-file writes still append to the old project's log.
+- Opening a plain file always closes the project first.
+
+**Edit.**
+- The dialog is filled from the xml.
+- A rename moves the folder (raw name), and BINFILE is re-pointed into the moved folder before the project reopens, which makes a new backup.
+- Writes the xml and logs PropertiesEdited (info: Version).
+- Without a rename, a changed binary path is only stored.
+
+**Produce latest binary:** save dialog, then copy the current file there.
+
+## Transaction log
+
+**When entries are added.**
+- `savedatatobinary(..., true)` adds an entry when a project log exists: Now, address, length, before, after, not rolled back, note.
+- It then runs SignalTransactionLogChanged:
+  - updates the rollback/forward buttons;
+  - writes logbook TransactionExecuted with "<symbol at address, or the address in decimal> <note>".
+- Map saves ask "Remark for change" (frmChangeNote) first when RequestProjectNotes is set and a project is open.
+
+**Buttons.**
+- Show log: enabled when there are entries.
+- Rollback: enabled when any entry is not rolled back.
+- Rollforward: enabled when any entry is rolled back.
+
+**RollBack / RollForward(e):**
+1. Address wrapped to the file size.
+2. Write DataBefore (rollback) or DataAfter (forward) without a new entry.
+3. `VerifyChecksum(false)`, which offers to fix the checksum with AutoChecksum.
+4. Set the flag.
+5. Logbook TransactionRolledback/Rolledforward: "<symbol> <note> <number>".
+
+- Any entry can be toggled on its own, with no ordering check.
+- The ribbon's Roll back takes the last entry that is not rolled back; Roll forward takes the first one that is.
+- Open viewers are not refreshed.
+
+**frmTransactionLog** ("Transaction log", modeless).
+- Columns:
+
+  | Column | Format | Editable |
+  |---|---|---|
+  | Timestamp | dd/MM/yyyy HH:mm:ss, sorted descending | no |
+  | Symbol | | no |
+  | Note | | yes (SetEntryNote, whole file rewritten) |
+  | Address | decimal | no |
+  | Length | | no |
+  | Rolled back | | no |
+
+- Roll back / Roll forward act on the focused row (buttons and context menu). Details shows "Still needs to be implemented".
+
+**Rebuild file** (frmRebuildFileParameters: "Rebuild upto" date, "Store result as current project file", checked by default):
+1. Source = the newest backup with LastAccessTime ≤ the date, else the current file.
+2. Copy it to the temp file and make a backup.
+3. Apply DataAfter of every entry with source time ≤ entry time ≤ date (rolled back or not).
+4. Then either replace the current file, or save the result elsewhere.
+5. Logbook ProjectFileRecreated.
+
+There is no checksum update of the result.
+
+**Add note:** logbook Note only, nothing in the transaction file.
+
+**Format and purge.**
+- TTL V2 format: see `T7Core/Common/TrionicTransactionLog.cs` and `T7CoreTest/TransactionLogTest.cs`.
+- Purge: copy to .btl, keep the last 1000 entries, renumber from 0.
+
+## Project logbook
+
+**Line format:** `ddMMyyyyHHmmss|<type text>|<info, '|' replaced by ' '>`.
+
+| Type | Text |
+|---|---|
+| Note | A project note was inserted |
+| TransactionExecuted | A transaction was executed |
+| TransactionRolledback | A transaction was rolled back |
+| TransactionRolledforward | A transaction rolled forward |
+| BackupfileCreated | A backup file was created (info: backup path) |
+| ProjectFileRecreated | A project file was recreated |
+| PropertiesEdited | Project properties were edited |
+
+**frmProjectLogbook:** columns Timestamp (sorted descending), Type and Description. Bad lines are skipped.
+
+**Backups.**
+- CreateProjectBackupFile runs on every project open and at the start of a rebuild. There is no overwrite, so two backups in the same second throw. There is no retention.
+- File > Create backup file verifies the checksum first:
+  - with a project open: the same as above;
+  - without one: `<dir>/<base>yyyyMMddHHmmss.binarybackup`, then "Backup created: <path>".
+
+## Compare
+
+**Entry points.**
+- "Compare symbols with other binary": pick a file.
+- "Compare to original file": `StartupPath\Binaries\<partnumber>.bin`. It is enabled when that file exists, and runs only if exactly one matches.
+- "Compare binary with other binary" (frmBinCompare): a raw 16-byte line diff of the two files, without symbols.
+
+**CompareToFile.**
+- The other file is parsed like an open, with side effects in T7Suite: MRU entry, status reset.
+- Its SRAM offset: the header's, else ExtractFile's, else 0xEFFC04. Its calibration symbols are mapped back like open software.
+- Name used everywhere: `Varname`, or `Userdescription` when Varname starts with "Symbolnumber". Matching is by that name only.
+
+**Pass 1, differing symbols.**
+- For each compare-file symbol, take the first current symbol with the same name, skipping SymbolNames and LocalID. Both addresses must be inside the file.
+- Compare current bytes (address and length by SmartVarname) with the other file's bytes.
+- Different lengths: listed, with stats 0.
+- Otherwise:
+  - abs = number of differing bytes (halved, integer division, for 16-bit tables)
+  - perc = abs*100/length in bytes, so a fully different 16-bit map shows 50
+  - avg = mean(current bytes) − mean(other bytes)
+- Row fields:
+  - SYMBOLNAME = the raw compare Varname
+  - addresses and lengths
+  - Description = help text
+  - CATEGORYNAME = prefix before the first '.'
+  - SymbolNumber1 / SymbolNumber2 (current / compare)
+  - Userdescription
+
+**Passes 2 and 3.**
+- Pass 2: calibration symbols only in the compare file go under "Missing in original" (MissingInOriFile).
+- Pass 3: calibration symbols only in the current file go under "Missing in compare" (MissingInCompareFile).
+- Calibration: the name contains `Cal.` or `Cal1.`–`Cal4.`, or starts with `X_Acc` or `DisplAdap.`.
+
+**CompareResults grid.**
+- Panel "Compare results: <file>", docked left, width 700.
+- Visible columns: Symbol, Description, Length (bytes), Percentage of values different (F1), Number of values different, Average difference (F1), Symbolnumber #1, Symbolnumber #2, User description, Missing in original file, Missing in compare file.
+- Grouped by category, with a count.
+- Rows coloured Salmon (missing in original) or CornflowerBlue (missing in compare).
+- AutoFilterRow; X6 in hex mode.
+
+**Double-click / Enter:**
+- If the symbol exists in the current file, open its normal viewer (StartTableViewer(name, number1)).
+- Plus a compare viewer: the compare file's data with its own axes, read-only (IsCompareViewer), titled "Symbol: <name> [<compare file>]".
+
+**Context menu.**
+- **Show differences map:**
+  - Content = |compare − current| per value (unsigned 16-bit or byte); lengths must match, else "Map lengths don't match...".
+  - Axes from the current file, factor applied (no offset).
+  - The 3D view can overlay both files' surfaces.
+  - Title "Symbol difference: <name> [<compare file>]".
+- **Export to Excel:** writes diffexport.xls.
+- **Export as tuning package:** ori or compared file, all rows; .t7p via PackageExporter.
+
+**Transfer maps** (wizard "Transfer maps to different binary wizard"):
+1. Offered: symbols in the file whose name contains '.', excluding MapChkCal.ST_Enable, SymbolNames and LocalID. A checked list, with the last selection remembered in the TransferSettings registry key.
+2. Back up the target to `<name><yyyyMMddHHmmss>beforetransferringmaps.bin`.
+3. Target symbols are matched by name (Varname/Userdescription cross-matching), address inside the file, length < 0x1000.
+4. Copy the source bytes when the lengths match, with a transaction entry in the current project.
+5. Update the target's checksum.
+6. Optional summary report listing each transfer, length mismatches and failures.
+
+**SRAM compare** (needs .ram dumps):
+- "Compare binary to SRAM snapshot": compares each calibration symbol's flash bytes with the RAM bytes at its SRAM address.
+- "Compare SRAM snapshots": compares two dumps value by value.
+
+## Settings dialog
+
+**Window.** "Settings", opened from File > Options > Settings. There are no tabs: three groups and a button row.
+- Every value is loaded from AppSettings on open and written back on OK, each setter persisting at once.
+- After OK: AFR/lambda gauge setup, docking (FancyDocking, HideSymbolTable), and display options (ShowAddressesInHex → X6 format on Address/SRAM address/Length). Viewer settings apply to viewers opened afterwards.
+- No CAN adapter re-setup: that happens at connect.
+
+**User interface settings** (all offline):
+
+| Caption | Setting | Default | Notes |
+|---|---|---|---|
+| Auto size new mapwindows | AutoSizeNewWindows | true | |
+| Use red and white maps | ShowRedWhite | false | |
+| Show graphs in mapviewer | ShowGraphs | true | |
+| Hide symbol window | HideSymbolTable | false | |
+| Auto size columns in mapviewer | AutoSizeColumnsInWindows | true | |
+| Don't display colors in mapviewer | DisableMapviewerColors | false | |
+| Auto dock maps from same file | AutoDockSameFile | false | |
+| Auto dock maps with same name | AutoDockSameSymbol | true | |
+| Show mapviewers in seperate windows | ShowViewerInWindows | | disabled, unused |
+| New panels are floating | NewPanelsFloating | false | |
+| Always re-create repository items | | | disabled, unused |
+| Auto load last file on startup | AutoLoadLastFile | true | |
+| Default view type for maps | DefaultViewType | Easy | Hexadecimal view / Decimal view / Easy view |
+| Synchronize mapviewers | SynchronizeMapviewers | true | |
+| Default view size for maps | DefaultViewSize | 0 | 0 High resolution (1600*1200), 1 Normal (1280*1024), 2 Low (1024*768) |
+| Fancy docking | FancyDocking | true | |
+| Use T7Suite AFR maps | AutoCreateAFRMaps | true | realtime |
+| Show table upside down | ShowTablesUpsideDown | | no effect: tables are always upside down |
+| Write timestamp marker in binary | WriteTimestampInBinary | true | |
+| Use new mapviewer | UseNewMapViewer | true | |
+| (no label) | StandardFill | 0 | No / Square / Triangle closed loop indicator |
+
+**General settings** (offline):
+
+| Caption | Setting | Default | Notes |
+|---|---|---|---|
+| Auto update checksum | AutoChecksum | true | |
+| Show addresses and lengths in Hex | ShowAddressesInHex | true | |
+| Auto fix footer | AutoFixFooter | false | |
+| Enable CAN logging | EnableCanLog | | unused |
+| Request project notes | RequestProjectNotes | false | |
+| Project folder | ProjectFolder | | folder browser; empty → StartupPath\Projects |
+
+**Realtime settings** (ECU, later):
+- CANBus adapter type, with its descriptions; Adapter (names from `ITrionic.GetAdapterNames`); Configuration for Combi / ELM327 / Just4Trionic.
+- Only P-bus connection.
+- Auto update SRAM viewers every 5–60 seconds (default 20).
+- Reset realtime symbol on tabpage switch; Interpolate timescale for LogWorks; Measure AFR in lambda.
+- Wideband:
+  - "Use wideband O2 (pin 16) with symbol": DisplProt.AD_Scanner / LambdaScanner, plus a voltage/AFR configuration.
+  - "Use wideband O2 on com port": device PLX/LM1/LC1/LM2/ZT2/AEM/STAG/LambdaShield, plus a com port.
+  - The two wideband options exclude each other.
+- Notifications.
+- Autotune settings and Autologging settings (sub-dialogs).
+
+## Symbol import / export
+
+**Import XML descriptor** (File actions):
+- The table name comes from the file's 3rd line (`_x0020_` → space, `_x003N_` → N). Columns SYMBOLNAME, SYMBOLNUMBER, FLASHADDRESS, DESCRIPTION (`DataTable.WriteXml`).
+- Matched on SYMBOLNAME = Varname and FLASHADDRESS = address:
+  - Varname "Symbolnumber N": Userdescription = old Varname, Varname = DESCRIPTION.
+  - Otherwise: Userdescription = DESCRIPTION.
+- Then Description and Category are recomputed and `<bin>.xml` is saved.
+
+**Import CSV descriptor:**
+- Lines `number;name;...`, separated by ';'. Every symbol with that number gets Userdescription = name.
+- Then Varname and Userdescription are swapped where Varname == "Symbolnumber <number>".
+- Then save.
+
+**Import AS2 descriptor:**
+- Lines starting with '*'. The Nth such line names the Nth symbol with Length > 0.
+- Then the same swap and save.
+
+**Sidecar `<bin>.xml`** (always written: on open, on user-description edit, after import). One row per symbol with a user description:
+- (Userdescription, number, address, Varname) when Userdescription == "Symbolnumber <number>";
+- else (Varname, number, address, Userdescription).
+
+**Export symbollist as CSV** (symbol menu):
+- `{Varname with ','→'.'},{address},{SRAM address},{length},{number},{type},{userdescription}`: decimal, no header.
+- Then "Export done". It isn't readable by Import CSV.
+
+## Exports
+
+**Save as.** Copies the bin (not the .xml), then asks "Do you want to open the newly saved file?", which opens it as a plain file.
+
+**Export to S19.**
+- `Srecord.ConvertBinToSrec(file, 0x80000, target)`, with no messages.
+- Output: S0 header; S2 records with 32 bytes and 24-bit addresses; S5; S8.
+
+**Generate Idc file.** `IdaProIdcFile.create`: writes `<bin>-autogen.idc` with no dialog.
+
+**XDF.** XDFWriter is unused in T7, so there is no menu.
+
+**Tuning packages** (.t7p, PackageExporter):
+- Per symbol: `symbol=<name>`, `length=<n>`, `data=XX,XX,...,`.
+- "Export as tuning package" exports the selected symbols. "Export fixed tuning package" exports a fixed list of 64 maps.
+
+**Excel exports**, which become CSV in the port:
+- **Symbol grid "Export to excel"** (and to PDF): the grid as shown.
+- **Actions > "Export map to Excel"**:
+  - A1 = "Data for <map>".
+  - Row 2: X-axis values with the axis factor, 2 decimals.
+  - Column A from A3: Y-axis values reversed, raw.
+  - Cells from B3: value×factor+offset, 2 decimals, data rows flipped.
+  - Saved as `<bin>~<map>.xls`.
+  - 16-bit cells are negative only when the high byte is 0xFF.

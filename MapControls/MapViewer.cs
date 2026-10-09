@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -39,6 +40,24 @@ public class MapViewer : UserControl
 
     private static readonly List<WeakReference<MapViewer>> s_viewers = new();
 
+    public static readonly StyledProperty<bool> CanEditXAxisProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(CanEditXAxis));
+    public static readonly StyledProperty<bool> CanEditYAxisProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(CanEditYAxis));
+
+    /// <summary>The map has an axis symbol, so "Edit x-axis" / "Edit y-axis" can open it.</summary>
+    public bool CanEditXAxis { get => GetValue(CanEditXAxisProperty); set => SetValue(CanEditXAxisProperty, value); }
+    public bool CanEditYAxis { get => GetValue(CanEditYAxisProperty); set => SetValue(CanEditYAxisProperty, value); }
+
+    public static readonly StyledProperty<ICommand?> SaveCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(SaveCommand));
+    public static readonly StyledProperty<ICommand?> ReadCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(ReadCommand));
+    public static readonly StyledProperty<ICommand?> EditAxisCommandProperty = AvaloniaProperty.Register<MapViewer, ICommand?>(nameof(EditAxisCommand));
+
+    /// <summary>MapViewerEx's Save to file / Read from file buttons.</summary>
+    public ICommand? SaveCommand { get => GetValue(SaveCommandProperty); set => SetValue(SaveCommandProperty, value); }
+    public ICommand? ReadCommand { get => GetValue(ReadCommandProperty); set => SetValue(ReadCommandProperty, value); }
+
+    /// <summary>"Edit x-axis" (parameter true) or "Edit y-axis" (false) from the table's context menu.</summary>
+    public ICommand? EditAxisCommand { get => GetValue(EditAxisCommandProperty); set => SetValue(EditAxisCommandProperty, value); }
+
     /// <summary>Selection or 3D camera changed by the user, to sync other viewers of the same map.</summary>
     public event EventHandler? SelectionChanged;
     public event EventHandler? CameraChanged;
@@ -50,6 +69,11 @@ public class MapViewer : UserControl
     private readonly Slider m_slice = new() { Minimum = 0, IsSnapToTickEnabled = true, TickFrequency = 1, Margin = new Thickness(8, 0) };
     private readonly ComboBox m_viewType = new() { ItemsSource = new[] { "Hex", "Decimal", "Easy", "ASCII" }, MinWidth = 100 };
     private readonly Grid m_split;
+    private readonly ComboBox m_operation = new() { ItemsSource = new[] { "Add", "Multiply", "Divide", "Fill" }, SelectedIndex = 0, MinWidth = 100 };
+    private readonly TextBox m_operand = new() { Text = "2", Width = 70 };
+    private readonly TextBox m_selectValues = new() { PlaceholderText = "Select values", Width = 120 };
+    private readonly StackPanel m_editTools = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+    private readonly MenuItem m_editX = new() { Header = "Edit x-axis" }, m_editY = new() { Header = "Edit y-axis" };
     private bool m_syncing;
 
     public MapViewer()
@@ -62,8 +86,32 @@ public class MapViewer : UserControl
         AttachedToVisualTree += (_, _) => { lock (s_viewers) s_viewers.Add(new WeakReference<MapViewer>(this)); };
         DetachedFromVisualTree += (_, _) => { lock (s_viewers) s_viewers.RemoveAll(w => !w.TryGetTarget(out var v) || v == this); };
 
+        var save = new Button { Content = "Save to file" };
+        var read = new Button { Content = "Read from file" };
+        var execute = new Button { Content = "Execute" };
+        save.Click += (_, _) => SaveCommand?.Execute(null);
+        read.Click += (_, _) => ReadCommand?.Execute(null);
+        execute.Click += (_, _) => ExecuteMath();
+        // the view combo doubled as the select-by-value box in MapViewerEx: values separated by spaces, Enter selects
+        m_selectValues.KeyDown += (_, e) =>
+        {
+            if (e.Key != Avalonia.Input.Key.Enter || Map is not { } map) return;
+            Grid.Select(MapOps.SelectByValue(map, m_selectValues.Text ?? ""));
+            Grid.Focus();
+            e.Handled = true;
+        };
+        m_editTools.Children.AddRange([save, read, m_operation, m_operand, execute]);
         var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(4) };
-        toolbar.Children.Add(m_viewType);
+        toolbar.Children.AddRange([m_viewType, m_editTools, m_selectValues]);
+
+        m_editX.Click += (_, _) => EditAxisCommand?.Execute(true);
+        m_editY.Click += (_, _) => EditAxisCommand?.Execute(false);
+        if (Grid.ContextMenu is { } menu)
+        {
+            menu.Items.Insert(2, m_editX);
+            menu.Items.Insert(3, m_editY);
+        }
+        m_editX.IsEnabled = m_editY.IsEnabled = false;
 
         var graphTabs = new TabControl();
         graphTabs.Items.Add(new TabItem { Header = "3D Graph", Content = Surface });
@@ -117,12 +165,28 @@ public class MapViewer : UserControl
         else if (change.Property == IsRedWhiteProperty) Grid.IsRedWhite = IsRedWhite;
         else if (change.Property == DisableColorsProperty) Grid.DisableColors = DisableColors;
         else if (change.Property == OpenLoopMarkProperty) Grid.OpenLoopMark = OpenLoopMark;
-        else if (change.Property == IsReadOnlyProperty) Grid.IsReadOnly = IsReadOnly;
+        else if (change.Property == IsReadOnlyProperty)
+        {
+            Grid.IsReadOnly = IsReadOnly;
+            m_editTools.IsVisible = !IsReadOnly;
+        }
+        else if (change.Property == CanEditXAxisProperty) m_editX.IsEnabled = CanEditXAxis;
+        else if (change.Property == CanEditYAxisProperty) m_editY.IsEnabled = CanEditYAxis;
         else if (change.Property == GraphVisibleProperty)
         {
             m_split.RowDefinitions[1].Height = new GridLength(GraphVisible ? 4 : 0);
             m_split.RowDefinitions[2].Height = GraphVisible ? GridLength.Star : new GridLength(0);
         }
+    }
+
+    /// <summary>MapViewerEx's Execute: add / multiply / divide / fill the selection with the typed value.</summary>
+    private void ExecuteMath()
+    {
+        if (Map is not { } map || IsReadOnly || Grid.SelectedCells.Count == 0) return;
+        string text = m_operand.Text ?? "";
+        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out double w)
+            && !double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out w)) return;
+        MapOps.Apply(map, Grid.SelectedCells.ToArray(), ViewType, (MapMath)m_operation.SelectedIndex, w);
     }
 
     private void OnMapChanged(object? sender, EventArgs e)

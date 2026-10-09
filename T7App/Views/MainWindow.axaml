@@ -28,6 +28,24 @@
                 <Separator />
                 <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
             </MenuItem>
+            <MenuItem Header="_Project">
+                <MenuItem Header="Create a project" Click="OnCreateProject" />
+                <MenuItem Header="Open a project" Click="OnOpenProject" />
+                <MenuItem Header="Close project" Command="{Binding CloseProjectMenuCommand}" IsEnabled="{Binding IsProjectOpen}" />
+                <Separator />
+                <MenuItem Header="Show transaction log" Click="OnShowTransactionLog" IsEnabled="{Binding HasTransactions}" />
+                <MenuItem Header="Roll back/undo" Command="{Binding RollBackCommand}" IsEnabled="{Binding CanRollBack}" />
+                <MenuItem Header="Roll forward/redo" Command="{Binding RollForwardCommand}" IsEnabled="{Binding CanRollForward}" />
+                <MenuItem Header="Rebuild file" Click="OnRebuild" IsEnabled="{Binding IsProjectOpen}" />
+                <Separator />
+                <MenuItem Header="Edit project" Click="OnEditProject" IsEnabled="{Binding IsProjectOpen}" />
+                <MenuItem Header="Add note to project log" Command="{Binding AddNoteCommand}" IsEnabled="{Binding IsProjectOpen}" />
+                <MenuItem Header="Show project logbook" Click="OnShowLogbook" IsEnabled="{Binding IsProjectOpen}" />
+                <MenuItem Header="Produce latest binary" Click="OnProduceLatest" IsEnabled="{Binding IsProjectOpen}" />
+            </MenuItem>
+            <MenuItem Header="_Actions">
+                <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
+            </MenuItem>
             <MenuItem Header="_Information">
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
             </MenuItem>
@@ -48,11 +66,11 @@
                 <TextBlock DockPanel.Dock="Top" Text="Symbol list" FontWeight="SemiBold" Margin="8,6" />
                 <TextBox DockPanel.Dock="Top" Margin="6,0,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
                 <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}"
-                          IsReadOnly="True" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                          CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
                           GridLinesVisibility="Horizontal" SelectionMode="Single"
-                          DoubleTapped="OnSymbolDoubleTapped" KeyDown="OnSymbolKeyDown">
+                          DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded">
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190">
+                        <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
                             <DataTemplate x:DataType="cs:SymbolHelper">
                                 <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
                                     <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" />
@@ -60,10 +78,10 @@
                             </DataTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" SortMemberPath="Flash_start_address"
-                                            Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+                                            Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
                         <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
-                                            Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
-                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description}" Width="300" />
+                                            Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
                         <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" Binding="{Binding Userdescription}" />
                     </DataGrid.Columns>
                 </DataGrid>
@@ -94,6 +112,8 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:MapViewerViewModel">
                             <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding MapName}"
+                                          SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
+                                          CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
                                           IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
                                           DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
                                           OpenLoopMark="{Binding OpenLoopMark}" />

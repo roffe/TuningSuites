@@ -13,6 +13,8 @@ using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using T7;
+using TrionicCANLib.API;
+using TrionicCANLib.Checksum;
 using TrionicCANLib.Firmware;
 
 namespace T7App.ViewModels;
@@ -66,11 +68,33 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasFile => Binary != null;
 
+    /// <summary>The open project, null when a plain file is open.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsProjectOpen))]
+    private T7Project? _project;
+
+    public bool IsProjectOpen => Project != null;
+
+    [ObservableProperty] private bool _canRollBack;
+    [ObservableProperty] private bool _canRollForward;
+    [ObservableProperty] private bool _hasTransactions;
+
+    /// <summary>A line of text from the user (frmChangeNote), null when cancelled; answered by the view.</summary>
+    public Func<string, Task<string?>>? AskText { get; set; }
+
+    /// <summary>Ok / Cancel question, answered by the view.</summary>
+    public Func<string, Task<bool>>? AskOkCancel { get; set; }
+
     public ObservableCollection<MapViewerViewModel> Viewers { get; } = new();
     public ObservableCollection<RecentFile> Recent { get; } = new();
 
     /// <summary>A message for the user (frmInfoBox / MessageBox), shown by the view.</summary>
     public event Action<string>? Info;
+
+    public void ShowInfo(string text) => Info?.Invoke(text);
+
+    /// <summary>Yes / No / Cancel question (null = Cancel), answered by the view.</summary>
+    public Func<string, Task<bool?>>? AskYesNoCancel { get; set; }
 
     public MainWindowViewModel()
     {
@@ -83,8 +107,10 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (args is [var arg, ..] && arg.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) && File.Exists(arg))
             await OpenFileAsync(arg, true);
-        else if (Settings.AutoLoadLastFile && Settings.Lastfilename != "" && File.Exists(Settings.Lastfilename))
+        else if (Settings.AutoLoadLastFile && Settings.LastOpenedType == 0 && Settings.Lastfilename != "" && File.Exists(Settings.Lastfilename))
             await OpenFileAsync(Settings.Lastfilename, true);
+        else if (Settings.AutoLoadLastFile && Settings.LastOpenedType == 1 && Settings.Lastprojectname != "")
+            await OpenProjectAsync(Settings.Lastprojectname);
     }
 
     /// <summary>frmMain.OpenFile: S19 is converted first, the file must be a T7 binary, then its symbols are read.</summary>
@@ -157,7 +183,7 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedViewer = open;
             return;
         }
-        if (MapViewerViewModel.Create(bin, sh, Settings) is not { } viewer)
+        if (MapViewerViewModel.Create(this, bin, sh) is not { } viewer)
         {
             // ponytail: SRAM-only symbols need the ECU connection (chunk 5)
             Info?.Invoke($"{sh.SmartVarname} only lives in the ECU's SRAM, reading it needs a connection to the ECU.");
@@ -173,23 +199,264 @@ public partial class MainWindowViewModel : ObservableObject
         if (newValue != null) newValue.IsSelected = true;
     }
 
-    [RelayCommand]
-    private void CloseViewer(MapViewerViewModel viewer)
+    /// <summary>StartTableViewer(name): clear the search, select the symbol and open it (axis editing, My Maps).</summary>
+    public void OpenSymbolByName(string name)
     {
-        int i = Viewers.IndexOf(viewer);
-        Viewers.Remove(viewer);
-        if (SelectedViewer == viewer) SelectedViewer = Viewers.Count == 0 ? null : Viewers[Math.Min(i, Viewers.Count - 1)];
+        if (Binary?.Find(name) is not { } sh)
+        {
+            ShowInfo($"Symbol {name} does not exist in this file");
+            return;
+        }
+        SearchText = "";
+        SelectedSymbol = sh;
+        OpenSymbol(sh);
     }
 
     [RelayCommand]
-    private Task OpenRecent(RecentFile file) => OpenFileAsync(file.Path, false);
+    private Task CloseViewer(MapViewerViewModel viewer) => CloseViewerAsync(viewer);
+
+    /// <summary>MapViewerEx's close: unsaved changes ask Yes (save) / No (discard) / Cancel (keep open). False when cancelled.</summary>
+    public async Task<bool> CloseViewerAsync(MapViewerViewModel viewer)
+    {
+        if (viewer.Map.Mutated && AskYesNoCancel != null)
+        {
+            SelectedViewer = viewer;
+            bool? save = await AskYesNoCancel("Data was mutated, do you want to save these changes in you binary?");
+            if (save == null) return false;
+            if (save == true)
+            {
+                await viewer.SaveCommand.ExecuteAsync(null);
+                if (viewer.Map.Mutated) return false; // the save failed, keep the changes on screen
+            }
+        }
+        int i = Viewers.IndexOf(viewer);
+        Viewers.Remove(viewer);
+        if (SelectedViewer == viewer) SelectedViewer = Viewers.Count == 0 ? null : Viewers[Math.Min(i, Viewers.Count - 1)];
+        return true;
+    }
+
+    /// <summary>Before the app closes: every viewer with unsaved changes gets the same question. False when cancelled.</summary>
+    public async Task<bool> CloseMutatedViewersAsync()
+    {
+        foreach (MapViewerViewModel viewer in Viewers.Where(v => v.Map.Mutated).ToList())
+            if (!await CloseViewerAsync(viewer)) return false;
+        return true;
+    }
+
+    /// <summary>The ribbon's Verify checksum: with AutoChecksum a mismatch offers to recalculate.</summary>
+    [RelayCommand]
+    private async Task VerifyChecksum()
+    {
+        if (Binary is not { } bin) return;
+        ChecksumResult result = await Task.Run(() => ChecksumT7.VerifyChecksum(bin.FileName, Settings.AutoChecksum, Settings.AutoFixFooter,
+            (_, _, _) => UserPrompt.AskYesNo("Checksums did not verify ok, do you want to recalculate and update the checksums?", "Question")));
+        ShowInfo(result == ChecksumResult.Ok ? "Checksums verified and all matched!" : "Checksums did not verify ok!");
+    }
+
+    /// <summary>gridViewSymbols_CellValueChanged: an edited user description is saved to &lt;bin&gt;.xml.</summary>
+    public void SaveUserDescriptions()
+    {
+        if (Binary is { } bin) SymbolXMLFile.SaveAdditionalSymbols(bin.FileName, bin.Symbols);
+    }
 
     [RelayCommand]
+    private Task OpenRecent(RecentFile file) => OpenPlainFileAsync(file.Path, false);
+
+    /// <summary>File > Open / Recent: closes the project first (CloseProject; Lastprojectname = ""; LastOpenedType = 0).</summary>
+    public async Task<bool> OpenPlainFileAsync(string path, bool showMessage)
+    {
+        CloseProject();
+        Settings.Lastprojectname = "";
+        bool ok = await OpenFileAsync(path, showMessage);
+        Settings.LastOpenedType = 0;
+        return ok;
+    }
+
+    // ---- projects ----
+
+    /// <summary>OpenProject: the project's binary, its transaction log (purge offered above 2000 entries), a backup.</summary>
+    public async Task<bool> OpenProjectAsync(string name)
+    {
+        if (T7Project.Open(Settings.ProjectFolder, name) is not { } project) return false;
+        Settings.LastOpenedType = 1;
+        if (!await OpenFileAsync(project.BinaryFile, false)) return false;
+        int count = project.TransactionLog.TransCollection.Count;
+        if (count > 2000 && AskOkCancel != null
+            && await AskOkCancel($"The transaction log of this project holds {count} records, which slows down opening and saving. Purge it to the last 1000 records (the full log is kept as a .btl copy)?"))
+        {
+            project.TransactionLog.Purge();
+        }
+        project.CreateBackup();
+        Project = project;
+        Settings.Lastprojectname = name;
+        Title = $"T7SuitePro [Project: {name}]";
+        UpdateRollControls();
+        return true;
+    }
+
+    /// <summary>CloseProject: no file, no project; open viewers stay.</summary>
+    public void CloseProject()
+    {
+        if (Project == null) return;
+        Project = null;
+        Binary = null;
+        Symbols = null;
+        FileNameText = "No file";
+        Settings.Lastfilename = "";
+        Title = "T7SuitePro";
+        UpdateRollControls();
+    }
+
+    /// <summary>Create project: prefilled from the open file, the binary copied into the new project, which is opened.</summary>
+    public ProjectPropertiesViewModel NewProjectProperties()
+    {
+        var p = new ProjectPropertiesViewModel();
+        if (Binary is { } bin)
+        {
+            var header = new TrionicCANLib.Checksum.T7FileHeader();
+            header.init(bin.FileName, false);
+            p.BinaryFile = bin.FileName;
+            p.CarModel = header.getCarDescription().Trim();
+            p.ProjectName = header.getPartNumber().Trim() + " " + header.getSoftwareVersion().Trim();
+        }
+        return p;
+    }
+
+    public async Task CreateProjectAsync(ProjectPropertiesViewModel p)
+    {
+        string name;
+        try
+        {
+            name = T7Project.Create(Settings.ProjectFolder, p.ToProperties(), p.BinaryFile);
+        }
+        catch (Exception e) when (e is InvalidOperationException or IOException or ArgumentException)
+        {
+            ShowInfo(e.Message);
+            return;
+        }
+        // the folder name: T7Suite reopened by the typed name, which missed when characters were dropped
+        await OpenProjectAsync(name);
+    }
+
+    public async Task EditProjectAsync(ProjectPropertiesViewModel p)
+    {
+        if (Project is not { } project) return;
+        string before = project.Name;
+        project.Edit(p.ToProperties());
+        if (project.Name != before) await OpenProjectAsync(project.Name);
+    }
+
+    [RelayCommand]
+    private void CloseProjectMenu()
+    {
+        CloseProject();
+        Settings.Lastprojectname = "";
+    }
+
+    public void UpdateRollControls()
+    {
+        var entries = Project?.TransactionLog.TransCollection.Cast<TransactionEntry>().ToList() ?? [];
+        HasTransactions = entries.Count > 0;
+        CanRollBack = entries.Any(e => !e.IsRolledBack);
+        CanRollForward = entries.Any(e => e.IsRolledBack);
+    }
+
+    /// <summary>The transaction log writes go to, null without a project.</summary>
+    public TrionicTransactionLog? TransactionLog => Project?.TransactionLog;
+
+    /// <summary>A note for the transaction when RequestProjectNotes is set and a project is open ("Remark for change").</summary>
+    public async Task<string> AskTransactionNoteAsync()
+    {
+        if (Project == null || !Settings.RequestProjectNotes || AskText == null) return "";
+        return await AskText("Remark for change") ?? "";
+    }
+
+    /// <summary>SignalTransactionLogChanged: the logbook line for the newest entry and the roll buttons.</summary>
+    public void TransactionsAdded(int before)
+    {
+        if (Project is not { } project || Binary is not { } bin) return;
+        foreach (TransactionEntry e in project.TransactionLog.TransCollection.Cast<TransactionEntry>().Skip(before))
+            project.LogTransaction(bin, e);
+        UpdateRollControls();
+    }
+
+    public void Roll(TransactionEntry entry, bool back)
+    {
+        if (Project is not { } project || Binary is not { } bin) return;
+        try
+        {
+            project.Roll(bin, entry, back, Settings.AutoFixFooter);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
+        }
+        RefreshViewers(bin.FileName);
+        UpdateRollControls();
+    }
+
+    [RelayCommand]
+    private void RollBack()
+    {
+        if (Project?.UndoTarget is { } e) Roll(e, true);
+    }
+
+    [RelayCommand]
+    private void RollForward()
+    {
+        if (Project?.RedoTarget is { } e) Roll(e, false);
+    }
+
+    /// <summary>Viewers of the file without unsaved changes show the file again after it changed underneath them.</summary>
+    public void RefreshViewers(string file)
+    {
+        foreach (MapViewerViewModel v in Viewers.Where(v => v.FileName == file && !v.Map.Mutated)) v.ReadCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private async Task AddNote()
+    {
+        if (Project is not { } project || AskText == null) return;
+        if (await AskText("Remark for change") is { Length: > 0 } note) project.Logbook.WriteLogbookEntry(LogbookEntryType.Note, note);
+    }
+
+    /// <summary>Rebuild file: replace the project's binary, or return the rebuilt file for the view to save elsewhere.</summary>
+    public string? Rebuild(DateTime upTo, bool storeAsCurrent)
+    {
+        if (Project is not { } project) return null;
+        string rebuilt = project.Rebuild(upTo, Settings.AutoFixFooter);
+        if (!storeAsCurrent) return rebuilt;
+        File.Copy(rebuilt, project.BinaryFile, true);
+        File.Delete(rebuilt);
+        RefreshViewers(project.BinaryFile);
+        UpdateRollControls();
+        return null;
+    }
+
+    // closing the main window, not Shutdown(): the window asks about unsaved maps first
+    [RelayCommand]
     private static void Exit() =>
-        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Close();
 
     public FirmwareInfoViewModel? FirmwareInfo() =>
-        Binary is { } bin && File.Exists(bin.FileName) ? new FirmwareInfoViewModel(T7.FirmwareInfo.Read(bin)) : null;
+        Binary is { } bin && File.Exists(bin.FileName) ? new FirmwareInfoViewModel(T7.FirmwareInfo.Read(bin), Settings.WriteTimestampInBinary) : null;
+
+    /// <summary>The firmware information dialog's OK: patches the current bin and updates its checksum.</summary>
+    public void ApplyFirmware(FirmwareInfoViewModel firmware, Func<string, bool> askYesNo)
+    {
+        if (Binary is not { } bin) return;
+        try
+        {
+            int before = TransactionLog?.TransCollection.Count ?? 0;
+            T7.FirmwareInfo.Apply(bin, firmware.ToEdit(), Settings.AutoFixFooter, Settings.WriteTimestampInBinary, askYesNo, TransactionLog);
+            TransactionsAdded(before);
+            RefreshViewers(bin.FileName);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
+        }
+    }
 
     // ---- MRU: file name and path per entry, appended when new, no limit (T7Suite's HKCU\Software\T7SuitePro\MRUList) ----
 

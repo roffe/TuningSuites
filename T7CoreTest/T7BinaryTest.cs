@@ -63,6 +63,41 @@ namespace T7CoreTest
         }
 
         [TestMethod]
+        public void WriteSymbolKeepsChecksumAndLogs()
+        {
+            string dir = Directory.CreateTempSubdirectory("t7write").FullName;
+            try
+            {
+                string file = Path.Combine(dir, "5168646.bin");
+                File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file);
+                T7Binary bin = T7Binary.Open(file, 0, false);
+                CommonSuite.SymbolHelper sh = bin.Find("IgnNormCal.Map");
+                int address = bin.FileAddress(sh);
+                byte[] data = bin.ReadSymbol(sh);
+                data[0] = 0x01; data[1] = 0x2C; // 30.0 degrees
+                var log = new CommonSuite.TrionicTransactionLog();
+                log.OpenTransActionLog(dir, "proj");
+
+                bin.WriteSymbol(address, data, false, log, "test");
+
+                T7Binary reopened = T7Binary.Open(file, 0, false);
+                CollectionAssert.AreEqual(data, reopened.ReadSymbol(reopened.Find("IgnNormCal.Map")));
+                Assert.AreEqual(TrionicCANLib.Checksum.ChecksumResult.Ok, reopened.VerifyChecksum());
+                Assert.HasCount(1, log.TransCollection);
+                Assert.AreEqual(address, log.TransCollection[0].SymbolAddress);
+                Assert.AreEqual("test", log.TransCollection[0].Note);
+
+                // outside the file nothing is written, like savedatatobinary
+                bin.WriteData(0x80000, [1, 2]);
+                Assert.AreEqual(0x80000, new FileInfo(file).Length);
+            }
+            finally
+            {
+                Directory.Delete(dir, true);
+            }
+        }
+
+        [TestMethod]
         public void CorrectionFactorParsing()
         {
             Assert.AreEqual(1, T7Binary.CorrectionFactor("No.Such.Symbol", 0));

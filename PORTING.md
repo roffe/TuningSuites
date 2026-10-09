@@ -139,11 +139,14 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Not yet: the map viewer's math toolbar, save / read file, Edit x-axis / y-axis, and firmware editing go with chunk 4 (they write the bin); SRAM-only symbols need the ECU (chunk 5); docking/floating windows, view sizes, My Maps, the ribbon's quick map buttons (DynamicTuningMenu) and the symbol-list context menu come with the features behind them.
 
 ### 4. Offline tuning (replaces the old T7Suite for offline work)
-- [ ] Edit and save the bin; checksum verify and update; editable user description (saves `<bin>.xml`)
-- [ ] Map viewer: save / read file buttons, the math toolbar (add/multiply/divide/fill, select by value in the view combo), Edit x-axis / y-axis, close prompt for unsaved changes
-- [ ] Firmware information editing: footer fields, programming date, option patches, SID/emission patches, TIS footer fix (spec: `docs/T7SUITE-BEHAVIOUR.md`, "Firmware information")
+- [x] Edit and save the bin: `T7Binary.WriteSymbol` = savedatatobinary (only inside the file, a transaction entry when a project log is given) + checksum update; "Failed to write to binary. Is it read-only?" on errors
+- [x] Actions > Verify checksum (with AutoChecksum a mismatch asks to recalculate); editable user description, saved to `<bin>.xml` like T7Suite
+- [x] Map viewer: Save to file / Read from file, the math toolbar (operation, value "2", Execute), select by value (a box next to the view combo instead of typing into it), Edit x-axis / y-axis in the table's menu, "Data was mutated, do you want to save these changes in you binary?" (Yes/No/Cancel) when closing a changed viewer. Also asked per changed viewer when the app closes, which T7Suite didn't guard
+- [x] Firmware information editing (`FirmwareInfo.Apply`, in T7Suite's order and conditions): footer fields (kept at their length, which T7Suite's save choked on), programming stamp, open/closed SID, torque limiters, OBDII (European / rest of world question), second lambda, (extra) fast throttle, catalyst light-off, ethanol sensor ("No TCS"), SID start screen / adaption and EU0AF01C emission patches, TIS footer fix with `.binarybackup`; Import / Undo of VIN and immobilizer code from another bin
+- [x] Checksums: one `ChecksumT7.UpdateChecksum` pass computes FB before it writes the new FW checksum, which can lie inside the FB range, so a write that changes FW leaves FB stale (e.g. catalyst light-off on 5385356.bin). T7Suite never noticed because it updated after every single write. `T7Binary.UpdateChecksum` repeats until the file verifies (or throws); every write goes through it. The root cause is in TrionicCANLib's `ChecksumT7.updateChecksum`
 - [ ] My Maps (mymaps.xml) and the ribbon's quick map buttons (DynamicTuningMenu)
-- [ ] Projects, transaction log, rollback and roll-forward, backups
+- [x] Projects (`T7Core/T7Project.cs`, Project menu): create (prefilled from the open bin, binary copied in), open (list with backups / transactions / modified / version), close, edit (rename moves the folder), backup on open, transaction log window (notes editable, roll back / forward per entry), Roll back/undo and Roll forward/redo, rebuild file (up to a date, into the project or saved elsewhere), add note, logbook window, produce latest binary; purge offered above 2000 entries; "Remark for change" with RequestProjectNotes; opening a plain file closes the project; LastOpenedType / Lastprojectname at startup
+- Deliberate differences: rollback and rebuild leave a verified checksum (rebuild didn't update it, rollback asked); a closed project's transaction log no longer collects later plain-file writes; viewers of the file without unsaved changes refresh after a rollback / rebuild / firmware change; create reopens by the folder name (T7Suite used the typed name and missed when characters were dropped); same-second backups are numbered instead of throwing
 - [ ] Compare against a file: list of differing symbols, difference map, original/compare overlay in Surface3D
 - [ ] Symbol import from XML, CSV and AS2; mymaps
 - [ ] Settings view
@@ -199,6 +202,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 4 in progress: map saving with the viewer toolbar, verify checksum, user descriptions, firmware editing, projects and the transaction log; checksum updates now repeat until the file verifies.
 - 2026-10-09: Chunk 3 done: T7Binary and FirmwareInfo in T7Core, the main window with symbol list, map viewer tabs (MapViewer composite with sync) and firmware information, T7AppTest driving the app headless.
 - 2026-10-09: Chunk 2 done: MapControls (MapData, MapOps, MapGrid, Surface3D, Graph2D), MapControlsDemo, MapControlsTest with headless Skia renders. Behaviour follows T7Suite, txlogger only for rendering.
 - 2026-10-09: Chunk 1 done: T7Core with the lifted logic and JSON settings, T7CoreTest with the golden baseline over 256 bins (28 tests, ~22 s). frmMain extraction moved into chunks 3-7.

@@ -47,6 +47,9 @@ namespace T7
             return ident[0] == 0xFF && ident[1] == 0xFF && ident[2] == 0xEF && ident[3] == 0xFC;
         }
 
+        /// <summary>A file to read and write bytes of, without parsing its symbols (rebuild, transfer targets).</summary>
+        public static T7Binary OpenRaw(string fileName) => new(fileName, new SymbolCollection(), "", 0, 0);
+
         /// <summary>frmMain.TryToOpenFileUsingClass for the working file.</summary>
         public static T7Binary Open(string fileName, int language, bool autoFixFooter)
         {
@@ -122,14 +125,54 @@ namespace T7
 
         public byte[] Read(int address, int length) => Trionic7File.readdatafromfile(FileName, address, length);
 
-        /// <summary>A map's content as StartTableViewer read it, null if it only lives in SRAM.</summary>
-        public byte[] ReadSymbol(SymbolHelper sh)
+        /// <summary>Where a map's data sits in the file (StartTableViewer's Map_address), -1 if it only lives in SRAM.</summary>
+        public int FileAddress(SymbolHelper sh)
         {
             int address = (int)sh.Flash_start_address;
-            if (address == 0) return null;
-            if (address < 0x0F00000) return Read(address, sh.Length);
-            if (IsSoftwareOpen) return Read(address - OpenFileOffset, sh.Length);
-            return null;
+            if (address == 0) return -1;
+            if (address < 0x0F00000) return address;
+            return IsSoftwareOpen ? address - OpenFileOffset : -1;
+        }
+
+        /// <summary>A map's content as StartTableViewer read it, null if it only lives in SRAM.</summary>
+        public byte[] ReadSymbol(SymbolHelper sh) => FileAddress(sh) is var a and >= 0 ? Read(a, sh.Length) : null;
+
+        /// <summary>
+        /// tabdet_onSymbolSave: savedatatobinary (only inside the 0x80000 file, a transaction entry when a project log is
+        /// given) and then the checksum update. Throws when the file can't be written (read-only).
+        /// </summary>
+        public void WriteSymbol(int address, byte[] data, bool autoFixFooter, TrionicTransactionLog log = null, string note = "")
+        {
+            WriteData(address, data, log, note);
+            UpdateChecksum(autoFixFooter);
+        }
+
+        /// <summary>
+        /// ChecksumT7.UpdateChecksum until the file verifies. One pass computes the FB checksum before it writes the new FW
+        /// checksum, which can lie inside the FB range, so a write that changes the FW checksum leaves FB stale; T7Suite never
+        /// noticed because it updated after every single write. Throws if it still doesn't verify.
+        /// </summary>
+        public void UpdateChecksum(bool autoFixFooter)
+        {
+            for (int pass = 0; pass < 3; pass++)
+            {
+                ChecksumT7.UpdateChecksum(FileName, autoFixFooter);
+                if (ChecksumT7.VerifyChecksum(FileName, false, autoFixFooter, (_, _, _) => false) == ChecksumResult.Ok) return;
+            }
+            throw new InvalidOperationException($"The checksum of {Path.GetFileName(FileName)} does not verify after updating it.");
+        }
+
+        /// <summary>savedatatobinary without the checksum update.</summary>
+        public void WriteData(int address, byte[] data, TrionicTransactionLog log = null, string note = "")
+        {
+            if (address <= 0 || address >= m_fileSize) return;
+            byte[] before = Read(address, data.Length);
+            using (var fs = new FileStream(FileName, FileMode.Open, FileAccess.Write))
+            {
+                fs.Position = address;
+                fs.Write(data, 0, data.Length);
+            }
+            log?.AddToTransactionLog(new TransactionEntry(DateTime.Now, address, data.Length, before, data, 0, 0, note));
         }
 
         private byte[] ReadAxis(int address, int length) =>
@@ -325,6 +368,7 @@ namespace T7
             return length == 0 ? null : Read((int)SymbolAddress(table), length);
         }
 
-        public ChecksumResult VerifyChecksum() => ChecksumT7.VerifyChecksum(FileName, false, false, null);
+        // never corrects; a null "should I update?" callback would crash the library on a mismatch
+        public ChecksumResult VerifyChecksum() => ChecksumT7.VerifyChecksum(FileName, false, false, (_, _, _) => false);
     }
 }
