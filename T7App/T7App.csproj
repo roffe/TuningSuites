@@ -28,6 +28,12 @@
     <!-- Help → User manual / Trionic 7 documentation -->
     <None Include="..\T7_manual.pdf" Link="T7_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Trionic 7.pdf" Link="Trionic 7.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the stock bins and their symbol files that T7Extras installed (compare to original file, lookup partnumber); only
+         published, a build doesn't copy the 130 MB -->
+    <None Include="..\T7Binaries\*" Link="Binaries\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <!-- Kvaser's CANlib for TrionicCANLib on Windows, as the flasher ships it -->
+    <None Include="$(TrionicDir)\Libs\canlib32.dll" Link="canlib32.dll" CopyToOutputDirectory="PreserveNewest"
+          Condition="$(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')" />
   </ItemGroup>
 
   <ItemGroup>

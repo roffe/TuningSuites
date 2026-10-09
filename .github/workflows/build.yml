@@ -2,19 +2,24 @@ name: Build
 on:
   push:
     branches: [net10]
+    tags:
+    - 'T7suite_v*' # a T7Suite release, e.g. T7suite_v2.0.0; T8suite_v* and T5suite_v* tags belong to the other suites
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
@@ -22,12 +27,11 @@ jobs:
     steps:
     - uses: actions/checkout@v7
       with:
-        path: TuningSuites
-        fetch-depth: 0 # history and tags, each suite's version comes from its nearest <suite>/v* tag (Directory.Build.props)
+        fetch-depth: 0 # history and tags, each suite's version comes from its nearest <Suite>_v* tag (Directory.Build.props)
 
     # TrionicCANLib from the Trionic submodule; only that one, T7Suite/CommonSuite's git:// url no longer resolves
     - name: Trionic submodule
-      run: git -C TuningSuites submodule update --init Trionic
+      run: git submodule update --init Trionic
 
     - uses: actions/setup-dotnet@v6
       with:
@@ -35,16 +39,139 @@ jobs:
 
     # no -r: a solution can't be built for one RID, T7App picks x86 on Windows by itself
     - name: Build
-      run: dotnet build TuningSuites/TuningSuites.slnx -c Release
+      run: dotnet build TuningSuites.slnx -c Release
 
-    # golden parse of every bin in T7Binaries, settings, crypto, S19, transaction log
+    # golden parse of every bin in T7Binaries, settings, crypto, S19, transaction log, update check
     - name: Test
-      run: dotnet test TuningSuites/T7CoreTest -c Release --no-build
+      run: dotnet test T7CoreTest -c Release --no-build
 
     # map controls: model and ops, keyboard/mouse and Skia renders in a headless window
     - name: Test map controls
-      run: dotnet test TuningSuites/MapControlsTest -c Release --no-build
+      run: dotnet test MapControlsTest -c Release --no-build
 
     # the app headless on a stock bin: open, symbol list, map viewer, firmware information
     - name: Test app
-      run: dotnet test TuningSuites/T7AppTest -c Release --no-build
+      run: dotnet test T7AppTest -c Release --no-build
+
+  # T7Suite for each platform, packaged as roffe/Trionic packages the flasher
+  package:
+    needs: test
+    if: github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        include:
+        - { rid: win-x86,     os: windows-latest }
+        - { rid: linux-x64,   os: ubuntu-latest }
+        - { rid: linux-arm64, os: ubuntu-latest }
+        - { rid: osx-arm64,   os: macos-latest }
+        - { rid: osx-x64,     os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    - name: Trionic submodule
+      run: git submodule update --init Trionic
+
+    - uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.x
+
+    # also puts the stock bins in Binaries (T7App.csproj)
+    - name: Publish
+      run: dotnet publish T7App/T7App.csproj -c Release -r ${{ matrix.rid }} --self-contained -o out/T7Suite
+
+    # LibUsbDotNet needs native libusb-1.0 for the CombiAdapter, its NuGet ships none.
+    # ponytail: MinGW32 build because it only links msvcrt.dll, the VS builds need the VC++ 2015+ runtime
+    - name: Add libusb-1.0.dll
+      if: runner.os == 'Windows'
+      run: |
+        curl -fsSLo libusb.7z https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.7z
+        echo "7fb1dfec805b97983763d7d0ae244320da12add1003d4249c96cc4d586398c79  libusb.7z" | sha256sum -c
+        7z x -y -olibusb libusb.7z > /dev/null
+        cp libusb/MinGW32/dll/libusb-1.0.dll out/T7Suite/
+
+    # T7Suite.msi, and zipped as upstream's releases had it (T7Suite.zip)
+    - name: Build Setup
+      if: runner.os == 'Windows'
+      run: |
+        dotnet build SetupT7/SetupT7.wixproj -c Release -p:Platform=x86 "-p:PublishDir=$GITHUB_WORKSPACE/out/T7Suite"
+        mkdir dist
+        cp SetupT7/bin/x86/Release/T7Suite.msi dist/
+        cd dist && 7z a T7Suite.zip T7Suite.msi
+
+    - name: Package Linux
+      if: runner.os == 'Linux'
+      run: |
+        cp packaging/linux/* out/T7Suite/
+        mkdir dist
+        tar -czf dist/T7Suite-${{ matrix.rid }}.tar.gz -C out T7Suite
+
+    # ponytail: plain unsigned folder, no .app bundle or notarization (and so no .bin association)
+    - name: Package macOS
+      if: runner.os == 'macOS'
+      run: |
+        mkdir dist
+        ditto -c -k --keepParent out/T7Suite dist/T7Suite-${{ matrix.rid }}.zip
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ matrix.rid }}
+        path: dist/*
+        if-no-files-found: error
+
+  release:
+    needs: package
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    - uses: actions/download-artifact@v8
+      with:
+        path: dist
+        merge-multiple: true
+
+    - uses: actions/setup-dotnet@v6
+      if: github.ref == 'refs/heads/net10'
+      with:
+        dotnet-version: 10.x
+
+    # the same VersionFromGit target the build ran, e.g. 2.0.0-bfecafebc
+    - name: Version
+      id: version
+      if: github.ref == 'refs/heads/net10'
+      env:
+        DOTNET_NOLOGO: true
+      run: echo "version=$(dotnet msbuild T7App/T7App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
+
+    # ponytail: rolling tag, one pre-release that always points at the latest net10 build; the update check skips it
+    - name: Move nightly tag
+      if: github.ref == 'refs/heads/net10'
+      run: |
+        git tag -f T7suite_nightly
+        git push -f origin T7suite_nightly
+
+    - name: Nightly release
+      if: github.ref == 'refs/heads/net10'
+      uses: softprops/action-gh-release@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: T7suite_nightly
+        name: T7Suite nightly build ${{ steps.version.outputs.version }}
+        body: Automated build ${{ steps.version.outputs.version }} of ${{ github.sha }}
+        prerelease: true
+        make_latest: "false"
+        files: dist/*
+
+    # the update check finds it by its T7suite_v tag, not by GitHub's latest marker (that's whichever suite released last)
+    - name: Release
+      if: github.ref_type == 'tag'
+      uses: softprops/action-gh-release@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        make_latest: "true"
+        files: dist/*

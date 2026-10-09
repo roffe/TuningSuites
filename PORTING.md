@@ -44,6 +44,7 @@ MapControls/               Avalonia controls: MapGrid, Surface3D, Graph2D, MapDa
 MapControlsDemo/           standalone app for working on the controls with fake data
 T7App/                     Avalonia MVVM app, AssemblyName T7Suite
 SetupT7/                   WiX MSI (chunk 8)
+packaging/linux/           udev rule, desktop entry installer and icon for the tar.gz (chunk 8)
 ```
 
 ## Dependency replacements
@@ -199,10 +200,12 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] From frmMain: SID, limiter, torque/power/airmass math, tuning packs, matrix from log (TuneToStage left out)
 
 ### 8. Release
-- [ ] WiX MSI, Linux tar.gz, macOS zip, nightly and tagged releases
-- [ ] `.bin` file association (per user, no elevation)
-- [ ] Updater
-- [ ] README with an OS × adapter support table
+- [x] Packages from `.github/workflows/build.yml` as the flasher's: self-contained win-x86 / linux-x64 / linux-arm64 / osx-arm64 / osx-x64 publishes; the WiX 6 MSI (`SetupT7/`, plus T7Suite.zip with it as upstream's releases had) with libusb-1.0.dll, the Linux tar.gz with the CombiAdapter udev rule and `install-desktop.sh`, the macOS zip (plain unsigned folder). Pushes to `net10` update the `T7suite_nightly` pre-release, a `T7suite_v*` tag makes a release. Every package ships the stock bins in `Binaries` (T7Extras' job; ~47 MB of the ~106 MB), canlib32.dll on Windows and T7Suite's NLog.config. Not run on GitHub yet; WiX only runs on Windows, so the MSI is first built there
+- [x] The MSI replaces the old T7Suite: its upgrade code and `Program Files (x86)\MattiasC\T7Suite`, per machine as it was (the VC++ 2010 merge module needs it), the merge module from the flasher's setup in the Trionic submodule. A build before the first `T7suite_v` tag is 0.0.0 and won't install over the old 0.1.59
+- [x] `.bin` association as an Open with entry, not the default program: OpenWithProgids in the MSI (per machine, like the install), `install-desktop.sh` on Linux (per user, `application/octet-stream`); none on macOS without an .app bundle
+- [x] Updater (`T7Core/UpdateCheck.cs`): on startup and Help → Check for updates, the newest non-pre-release `T7suite_v` release of roffe/TuningSuites (the release list, GitHub's latest is whichever suite went last), "No new version(s) found..." and the like in the status bar's update field, T7Suite's "found some new toys" dialog: Show change log opens the release page, OK downloads the MSI on Windows / opens the release page elsewhere (T7Suite ran the MSI and quit). Builds without a tag skip the startup check. Help → Release notes opens the releases page
+- [x] Logs: T7Suite's NLog.config and files (`<AppData>/MattiasC/T7`), every CAN frame only with Settings → Enable CAN logging (T7Suite's option, which its config ignored)
+- [x] README with an OS × adapter support table, installation, updates, building, versioning
 
 ## After T7
 
@@ -219,6 +222,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 8 implemented: packages and releases per tag (`T7suite_v`, upstream's scheme; `t7suite/` dropped), the MSI replacing the old T7Suite, Open with for `.bin`, the GitHub release update check, logs, README. Waiting for a first CI run and the first tag.
 - 2026-10-09: The symbol list pinned to the side (Dock's auto hide) gives its width to the inner windows; the empty pane kept it as an invisible wall. Settings → Hide symbol window (T7Suite's option, imported) starts with the list pinned and slides it back in when a map opens.
 - 2026-10-09: The light skin follows T7Suite's DevExpress one: grey workspace, white inner windows with blue titles, grey buttons, white map table headers framed in light steel blue, the symbol list's selected row in MediumBlue on light blue whether focused or not. Dark is unchanged. Not matched: DevExpress's thicker window frame and denser spacing, the white gutters between map cells, Fluent scrollbars / check boxes / tab strips.
 - 2026-10-09: The 3D view draws with txlogger's meshgrid shader ported to SkSL on GPU canvases; the triangle renderer stays for CPU canvases, single columns and grids too large for the shader's loop.
