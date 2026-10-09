@@ -27,9 +27,11 @@ internal sealed class SurfaceAxes(Surface3D mesh)
     private const double CornerHysteresis = 24.0;
     private const double CellSize = 32;
 
-    private static readonly IBrush XBrush = new ImmutableSolidColorBrush(Color.FromRgb(255, 90, 90));
-    private static readonly IBrush YBrush = new ImmutableSolidColorBrush(Color.FromRgb(90, 220, 90));
-    private static readonly IBrush ZBrush = new ImmutableSolidColorBrush(Color.FromRgb(120, 170, 255));
+    // light on the dark background, deeper shades of the same hues on the light one
+    private static readonly (IBrush x, IBrush y, IBrush z) DarkBrushes = (Solid(255, 90, 90), Solid(90, 220, 90), Solid(120, 170, 255));
+    private static readonly (IBrush x, IBrush y, IBrush z) LightBrushes = (Solid(200, 30, 30), Solid(20, 130, 20), Solid(30, 80, 210));
+
+    private static IBrush Solid(byte r, byte g, byte b) => new ImmutableSolidColorBrush(Color.FromRgb(r, g, b));
 
     private int m_frontCorner = -1, m_zCorner = -1;
 
@@ -102,13 +104,14 @@ internal sealed class SurfaceAxes(Surface3D mesh)
         }
 
         int cols = mesh.Cols, rows = mesh.Rows;
+        var (xBrush, yBrush, zBrush) = mesh.IsDark ? DarkBrushes : LightBrushes;
         string[] xLabels = Labels(mesh.XData, cols, mesh.XPrec);
-        Axis(context, inside, XBrush, liftX, false, new(0, front.Y, 0), new(xMax, front.Y, 0), mesh.XLabel, xLabels,
+        Axis(context, inside, xBrush, liftX, false, new(0, front.Y, 0), new(xMax, front.Y, 0), mesh.XLabel, xLabels,
             k => new((k + 0.5) * CellSize, front.Y, 0));
 
         // data row 0 sits at the high-Y (far) end, so row k maps to Oy = (rows+0.5-k)*cell
         string[] yLabels = Labels(mesh.YData, rows, mesh.YPrec);
-        Axis(context, inside, YBrush, liftY, false, new(front.X, yMin, 0), new(front.X, yMax, 0), mesh.YLabel, yLabels,
+        Axis(context, inside, yBrush, liftY, false, new(front.X, yMin, 0), new(front.X, yMax, 0), mesh.YLabel, yLabels,
             k => new(front.X, (rows + 0.5 - k) * CellSize, 0));
 
         string[] zLabels = [];
@@ -118,7 +121,7 @@ internal sealed class SurfaceAxes(Surface3D mesh)
             for (int k = 0; k <= ZDivisions; k++)
                 zLabels[k] = (mesh.ZMin + (double)k / ZDivisions * mesh.ZRange).ToString("F" + mesh.ZPrec, CultureInfo.InvariantCulture);
         }
-        Axis(context, inside, ZBrush, 0, true, new(zCorner.X, zCorner.Y, 0), new(zCorner.X, zCorner.Y, zTop), mesh.ZLabel, zLabels,
+        Axis(context, inside, zBrush, 0, true, new(zCorner.X, zCorner.Y, 0), new(zCorner.X, zCorner.Y, zTop), mesh.ZLabel, zLabels,
             k => new(zCorner.X, zCorner.Y, (double)k / ZDivisions * zTop));
     }
 

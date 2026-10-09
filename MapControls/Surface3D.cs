@@ -9,6 +9,7 @@ using Avalonia.Media.Immutable;
 using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
+using Avalonia.Styling;
 using SkiaSharp;
 
 namespace MapControls;
@@ -23,14 +24,23 @@ public enum SurfaceRenderMode { SolidWireframe, Solid, Wireframe }
 /// </summary>
 public class Surface3D : Control
 {
-    public static readonly StyledProperty<IBrush?> BackgroundProperty =
-        AvaloniaProperty.Register<Surface3D, IBrush?>(nameof(Background), new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20)));
+    public static readonly StyledProperty<IBrush?> BackgroundProperty = AvaloniaProperty.Register<Surface3D, IBrush?>(nameof(Background));
 
+    /// <summary>Unset, the background follows the theme: dark grey in the dark theme, white in the light one.</summary>
     public IBrush? Background
     {
         get => GetValue(BackgroundProperty);
         set => SetValue(BackgroundProperty, value);
     }
+
+    private static readonly IBrush DarkBackground = new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
+
+    static Surface3D()
+    {
+        AffectsRender<Surface3D>(BackgroundProperty, ThemeVariantScope.ActualThemeVariantProperty);
+    }
+
+    internal bool IsDark => ActualThemeVariant == ThemeVariant.Dark;
 
     private const double CellSize = 32;
     private const double RotationScale = 0.6, RollScale = 0.4, PanScale = 0.8;
@@ -464,7 +474,7 @@ public class Surface3D : Control
     public override void Render(DrawingContext context)
     {
         var bounds = new Rect(Bounds.Size);
-        if (Background != null) context.FillRectangle(Background, bounds);
+        context.FillRectangle(Background ?? (IsDark ? DarkBackground : Brushes.White), bounds);
         if (m_size.Width <= 0 || m_size.Height <= 0) return;
 
         context.Custom(new SurfaceDrawOperation(bounds, BuildCells()));

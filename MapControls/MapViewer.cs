@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.VisualTree;
 
 namespace MapControls;
 
@@ -96,6 +97,7 @@ public class MapViewer : UserControl
     private readonly Button[] m_fileButtons;
     private readonly Button m_close = new() { Content = "Close", IsVisible = false };
     private bool m_syncing;
+    private Size m_arranged = Size.Infinity, m_available, m_measuredAt;
 
     public MapViewer()
     {
@@ -127,10 +129,11 @@ public class MapViewer : UserControl
             e.Handled = true;
         };
         m_editTools.Children.AddRange([m_operation, m_operand, execute]);
-        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(4) };
+        // both bars wrap in a narrow viewer instead of running off its edge
+        var toolbar = new WrapPanel { ItemSpacing = 8, LineSpacing = 4, Margin = new Thickness(4) };
         toolbar.Children.AddRange([m_viewType, m_editTools, m_selectValues]);
         // the ECU / file / close buttons sit under the graphs and stay visible whatever the viewer's size
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(4), HorizontalAlignment = HorizontalAlignment.Right };
+        var buttons = new WrapPanel { ItemSpacing = 8, LineSpacing = 4, Margin = new Thickness(4), ItemsAlignment = WrapPanelItemsAlignment.End };
         buttons.Children.AddRange([m_readEcu, m_writeEcu, read, save, m_close]);
 
         m_editX.Click += (_, _) => EditAxisCommand?.Execute(true);
@@ -166,6 +169,36 @@ public class MapViewer : UserControl
         root.Children.Add(m_split);
         Content = root;
     }
+
+    // Dock's MDI panel measures every inner window at the whole workspace's size and then arranges it at the window's own.
+    // Measured that wide, the split Grid kept the table's natural width (and height) as the minimum of its star column (rows)
+    // and laid the graph tabs out wider than the viewer: the mesh sat off centre with its scales clipped and the table lost
+    // columns. Measure at the size we were last arranged at, and measure again when that changes.
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        m_available = availableSize;
+        Size cap = Cap(availableSize);
+        if (cap != m_measuredAt)
+        {
+            // a control measured at a new size but arranged at the same rect as before skips its arrange and keeps the
+            // old layout (the split Grid would keep its too wide column)
+            foreach (Layoutable l in this.GetVisualDescendants().OfType<Layoutable>()) l.InvalidateArrange();
+            m_measuredAt = cap;
+        }
+        return base.MeasureOverride(cap);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        m_arranged = finalSize;
+        // only finite constraints are capped, an unconstrained host (a StackPanel) arranges at what we asked for anyway
+        if (Cap(m_available) != m_measuredAt) InvalidateMeasure();
+        return base.ArrangeOverride(finalSize);
+    }
+
+    private Size Cap(Size available) => new(
+        double.IsInfinity(available.Width) ? available.Width : Math.Min(available.Width, m_arranged.Width),
+        double.IsInfinity(available.Height) ? available.Height : Math.Min(available.Height, m_arranged.Height));
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
