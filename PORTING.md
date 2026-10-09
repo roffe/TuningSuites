@@ -24,7 +24,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | UI pattern | MVVM with CommunityToolkit.Mvvm. The suites are too complex for code-behind |
 | Copy/paste | Keep T7Suite's format byte for byte: `<viewtype digit><col>:<row>:<value>:~…` |
 | Repo | Work happens on branch `net10` in TuningSuites |
-| TrionicCANLib | ProjectReference to the local sibling checkout `../Trionic/TrionicCANLib/TrionicCANLib.csproj`, set once in `Directory.Build.props` as `$(TrionicDir)` and overridable with `-p:TrionicDir=…`. Not everything in roffe/Trionic is committed yet. CI checks out roffe/Trionic next to this repo; switch to a submodule once Trionic `net10` is pushed |
+| TrionicCANLib | ProjectReference to `Trionic/TrionicCANLib/TrionicCANLib.csproj` in the `Trionic` submodule (roffe/Trionic), set once in `Directory.Build.props` as `$(TrionicDir)` and overridable with `-p:TrionicDir=…` (e.g. `../Trionic` while working on both) |
 | WidebandSupport | Vendored into `WidebandSupport/` (from f0c0e87) with an SDK-style net10 csproj and the System.IO.Ports package. No licence file upstream, but every source file carries George Daswani's Apache License 2.0 header |
 | Settings | JSON at `<AppData>/MattiasC/T7SuitePro/settings.json`, plus a one-time import from `HKCU\Software\MattiasC\T7SuitePro` (and its MRU key `HKCU\Software\T7SuitePro\MRUList`) on Windows, as the flasher does |
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`, one tag prefix per suite (`t7suite/v3.0.0`, later `t8suite/`, `t5suite/`) set by the app project's `VersionTagPrefix`, so a tag versions one suite; libraries and tests build as `0.0.0-<sha>`. One repo for all suites (revisit splitting after the T8 port, then with NuGet packages rather than submodules); self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
@@ -36,7 +36,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 
 ```
 TuningSuites.slnx          new solution (the old *.sln files stay for reference)
-Directory.Build.props      from the flasher, plus $(TrionicDir) = ../Trionic
+Directory.Build.props      from the flasher, plus $(TrionicDir) = Trionic (submodule)
 WidebandSupport/           vendored, net10
 T7Core/                    net10 class library, no UI: file, symbols, axes, checksum glue, projects, transaction log, realtime engine, tuning logic
 T7CoreTest/                MSTest, golden tests over T7Binaries/
@@ -85,7 +85,7 @@ SetupT7/                   WiX MSI (chunk 8)
 - [x] `TuningSuites.slnx`, `Directory.Build.props` (no `.gitignore` changes needed, `[Bb]in/` and `[Oo]bj/` were already ignored)
 - [x] ProjectReference to `$(TrionicDir)/TrionicCANLib`
 - [x] Empty `T7App` window (MVVM: `MainWindowViewModel`, File > Exit, status bar), runs on Linux. Windows not tried yet
-- [x] CI: `.github/workflows/build.yml` builds the solution and runs T7CoreTest on ubuntu and windows, with roffe/Trionic `net10` checked out side by side. Not run on GitHub yet
+- [x] CI: `.github/workflows/build.yml` builds the solution and runs T7CoreTest on ubuntu and windows, with the Trionic submodule. Not run on GitHub yet
 - [ ] Tag the first T7Suite release (`t7suite/vX.Y.Z`; the old T7Suite was 2.5.9 in the repo). Until then T7App warns about the missing tag and builds as `0.0.0-<sha>`
 
 ### 1. T7Core (can run in parallel with chunk 2)

@@ -15,11 +15,11 @@
     which the updater and the MSI use. -p:Version=1.2.3 or -p:VersionFromGit=false skips git.
   -->
   <!--
-    TrionicCANLib comes from a local checkout of roffe/Trionic next to this repo (not everything there is committed yet).
-    Override with -p:TrionicDir=/path/to/Trionic. CI checks it out side by side.
+    TrionicCANLib comes from roffe/Trionic, the Trionic submodule (after cloning: git submodule init Trionic, git submodule update).
+    -p:TrionicDir=/path/to/Trionic builds against another checkout, e.g. ../Trionic while working on both.
   -->
   <PropertyGroup>
-    <TrionicDir Condition="'$(TrionicDir)' == ''">$(MSBuildThisFileDirectory)..\Trionic</TrionicDir>
+    <TrionicDir Condition="'$(TrionicDir)' == ''">$(MSBuildThisFileDirectory)Trionic</TrionicDir>
   </PropertyGroup>
 
   <PropertyGroup>

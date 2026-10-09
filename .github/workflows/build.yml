@@ -25,13 +25,9 @@ jobs:
         path: TuningSuites
         fetch-depth: 0 # history and tags, each suite's version comes from its nearest <suite>/v* tag (Directory.Build.props)
 
-    # TrionicCANLib is referenced from a sibling checkout (Directory.Build.props TrionicDir)
-    # ponytail: tracks the Trionic net10 branch, pin a sha or move to a submodule once it is merged
-    - uses: actions/checkout@v7
-      with:
-        repository: roffe/Trionic
-        ref: net10
-        path: Trionic
+    # TrionicCANLib from the Trionic submodule; only that one, T7Suite/CommonSuite's git:// url no longer resolves
+    - name: Trionic submodule
+      run: git -C TuningSuites submodule update --init Trionic
 
     - uses: actions/setup-dotnet@v6
       with:
