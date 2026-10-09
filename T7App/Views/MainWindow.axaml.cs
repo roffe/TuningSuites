@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         InitWorkspace();
+        using (var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite)) ApplySkin(settings.GetValue(SkinKey) as string);
     }
 
     private MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;
@@ -149,6 +150,54 @@ public partial class MainWindow : Window
         {
             await Dialogs.Info(this, "Failed to write to binary. Is it read-only? Details: " + ex.Message);
         }
+    }
+
+    // ---- skin and help ----
+
+    private const string SkinKey = "Skin";
+
+    /// <summary>Skin: light, dark or the system's theme, remembered (T7Suite's DevExpress skins).</summary>
+    private void OnSkin(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string skin }) return;
+        ApplySkin(skin);
+        using var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite);
+        settings.SetValue(SkinKey, skin);
+    }
+
+    private static void ApplySkin(string? skin)
+    {
+        if (Application.Current is not { } app) return;
+        app.RequestedThemeVariant = skin switch
+        {
+            "Light" => Avalonia.Styling.ThemeVariant.Light,
+            "Dark" => Avalonia.Styling.ThemeVariant.Dark,
+            _ => Avalonia.Styling.ThemeVariant.Default,
+        };
+    }
+
+    /// <summary>Help: the manuals next to the program, opened with the system's viewer.</summary>
+    private async void OnHelpFile(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string name }) return;
+        string file = System.IO.Path.Combine(System.AppContext.BaseDirectory, name);
+        try
+        {
+            if (!System.IO.File.Exists(file)) throw new System.IO.FileNotFoundException();
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = true });
+        }
+        catch (System.Exception)
+        {
+            await Dialogs.Info(this, $"{name} could not be found or opened!");
+        }
+    }
+
+    private async void OnAbout(object? sender, RoutedEventArgs e)
+    {
+        string version = System.Reflection.Assembly.GetEntryAssembly()?
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "";
+        await Dialogs.Info(this, $"T7Suite {version}\n\nTrionic 7 tuning suite by Dilemma (Mattias Claesson), ported to .NET 10.", "About T7Suite");
     }
 
     // ---- logs ----

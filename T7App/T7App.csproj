@@ -21,6 +21,9 @@
   <ItemGroup>
     <AvaloniaResource Include="T7Suite.ico" />
     <AvaloniaResource Include="Assets\Compressormaps\*" />
+    <!-- Help → User manual / Trionic 7 documentation -->
+    <None Include="..\T7_manual.pdf" Link="T7_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Trionic 7.pdf" Link="Trionic 7.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

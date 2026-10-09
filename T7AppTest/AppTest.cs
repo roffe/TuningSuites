@@ -474,6 +474,11 @@ namespace T7AppTest
                 vm.OpenSymbolByName("IgnNormCal.Map");
                 vm.OpenSymbolByName("BFuelCal.Map");
                 window.CaptureRenderedFrame();
+                // T7Suite's ribbon order, with ECU where its Programmer page was
+                var menu = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Menu>().First();
+                CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
+                    menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
+
                 // dark theme: the coloured symbol names keep black text
                 Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
                 vm.SearchText = "MAFCal";

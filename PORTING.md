@@ -216,6 +216,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Menus in T7Suite's ribbon order: File (with Project), Actions (with firmware information), Tuning, My Maps, Realtime, ECU (in Programmer's place), Skin (light / dark / system and window layout), Help (manuals, About).
 - 2026-10-09: Chunk 7: airmass result viewer with the dyno graph and compressor map; TuneToStage / tuning wizard found unreachable in T7Suite.
 - 2026-10-09: Chunk 7: docking workspace (MDI inner windows / tabs, dockable symbol list).
 - 2026-10-09: Chunk 6 bench tested (realtime values OK); sounds and Combi ADC moved to later. Chunk 7 started.
