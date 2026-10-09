@@ -24,6 +24,7 @@ public class MapViewer : UserControl
     public static readonly StyledProperty<OpenLoopMark> OpenLoopMarkProperty = AvaloniaProperty.Register<MapViewer, OpenLoopMark>(nameof(OpenLoopMark));
     public static readonly StyledProperty<bool> IsReadOnlyProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(IsReadOnly));
     public static readonly StyledProperty<bool> GraphVisibleProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(GraphVisible), true);
+    public static readonly StyledProperty<PixelPoint?> LiveCellProperty = AvaloniaProperty.Register<MapViewer, PixelPoint?>(nameof(LiveCell));
     public static readonly StyledProperty<string?> SyncGroupProperty = AvaloniaProperty.Register<MapViewer, string?>(nameof(SyncGroup));
 
     public MapData? Map { get => GetValue(MapProperty); set => SetValue(MapProperty, value); }
@@ -67,6 +68,9 @@ public class MapViewer : UserControl
 
     /// <summary>"Edit x-axis" (parameter true) or "Edit y-axis" (false) from the table's context menu.</summary>
     public ICommand? EditAxisCommand { get => GetValue(EditAxisCommandProperty); set => SetValue(EditAxisCommandProperty, value); }
+
+    /// <summary>The cell the engine is in while logging (X column, Y data row), highlighted yellow; null clears it.</summary>
+    public PixelPoint? LiveCell { get => GetValue(LiveCellProperty); set => SetValue(LiveCellProperty, value); }
 
     /// <summary>Selection or 3D camera changed by the user, to sync other viewers of the same map.</summary>
     public event EventHandler? SelectionChanged;
@@ -155,7 +159,12 @@ public class MapViewer : UserControl
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == MapProperty)
+        if (change.Property == LiveCellProperty)
+        {
+            PixelPoint? cell = LiveCell;
+            Grid.SetHighlight(cell?.X ?? -1, cell?.Y ?? -1);
+        }
+        else if (change.Property == MapProperty)
         {
             if (change.OldValue is MapData old) old.Changed -= OnMapChanged;
             if (change.NewValue is MapData map)

@@ -110,6 +110,11 @@ public partial class MainWindow : Window
             await Vm.ReadMapFromEcuAsync(viewer);
     }
 
+    private void OnAddToRealtime(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.SelectedSymbol is { } sh) Vm.AddToRealtime(sh);
+    }
+
     private void OnReadFromSramFile(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is { } sh) Vm.OpenFromSramFile(sh);

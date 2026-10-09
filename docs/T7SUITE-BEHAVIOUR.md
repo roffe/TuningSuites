@@ -677,3 +677,107 @@ All of this ran on the GUI thread in T7Suite, except flash read/write and the ke
 - ReadFlash / WriteFlash return at once. A 1 s timer reports progress and the final onCanInfo.
 - Every other call blocks its caller.
 - The KWP handler's mutex is thread-affine: a session has to stay on one thread.
+
+## Realtime engine and dashboard
+
+**Loop.** A WinForms timer (1 ms) on the UI thread; each tick reads the whole realtime table back to back (`GetSRAMVarsFromTable`, frmMain:11244), then every 21 ticks `Performance.Mode`.
+- Started by "Toggle realtime panel [SHIFT+F1]": SuspendAlivePolling, `FillRealtimeTable(Dashboard)` when `ResetRealtimeSymbolOnTabPageSwitch` (default true), connect (Latency.Low). Hiding stops the timer and resumes alive polling.
+- Rows in table order. Per row `Delay--`; read only when it reaches 0, then `Delay = Reload`. Dashboard rates: T_Engine 5, v_Vehicle 3, T_AirInlet 3, Exhaust.T_Calc 2, CurrentFuelCon 2, the rest 1. Only rows with `ConvertedSymbolnumber > 0` are read.
+- Length ≤ 4: `ReadValueFromSRAM(Start_address, length)` (KWP 0x23), data from byte 1. Longer: `ReadSymbolNumber(Symbol_number)` (0x2C F0 03 + 0x21 F0). One transaction per symbol.
+- A failed read keeps the old value; a failed ≤4-byte read actually throws and aborts the pass (bug).
+- `m_prohibitReading` pauses the loop around viewer SRAM reads/writes and DTC actions.
+- After the pass: Combi ADC/thermo channels, wideband, `.t7l` line, live cell tracking, FPS in the panel caption "Realtime panel [x.x fps]".
+
+**Conversion.** Big-endian unsigned (1, 2 or 4 bytes; others 0). Signed by name when > 32000 (`value - 65536`): ActualIn.T_Engine, ActualIn.T_AirInlet, Out.fi_Ignition, Out.M_Engine, ECMStat.P_Engine, ECMStat.p_Diff, IgnProt.fi_Offset, IgnKnk.fi_MeanKnock, Ign.fi_OtherOff, IgnJerkProt.fi_Offset, Lambda.LambdaInt, MAF.m_AirInlet, AdpFuelProt.MulFuelAdapt, BoostProt.PFac, BoostProt.IFac, BoostProt.LoadDiff. Then `value × Correction + Offset`; Peak is a max hold.
+- `KnkDet.KnockCyl` / `KnkDetAdap.KnkCntCyl` (4 × u16) → rows KnockCyl1..4; `MissfAdap.MissfCntCyl` → MisfCyl1..4.
+- Power [hp] = rpm × torque / 7121, on every Out.M_Engine.
+- No unit options: bar, km/h, °C.
+
+**Default dashboard rows** (name, description, offset, correction, min..max, delay): ActualIn.n_Engine "Engine speed" 0 1 0..8000; In.v_Vehicle "Vehicle speed" 0 0.1 0..300 d3; Out.X_AccPedal "TPS %" 0 0.1 0..100; ActualIn.T_Engine "Engine temperature" 0 1 -20..120 d5; ActualIn.T_AirInlet "Intake air temperature" 0 1 -20..120 d3; ECMStat.ST_ActiveAirDem "Active air demand map" 0 1 0..255; Lambda.Status "Lambda status"; FCut.CutStatus "Fuelcut status"; IgnProt.fi_Offset "Ignition offset" 0 0.1 -20..20; m_Request "Requested airmass" 0 1 0..600; Out.M_Engine "Calculated torque" 0 1 0..600; In.p_AirInlet "Boost" -1 0.001 -1..3; Out.PWM_BoostCntrl "Duty cycle BCV" 0 0.1 0..100; Out.fi_Ignition "Ignition advance" 0 0.1 -10..50; MAF.m_AirInlet "Actual airmass" 0 1 0..1600; Exhaust.T_Calc "Calculated EGT temperature" 0 1 0..1200 d2 (only when ExhaustCal.ST_Enable ≠ 0); BFuelProt.CurrentFuelCon "Fuel consumption" 0 0.1 0..50 d2; Lambda.LambdaInt "Lambda value (nbO2)" 1 0.0001 0..2 (without wideband) or the wideband symbol.
+
+**UI.** Dock "Realtime panel" with tabs Dashboard, Free logging, (Vehicle information, hidden), Empty (speed up logging); a bottom panel on all but Empty.
+- Dashboard: 3 × 3 seven-segment displays: km/h (1 dec), I offset (1, red when negative: `RGB(-Ioff·12, 0, 0)`), Req. airmass (0) / Calculated torque (0), Calculated power (0), Boost (2) / Duty cycle % (1), Degrees BTDC (1), TPS % (0). Linear gauges: AFR 10..20 (λ 0.5..1.5, click toggles) and Airmass mg/c 0..1600, with a fading peak line.
+- Bottom: RPM, Water °C, Air °C, EGT °C, ActiveAirDem, L/100km, AFR/λ; decoded "Airmass limiter", "Lambda status", "Fuelcut status"; Night/Day; Eco/Norm/Sport when `Performance.Mode` exists (last byte 0/'E', 1/'N', 2/'S'; written with WriteMapToSRAM); AutoTune.
+- Night: black background, digits RGB(234,77,0), labels RGB(0,192,0).
+- Free logging grid: Symbol, Description, Value (with a min..max bar), Peak, Symbolnumber (ECU), SRAM address. Save layout / Load layout (.t7rtl), Add / Remove / Edit symbol (name, description, min, max, offset, correction), Del removes, Ctrl+Up/Down moves rows (poll order). The peak reset is hidden.
+- "Add to realtime list" in the symbol list (presets by name; length 1 → 0..255, else 0..65535).
+- Sound notifications: 3 slots (symbol, condition 0 = / 1 > / 2 <, value, wav), at most one per 2 s, also set the log marker.
+- Ribbon: View knock count map (`KnkDetAdap.KnkCntMap`), false knock (`F_KnkDetAdap.FKnkCntMap`), real knock (`F_KnkDetAdap.RKnkCntMap`), misfire (`MissfAdap.MissfCntMap`), read from SRAM.
+
+**Status texts.** FCut.CutStatus: 0 No fuelcut, 1 Ignition key turned off, 2 Accelerator pedal pressed during start, 3 RPM limiter (engine speed guard), 4 Throttle block adaption active 1st time, 5/6 Airmass limit (pressure guard), 7 Immobilizer code incorrect, 8 Current to h-bridge to high during throttle limphome, 9 Torque to high during throttle limphome, 11 Tampering protection of throttle, 12 Error on all ignition trigger outputs, 13 ECU not correctly programmed, 14 To high rpm in throttle limp home, pedal potentiometer fault, 15 Torque master fuel cut request, 16 TCM requests fuelcut to smoothen gear shift, 20 Application conditions for fuel cut. Lambda.Status 0-22 and ECMStat.ST_ActiveAirDem 10-62 are in `RealtimeStatus` (T7Core), copied verbatim from frmMain:9205-9362.
+
+**Persistence.** `rtsymbols.txt` in the app data folder (saved on close, loaded after opening a file) and `.t7rtl` layouts: user rows only, `SymbolName|Symbolnumber|Minimum|Maximum|Offset|Correction|ConvertedSymbolnumber|SRAMAddress|Length` in the current culture (an optional 10th field is the description). Loading looks the symbol number and length up in the current bin but trusts the saved SRAM address.
+
+**Live cell tracking** (`UpdateOpenViewers`): the nearest axis breakpoint (axis read from the file, 16-bit > 32000 negative) highlighted yellow in every open viewer whose map name starts with:
+- BFuelCal.Map/StartMap/E85Map/GasMap, MyrtilosCal.Fuel_GasMap, MyrtilosAdap.WBLambda_FeedbackMap/FFMap: BFuelCal.AirXSP ← airmass, BFuelCal.RpmYSP ← rpm
+- KnkFuelCal.EnrichmentMap: IgnKnkCal.m_AirXSP / IgnKnkCal.n_EngYSP
+- InjAnglCal.Map: InjAnglCal.AirXSP / InjAnglCal.RpmYSP
+- IgnNormCal.Map, IgnNormCal.GasMap, IgnE85Cal.fi_AbsMap: IgnNormCal.m_AirXSP / IgnNormCal.n_EngYSP
+- KnkFuelCal.fi_MapMaxOff: KnkFuelCal.m_AirXSP / BstKnkCal.n_EngYSP
+- IgnKnkCal.IndexMap: IgnKnkCal.m_AirXSP / IgnKnkCal.n_EngYSP
+- KnkDetCal.RefFactorMap: KnkDetCal.m_AirXSP / KnkDetCal.n_EngYSP
+- PedalMapCal.m_RequestMap: PedalMapCal.n_EngineMap ← rpm / PedalMapCal.X_PedalMap ← TPS (axis × 0.1)
+- TorqueCal.m_AirTorqMap: TorqueCal.M_EngXSP ← torque / TorqueCal.n_EngYSP
+- TorqueCal.M_NominalMap: TorqueCal.m_AirXSP / TorqueCal.n_EngYSP
+- BoostCal.RegMap: BoostCal.SetLoadXSP / BoostCal.n_EngSP
+- BstKnkCal.MaxAirmass(Au): BstKnkCal.OffsetXSP ← ignition offset (axis × 0.1) / BstKnkCal.n_EngYSP
+
+## Realtime logging and log viewer
+
+**Writing `.t7l`** (`LogRealTimeInformation`, frmMain:12299-12331).
+- One line per realtime cycle (end of `GetSRAMVarsFromTable`, 11481) while the realtime panel is shown, connected, not `m_prohibitReading`, and a binary is loaded. There is no start/stop button; hiding the panel or losing the connection stops it.
+- The timestamp is `DateTime.Now` at the **start** of the cycle.
+- File: `<bin dir>/<bin base>-yyyyMMdd-CanTraceExt.t7l`, opened in append mode for every line. One file per binary per day; sessions are appended to it.
+- No header. Line: `dd/MM/yyyy HH:mm:ss.fff|Sym1=val|Sym2=val|...|IMPORTANTLINE=0|`.
+  - Date and time separators come from the current culture; the `.` before the milliseconds is literal.
+  - Values are the scaled values (raw × correction + offset), `ToString()` in the **current culture** (`12,5` on sv-SE).
+  - Every row of the realtime table in row order, including rows skipped by their delay (previous value) and derived rows (KnockCyl1..4, MisfCyl1..4, Combi ADC/thermo channels, `Wideband`). `FPSCounter` isn't written.
+  - `IMPORTANTLINE=1` once after "Write log marker [F6]" or a notification sound, then 0 again.
+- Auto-logging (start/stop trigger symbol, sign 0 = equals / 1 = greater / 2 = smaller, value) has a dialog and settings but nothing reads them in T7Suite. T5's ctrlRealtime starts a new file on the start condition and stops on the stop condition.
+
+**Reading `.t7l`.**
+- Split on `|`, field 0 is the timestamp, later fields split on `=` and used only with exactly 2 parts.
+- The timestamp is parsed by fixed positions: day [0,2], month [3,2], year [6,4], hour [11,2], minute [14,2], second [17,2], milliseconds [20,3] if longer than 20. Any single-character separator works.
+- Numbers: the current culture's group separator is replaced by its decimal separator, then TryParse; a failure gives 0. So an en-US log shows zeros on sv-SE.
+- `LogFile.FindSymbols`: distinct names in first-seen order (IMPORTANTLINE included) and the first/last time, to whole seconds.
+
+**Exports** (ribbon Realtime → CAN bus connection; each opens a `.t7l` first).
+- **Selection dialog** (`frmPlotSelection`): symbols with a colour (registry `SymbolColors`), from/to time, a Filters button. Using Filters duplicates the selected columns in the DIF export (bug).
+- **LogWorks (DIF):** only when LogWorks is installed (HKLM lookups); writes `<base>.dif` and starts LogWorks with it.
+  - Header `TABLE / 0,1 / "EXCEL" / VECTORS / 0, 31280 / "LMTR" / TUPLES / 0,<N+1> / ...`, descriptor rows (Input Description, From device "LM-1 (LM-1:i)", Name, Unit, Range from/to, Color as R*65536+G*256+B, -End-, Session 1, Name), then per line `-1,0 / BOT / 0,<seconds since start F4> / V` and `0,<value F3> / V` per symbol (missing → 0), ending `-1,0 / EOD`.
+  - Units and ranges are hard-coded per symbol (rpm 0-8500, In.p_AirInlet bar -1..3, IMPORTANTLINE "NOTE THIS" 0-2, Out.fi_Ignition "d BTDC" -10..45, wideband 7-23 "WB Lambda", default: name, 0-1000).
+  - "Interpolate timescale for LogWorks" repeats each line every 83.33 ms, interpolating values.
+- **CSV:** the same dialog, but the symbol selection is ignored. `<base>.csv`: `Time,<sym>,...` then `<seconds F4>,<value>,...`. A missing column shifts the rest left (bug).
+- **Log filters** (File → Setup log filters; registry `LogFilters\<n>`: symbol, type GreaterThan 0 / SmallerThan 1 / Equals 2, value, active). A line is dropped if any active filter on a symbol in the line fails (GreaterThan: value < filter, SmallerThan: value > filter, Equals: value ≠ filter). Removed filters come back (never deleted from the registry).
+
+**Log viewer** (`RealtimeGraphControl`, Realtime → "Load trionic 7 logfile"). A dock panel "CANBus logfile: <file>"; several can be open.
+- A gap of 10 s or more starts a new section; with several sections a dialog lists `HH:mm:ss - HH:mm:ss [duration]` to pick one.
+- Filters apply. Every symbol becomes a channel. Display names: In.v_Vehicle Speed, ActualIn.n_Engine Rpm, In.p_AirInlet Boost, ActualIn.T_Engine Coolant, ActualIn.T_AirInlet IAT, ECMStat.ST_ActiveAirDem LIMITER, IgnProt.fi_Offset IOFF, m_Request Request, Out.M_Engine Torque, ECMStat.P_Engine Power, Out.PWM_BoostCntrl APC PWM, Out.fi_Ignition Ign.angle, Out.X_AccPedal TPS, MAF.m_AirInlet Airmass, Exhaust.T_Calc EGT, DisplProt.LambdaScanner WBLambda, Lambda.LambdaInt NBLambda.
+- Colours from the registry `SymbolColors` (defaults seeded, e.g. rpm LightCyan, boost Red); channel visibility under `Channels`.
+- Each channel is autoscaled to its own range (min never above 0, both ×1.05) over the full height. Black background, Y scale on the left for the hovered line, legend on the right with the value under the cursor (when the window is under 5 minutes), time labels at the bottom (`dd/MM HH:mm:ss`, with ms under 10 s).
+- Starts zoomed to 3 minutes when longer. Wheel zooms around the mouse (1-500), drag pans, click in the bottom strip recentres, arrows pan/zoom. Hovering a point shows `symbol=value at time`.
+- No export, statistics or context menu. OnlineGraph is T5-only.
+
+## Wideband, AFR maps and autotune
+
+**Wideband sources** (one at a time).
+- **ECU symbol** (`UseWidebandLambda`, `WideBandSymbol` = `DisplProt.AD_Scanner` or `DisplProt.LambdaScanner`): a realtime row "Lambda value (wbO2)". `LambdaScanner` × 0.1 is AFR. `AD_Scanner` is a 0..1023 ADC count: `V = adc/1023 × (HighV − LowV)` (LowV not added), clamped to LowV..HighV, `AFR = LowAFR + (HighAFR − LowAFR)/(HighV − LowV) × (V − LowV)`. Settings ×1000, defaults 0 V / 5 V / 7.39 / 22.30.
+- **Serial device** (`UseDigitalWidebandLambda`, `WidebandDevice` PLX/LM1/LC1/LM2/ZT2/AEM/STAG/LambdaShield, `WbPort`): WidebandSupport's reader started when the realtime panel shows, stopped when it hides. Each cycle: AFR = `LatestReading`, λ = AFR/14.7, a "Wideband" row (AFR or λ when `MeasureAFRInLambda`).
+- Narrowband `Lambda.LambdaInt` (λ = 1 + signed raw × 0.0001) is display only.
+- Display: λ mode gauge 0.5-1.5 (2 decimals), AFR mode 10-20 (1 decimal); clicking the gauge toggles at runtime.
+
+**AFR maps** (`AFRMap`, already lifted into T7Core).
+- Target, feedback (running mean) and counter maps, 18 × 16 from `BFuelCal.Map` (columns `BFuelCal.AirXSP`, rows `BFuelCal.RpmYSP`), index rpm × 18 + air.
+- Files in `<bin dir>/AFRMaps/`: `<bin>-targetafr.afr`, `<bin>-AFRFeedbackmap.afr`, `<bin>-AFRFeedbackCountermap.afr`. 16 lines of `v;v;...;` (F2, current culture; counters as ints).
+- Default target: 14.7; when `AirXSP[col] > 600`: `afr -= 3.5·col/18`, rpm folded at 4000, `afr += |4000 − rpm|/4000`.
+- Accumulating (`LogWidebandAFR`): needs `AutoCreateAFRMaps`, rpm > 600, 0 ≤ afr < 25, no fuel cut (`FCut.CutStatus` == 0). Nearest breakpoint, no interpolation. `mean = (mean·n + x)/(n + 1)`. Open feedback viewers refresh.
+- Viewing: "Symbol: TargetAFR / FeedbackAFR / FeedbackCounter [bin]", axes from BFuelCal.Map, 16-bit, upside down, ×0.1 (counter ×1), stored as `ceil(f × 10)`; the open-loop marks from `LambdaCal.MaxLoadNormTab`; hover shows "# measurements: N". Saving the target viewer writes the target file.
+- Commands (Realtime → Tuning in realtime → AFR maps): Show AFR feedback map, Show feedback counter map, Clear AFR feedback map, Show AFR target map. Actions → "Import AFR feedback data": each counted cell of BFuelCal.Map × (100 ± |target − fb|/target·100)/100 (lean up, rich down, 1..254), transaction note "Imported AFR feedback data", checksum, feedback cleared.
+
+**Autotune** (fuel only, open binaries, needs a wideband, coolant ≥ 70 °C).
+- Start: optionally writes 0 to `LambdaCal.ST_Enable`, `E85Cal.ST_Enable` (BioPower) and `FCutCal.ST_Enable` in SRAM (restored on stop); reads `AutoTuneFuelMap` (BFuelCal.Map / E85Map / StartMap) from SRAM.
+- Per sample: nearest cell; a new cell restarts the stopwatch. After `CellStableTime_ms` in one cell: `err% = |tgt − avg|/tgt·100`; above `AcceptableTargetErrorPercentage`: `corr = min(err% × CorrectionPercentage/100, MaximumAdjustmentPerCyclePercentage)`, `v = v·(int)(100 ± corr)/100` (lean up), 1..254.
+  - `AutoUpdateFuelMap`: the byte is written to SRAM at once (ping.wav when `PlayCellProcessedSound`).
+  - Otherwise the proposals are averaged per cell and shown on stop in "Select percent mutations to accept for map <map>" (Accept selected / Accept all / Cancel).
+- Stop: hides the realtime panel; with auto update asks "Keep adjusted fuel map?" (No writes the original back to SRAM, Yes reads SRAM into the file and updates the checksum).
+- Settings (defaults): CellStableTime_ms 1000, CorrectionPercentage 50, AcceptableTargetErrorPercentage 2, MaximumAdjustmentPerCyclePercentage 10, AutoUpdateFuelMap false, DisableClosedLoopOnStartAutotune true, PlayCellProcessedSound false. FuelCutDecayTime, AreaCorrection, EnrichmentFilter, MinimumAFRMeasurements, MaximumAFRDeviance, discard fuel cut / closed throttle and AllowIdleAutoTune are stored but unused.

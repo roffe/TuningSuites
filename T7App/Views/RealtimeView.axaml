@@ -1,0 +1,203 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T7App.ViewModels"
+             xmlns:v="using:T7App.Views"
+             xmlns:c="using:T7App.Controls"
+             x:Class="T7App.Views.RealtimeView"
+             x:DataType="vm:RealtimeViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.display">
+            <Setter Property="Background" Value="#1A1A1A" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+        <Style Selector="TextBlock.digits">
+            <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" />
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#7CFC00" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        <Style Selector="TextBlock.small">
+            <Setter Property="FontSize" Value="20" />
+        </Style>
+        <Style Selector="TextBlock.big">
+            <Setter Property="FontSize" Value="44" />
+        </Style>
+        <Style Selector="TextBlock.status">
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <Style Selector="TextBlock.limiter">
+            <Setter Property="Foreground" Value="ForestGreen" />
+        </Style>
+        <Style Selector="TextBlock.lambda">
+            <Setter Property="Foreground" Value="SteelBlue" />
+        </Style>
+        <Style Selector="TextBlock.fuelcut">
+            <Setter Property="Foreground" Value="IndianRed" />
+        </Style>
+        <Style Selector="TextBlock.caption">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Border.night">
+            <Setter Property="Background" Value="Black" />
+        </Style>
+        <Style Selector="Border.night TextBlock.digits">
+            <Setter Property="Foreground" Value="#EA4D00" />
+        </Style>
+        <Style Selector="Border.night TextBlock.caption, Border.night TextBlock.status">
+            <Setter Property="Foreground" Value="#00C000" />
+        </Style>
+        <Style Selector="Border.night TabItem">
+            <Setter Property="Foreground" Value="#00C000" />
+        </Style>
+        <Style Selector="Border.night Button, Border.night ToggleButton">
+            <Setter Property="Background" Value="#202020" />
+            <Setter Property="Foreground" Value="#00C000" />
+        </Style>
+        <Style Selector="Border.night ToggleButton:checked">
+            <Setter Property="Background" Value="#EA4D00" />
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Classes.night="{Binding IsNight}">
+        <DockPanel>
+            <!-- panelBottom -->
+            <StackPanel DockPanel.Dock="Bottom" Margin="4" IsVisible="{Binding #Tabs.SelectedIndex, Converter={x:Static v:NotEqualConverter.Instance}, ConverterParameter=2}">
+                <UniformGrid Columns="7">
+                    <StackPanel>
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Rpm, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="RPM" />
+                    </StackPanel>
+                    <StackPanel>
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Coolant, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="Water ˚C" />
+                    </StackPanel>
+                    <StackPanel>
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding IntakeAir, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="Air ˚C" />
+                    </StackPanel>
+                    <StackPanel IsEnabled="{Binding HasEgt}">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Egt, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="EGT ˚C" />
+                    </StackPanel>
+                    <StackPanel>
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding ActiveAirDemand, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="ActiveAirDem" />
+                    </StackPanel>
+                    <StackPanel>
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding FuelConsumption, StringFormat={}{0:F1}}" /></Border>
+                        <TextBlock Classes="caption" Text="L/100km" />
+                    </StackPanel>
+                    <StackPanel Background="Transparent" PointerPressed="OnToggleAfr" ToolTip.Tip="Click to switch between AFR and lambda">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding AfrText}" /></Border>
+                        <TextBlock Classes="caption" Text="{Binding AfrCaption}" />
+                    </StackPanel>
+                </UniformGrid>
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="4,6">
+                    <TextBlock Classes="caption" Text="Airmass limiter" HorizontalAlignment="Left" Margin="0,0,12,0" />
+                    <TextBlock Classes="status limiter" Grid.Column="1" Text="{Binding AirmassLimiter}" />
+                    <TextBlock Classes="caption" Grid.Row="1" Text="Lambda status" HorizontalAlignment="Left" />
+                    <TextBlock Classes="status lambda" Grid.Row="1" Grid.Column="1" Text="{Binding LambdaStatus}" />
+                    <TextBlock Classes="caption" Grid.Row="2" Text="Fuelcut status" HorizontalAlignment="Left" />
+                    <TextBlock Classes="status fuelcut" Grid.Row="2" Grid.Column="1" Text="{Binding FuelcutStatus}" />
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Night/Day" Command="{Binding ToggleNightCommand}" />
+                    <ToggleButton Content="Eco" IsVisible="{Binding HasPerformanceMode}" IsChecked="{Binding IsEco, Mode=OneWay}" Command="{Binding SetPerformanceModeCommand}" CommandParameter="0" />
+                    <ToggleButton Content="Norm" IsVisible="{Binding HasPerformanceMode}" IsChecked="{Binding IsNormal, Mode=OneWay}" Command="{Binding SetPerformanceModeCommand}" CommandParameter="1" />
+                    <ToggleButton Content="Sport" IsVisible="{Binding HasPerformanceMode}" IsChecked="{Binding IsSport, Mode=OneWay}" Command="{Binding SetPerformanceModeCommand}" CommandParameter="2" />
+                    <Button Content="Write log marker [F6]" Command="{Binding WriteLogMarkerCommand}" />
+                    <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding FpsText}" />
+                </StackPanel>
+            </StackPanel>
+
+            <TabControl x:Name="Tabs">
+                <TabItem Header="Dashboard">
+                    <DockPanel>
+                        <UniformGrid DockPanel.Dock="Bottom" Columns="2" Height="70">
+                            <c:LinearGauge Caption="{Binding AfrCaption}" Value="{Binding AfrValue}" Minimum="{Binding AfrMinimum}" Maximum="{Binding AfrMaximum}"
+                                           Format="{Binding AfrFormat}" PointerPressed="OnToggleAfr" />
+                            <c:LinearGauge Caption="Airmass mg/c" Value="{Binding Airmass}" Minimum="0" Maximum="1600" Format="F0" />
+                        </UniformGrid>
+                        <UniformGrid Columns="3" Rows="3">
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding Speed, StringFormat={}{0:F1}}" /></Border>
+                                <TextBlock Classes="caption" Text="km/h" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display">
+                                    <TextBlock Classes="digits big" Text="{Binding IgnitionOffset, StringFormat={}{0:F1}}"
+                                               Background="{Binding IgnitionOffset, Converter={x:Static v:IgnitionOffsetConverter.Instance}}" />
+                                </Border>
+                                <TextBlock Classes="caption" Text="I offset" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding AirmassRequest, StringFormat={}{0:F0}}" /></Border>
+                                <TextBlock Classes="caption" Text="Req. airmass" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding Torque, StringFormat={}{0:F0}}" /></Border>
+                                <TextBlock Classes="caption" Text="Calculated torque" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding Power, StringFormat={}{0:F0}}" /></Border>
+                                <TextBlock Classes="caption" Text="Calculated power" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding Boost, StringFormat={}{0:F2}}" /></Border>
+                                <TextBlock Classes="caption" Text="Boost" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding DutyCycle, StringFormat={}{0:F1}}" /></Border>
+                                <TextBlock Classes="caption" Text="Duty cycle %" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding IgnitionAdvance, StringFormat={}{0:F1}}" /></Border>
+                                <TextBlock Classes="caption" Text="Degrees BTDC" />
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding Tps, StringFormat={}{0:F0}}" /></Border>
+                                <TextBlock Classes="caption" Text="TPS %" />
+                            </StackPanel>
+                        </UniformGrid>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Free logging">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,4">
+                            <Button Content="Save layout" Click="OnSaveLayout" />
+                            <Button Content="Load layout" Click="OnLoadLayout" />
+                            <Button Content="Add symbol to list" Click="OnAdd" />
+                            <Button Content="Remove symbol" Click="OnRemove" />
+                            <Button Content="Edit symbol" Click="OnEdit" />
+                            <Button Content="Reset peak values" Command="{Binding ResetPeaksCommand}" />
+                        </StackPanel>
+                        <DataGrid x:Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" GridLinesVisibility="Horizontal"
+                                  CanUserSortColumns="False" KeyDown="OnGridKeyDown" DoubleTapped="OnGridDoubleTapped">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Symbol" Binding="{Binding Name, Mode=OneWay}" IsReadOnly="True" Width="2*" />
+                                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Description" Binding="{Binding Description}" Width="2*" />
+                                <DataGridTemplateColumn x:DataType="vm:RealtimeRow" Header="Value" Width="*">
+                                    <DataTemplate x:DataType="vm:RealtimeRow">
+                                        <Panel>
+                                            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Fraction}" Foreground="#FF7F50" Background="Transparent" MinWidth="0" Height="20" Opacity="0.6" />
+                                            <TextBlock Text="{Binding Value, StringFormat={}{0:0.###}}" VerticalAlignment="Center" Margin="4,0" />
+                                        </Panel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Peak" Binding="{Binding Peak, Mode=OneWay, StringFormat={}{0:0.###}}" IsReadOnly="True" Width="*" />
+                                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Symbolnumber (ECU)" Binding="{Binding SymbolNumberText, Mode=OneWay}" IsReadOnly="True" Width="Auto" />
+                                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="SRAM address" Binding="{Binding SramText, Mode=OneWay}" IsReadOnly="True" Width="Auto" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Empty (speed up logging)" />
+            </TabControl>
+        </DockPanel>
+    </Border>
+</UserControl>

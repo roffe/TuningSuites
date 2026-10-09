@@ -10,6 +10,10 @@
         Icon="/T7Suite.ico"
         Width="1400" Height="900"
         WindowStartupLocation="CenterScreen">
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" />
+        <KeyBinding Gesture="F6" Command="{Binding WriteLogMarkerCommand}" />
+    </Window.KeyBindings>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem x:Name="FileMenu" Header="_File">
@@ -69,6 +73,8 @@
             </MenuItem>
             <MenuItem Header="_ECU">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
+                <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
                 <Separator />
                 <MenuItem Header="Read ECU" Click="OnReadEcu" />
                 <MenuItem Header="Flash current file to ECU" Click="OnFlashEcu" IsEnabled="{Binding HasFile}" />
@@ -113,6 +119,7 @@
                     <DataGrid.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="Read symbol from ECU" Click="OnReadSymbolFromEcu" />
+                            <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
                             <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
                             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
                             <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
@@ -169,10 +176,13 @@
                                           CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
                                           IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
                                           DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
-                                          OpenLoopMark="{Binding OpenLoopMark}" />
+                                          OpenLoopMark="{Binding OpenLoopMark}" LiveCell="{Binding LiveCell}" />
                         </DataTemplate>
                         <DataTemplate DataType="vm:CompareResultsViewModel">
                             <v:CompareResultsView IsVisible="{Binding IsSelected}" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:RealtimeViewModel">
+                            <v:RealtimeView IsVisible="{Binding IsSelected}" />
                         </DataTemplate>
                         <DataTemplate DataType="vm:SearchResultsViewModel">
                             <v:SearchResultsView IsVisible="{Binding IsSelected}" />

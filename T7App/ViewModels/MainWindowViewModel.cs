@@ -26,7 +26,7 @@ public record RecentFile(string Name, string Path);
 /// </summary>
 public partial class MainWindowViewModel : ObservableObject
 {
-    private const string Suite = "T7SuitePro";
+    public const string Suite = "T7SuitePro";
     private static readonly string Version =
         typeof(MainWindowViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
 
@@ -244,6 +244,7 @@ public partial class MainWindowViewModel : ObservableObject
                 if (map.Map.Mutated) return false; // the save failed, keep the changes on screen
             }
         }
+        if (viewer is RealtimeViewModel realtime) realtime.Stop();
         int i = Viewers.IndexOf(viewer);
         Viewers.Remove(viewer);
         if (SelectedViewer == viewer) SelectedViewer = Viewers.Count == 0 ? null : Viewers[Math.Min(i, Viewers.Count - 1)];

@@ -170,13 +170,15 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Tested on a bench ECU: connect, read flash (identical to the flashed file), flash, SRAM write on an open binary, refused write reported on a closed one. Snapshot and fault codes not yet
 
 ### 6. Realtime
-- [ ] Realtime engine on a worker thread (the old one is a WinForms timer doing synchronous CAN on the UI thread)
-- [ ] Dashboard: gauges and digital displays
-- [ ] `.t7l` logging, DIF export, LogWorks
+- [x] Realtime engine on the ECU thread (`RealtimeEngine` in T7Core): passes back to back, other ECU actions queue between two passes instead of T7Suite's m_prohibitReading; per-row Delay/Reload, ≤4 bytes by SRAM address, longer by symbol number, signed by name, per-cylinder knock/misfire rows, Performance.Mode every 21 passes
+- [x] Realtime panel (a document tab until docking): dashboard (3 × 3 displays, AFR/λ and airmass gauges with the fading peak), bottom panel with decoded limiter / lambda / fuelcut status, Night/Day, Eco/Norm/Sport, Free logging grid (add / edit / remove / reorder, save / load .t7rtl, rtsymbols.txt, Add to realtime list), Shift+F1, F6
+- [x] `.t7l` logging: a line per pass while the panel runs, `<bin>-yyyyMMdd-CanTraceExt.t7l`, invariant numbers, read with either decimal separator
+- [ ] DIF / LogWorks and CSV exports, log filters
 - [ ] Wideband through WidebandSupport
-- [ ] Live cell tracking in open map viewers
+- [x] Live cell tracking in open map viewers (T7Suite's map → axis table, nearest breakpoint)
 - [ ] Autotune and AFR feedback maps
 - [ ] Log viewer (replaces RealtimeGraph)
+- Deliberate differences: a failed read keeps the last value (T7Suite's failed short read threw and lost the rest of the pass); layouts and logs are written with invariant numbers and read with either separator; a layout's symbol takes the open bin's address (T7Suite trusted the saved one); the AFR digits show AFR in AFR mode (T7Suite showed λ there); Reset peak values is visible; sound notifications aren't ported yet
 - [ ] From frmMain: realtime engine (10929-12607), status codes and realtime table persistence (9129-9553), AFR and autotune (15292-15777, 17833-18234). `.t7l` round-trip test (decimal separator!)
 
 ### 7. Tools
@@ -211,6 +213,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 6 in progress: realtime engine, panel, .t7l logging and live cell tracking.
 - 2026-10-09: Map colours switched to txlogger's scale; the window gets its own X11 class (T7App) so the taskbar shows T7Suite's icon instead of a launcher's named T7Suite.desktop; docking added to chunk 7.
 - 2026-10-09: Chunk 5 done apart from SaabOpenTech: tuning packages to / from the ECU and the SRAM compares.
 - 2026-10-09: Chunk 5 bench tested: flash read and write, SRAM writes; refused SRAM writes are now reported and closing waits for a running flash session.

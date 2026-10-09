@@ -36,6 +36,10 @@ public partial class MapViewerViewModel : DocumentViewModel
     [ObservableProperty]
     private bool _onlineMode;
 
+    /// <summary>The engine's cell while the realtime panel runs (column, data row).</summary>
+    [ObservableProperty]
+    private Avalonia.PixelPoint? _liveCell;
+
     /// <summary>Maps that only live in SRAM have no file to save to.</summary>
     public bool CanSaveToFile => Address >= 0;
 

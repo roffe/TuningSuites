@@ -317,6 +317,68 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void RealtimePanelWithoutHardware()
+        {
+            string file = Path.Combine(s_dir, "realtime.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                var infos = new System.Collections.Generic.List<string>();
+                vm.Info += infos.Add;
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                vm.OpenSymbolByName("IgnNormCal.Map");
+                var ign = (MapViewerViewModel)vm.SelectedViewer!;
+
+                // no adapter: the panel opens with the dashboard rows but doesn't poll
+                vm.Settings.Adapter = "";
+                await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
+                var rt = vm.Realtime!;
+                Assert.AreSame(rt, vm.SelectedViewer);
+                Assert.IsFalse(rt.IsRunning);
+                Assert.IsTrue(rt.Rows.Any(r => r.Name == "ActualIn.n_Engine"));
+
+                // a pass on screen: dashboard, decoded statuses, per-cylinder rows and the engine's cell in the ignition map
+                int[] air = vm.Binary!.GetXaxisValues("IgnNormCal.Map"), rpm = vm.Binary.GetYaxisValues("IgnNormCal.Map");
+                rt.Apply(new T7.RealtimeSample(System.DateTime.Now,
+                [
+                    ("ActualIn.n_Engine", rpm[4]), ("MAF.m_AirInlet", air[7]), ("In.p_AirInlet", 0.85), ("Out.M_Engine", 300),
+                    ("IgnProt.fi_Offset", -2.5), ("Lambda.Status", 0), ("FCut.CutStatus", 0), ("ECMStat.ST_ActiveAirDem", 10),
+                    ("Lambda.LambdaInt", 0.85), ("KnockCyl1", 3),
+                ], 25, 1));
+                Assert.AreEqual(0.85, rt.Boost);
+                Assert.AreEqual(T7.Realtime.Power(rpm[4], 300), rt.Power);
+                Assert.AreEqual("Closed loop activated", rt.LambdaStatus);
+                Assert.AreEqual("PedalMap", rt.AirmassLimiter);
+                Assert.AreEqual((0.85 * 14.7).ToString("F1"), rt.AfrText);
+                Assert.IsTrue(rt.IsNormal);
+                Assert.AreEqual(3, rt.Rows.Single(r => r.Name == "KnockCyl1").Value);
+                Assert.AreEqual(new Avalonia.PixelPoint(7, 4), ign.LiveCell);
+
+                // add to realtime list goes into the open panel and rtsymbols.txt
+                vm.AddToRealtime(vm.Binary.Find("Out.X_AccPedal")!);
+                vm.AddToRealtime(vm.Binary.Find("BFuelCal.Map")!);
+                Assert.IsTrue(rt.Rows.Single(r => r.Name == "BFuelCal.Map").Symbol.UserDefined);
+                Assert.IsTrue(File.ReadAllText(rt.LayoutFile).Contains("BFuelCal.Map|"));
+
+                Save(window, "realtime-dashboard");
+                rt.IsNight = true;
+                Save(window, "realtime-night");
+
+                // closing the tab stops it; the user rows come back with the next panel
+                await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
+                Assert.IsNull(vm.Realtime);
+                await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
+                Assert.IsTrue(vm.Realtime!.Rows.Any(r => r.Name == "BFuelCal.Map"));
+                Assert.IsTrue(vm.Realtime.IsNight);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");
