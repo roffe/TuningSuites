@@ -21,6 +21,10 @@ public partial class MainWindowViewModel
     public IReadOnlyList<string> LogFilterSymbols =>
         Binary?.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Where(n => !T7Compare.IsCalibration(n)).Distinct().OrderBy(n => n).ToList() ?? [];
 
+    /// <summary>Set symbol colors lists the bin's symbols that have an SRAM address, as T7Suite did.</summary>
+    public SymbolColorsViewModel SymbolColorChoices() =>
+        new(Binary?.Symbols.Cast<SymbolHelper>().Where(s => s.Start_address > 0).Select(s => s.SmartVarname) ?? []);
+
     private List<T7LogLine> FilteredLines(string file)
     {
         LogFilter[] filters = LoadLogFilters().Cast<LogFilter>().ToArray();

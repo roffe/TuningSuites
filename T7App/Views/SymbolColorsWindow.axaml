@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.SymbolColorsWindow"
+        x:DataType="vm:SymbolColorsViewModel"
+        Title="Set symbol colors" Width="460" Height="600" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="12">
+        <TextBox DockPanel.Dock="Top" Text="{Binding Search}" PlaceholderText="Search symbols" Margin="0,0,0,8" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+        <DataGrid ItemsSource="{Binding Visible}" GridLinesVisibility="Horizontal" SelectionMode="Single" IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="vm:SymbolColorRow" Header="Symbol" Binding="{Binding Name}" Width="*" />
+                <DataGridTemplateColumn x:DataType="vm:SymbolColorRow" Header="Color" Width="90">
+                    <DataTemplate x:DataType="vm:SymbolColorRow">
+                        <ColorPicker Color="{Binding Color, Mode=TwoWay}" IsAlphaEnabled="False" IsAlphaVisible="False"
+                                     HorizontalAlignment="Stretch" Margin="4,2" />
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

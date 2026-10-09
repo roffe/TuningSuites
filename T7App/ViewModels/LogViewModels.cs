@@ -123,3 +123,48 @@ public partial class MatrixSelectionViewModel(IReadOnlyList<string> symbols) : O
 
     public bool IsComplete => X != null && Y != null && Z != null;
 }
+
+public partial class SymbolColorRow(string name, Avalonia.Media.Color color) : ObservableObject
+{
+    public string Name { get; } = name;
+    public Avalonia.Media.Color Original { get; } = color;
+
+    [ObservableProperty] private Avalonia.Media.Color _color = color;
+}
+
+/// <summary>
+/// frmPlotSelection as frmMain's Set symbol colors used it: every symbol with an SRAM address and its colour from the
+/// SymbolColors settings (black when none is stored), saved on Ok. The search box is new, there are hundreds of symbols.
+/// </summary>
+public partial class SymbolColorsViewModel : ObservableObject
+{
+    private readonly SymbolColors m_colors = new(new T7SuiteRegistry());
+
+    public IReadOnlyList<SymbolColorRow> Rows { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Visible))]
+    private string _search = "";
+
+    public IReadOnlyList<SymbolColorRow> Visible =>
+        Search.Trim() is { Length: > 0 } s ? Rows.Where(r => r.Name.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList() : Rows;
+
+    public SymbolColorsViewModel(IEnumerable<string> symbols)
+    {
+        Rows = symbols.Distinct().Select(n =>
+        {
+            System.Drawing.Color c = m_colors.GetColorFromRegistry(n);
+            return new SymbolColorRow(n, Avalonia.Media.Color.FromRgb(c.R, c.G, c.B));
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Ok: T7Suite saved every row; saving only the changed ones stores the same. Black isn't saved
+    /// (SaveColorToRegistry skips it), so a stored colour can't be cleared, as in T7Suite.
+    /// </summary>
+    public void Save()
+    {
+        foreach (SymbolColorRow r in Rows.Where(r => r.Color != r.Original))
+            m_colors.SaveColorToRegistry(r.Name, System.Drawing.Color.FromArgb(r.Color.R, r.Color.G, r.Color.B));
+    }
+}

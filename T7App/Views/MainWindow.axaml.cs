@@ -334,6 +334,12 @@ public partial class MainWindow : Window
         if (await new LogFiltersWindow { DataContext = filters }.ShowDialog<bool>(this)) Vm.SaveLogFilters(filters.ToCollection());
     }
 
+    private async void OnSymbolColors(object? sender, RoutedEventArgs e)
+    {
+        SymbolColorsViewModel colors = Vm.SymbolColorChoices();
+        if (await new SymbolColorsWindow { DataContext = colors }.ShowDialog<bool>(this)) colors.Save();
+    }
+
     internal void OnAddToRealtime(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is { } sh) Vm.AddToRealtime(sh);

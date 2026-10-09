@@ -99,6 +99,7 @@
                 <MenuItem Header="Export logfile to LogWorks" Click="OnExportLogDif" />
                 <MenuItem Header="View matrix from logfile" Click="OnLogMatrix" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Setup log filters" Click="OnLogFilters" />
+                <MenuItem Header="Set symbol colors" Click="OnSymbolColors" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="View knock count map" Command="{Binding ShowEcuMapCommand}" CommandParameter="KnkDetAdap.KnkCntMap" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="View false knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.FKnkCntMap" IsEnabled="{Binding HasFile}" />
