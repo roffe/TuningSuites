@@ -425,12 +425,19 @@ public partial class MainWindow : Window
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (Documents.VisibleDockables?.FirstOrDefault(d => d.Context == viewer) is not { } dockable) return;
-            // a new inner window opens at a working size, cascaded below the last one (Dock's default is small)
-            if (dockable is Dock.Model.Controls.IMdiDocument mdi && m_sized.Add(dockable))
+            if (m_sized.Add(dockable))
             {
-                int n = Documents.VisibleDockables.Count - 1;
-                double width = System.Math.Max(640, Workspace.Bounds.Width * 0.6), height = System.Math.Max(460, Workspace.Bounds.Height * 0.8);
-                mdi.MdiBounds = new Dock.Model.Core.DockRect(24 * (n % 8), 24 * (n % 8), width, height);
+                // documents stay inner windows: dropping them on dock targets turned them into tabs, splits (an empty strip
+                // by the symbol list) or floating windows that couldn't be brought back
+                dockable.CanFloat = false;
+                dockable.CanDrop = false;
+                // a new inner window opens at a working size, cascaded below the last one (Dock's default is small)
+                if (dockable is Dock.Model.Controls.IMdiDocument mdi)
+                {
+                    int n = Documents.VisibleDockables.Count - 1;
+                    double width = System.Math.Max(640, Workspace.Bounds.Width * 0.6), height = System.Math.Max(460, Workspace.Bounds.Height * 0.8);
+                    mdi.MdiBounds = new Dock.Model.Core.DockRect(24 * (n % 8), 24 * (n % 8), width, height);
+                }
             }
             m_syncingDock = true;
             try

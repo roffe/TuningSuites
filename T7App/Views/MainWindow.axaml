@@ -142,15 +142,15 @@
             <DockControl.Factory>
                 <Factory HideToolsOnClose="True" />
             </DockControl.Factory>
-            <RootDock Id="Root" IsCollapsable="False" DefaultDockable="{Binding #MainLayout}">
-                <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal" IsCollapsable="False">
-                    <ToolDock Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="False">
-                        <Tool Id="SymbolList" Title="Symbol list" CanClose="False" x:DataType="Tool">
+            <RootDock Id="Root" IsCollapsable="False" CanDrop="False" DefaultDockable="{Binding #MainLayout}">
+                <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal" IsCollapsable="False" CanDrop="False">
+                    <ToolDock Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="False" CanDrop="False" CanFloat="False">
+                        <Tool Id="SymbolList" Title="Symbol list" CanClose="False" CanFloat="False" CanDrag="False" x:DataType="Tool">
                             <v:SymbolListView DataContext="{Binding $parent[Window].DataContext}" />
                         </Tool>
                     </ToolDock>
                     <ProportionalDockSplitter />
-                    <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False">
+                    <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False" CanDrop="False" CanFloat="False">
                         <DocumentDock.DocumentTemplate>
                             <DocumentTemplate>
                                 <ContentControl x:DataType="Document" Content="{Binding Context}" />

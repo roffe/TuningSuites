@@ -467,6 +467,9 @@ namespace T7AppTest
                 vm.SelectedViewer = ign;
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Assert.AreSame(ign, dock.ActiveDockable!.Context);
+                // inner windows only: no floating out of the main window, nothing dropped onto the docks
+                Assert.IsTrue(dock.VisibleDockables!.All(d => !d.CanFloat && !d.CanDrop));
+                Assert.IsFalse(dock.CanDrop);
                 docs.Factory!.SetActiveDockable(dock.VisibleDockables!.First(d => d.Context != ign));
                 Assert.AreNotSame(ign, vm.SelectedViewer);
 
