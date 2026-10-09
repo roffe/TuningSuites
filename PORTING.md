@@ -245,7 +245,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 |---|---|
 | Behaviour | T8Suite's behaviour wins for T8, as T7Suite's did for T7. The shared window's improvements (Recent files, multi-step undo, ...) stay, unless T8Suite contradicts them |
 | Shared layer | Grows chunk by chunk (see the Decisions table above). Each suite keeps its own menus, in its ribbon's order and with its captions; the rest of the main window is shared |
-| SharpZipLib | Package 1.4.2 (MIT) for the encrypted name tables (a ZipCrypto zip, which System.IO.Compression can't open), without T8Suite's code page 850 line. With the old 0.86 on .NET 10 that line throws, the error is swallowed, and the 27 encrypted bins open without names |
+| SharpZipLib | Package 1.4.2 (MIT, T8Core) for the encrypted name tables (a ZipCrypto zip, which System.IO.Compression can't open), without T8Suite's code page 850 line. With the old 0.86 on .NET 10 that line throws, the error is swallowed, and the 27 encrypted bins open without names |
 | State | Per binary. Trionic8File's statics (open flag, address offsets) and Form1's static PID / TEM tables become T8Binary's, so opening a compare or transfer file no longer replaces the open file's |
 | Settings | JSON at `<AppData>/MattiasC/T8SuitePro/settings.json`, imported once from `HKCU\Software\MattiasC\T8SuitePro` plus `HKCU\Software\T8SuitePro\TransferSettings` (outside MattiasC) |
 | Releases | `T8suite_v` tags (T8App's VersionTagPrefix), `T8suite_nightly`; the MSI replaces the old T8Suite (its upgrade code) |
@@ -258,10 +258,24 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] `docs/T8SUITE-BEHAVIOUR.md`
 
 ### 1. T8Core
-- [ ] Lift from T8Suite (namespace `T8SuitePro` kept): Trionic8File, T8Header, FlashBlock(Collection), pidCode, SymbolDictionary (`iconv -f CP1252` first: it's Windows-1252), SymbolTranslator, SymbolAxesTranslator, SymbolnamesDictionary, blowfish, SymbolFiller, PartNumberConverter, PartnumberCollection, Disassembler, IdaProIdcFile, AirmassLimitType. Dropped: crc64 (unused), Plot3D, Settings, MapViewerFactory. Minimal edits: no MessageBox / StartupPath, `using` streams (CountNq leaks a handle on 10 of the stock bins, which blocks saving on Windows), no `C:\T8Decode` dumps or Console output
-- [ ] `T8Binary`, lifted from Form1 as T7Binary was from frmMain: open (TryToOpenFile 557: validate, extract, symbol XML from the program folder by software-version prefix, then `<bin>.xml`, SymbolFiller when MapDetectionActive), addresses (GetSymbolAddress 1366), read / write (readdatafromfile 1627, savedatatobinary 1830), axes (GetX/YaxisValues 1656-1828: raw, X unsigned / Y signed, static "N : v…" axes, duplicate axes), table width (GetTableMatrixWitdhByName 1419), 16-bit (isSixteenBitTable 1598), factor from SymbolDictionary (GetMapCorrectionFactor 1569), ChecksumT8 (UpdateChecksum 3557), PID / TEM tables, bitmask words (StartBitMaskViewer 2469)
-- [ ] `T8CoreTest`: golden test over the 72 bins (header, checksum, symbol table kind / key, symbols with addresses, axes, widths, factors; PID entries). It also asserts that the 27 encrypted bins get their names, so a SharpZipLib regression can't become the baseline. Plus a checksum test (a flipped byte below CHPTR fails layer 1, an update fixes it)
-- Known T8Suite bugs this chunk fixes: the placeholder name "Symbolnumber N" is one off from `Symbol_number` (N+1), so user names saved to `<bin>.xml` get lost on a later save; the process-wide statics above
+- [x] Lifted from T8Suite (namespace `T8SuitePro` kept): Trionic8File, T8Header, FlashBlock(Collection), pidCode, SymbolDictionary (converted from Windows-1252), SymbolTranslator, SymbolAxesTranslator, SymbolnamesDictionary, blowfish, SymbolFiller, T8SuiteRegistry.
+  - Edits: MessageBox → `UserPrompt.Show`; the program folder for symbol lists is a parameter; SharpZipLib 1.4.2 without the code page line; no `C:\T8Decode` dumps or Console output (the header log goes to NLog at Trace).
+  - Also: `using` streams (CountNq left a handle open on 10 of the stock bins); Trionic8File's open flag and offsets per instance; dead code dropped (four unused table finders, the DEBUG-only PI writer).
+  - Moved to the chunks that use them: Disassembler and IdaProIdcFile (7), PartNumberConverter and PartnumberCollection (4), AirmassLimitType (7).
+  - Dropped: crc64 (unused), Plot3D, Settings, MapViewerFactory.
+- [x] `T8Binary` (`T8Core/T8Binary.cs`), lifted from Form1 as T7Binary was from frmMain:
+  - open (TryToOpenFile 557: extract, a symbol list from the program folder by software-version prefix or `<bin>.xml`, SymbolFiller when map detection is on);
+  - addresses (GetSymbolAddress 1366), read / write (readdatafromfile 1627, savedatatobinary 1830), ChecksumT8 (UpdateChecksum 3557; a map write always corrects it, as T8Suite);
+  - axes (GetX/YaxisValues 1656-1828: raw, X unsigned / Y signed, "N : v…" axes from the dictionary, the duplicate's x axis when the listed one is missing), table width (GetTableMatrixWitdhByName 1419, then the x axis' length as StartTableViewer did), 16-bit (isSixteenBitTable 1598), factor from SymbolDictionary.
+  - Same members as T7Binary where the two agree, for the shared base class in chunk 3. Bitmask words and the PID / TEM write-back come with their editors (chunk 7).
+- [x] `T8CoreTest`:
+  - **Golden test** over the 72 bins. It hashes the header and flash blocks, checksum, symbol table, symbols with their addresses, the PID / TEM tables, every map's width / 16-bit / factor / axes, and the names map detection gives the stripped bin. It asserts that 71 bins get names.
+  - **Baseline:** taken from the lifted code with only the edits needed to build, before the per-instance state and stream changes. It was checked to catch a one-off change.
+  - **Speed:** the test parses the bins in parallel (5 s), which the per-file state allows.
+  - **T8BinaryTest:** a stock bin's map, axes and SRAM-only symbol; a write leaves layer 1 stale and the update fixes it; the transaction entry.
+- [x] SuiteCore: TrionicSymbolDecompressor (T7's and T8's packed name tables) decodes one table at a time. Its tables are static, so two files decoding at once mixed up their names: the parallel golden test showed it, and in the apps it could happen with an open while another runs
+- Deliberate difference: EngTipLimCal.X_Koeff's dictionary axis "6: A B C D E F" made T8Suite's viewer throw, so the map never opened; its labels now count as their positions 0..5
+- Known T8Suite bug fixed: the process-wide statics above
 
 ### 2. MapControls
 - Nothing T8-specific expected. T8's MapViewerEx differences go with the viewer in chunk 3:
@@ -279,6 +293,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [ ] Save with ChecksumT8, Verify checksum (T8Suite showed the result only in the status bar and fixed it silently), projects (same files as T7), compare / transfer maps / copy address table / Compare binary outside symbolrange, search, imports (XML / CSV / AS2) and exports (S19, Idc, CSV instead of Excel), `.t8p` tuning packages, My Maps, the Tuning menu (DynamicTuningMenu's old / new calibration captions), settings window with T8's options, Lookup partnumber
 - [ ] Firmware editing: software version, VIN and immobilizer code
 - Known T8Suite bugs to fix:
+  - the placeholder name "Symbolnumber N" is one off from `Symbol_number` (N+1), so user names saved to `<bin>.xml` get lost on a later save;
   - "Edit a tuning package" saved the open bin's bytes instead of the edited rows;
   - "Clear" VIN wrote the file without a checksum update;
   - a short VIN / serial threw after part of it was written;
@@ -316,6 +331,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-09: T8 chunk 1 done: T8Core with the lifted file logic and T8Binary, T8CoreTest with a golden test over the 72 stock bins; the shared symbol table decoder no longer mixes up two files decoding at once.
 - 2026-10-09: T8Suite port started on branch `net10-t8`. Its behaviour is read into `docs/T8SUITE-BEHAVIOUR.md` and the T8 chunks are planned. T8 chunk 0 is done: SuiteCore and SuiteApp were extracted from T7Core / T7App with T7 unchanged (tests green, renders identical), and T8App is scaffolded.
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.

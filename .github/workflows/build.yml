@@ -49,6 +49,10 @@ jobs:
     - name: Test
       run: dotnet test T7CoreTest -c Release --no-build
 
+    # golden parse of every bin in T8Binaries and the T8 logic
+    - name: Test T8
+      run: dotnet test T8CoreTest -c Release --no-build
+
     # map controls: model and ops, keyboard/mouse and Skia renders in a headless window
     - name: Test map controls
       run: dotnet test MapControlsTest -c Release --no-build
