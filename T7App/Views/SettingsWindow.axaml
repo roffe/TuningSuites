@@ -4,7 +4,8 @@
         x:Class="T7App.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
-    <StackPanel Margin="16" Spacing="12">
+    <Grid Margin="16" ColumnDefinitions="Auto,Auto" RowDefinitions="*,Auto" ColumnSpacing="16">
+    <StackPanel Spacing="12">
         <HeaderedContentControl Header="User interface settings">
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
                 <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
@@ -52,9 +53,51 @@
                 </StackPanel>
             </Grid>
         </HeaderedContentControl>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+    </StackPanel>
+    <StackPanel Grid.Column="1" Spacing="12">
+        <HeaderedContentControl Header="Wideband and AFR maps">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <CheckBox Grid.ColumnSpan="2" Content="Use T7Suite AFR maps" IsChecked="{Binding AutoCreateAFRMaps}" />
+                <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Content="Measure AFR in lambda" IsChecked="{Binding MeasureAFRInLambda}" />
+                <CheckBox Grid.Row="2" Content="Use wideband O2 (pin 16) with symbol" IsChecked="{Binding UseWidebandLambda}" />
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding WidebandSymbols}" SelectedItem="{Binding WideBandSymbol}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="3" Text="Low voltage (Volt) equals AFR" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding WidebandLowVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" Width="140" />
+                    <NumericUpDown Value="{Binding WidebandLowAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" Width="140" />
+                </StackPanel>
+                <TextBlock Grid.Row="4" Text="High voltage (Volt) equals AFR" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding WidebandHighVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" Width="140" />
+                    <NumericUpDown Value="{Binding WidebandHighAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" Width="140" />
+                </StackPanel>
+                <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}" />
+                <TextBlock Grid.Row="6" Text="Wideband device" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="7" Text="Wideband port" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Autotune">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <TextBlock Text="Fuel map" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding FuelMaps}" SelectedItem="{Binding AutoTuneFuelMap}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Cell stable time (ms)" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding CellStableTime}" Minimum="100" Maximum="10000" Increment="100" FormatString="0" />
+                <TextBlock Grid.Row="2" Text="Correction percentage %" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding CorrectionPercentage}" Minimum="1" Maximum="100" Increment="1" FormatString="0" />
+                <TextBlock Grid.Row="3" Text="Acceptable target error %" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding AcceptableTargetError}" Minimum="1" Maximum="10" Increment="1" FormatString="0" />
+                <TextBlock Grid.Row="4" Text="Maximum adjustment per cycle %" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding MaximumAdjustment}" Minimum="1" Maximum="20" Increment="1" FormatString="0" />
+                <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Auto update fuel map" IsChecked="{Binding AutoUpdateFuelMap}" />
+                <CheckBox Grid.Row="6" Grid.ColumnSpan="2" Content="Disable closed loop on starting autotune" IsChecked="{Binding DisableClosedLoopOnStartAutotune}" />
+            </Grid>
+        </HeaderedContentControl>
+    </StackPanel>
+        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
             <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
             <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </Window>

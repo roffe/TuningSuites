@@ -325,6 +325,8 @@ public partial class MainWindowViewModel : ObservableObject
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         Symbols?.Refresh();
         RestartSramTimer();
+        OnPropertyChanged(nameof(FeedbackMapCaption));
+        OnPropertyChanged(nameof(ClearFeedbackCaption));
     }
 
     /// <summary>A descriptor import changed names: the list shows them (the import saved &lt;bin&gt;.xml).</summary>

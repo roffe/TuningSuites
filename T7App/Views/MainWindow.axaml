@@ -70,11 +70,10 @@
                 <Separator />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import AFR feedback data" Command="{Binding ImportAfrFeedbackCommand}" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <MenuItem Header="_ECU">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
-                <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
                 <Separator />
                 <MenuItem Header="Read ECU" Click="OnReadEcu" />
                 <MenuItem Header="Flash current file to ECU" Click="OnFlashEcu" IsEnabled="{Binding HasFile}" />
@@ -90,6 +89,17 @@
                 <MenuItem Header="Generate tuning package from ECU" Click="OnGeneratePackage" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Import SRAM snapshot" Click="OnImportSram" />
+            </MenuItem>
+            <MenuItem Header="_Realtime">
+                <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
+                <Separator />
+                <MenuItem Header="AFR maps" IsEnabled="{Binding HasFile}">
+                    <MenuItem Header="Show AFR target map" Command="{Binding ShowAfrTargetMapCommand}" />
+                    <MenuItem Header="{Binding FeedbackMapCaption}" Command="{Binding ShowAfrFeedbackMapCommand}" />
+                    <MenuItem Header="Show feedback counter map" Command="{Binding ShowAfrCounterMapCommand}" />
+                    <MenuItem Header="{Binding ClearFeedbackCaption}" Command="{Binding ClearAfrFeedbackMapCommand}" />
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="_Information">
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
@@ -171,7 +181,7 @@
                         <DataTemplate DataType="vm:MapViewerViewModel">
                             <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
                                           SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
-                                          ReadEcuCommand="{Binding ReadEcuCommand}" WriteEcuCommand="{Binding WriteEcuCommand}"
+                                          ReadEcuCommand="{Binding EcuReadCommand}" WriteEcuCommand="{Binding EcuWriteCommand}"
                                           OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
                                           CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
                                           IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"

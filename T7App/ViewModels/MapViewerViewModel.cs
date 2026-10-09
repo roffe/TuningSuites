@@ -41,7 +41,18 @@ public partial class MapViewerViewModel : DocumentViewModel
     private Avalonia.PixelPoint? _liveCell;
 
     /// <summary>Maps that only live in SRAM have no file to save to.</summary>
-    public bool CanSaveToFile => Address >= 0;
+    public bool CanSaveToFile => Address >= 0 || SaveTo != null;
+
+    /// <summary>Where a map that isn't in the bin saves and reloads (the AFR target map's .afr file).</summary>
+    public Action<byte[]>? SaveTo { get; init; }
+    public Func<byte[]>? ReadFrom { get; init; }
+
+    /// <summary>AFR maps live in files of their own, not in the ECU.</summary>
+    public bool IsAfrMap { get; init; }
+
+    /// <summary>The viewer's Read from ECU / Save to ECU buttons, none for AFR maps.</summary>
+    public IAsyncRelayCommand? EcuReadCommand => IsAfrMap ? null : ReadEcuCommand;
+    public IAsyncRelayCommand? EcuWriteCommand => IsAfrMap ? null : WriteEcuCommand;
 
     [RelayCommand]
     private Task ReadEcu() => Owner.ReadMapFromEcuAsync(this);
@@ -69,6 +80,12 @@ public partial class MapViewerViewModel : DocumentViewModel
     private async Task Save()
     {
         if (!CanSaveToFile) return;
+        if (SaveTo != null)
+        {
+            SaveTo(Map.ToBytes());
+            Map.MarkSaved();
+            return;
+        }
         // only writes into the project's own binary get transaction entries
         bool projectFile = Owner.Binary?.FileName == FileName && Owner.TransactionLog != null;
         string note = projectFile ? await Owner.AskTransactionNoteAsync() : "";
@@ -94,7 +111,7 @@ public partial class MapViewerViewModel : DocumentViewModel
     private void Read()
     {
         if (!CanSaveToFile) return;
-        if (Binary.ReadSymbol(Symbol) is { } content) Map.Load(content);
+        if ((ReadFrom != null ? ReadFrom() : Binary.ReadSymbol(Symbol)) is { } content) Map.Load(content);
     }
 
     [RelayCommand]
@@ -156,6 +173,49 @@ public partial class MapViewerViewModel : DocumentViewModel
             OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
             XAxisSymbol = xAxis != "" && bin.Find(xAxis) != null ? xAxis : null,
             YAxisSymbol = yAxis != "" && bin.Find(yAxis) != null ? yAxis : null,
+        };
+    }
+
+    /// <summary>
+    /// ShowAfrMAP: TargetAFR / FeedbackAFR (×0.1) or FeedbackCounter on BFuelCal.Map's axes, 16-bit, upside down. The target
+    /// map saves into its .afr file, the other two are read-only.
+    /// </summary>
+    public static MapViewerViewModel? CreateAfr(MainWindowViewModel owner, AfrFeedback afr, string kind)
+    {
+        T7Binary bin = afr.Binary;
+        if (bin.FindAny("BFuelCal.Map") is not { } fuel) return null;
+        byte[] content = kind switch { "TargetAFR" => afr.Target, "FeedbackAFR" => afr.Feedback, _ => afr.Counter };
+        var (_, _, xDescr, yDescr, _) = T7Binary.AxisSymbols("BFuelCal.Map");
+        var map = new MapData(kind, content, AfrFeedback.Columns, true)
+        {
+            Factor = kind == "FeedbackCounter" ? 1 : 0.1,
+            UpsideDown = true,
+            XAxis = bin.GetXaxisValues("BFuelCal.Map").Select(v => (double)v).ToArray(),
+            YAxis = bin.GetYaxisValues("BFuelCal.Map").Select(v => (double)v).ToArray(),
+            XName = xDescr,
+            YName = yDescr,
+            ZName = kind == "FeedbackCounter" ? "count" : "AFR",
+        };
+        if (bin.OpenLoopTable("BFuelCal.Map") is { Length: > 0 } ol) map.OpenLoop = MapData.Decode(ol, true).Select(v => (double)v).ToArray();
+        AppSettings settings = owner.Settings;
+        bool target = kind == "TargetAFR";
+        return new MapViewerViewModel
+        {
+            Owner = owner,
+            Binary = bin,
+            Symbol = fuel,
+            MapName = kind,
+            Map = map,
+            Address = -1,
+            IsReadOnly = !target,
+            IsAfrMap = true,
+            SaveTo = target ? afr.SaveTarget : null,
+            ReadFrom = target ? () => afr.Target : null,
+            ViewType = MapViewType.Easy,
+            IsRedWhite = settings.ShowRedWhite,
+            DisableColors = settings.DisableMapviewerColors,
+            GraphVisible = settings.ShowGraphs,
+            OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
         };
     }
 }

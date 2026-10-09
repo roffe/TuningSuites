@@ -357,6 +357,26 @@ namespace T7AppTest
                 Assert.AreEqual(3, rt.Rows.Single(r => r.Name == "KnockCyl1").Value);
                 Assert.AreEqual(new Avalonia.PixelPoint(7, 4), ign.LiveCell);
 
+                // the wideband on the ECU's AD scanner: AFR on the display, into the feedback map and its open viewer
+                vm.Settings.UseWidebandLambda = true;
+                vm.Settings.WideBandSymbol = "DisplProt.AD_Scanner";
+                vm.Settings.AutoCreateAFRMaps = true;
+                vm.ShowAfrFeedbackMapCommand.Execute(null);
+                var feedback = (MapViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Symbol: FeedbackAFR [realtime.bin]", feedback.Title);
+                Assert.IsNull(feedback.EcuReadCommand);
+                int[] fuelRpm = vm.Binary.GetYaxisValues("BFuelCal.Map"), fuelAir = vm.Binary.GetXaxisValues("BFuelCal.Map");
+                rt.Apply(new T7.RealtimeSample(System.DateTime.Now,
+                    [("ActualIn.n_Engine", fuelRpm[6]), ("MAF.m_AirInlet", fuelAir[3]), ("FCut.CutStatus", 0), ("DisplProt.AD_Scanner", 1023)], 25, null));
+                Assert.AreEqual("22.3", rt.AfrText);
+                int cell = 6 * T7.AfrFeedback.Columns + 3;
+                Assert.AreEqual(223, feedback.Map[cell]);
+                vm.ImportAfrFeedbackCommand.Execute(null);
+                Assert.AreEqual(0, feedback.Map[cell]);
+                Assert.AreEqual(TrionicCANLib.Checksum.ChecksumResult.Ok, T7.T7Binary.OpenRaw(file).VerifyChecksum());
+                vm.Settings.UseWidebandLambda = false;
+                vm.SelectedViewer = rt;
+
                 // add to realtime list goes into the open panel and rtsymbols.txt
                 vm.AddToRealtime(vm.Binary.Find("Out.X_AccPedal")!);
                 vm.AddToRealtime(vm.Binary.Find("BFuelCal.Map")!);

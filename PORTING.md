@@ -25,7 +25,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | Copy/paste | Keep T7Suite's format byte for byte: `<viewtype digit><col>:<row>:<value>:~…` |
 | Repo | Work happens on branch `net10` in TuningSuites |
 | TrionicCANLib | ProjectReference to the local sibling checkout `../Trionic/TrionicCANLib/TrionicCANLib.csproj`, set once in `Directory.Build.props` as `$(TrionicDir)` and overridable with `-p:TrionicDir=…`. Not everything in roffe/Trionic is committed yet. CI checks out roffe/Trionic next to this repo; switch to a submodule once Trionic `net10` is pushed |
-| WidebandSupport | Vendored into `WidebandSupport/` with an SDK-style net10 csproj and the System.IO.Ports package. Upstream has no licence file, so ask Mattias |
+| WidebandSupport | Vendored into `WidebandSupport/` (from f0c0e87) with an SDK-style net10 csproj and the System.IO.Ports package. No licence file upstream, but every source file carries George Daswani's Apache License 2.0 header |
 | Settings | JSON at `<AppData>/MattiasC/T7SuitePro/settings.json`, plus a one-time import from `HKCU\Software\MattiasC\T7SuitePro` (and its MRU key `HKCU\Software\T7SuitePro\MRUList`) on Windows, as the flasher does |
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`; self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
@@ -174,9 +174,9 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Realtime panel (a document tab until docking): dashboard (3 × 3 displays, AFR/λ and airmass gauges with the fading peak), bottom panel with decoded limiter / lambda / fuelcut status, Night/Day, Eco/Norm/Sport, Free logging grid (add / edit / remove / reorder, save / load .t7rtl, rtsymbols.txt, Add to realtime list), Shift+F1, F6
 - [x] `.t7l` logging: a line per pass while the panel runs, `<bin>-yyyyMMdd-CanTraceExt.t7l`, invariant numbers, read with either decimal separator
 - [ ] DIF / LogWorks and CSV exports, log filters
-- [ ] Wideband through WidebandSupport
+- [x] Wideband: the ECU symbol (AD_Scanner with the voltage → AFR settings, LambdaScanner) or a serial device through WidebandSupport, logged as "Wideband"; settings group instead of frmWidebandConfig
 - [x] Live cell tracking in open map viewers (T7Suite's map → axis table, nearest breakpoint)
-- [ ] Autotune and AFR feedback maps
+- [x] AFR target / feedback / counter maps (AFRMaps folder, viewers, clear, Actions → Import AFR feedback data) and autotune (fuel, open binaries; auto update or the accept grid on stop). Deliberate differences: .afr files written invariant and read with either separator (T7Suite's culture trick read "14.70" as 0 on Linux sv-SE); saving the target map keeps unsaved samples; lambda-mode feedback is compared as AFR on import; autotune writes the file once with a transaction entry and one checksum update (T7Suite updated the checksum per cell and logged nothing) and doesn't close the realtime panel on stop; the ping sound isn't ported; settings T7Suite stored but never used are left out
 - [ ] Log viewer (replaces RealtimeGraph)
 - Deliberate differences: a failed read keeps the last value (T7Suite's failed short read threw and lost the rest of the pass); layouts and logs are written with invariant numbers and read with either separator; a layout's symbol takes the open bin's address (T7Suite trusted the saved one); the AFR digits show AFR in AFR mode (T7Suite showed λ there); Reset peak values is visible; sound notifications aren't ported yet
 - [ ] From frmMain: realtime engine (10929-12607), status codes and realtime table persistence (9129-9553), AFR and autotune (15292-15777, 17833-18234). `.t7l` round-trip test (decimal separator!)
@@ -206,13 +206,13 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Open questions
 
-- WidebandSupport has no licence file upstream. Ask Mattias, and add one when vendoring.
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 6: wideband, AFR maps and autotune; WidebandSupport vendored (Apache 2.0).
 - 2026-10-09: Chunk 6 in progress: realtime engine, panel, .t7l logging and live cell tracking.
 - 2026-10-09: Map colours switched to txlogger's scale; the window gets its own X11 class (T7App) so the taskbar shows T7Suite's icon instead of a launcher's named T7Suite.desktop; docking added to chunk 7.
 - 2026-10-09: Chunk 5 done apart from SaabOpenTech: tuning packages to / from the ECU and the SRAM compares.

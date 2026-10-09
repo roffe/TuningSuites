@@ -265,6 +265,9 @@ namespace T7
         /// <summary>Performance.Mode, read every 21 passes when the bin has it.</summary>
         public SymbolHelper PerformanceMode { get; set; }
 
+        /// <summary>Values appended to every pass that don't come from the ECU (the serial wideband's "Wideband").</summary>
+        public Func<IEnumerable<(string, double)>> Extra { get; set; }
+
         /// <summary>Raised on the ECU thread after every pass.</summary>
         public event Action<RealtimeSample> Sample;
 
@@ -287,6 +290,7 @@ namespace T7
                     int? performance = mode ? ReadPerformanceMode(t, PerformanceMode) : null;
                     return Realtime.Cycle(rows, row => Realtime.Read(t, row), DateTime.Now, fps, performance);
                 }).ConfigureAwait(false);
+                if (Extra?.Invoke() is { } extra) sample = sample with { Values = [.. sample.Values, .. extra] };
                 double seconds = watch.Elapsed.TotalSeconds;
                 watch.Restart();
                 fps = seconds > 0 ? 1 / seconds : 0;

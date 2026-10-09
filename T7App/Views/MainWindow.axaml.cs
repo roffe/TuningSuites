@@ -31,6 +31,13 @@ public partial class MainWindow : Window
             BuildMyMaps();
             vm.Info += text => _ = Dialogs.Info(this, text, "T7Suite");
             vm.AskYesNoCancel = text => Dialogs.YesNoCancel(this, text, "Question");
+            vm.AcceptAutotune = percent =>
+            {
+                string map = string.IsNullOrEmpty(vm.Settings.AutoTuneFuelMap) ? "BFuelCal.Map" : vm.Settings.AutoTuneFuelMap;
+                double[] x = vm.Binary?.GetXaxisValues("BFuelCal.Map").Select(v => (double)v).ToArray() ?? [];
+                double[] y = vm.Binary?.GetYaxisValues("BFuelCal.Map").Select(v => (double)v).ToArray() ?? [];
+                return new AutotuneAcceptWindow(map, percent, x, y).ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(this);
+            };
             vm.AskText = caption => Dialogs.Prompt(this, caption);
             vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
         }

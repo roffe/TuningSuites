@@ -59,6 +59,8 @@ public partial class RealtimeViewModel : DocumentViewModel
     private CancellationTokenSource? m_cancel;
     private T7LogWriter? m_log;
     private volatile bool m_marker;
+    private WidebandSupport.IWidebandReader? m_wideband;
+    private Autotune? m_autotune;
 
     public override string Title => "Realtime panel";
 
@@ -164,6 +166,7 @@ public partial class RealtimeViewModel : DocumentViewModel
     {
         if (IsRunning || !await m_owner.EnsureConnectedAsync()) return;
         await m_owner.Ecu.RunAsync(t => t.SuspendAlivePolling());
+        StartWideband();
         m_log = new T7LogWriter(m_bin.FileName);
         m_cancel = new CancellationTokenSource();
         IsRunning = true;
@@ -187,9 +190,47 @@ public partial class RealtimeViewModel : DocumentViewModel
                 m_log?.Dispose();
                 m_log = null;
             }
+            StopWideband();
+            if (m_autotune != null) await StopAutotuneAsync();
+            m_owner.AfrMaps?.Save();
             if (m_owner.Ecu.IsConnected) await m_owner.Ecu.RunAsync(t => t.ResumeAlivePolling());
             foreach (MapViewerViewModel v in m_owner.Viewers.OfType<MapViewerViewModel>()) v.LiveCell = null;
         }
+    }
+
+    /// <summary>"Use wideband O2 on com port": WidebandSupport's reader, its AFR (or λ) as "Wideband" in every pass.</summary>
+    private void StartWideband()
+    {
+        AppSettings s = m_owner.Settings;
+        if (!s.UseDigitalWidebandLambda) return;
+        try
+        {
+            m_wideband = new WidebandSupport.WidebandFactory(s.WidebandDevice, s.WbPort, false).CreateInstance();
+            m_wideband.Start();
+        }
+        catch (Exception e)
+        {
+            m_wideband = null;
+            m_owner.ShowInfo("Wideband error: " + e.Message);
+            return;
+        }
+        bool lambda = s.MeasureAFRInLambda;
+        WidebandSupport.IWidebandReader reader = m_wideband;
+        m_engine.Extra = () => [("Wideband", Math.Round(lambda ? reader.LatestReading / AfrFeedback.Stoich : reader.LatestReading, 2))];
+    }
+
+    private void StopWideband()
+    {
+        m_engine.Extra = null;
+        try
+        {
+            m_wideband?.Stop();
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        m_wideband?.Dispose();
+        m_wideband = null;
     }
 
     /// <summary>ToggleRealtimePanel (hide) and closing the tab.</summary>
@@ -258,7 +299,17 @@ public partial class RealtimeViewModel : DocumentViewModel
         ActiveAirDemand = V("ECMStat.ST_ActiveAirDem");
         FuelConsumption = V("BFuelProt.CurrentFuelCon");
         Power = sample["ECMStat.P_Engine"] ?? Realtime.Power(Rpm, Torque);
-        if (sample["Lambda.LambdaInt"] is { } lambda) Lambda = lambda;
+        AppSettings s = m_owner.Settings;
+        double? afr = s.UseWidebandLambda ? AfrFeedback.SymbolAfr(sample, s)
+            : s.UseDigitalWidebandLambda && sample["Wideband"] is { } wb ? (s.MeasureAFRInLambda ? wb * AfrFeedback.Stoich : wb) : null;
+        if (afr is { } a)
+        {
+            Lambda = a / AfrFeedback.Stoich;
+            if (s.AutoCreateAFRMaps && m_owner.AfrMaps is { } maps && maps.Add(a, s.MeasureAFRInLambda, Rpm, Airmass, V("FCut.CutStatus")))
+                m_owner.RefreshAfrViewers();
+            m_autotune?.Handle(a, Rpm, Airmass);
+        }
+        else if (sample["Lambda.LambdaInt"] is { } lambda) Lambda = lambda;
         AirmassLimiter = RealtimeStatus.AirDemand((int)ActiveAirDemand);
         LambdaStatus = RealtimeStatus.Lambda((int)V("Lambda.Status"));
         FuelcutStatus = RealtimeStatus.Fuelcut((int)V("FCut.CutStatus"));
@@ -275,6 +326,86 @@ public partial class RealtimeViewModel : DocumentViewModel
         };
         foreach (MapViewerViewModel v in m_owner.Viewers.OfType<MapViewerViewModel>().Where(v => v.FileName == m_bin.FileName))
             v.LiveCell = m_tracker.Cell(v.MapName, Input) is var (col, row) ? new Avalonia.PixelPoint(col, row) : null;
+    }
+
+    // ---- autotune ----
+
+    /// <summary>The AutoTune button shows for open binaries only.</summary>
+    public bool CanAutotune => m_bin.IsSoftwareOpen;
+
+    [ObservableProperty]
+    private string _autotuneCaption = "AutoTune";
+
+    [ObservableProperty]
+    private bool _isAutotuning;
+
+    /// <summary>btnAutoTune: start (open bin, wideband, coolant ≥ 70 °C) or stop.</summary>
+    [RelayCommand]
+    private async Task ToggleAutotune()
+    {
+        if (AutotuneCaption == "Wait...") return;
+        if (m_autotune != null)
+        {
+            await StopAutotuneAsync();
+            return;
+        }
+        if (Autotune.CannotStart(m_bin, m_owner.Settings, Coolant) is { } reason)
+        {
+            m_owner.ShowInfo(reason);
+            return;
+        }
+        if (!IsRunning || m_owner.AfrMaps is not { } afr) return;
+        AutotuneCaption = "Wait...";
+        m_owner.ProgressText = "Starting autotune...";
+        m_autotune = await Autotune.StartAsync(afr, m_owner.Ecu, m_owner.Settings);
+        IsAutotuning = m_autotune != null;
+        AutotuneCaption = IsAutotuning ? "Tuning..." : "AutoTune";
+        m_owner.ProgressText = IsAutotuning ? "Autotune running..." : "Autotune init failed.";
+    }
+
+    /// <summary>
+    /// Stop: the switches back. With auto update "Keep adjusted fuel map?" (yes: SRAM into the file, no: the original back
+    /// into SRAM); without, the proposed changes to accept, written to SRAM and the file. The file gets a transaction entry and
+    /// one checksum update (T7Suite updated the checksum per cell and logged nothing).
+    /// </summary>
+    private async Task StopAutotuneAsync()
+    {
+        if (m_autotune is not { } tune) return;
+        m_autotune = null;
+        IsAutotuning = false;
+        AutotuneCaption = "Wait...";
+        try
+        {
+            await tune.RestoreAsync();
+            byte[]? keep = null;
+            if (tune.AutoUpdate)
+            {
+                bool? answer = m_owner.AskYesNoCancel == null ? true : await m_owner.AskYesNoCancel("Keep adjusted fuel map?");
+                if (answer == true) keep = await m_owner.Ecu.ReadMapAsync(tune.FuelMap);
+                else if (answer == false) await m_owner.Ecu.WriteMapAsync(tune.FuelMap, tune.Original);
+            }
+            else if (m_owner.AcceptAutotune is { } accept && await accept(tune.Differences) is { Count: > 0 } cells)
+            {
+                keep = Autotune.Accept(tune.Original, tune.Differences, cells);
+                await m_owner.Ecu.WriteMapAsync(tune.FuelMap, keep);
+            }
+            if (keep != null)
+            {
+                int before = m_owner.TransactionLog?.TransCollection.Count ?? 0;
+                m_bin.WriteSymbol(m_bin.FileAddress(tune.FuelMap), keep, m_owner.Settings.AutoFixFooter, m_owner.TransactionLog, "Autotune");
+                m_owner.TransactionsAdded(before);
+                m_owner.RefreshViewers(m_bin.FileName);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            m_owner.ShowInfo(e.Message);
+        }
+        finally
+        {
+            AutotuneCaption = "AutoTune";
+            m_owner.ProgressText = "Autotune stopped.";
+        }
     }
 
     [RelayCommand]

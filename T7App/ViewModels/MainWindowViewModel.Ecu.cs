@@ -122,6 +122,76 @@ public partial class MainWindowViewModel
         T7.Realtime.SaveLayout(file, rows);
     }
 
+    // ---- AFR maps ----
+
+    private AfrFeedback? m_afr;
+
+    /// <summary>The open bin's AFR target / feedback / counter maps (AFRMaps folder next to it).</summary>
+    public AfrFeedback? AfrMaps => Binary is not { } bin ? null : m_afr?.Binary == bin ? m_afr : m_afr = new AfrFeedback(bin);
+
+    /// <summary>Autotune without auto update: the cells (data indices) to take from the proposed percentages, null to cancel.</summary>
+    public Func<double[], Task<IReadOnlyCollection<int>?>>? AcceptAutotune { get; set; }
+
+    /// <summary>SetupMeasureAFRorLambda's captions.</summary>
+    public string FeedbackMapCaption => Settings.MeasureAFRInLambda ? "Show lambda feedback map" : "Show AFR feedback map";
+    public string ClearFeedbackCaption => Settings.MeasureAFRInLambda ? "Clear lambda feedback map" : "Clear AFR feedback map";
+
+    [RelayCommand]
+    private void ShowAfrTargetMap() => ShowAfr("TargetAFR");
+
+    [RelayCommand]
+    private void ShowAfrFeedbackMap() => ShowAfr("FeedbackAFR");
+
+    [RelayCommand]
+    private void ShowAfrCounterMap() => ShowAfr("FeedbackCounter");
+
+    // SaveMap first, as T7Suite did before showing an AFR viewer
+    private void ShowAfr(string kind)
+    {
+        if (AfrMaps is not { } afr) return;
+        afr.Save();
+        if (MapViewerViewModel.CreateAfr(this, afr, kind) is { } viewer) ShowDocument(viewer);
+    }
+
+    /// <summary>Clear AFR feedback map: feedback and counters to 0, saved, open viewers refreshed.</summary>
+    [RelayCommand]
+    private void ClearAfrFeedbackMap()
+    {
+        if (!Settings.AutoCreateAFRMaps || AfrMaps is not { } afr) return;
+        afr.Clear();
+        RefreshAfrViewers();
+    }
+
+    /// <summary>UpdateFeedbackMaps: open feedback and counter viewers show the maps as they are now.</summary>
+    public void RefreshAfrViewers()
+    {
+        if (m_afr == null) return;
+        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(v => v.IsAfrMap && v.MapName != "TargetAFR" && v.FileName == m_afr.Binary.FileName))
+            v.Map.Load(v.MapName == "FeedbackAFR" ? m_afr.Feedback : m_afr.Counter);
+    }
+
+    /// <summary>Import AFR feedback data: the measured cells corrected into BFuelCal.Map, the checksum, the feedback cleared.</summary>
+    [RelayCommand]
+    private void ImportAfrFeedback()
+    {
+        if (Binary is not { } bin || AfrMaps is not { } afr || bin.FindAny("BFuelCal.Map") is not { } fuel || bin.ReadSymbol(fuel) is not { } map) return;
+        byte[] data = AfrFeedback.ApplyFeedback(map, afr.Target, afr.Feedback, afr.Counter, Settings.MeasureAFRInLambda);
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        try
+        {
+            bin.WriteSymbol(bin.FileAddress(fuel), data, Settings.AutoFixFooter, TransactionLog, "Imported AFR feedback data");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowInfo(e.Message);
+            return;
+        }
+        TransactionsAdded(before);
+        afr.Clear();
+        RefreshAfrViewers();
+        RefreshViewers(bin.FileName);
+    }
+
     // ---- SRAM maps ----
 
     /// <summary>A map that only lives in SRAM: read it from the ECU (connecting first) and show it.</summary>

@@ -353,12 +353,8 @@ namespace T7
 
         private double ConvertToDouble(string v)
         {
-            double d = 0;
-            if (v == "") return d;
-            string vs = "";
-            vs = v.Replace(System.Threading.Thread.CurrentThread.CurrentCulture.NumberFormat.NumberGroupSeparator, System.Threading.Thread.CurrentThread.CurrentCulture.NumberFormat.NumberDecimalSeparator);
-            Double.TryParse(vs, out d);
-            return d;
+            // either decimal separator: T7Suite wrote the current culture's, and its culture trick read "14.70" as 0 on Linux sv-SE
+            return T7Log.Number(v);
         }
 
         private float[] LoadTargetAFRMap(string filename, int size)
@@ -445,7 +441,7 @@ namespace T7
                     for (int ct = 0; ct < columns; ct++)
                     {
                         float value = (float)map.GetValue((rt * columns) + ct);
-                        sw.Write(value.ToString("F2") + ";");
+                        sw.Write(value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + ";");
                     }
                     sw.Write(Environment.NewLine);
                 }
