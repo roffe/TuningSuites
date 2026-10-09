@@ -117,22 +117,6 @@ public static class MapOps
         return true;
     }
 
-    /// <summary>Cells whose physical value is within 0.009 of any of the space separated values.</summary>
-    public static List<int> SelectByValue(MapData map, string text)
-    {
-        var values = new List<double>();
-        foreach (string token in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (double.TryParse(token, NumberStyles.Float, CultureInfo.CurrentCulture, out double d)
-                || double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out d))
-                values.Add(d);
-        }
-        var cells = new List<int>();
-        for (int i = 0; i < map.Count; i++)
-            if (values.Any(x => Math.Abs(map.Physical(i) - x) < 0.009)) cells.Add(i);
-        return cells;
-    }
-
     /// <summary>
     /// T7Suite's clipboard text: the view type digit, then "col:row:raw:~" per cell with the displayed row, in display order.
     /// Values are always raw decimal integers.

@@ -133,13 +133,6 @@ namespace MapControlsTest
         }
 
         [TestMethod]
-        public void SelectByValueUsesPhysical()
-        {
-            MapData m = Map16();
-            CollectionAssert.AreEqual(new[] { 0, 1 }, MapOps.SelectByValue(m, "0.1 0.2"));
-        }
-
-        [TestMethod]
         public void ClipboardRoundTripsInT7SuiteFormat()
         {
             MapData m = Map16();

@@ -90,7 +90,6 @@ public class MapViewer : UserControl
     private readonly Grid m_split;
     private readonly ComboBox m_operation = new() { ItemsSource = new[] { "Add", "Multiply", "Divide", "Fill" }, SelectedIndex = 0, MinWidth = 100 };
     private readonly TextBox m_operand = new() { Text = "2", Width = 70 };
-    private readonly TextBox m_selectValues = new() { PlaceholderText = "Select values", Width = 120 };
     private readonly StackPanel m_editTools = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
     private readonly MenuItem m_editX = new() { Header = "Edit x-axis" }, m_editY = new() { Header = "Edit y-axis" };
     private readonly Button m_readEcu = new() { Content = "Read from ECU" }, m_writeEcu = new() { Content = "Save to ECU" };
@@ -120,18 +119,10 @@ public class MapViewer : UserControl
         save.Click += (_, _) => SaveCommand?.Execute(null);
         read.Click += (_, _) => ReadCommand?.Execute(null);
         execute.Click += (_, _) => ExecuteMath();
-        // the view combo doubled as the select-by-value box in MapViewerEx: values separated by spaces, Enter selects
-        m_selectValues.KeyDown += (_, e) =>
-        {
-            if (e.Key != Avalonia.Input.Key.Enter || Map is not { } map) return;
-            Grid.Select(MapOps.SelectByValue(map, m_selectValues.Text ?? ""));
-            Grid.Focus();
-            e.Handled = true;
-        };
         m_editTools.Children.AddRange([m_operation, m_operand, execute]);
         // both bars wrap in a narrow viewer instead of running off its edge
         var toolbar = new WrapPanel { ItemSpacing = 8, LineSpacing = 4, Margin = new Thickness(4) };
-        toolbar.Children.AddRange([m_viewType, m_editTools, m_selectValues]);
+        toolbar.Children.AddRange([m_viewType, m_editTools]);
         // the ECU / file / close buttons sit under the graphs and stay visible whatever the viewer's size
         var buttons = new WrapPanel { ItemSpacing = 8, LineSpacing = 4, Margin = new Thickness(4), ItemsAlignment = WrapPanelItemsAlignment.End };
         buttons.Children.AddRange([m_readEcu, m_writeEcu, read, save, m_close]);
