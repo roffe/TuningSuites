@@ -156,7 +156,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
     [
         new("Symbol name", nameof(SymbolHelper.Varname)), new("Address", nameof(SymbolHelper.Flash_start_address)),
         new("Length", nameof(SymbolHelper.Length)), new("Description", nameof(SymbolHelper.Description)),
-        new("User description", nameof(SymbolHelper.Userdescription)),
+        new("User description", nameof(SymbolHelper.Userdescription)), new("Number", nameof(SymbolHelper.Symbol_number)),
+        new("SRAM address", nameof(SymbolHelper.Start_address), false), new("Category", nameof(SymbolHelper.Category), false),
     ];
 
     /// <summary>The symbol list's order inside its category groups (T7Suite: largest first).</summary>
