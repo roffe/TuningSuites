@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.ProjectPropertiesWindow"
+        x:DataType="vm:ProjectPropertiesViewModel"
+        Title="Trionic project properties"
+        SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="16" Spacing="12">
+        <HeaderedContentControl Header="Car settings">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <TextBlock Grid.Row="0" Text="Car make" VerticalAlignment="Center" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding CarMake}" MinWidth="320" />
+                <TextBlock Grid.Row="1" Text="Car model" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CarModel}" />
+                <TextBlock Grid.Row="2" Text="Car MY" VerticalAlignment="Center" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CarMY}" />
+                <TextBlock Grid.Row="3" Text="Car VIN" VerticalAlignment="Center" />
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CarVIN}" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="File settings">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <TextBlock Grid.Row="0" Text="Project name" VerticalAlignment="Center" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ProjectName}" />
+                <TextBlock Grid.Row="1" Text="Version" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Version}" />
+                <TextBlock Grid.Row="2" Text="Binary file" VerticalAlignment="Center" />
+                <DockPanel Grid.Row="2" Grid.Column="1">
+                    <Button DockPanel.Dock="Right" Content="..." Margin="4,0,0,0" Click="OnBrowse" />
+                    <TextBox Text="{Binding BinaryFile}" />
+                </DockPanel>
+            </Grid>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

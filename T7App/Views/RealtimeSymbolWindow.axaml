@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.RealtimeSymbolWindow"
+        x:DataType="vm:RealtimeSymbolEdit"
+        Title="Realtime symbol" Width="460" SizeToContent="Height" WindowStartupLocation="CenterOwner" CanResize="False">
+    <StackPanel Margin="12" Spacing="8">
+        <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+            <TextBlock Text="Symbol" VerticalAlignment="Center" />
+            <AutoCompleteBox Grid.Column="1" ItemsSource="{Binding Names}" Text="{Binding Name}" FilterMode="ContainsOrdinal" IsEnabled="{Binding IsNew}" />
+            <TextBlock Grid.Row="1" Text="Description" VerticalAlignment="Center" />
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Description}" />
+            <TextBlock Grid.Row="2" Text="Minimum" VerticalAlignment="Center" />
+            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Minimum}" />
+            <TextBlock Grid.Row="3" Text="Maximum" VerticalAlignment="Center" />
+            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Maximum}" />
+            <TextBlock Grid.Row="4" Text="Offset" VerticalAlignment="Center" />
+            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Offset}" />
+            <TextBlock Grid.Row="5" Text="Correction" VerticalAlignment="Center" />
+            <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Correction}" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

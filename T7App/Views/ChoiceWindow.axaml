@@ -1,0 +1,12 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="T7App.Views.ChoiceWindow"
+        Width="420" Height="360" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" HorizontalAlignment="Right">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+        <ListBox x:Name="List" DoubleTapped="OnOk" />
+    </DockPanel>
+</Window>

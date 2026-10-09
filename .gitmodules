@@ -1,3 +1,7 @@
 [submodule "CommonSuite"]
 	path = T7Suite/CommonSuite
 	url = git://github.com/mattiasclaesson/CommonSuite.git
+[submodule "Trionic"]
+	path = Trionic
+	url = https://github.com/roffe/Trionic.git
+	branch = master

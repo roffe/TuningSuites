@@ -1,0 +1,79 @@
+<Project>
+
+  <!--
+    Each suite is versioned by its own tags, the scheme upstream's releases use: the app project sets VersionTagPrefix (T7App:
+    T7suite_) and the version comes from the nearest <prefix>vX.Y.Z tag, so tagging T7suite_v2.0.0 doesn't touch T8Suite
+    (T8suite_v) or T5Suite. Libraries and tests have no prefix and build as 0.0.0-<sha> quietly; nothing ships them on their own.
+    The version comes from the nearest vX.Y.Z git tag, nothing in the code holds it (same scheme as roffe/Trionic, see its README "Versioning and releasing"):
+      (tags below with the project's prefix, e.g. T7suite_v0.1.75)
+      HEAD at tag v0.1.75, clean tree    0.1.75
+      commits after the tag              0.1.75-<first 9 of the commit sha>
+      uncommitted changes                0.1.75-<sha>-dirty
+      a labelled tag v0.1.76-beta        0.1.76-beta (0.1.76-beta-<sha> after it), numeric 0.1.76.0
+      no git, no tag or a shallow clone  0.0.0-<sha> and a warning
+    That string is InformationalVersion (the window title), Assembly/FileVersion is the tag padded to 4 parts (0.1.75.0),
+    which the updater and the MSI use. -p:Version=1.2.3 or -p:VersionFromGit=false skips git.
+  -->
+  <!--
+    TrionicCANLib comes from roffe/Trionic, the Trionic submodule (after cloning: git submodule init Trionic, git submodule update).
+    -p:TrionicDir=/path/to/Trionic builds against another checkout, e.g. ../Trionic while working on both.
+  -->
+  <PropertyGroup>
+    <TrionicDir Condition="'$(TrionicDir)' == ''">$(MSBuildThisFileDirectory)Trionic</TrionicDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <VersionFromGit Condition="'$(VersionFromGit)' == '' and '$(Version)' != ''">false</VersionFromGit>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <Target Name="VersionFromGit" BeforeTargets="GetAssemblyVersion" Condition="'$(VersionFromGit)' != 'false'">
+    <PropertyGroup>
+      <_GitNull Condition="'$(OS)' == 'Windows_NT'">nul</_GitNull>
+      <_GitNull Condition="'$(OS)' != 'Windows_NT'">/dev/null</_GitNull>
+    </PropertyGroup>
+
+    <Exec Command="git rev-parse HEAD 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitSha" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitShaExit" />
+    </Exec>
+    <Exec Command="git describe --tags --abbrev=0 --match &quot;$(VersionTagPrefix)v[0-9]*&quot; 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitTag" />
+    </Exec>
+    <Exec Command="git describe --tags --exact-match --match &quot;$(VersionTagPrefix)v[0-9]*&quot; 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="_GitExactExit" />
+    </Exec>
+    <!-- GIT_OPTIONAL_LOCKS=0: status must not rewrite .git/index, its index.lock would break a git commit running meanwhile -->
+    <Exec Command="git status --porcelain --untracked-files=no 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)" EnvironmentVariables="GIT_OPTIONAL_LOCKS=0"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatus" />
+    </Exec>
+
+    <PropertyGroup>
+      <_GitSha9 Condition="'$(_GitShaExit)' == '0' and $(_GitSha.Length) &gt;= 9">$(_GitSha.Substring(0, 9))</_GitSha9>
+      <_GitSha9 Condition="'$(_GitSha9)' == ''">unknown</_GitSha9>
+      <!-- <prefix>vX.Y[.Z[.W]] with an optional label (v0.1.76-beta), the label only goes into InformationalVersion -->
+      <_GitTagVersion Condition="'$(_GitTag)' != '' and $(_GitTag.StartsWith('$(VersionTagPrefix)'))">$(_GitTag.Substring($(VersionTagPrefix.Length)))</_GitTagVersion>
+      <_GitTagOk>$([System.Text.RegularExpressions.Regex]::IsMatch('$(_GitTagVersion)', '^v\d+(\.\d+){1,3}(-[0-9A-Za-z.-]+)?$'))</_GitTagOk>
+      <_GitBase Condition="'$(_GitTagOk)' == 'True'">$(_GitTagVersion.Substring(1))</_GitBase>
+      <_GitBase Condition="'$(_GitTagOk)' != 'True'">0.0.0</_GitBase>
+      <_GitNumeric>$([System.Text.RegularExpressions.Regex]::Match('$(_GitBase)', '^\d+(\.\d+)*').Value)</_GitNumeric>
+      <_GitDirty Condition="'$(_GitStatus)' != ''">-dirty</_GitDirty>
+
+      <InformationalVersion>$(_GitBase)-$(_GitSha9)$(_GitDirty)</InformationalVersion>
+      <InformationalVersion Condition="'$(_GitTagOk)' == 'True' and '$(_GitExactExit)' == '0' and '$(_GitDirty)' == ''">$(_GitBase)</InformationalVersion>
+      <Version>$([System.Text.RegularExpressions.Regex]::Match('$(_GitNumeric).0.0', '^\d+\.\d+\.\d+\.\d+').Value)</Version>
+      <AssemblyVersion>$(Version)</AssemblyVersion>
+      <FileVersion>$(Version)</FileVersion>
+    </PropertyGroup>
+
+    <Warning Condition="'$(_GitTagOk)' != 'True' and '$(_GitTag)' == '' and '$(VersionTagPrefix)' != ''"
+             Text="No $(VersionTagPrefix)vX.Y.Z git tag found (no git, a shallow clone or the tags not fetched), building as version $(InformationalVersion). Run 'git fetch --tags' ('git fetch --unshallow --tags' in a shallow clone) or pass -p:Version=X.Y.Z." />
+    <Warning Condition="'$(_GitTagOk)' != 'True' and '$(_GitTag)' != ''"
+             Text="The nearest git tag $(_GitTag) is not a $(VersionTagPrefix)vX.Y.Z or $(VersionTagPrefix)vX.Y.Z-label version, building as version $(InformationalVersion)." />
+  </Target>
+
+</Project>

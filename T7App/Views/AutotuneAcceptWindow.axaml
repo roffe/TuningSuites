@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="using:MapControls"
+        x:Class="T7App.Views.AutotuneAcceptWindow"
+        Title="Select percent mutations to accept" Width="1100" Height="560" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" HorizontalAlignment="Right">
+            <Button Content="Accept selected" Click="OnAcceptSelected" />
+            <Button Content="Accept all" Click="OnAcceptAll" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+        <mc:MapGrid x:Name="Grid" IsReadOnly="True" />
+    </DockPanel>
+</Window>

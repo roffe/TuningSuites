@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.SearchMapsWindow"
+        x:DataType="vm:SearchMapsViewModel"
+        Title="Search maps for value..." SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="16" Spacing="12">
+        <HeaderedContentControl Header="Search options">
+            <Grid ColumnDefinitions="Auto,200" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <CheckBox Grid.Row="0" Content="Search for numeric value" IsChecked="{Binding SearchForNumericValues}" />
+                <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding NumericValue}" FormatString="0.###" Increment="1" />
+                <CheckBox Grid.Row="1" Content="Search for string value" IsChecked="{Binding SearchForStringValues}" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding StringValue}" />
+                <CheckBox Grid.Row="2" Content="Include symbol names" IsChecked="{Binding IncludeSymbolNames}" />
+                <CheckBox Grid.Row="3" Content="Include symbol descriptions" IsChecked="{Binding IncludeSymbolDescription}" />
+                <CheckBox Grid.Row="4" Content="Only maps with length" IsChecked="{Binding UseSpecificMapLength}" />
+                <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding MapLength}" Minimum="0" FormatString="0" Increment="1" />
+            </Grid>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

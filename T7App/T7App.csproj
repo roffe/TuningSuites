@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>T7App</RootNamespace>
+    <AssemblyName>T7Suite</AssemblyName>
+    <!-- the version comes from the nearest T7suite_vX.Y.Z tag (Directory.Build.props), upstream's release tags -->
+    <VersionTagPrefix>T7suite_</VersionTagPrefix>
+    <ApplicationIcon>T7Suite.ico</ApplicationIcon>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!-- ponytail: Windows stays 32-bit like the flasher, most J2534 and the Lawicel CANUSB drivers only ship x86 DLLs -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT'">
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="T7Suite.ico" />
+    <AvaloniaResource Include="Assets\Compressormaps\*" />
+    <AvaloniaResource Include="Assets\ASM-Mode.xshd" />
+    <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Help → User manual / Trionic 7 documentation -->
+    <None Include="..\T7_manual.pdf" Link="T7_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Trionic 7.pdf" Link="Trionic 7.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the stock bins and their symbol files that T7Extras installed (compare to original file, lookup partnumber); only
+         published, a build doesn't copy the 130 MB -->
+    <None Include="..\T7Binaries\*" Link="Binaries\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <!-- Kvaser's CANlib for TrionicCANLib on Windows, as the flasher ships it -->
+    <None Include="$(TrionicDir)\Libs\canlib32.dll" Link="canlib32.dll" CopyToOutputDirectory="PreserveNewest"
+          Condition="$(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+    <!-- MIT; the colour picker in Set symbol colors -->
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- MIT; the docking workspace: MDI document windows, tabs and a dockable symbol list -->
+    <PackageReference Include="Dock.Avalonia" Version="12.1.0.7" />
+    <PackageReference Include="Dock.Model.Avalonia" Version="12.1.0.7" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0.7" />
+    <!-- MIT; the disassembly text (ASM highlighting, search) and the hex view -->
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
+    <PackageReference Include="AvaloniaHex" Version="0.1.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(TrionicDir)\TrionicCANLib\TrionicCANLib.csproj" />
+    <ProjectReference Include="..\T7Core\T7Core.csproj" />
+    <ProjectReference Include="..\MapControls\MapControls.csproj" />
+  </ItemGroup>
+
+</Project>

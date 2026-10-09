@@ -1,0 +1,63 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+	<!-- the old T7Suite setup's (SetupT7Suite.vdproj) upgrade code and folder: installing this replaces the old T7Suite -->
+	<?define UpgradeCode="{9C2F3019-BC14-4E3F-A0CC-87BFB3182E7D}"?>
+	<?define Manufacturer="MattiasC"?>
+
+	<!-- Version is the exe's FileVersion, from the T7suite_v git tag (Directory.Build.props); MSI uses its first three fields -->
+	<Package Name="T7Suite" Language="1033" Version="!(bind.FileVersion.T7SuiteExe)" Codepage="1252" Manufacturer="$(var.Manufacturer)" UpgradeCode="$(var.UpgradeCode)" InstallerVersion="300" ProductCode="*">
+		<SummaryInformation Manufacturer="$(var.Manufacturer)" />
+		<MediaTemplate EmbedCab="yes" />
+
+
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		<ui:WixUI Id="WixUI_InstallDir" />
+		<WixVariable Id="WixUILicenseRtf" Value="disclaimer.rtf" />
+
+
+		<!-- Lawicel canusbdrv.dll needs the VC++ 2010 runtime -->
+		<Feature Id="VCRedist" Title="Visual C++ 10.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+			<MergeRef Id="VCRedist" />
+		</Feature>
+
+		<DirectoryRef Id="INSTALLFOLDER">
+			<Component Id="T7SuiteExeComponent">
+				<File Id="T7SuiteExe" Name="T7Suite.exe" KeyPath="yes" DiskId="1" Source="$(var.PublishDir)\T7Suite.exe" />
+				<Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="T7Suite" Icon="T7Suite.ico" IconIndex="0" Show="normal" WorkingDirectory="TARGETDIR" Advertise="yes" />
+				<Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="T7Suite" Icon="T7Suite.ico" IconIndex="0" Show="normal" WorkingDirectory="TARGETDIR" Advertise="yes" />
+			</Component>
+			<!-- .bin files list T7Suite under Open with; their default program stays as it is (T7Suite's setup registered none) -->
+			<Component Id="BinOpenWith">
+				<RegistryValue Root="HKLM" Key="Software\Classes\.bin\OpenWithProgids" Name="T7Suite.bin" Type="string" Value="T7Suite" KeyPath="yes" />
+				<RegistryValue Root="HKLM" Key="Software\Classes\T7Suite.bin" Type="string" Value="Trionic 7 binary" />
+				<RegistryValue Root="HKLM" Key="Software\Classes\T7Suite.bin\DefaultIcon" Type="string" Value="[INSTALLFOLDER]T7Suite.exe,0" />
+				<RegistryValue Root="HKLM" Key="Software\Classes\T7Suite.bin\shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]T7Suite.exe&quot; &quot;%1&quot;" />
+			</Component>
+			<Merge Id="VCRedist" SourceFile="$(var.TrionicDir)\SetupCANFlasher\Microsoft_VC100_CRT_x86.msm" DiskId="1" Language="0"/>
+		</DirectoryRef>
+
+
+		<Feature Id="DefaultFeature" ConfigurableDirectory="INSTALLFOLDER" Level="1">
+			<ComponentRef Id="T7SuiteExeComponent" Primary="yes" />
+			<ComponentRef Id="BinOpenWith" />
+			<!-- the rest of the self-contained publish folder (runtime, Avalonia, manuals, Binaries, libusb-1.0.dll) -->
+			<Files Directory="INSTALLFOLDER" Include="$(var.PublishDir)\**">
+				<Exclude Files="$(var.PublishDir)\T7Suite.exe" />
+				<!-- native SkiaSharp/HarfBuzz symbols, ~100 MB -->
+				<Exclude Files="$(var.PublishDir)\lib*.pdb" />
+			</Files>
+		</Feature>
+
+		<Icon Id="T7Suite.ico" SourceFile="$(sys.SOURCEFILEDIR)..\T7App\T7Suite.ico" />
+		<Property Id="ARPPRODUCTICON" Value="T7Suite.ico" />
+		<MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+		<StandardDirectory Id="ProgramFilesFolder">
+			<Directory Id="ManufacturerFolder" Name="!(bind.property.Manufacturer)">
+				<Directory Id="INSTALLFOLDER" Name="!(bind.property.ProductName)" />
+			</Directory>
+		</StandardDirectory>
+		<StandardDirectory Id="DesktopFolder" />
+		<StandardDirectory Id="ProgramMenuFolder" />
+	</Package>
+</Wix>

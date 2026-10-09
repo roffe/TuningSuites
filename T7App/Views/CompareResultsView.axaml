@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T7App.ViewModels"
+             xmlns:v="using:T7App.Views"
+             xmlns:t7="using:T7"
+             x:Class="T7App.Views.CompareResultsView"
+             x:DataType="vm:CompareResultsViewModel">
+    <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsReadOnly="True" SelectionMode="Single"
+              GridLinesVisibility="Horizontal" DoubleTapped="OnDoubleTapped" KeyDown="OnKeyDown">
+        <DataGrid.Styles>
+            <!-- missing in the original file: Salmon, missing in the compare file: CornflowerBlue -->
+            <Style Selector="DataGridRow" x:DataType="t7:CompareRow">
+                <Setter Property="Background" Value="{Binding Converter={x:Static v:CompareRowColorConverter.Instance}}" />
+            </Style>
+        </DataGrid.Styles>
+        <DataGrid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Open" Click="OnOpen" />
+                <MenuItem Header="Show differences map" Click="OnDifferenceMap" />
+                <MenuItem Header="Export to CSV" Click="OnExport" />
+            </ContextMenu>
+        </DataGrid.ContextMenu>
+        <DataGrid.Columns>
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Symbol" Binding="{Binding SymbolName, Mode=OneWay}" Width="200" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Description" Binding="{Binding Description, Mode=OneWay}" Width="260" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Length (bytes)" Binding="{Binding LengthBytes, Mode=OneWay, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Percentage of values different" Binding="{Binding Percentage, Mode=OneWay, StringFormat='{}{0:F1}'}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Number of values different" Binding="{Binding Differences, Mode=OneWay}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Average difference" Binding="{Binding AverageDifference, Mode=OneWay, StringFormat='{}{0:F1}'}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Symbolnumber #1" Binding="{Binding SymbolNumber1, Mode=OneWay}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Symbolnumber #2" Binding="{Binding SymbolNumber2, Mode=OneWay}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="User description" Binding="{Binding Userdescription, Mode=OneWay}" />
+            <DataGridCheckBoxColumn x:DataType="t7:CompareRow" Header="Missing in original file" Binding="{Binding MissingInOriFile, Mode=OneWay}" />
+            <DataGridCheckBoxColumn x:DataType="t7:CompareRow" Header="Missing in compare file" Binding="{Binding MissingInCompareFile, Mode=OneWay}" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

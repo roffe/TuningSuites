@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.TcmWindow"
+        x:DataType="vm:TcmViewModel"
+        Title="TCM Limiter Modification" Width="520" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="12" Spacing="10">
+        <HeaderedContentControl Header="TCM MOD v1 TCM threshold based solution">
+            <StackPanel Spacing="6">
+                <CheckBox Content="Enable firmware modification" IsChecked="{Binding ThresholdMod}" />
+                <TextBlock Text="Select TCM limiter" />
+                <ComboBox ItemsSource="{Binding Thresholds}" SelectedIndex="{Binding Threshold}" IsEnabled="{Binding ThresholdMod}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="TCM MOD v2 Customized TCM limit depending on active gear">
+            <StackPanel Spacing="6">
+                <CheckBox Content="Enable firmware modification" IsChecked="{Binding GearMod}" />
+                <TextBlock Text="Gear selection" />
+                <ComboBox ItemsSource="{Binding Gears}" SelectedIndex="{Binding Gear}" IsEnabled="{Binding GearMod}" HorizontalAlignment="Stretch" />
+                <TextBlock Text="Select TCM limiter" />
+                <ComboBox ItemsSource="{Binding GearLimits}" SelectedIndex="{Binding GearLimit}" IsEnabled="{Binding GearMod}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

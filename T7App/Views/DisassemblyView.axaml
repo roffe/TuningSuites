@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T7App.ViewModels"
+             xmlns:ae="using:AvaloniaEdit"
+             xmlns:hex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+             xmlns:r="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
+             x:Class="T7App.Views.DisassemblyView"
+             x:DataType="vm:DisassemblyViewModel">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="4">
+            <Button Content="Save" Click="OnSave" />
+            <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="Ctrl+F finds, Ctrl+H replaces, double-click a byte to find its address" />
+        </StackPanel>
+        <!-- ctrlDisassembler's splitter: the listing left, the bin's bytes right at a fixed width, 16 per line (UseFixedBytesPerLine) -->
+        <!-- the hex pane is 16 bytes and their text wide; the listing keeps room to read and takes it from the hex pane in a narrow window -->
+        <Grid x:Name="Panes">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="280" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="640" />
+            </Grid.ColumnDefinitions>
+            <ae:TextEditor x:Name="Editor" ShowLineNumbers="True" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13" />
+            <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" />
+            <DockPanel Grid.Column="2">
+            <TextBlock DockPanel.Dock="Top" Margin="6,2" Text="{Binding HexStatus}" />
+            <hex:HexEditor x:Name="Hex" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13">
+                <hex:HexEditor.Columns>
+                    <r:OffsetColumn />
+                    <r:HexColumn />
+                    <r:AsciiColumn />
+                </hex:HexEditor.Columns>
+            </hex:HexEditor>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

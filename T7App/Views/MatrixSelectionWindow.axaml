@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.MatrixSelectionWindow"
+        x:DataType="vm:MatrixSelectionViewModel"
+        Title="Select parameters for matrix" Width="460" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="12" Spacing="8">
+        <TextBlock Text="Matrix definition" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+            <TextBlock Text="x axis" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Symbols}" SelectedItem="{Binding X}" PlaceholderText="Select a symbol for X" HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="1" Text="y axis" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Symbols}" SelectedItem="{Binding Y}" PlaceholderText="Select a symbol for Y" HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="2" Text="z axis (value)" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Symbols}" SelectedItem="{Binding Z}" PlaceholderText="Select a symbol for Z" HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="3" Text="Viewtype" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding Modes}" SelectedIndex="{Binding Mode}" HorizontalAlignment="Stretch" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>
