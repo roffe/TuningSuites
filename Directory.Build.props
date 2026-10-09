@@ -1,11 +1,11 @@
 <Project>
 
   <!--
-    Each suite is versioned by its own tags: the app project sets VersionTagPrefix (T7App: t7suite/) and the version comes from
-    the nearest <prefix>vX.Y.Z tag, so tagging t7suite/v3.0.0 doesn't touch T8Suite or T5Suite. Libraries and tests have no
-    prefix and build as 0.0.0-<sha> quietly; nothing ships them on their own.
+    Each suite is versioned by its own tags, the scheme upstream's releases use: the app project sets VersionTagPrefix (T7App:
+    T7suite_) and the version comes from the nearest <prefix>vX.Y.Z tag, so tagging T7suite_v2.0.0 doesn't touch T8Suite
+    (T8suite_v) or T5Suite. Libraries and tests have no prefix and build as 0.0.0-<sha> quietly; nothing ships them on their own.
     The version comes from the nearest vX.Y.Z git tag, nothing in the code holds it (same scheme as roffe/Trionic, see its README "Versioning and releasing"):
-      (tags below with the project's prefix, e.g. t7suite/v0.1.75)
+      (tags below with the project's prefix, e.g. T7suite_v0.1.75)
       HEAD at tag v0.1.75, clean tree    0.1.75
       commits after the tag              0.1.75-<first 9 of the commit sha>
       uncommitted changes                0.1.75-<sha>-dirty
