@@ -3,6 +3,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using T7App.Services;
 using T7App.ViewModels;
 
@@ -605,6 +606,11 @@ public partial class MainWindow : Window
         DockFactory!.ActiveDockableChanged += (_, e) =>
         {
             if (!m_syncingDock && e.Dockable?.Context is DocumentViewModel doc) Vm.SelectedViewer = doc;
+            // Dock brings an inner window forward by raising its ZIndex, and Avalonia's compositor re-sorts the windows without
+            // repainting them: only the restyled title bars were redrawn, the other window's table and graph stayed painted over
+            // the one brought forward until it was dragged. Redrawing each window's frame repaints the whole window.
+            foreach (var w in Workspace.GetVisualDescendants().OfType<Dock.Avalonia.Controls.MdiDocumentWindow>())
+                w.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Name == "PART_OuterBorder")?.InvalidateVisual();
         };
         // a window dragged by its title bar and let go outside the main window floats (T7Suite's floating panels)
         AddHandler(PointerPressedEvent, OnWorkspacePressed, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);

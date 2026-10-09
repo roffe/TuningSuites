@@ -3,11 +3,12 @@
              xmlns:vm="using:T7App.ViewModels"
              xmlns:v="using:T7App.Views"
              xmlns:mc="using:MapControls"
+             xmlns:c="using:T7App.Controls"
              x:Class="T7App.App"
              RequestedThemeVariant="Default">
     <Application.Resources>
-        <!-- documents keep their view (map camera, selection) when Dock re-hosts them -->
-        <ControlRecycling x:Key="DocumentRecycling" TryToUseIdAsKey="True" />
+        <!-- every host builds its own document view (Dock's recycling moved views between the tabbed and the inner window layout) -->
+        <c:NoRecycling x:Key="DocumentRecycling" />
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>
@@ -28,6 +29,14 @@
         <DockFluentTheme />
         <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
         <StyleInclude Source="avares://AvaloniaHex/Themes/Fluent/AvaloniaHex.axaml" />
+        <!-- inner windows measured at their own size, not the workspace's (a class selector outranks the template's panel) -->
+        <Style Selector="ItemsControl.MdiLayoutItems">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <c:ArrangedMdiLayoutPanel LayoutManager="{Binding $parent[MdiDocumentControl].LayoutManager}" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
         <!-- the whole MDI title bar moves the window; its title part was Dock's drag-to-dock handle (tabs, splits) -->
         <Style Selector="MdiDocumentWindow /template/ Border#PART_DragHandle">
             <Setter Property="IsHitTestVisible" Value="False" />

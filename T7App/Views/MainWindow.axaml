@@ -189,9 +189,7 @@
                     <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False" CanDrop="False" CanFloat="False">
                         <DocumentDock.DocumentTemplate>
                             <DocumentTemplate>
-                                <c:ArrangedSizeDecorator x:DataType="Document">
-                                    <ContentControl Content="{Binding Context}" />
-                                </c:ArrangedSizeDecorator>
+                                <ContentControl x:DataType="Document" Content="{Binding Context}" />
                             </DocumentTemplate>
                         </DocumentDock.DocumentTemplate>
                     </DocumentDock>
