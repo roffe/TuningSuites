@@ -63,6 +63,7 @@ public partial class DisassemblyView : UserControl
         {
             Editor.Document = vm.Document;
             Hex.Document = vm.Binary;
+            vm.HexCaretAt(Hex.Caret.Location.ByteIndex);
         }
     }
 

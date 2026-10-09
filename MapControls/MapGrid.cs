@@ -282,8 +282,10 @@ public class MapGrid : Control
                 if (editing) context.FillRectangle(Brushes.White, rect.Deflate(1));
                 if (editing) textBrush = Brushes.Black;
                 var t = Text(editing ? m_input : map.FormatCell(i, ViewType), textBrush);
+                // an edit wider than the cell keeps its end, where the typing is, in view
+                double x = editing && t.Width > rect.Width - 2 ? rect.Right - 1 - t.Width : rect.X + Math.Max(1, (rect.Width - t.Width) / 2);
                 using (context.PushClip(rect))
-                    context.DrawText(t, new Point(rect.X + Math.Max(1, (rect.Width - t.Width) / 2), rect.Y + (rect.Height - t.Height) / 2));
+                    context.DrawText(t, new Point(x, rect.Y + (rect.Height - t.Height) / 2));
             }
 
         for (int c = 0; c <= map.Cols; c++)

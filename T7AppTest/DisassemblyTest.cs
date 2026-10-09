@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -85,6 +86,9 @@ namespace T7AppTest
                 var view = window.GetVisualDescendants().OfType<DisassemblyView>().Single();
                 var editor = view.GetVisualDescendants().OfType<TextEditor>().Single();
                 var hex = view.GetVisualDescendants().OfType<HexEditor>().Single();
+                // the hex pane at its full 16 bytes and text in the default inner window, its status from the start
+                Assert.AreEqual(640, view.FindControl<Avalonia.Controls.Grid>("Panes")!.ColumnDefinitions[2].ActualWidth);
+                StringAssert.StartsWith(asm.HexStatus, "0x000000");
 
                 // text → hex: an instruction a few hundred lines down, followed by another
                 var lines = asm.Document.Lines;
