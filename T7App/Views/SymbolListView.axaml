@@ -26,7 +26,7 @@
                 <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
                     <DataTemplate x:DataType="cs:SymbolHelper">
                         <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
-                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Foreground="{Binding Varname, Converter={x:Static v:SymbolForegroundConverter.Instance}}" />
                         </Border>
                     </DataTemplate>
                 </DataGridTemplateColumn>

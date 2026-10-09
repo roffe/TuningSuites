@@ -474,6 +474,12 @@ namespace T7AppTest
                 vm.OpenSymbolByName("IgnNormCal.Map");
                 vm.OpenSymbolByName("BFuelCal.Map");
                 window.CaptureRenderedFrame();
+                // dark theme: the coloured symbol names keep black text
+                Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+                vm.SearchText = "MAFCal";
+                Save(window, "symbols-dark");
+                Avalonia.Application.Current.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
+                vm.SearchText = "";
                 var docs = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!;
                 var dock = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Dock.Avalonia.Controls.DocumentDockControl>().First().DataContext as Dock.Model.Controls.IDocumentDock;
                 Assert.HasCount(2, dock!.VisibleDockables!);

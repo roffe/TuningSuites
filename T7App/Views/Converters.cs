@@ -126,3 +126,14 @@ public class ResultTextConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
+
+/// <summary>Black text on the symbol name's category colour (the theme's white disappears on yellow); the theme's colour otherwise.</summary>
+public class SymbolForegroundConverter : IValueConverter
+{
+    public static readonly SymbolForegroundConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        SymbolColorConverter.Instance.Convert(value, targetType, parameter, culture) != null ? Brushes.Black : Avalonia.AvaloniaProperty.UnsetValue;
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
