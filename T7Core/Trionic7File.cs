@@ -762,7 +762,8 @@ namespace T7
             int found = -1;
             bool matched = false;
             FileInfo fi = new FileInfo(filename);
-            FileStream fsread = new FileStream(filename, FileMode.Open, FileAccess.Read);
+            // using: closed on every path (it stayed open when the search didn't run, blocking a later save on Windows)
+            using FileStream fsread = new FileStream(filename, FileMode.Open, FileAccess.Read);
             //only look at this if we have a populated file and search bytes with a sensible start
             if (fi.Length > 0 && searchBytes.Length > 0 && startOffset <= (fi.Length - searchBytes.Length) && fi.Length >= searchBytes.Length)
             {

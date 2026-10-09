@@ -1839,9 +1839,10 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                 A_reg.SetValue(0, temp);
                 D_reg.SetValue(0, temp);
             }
-            FileStream fsbr = new FileStream(inputfile, FileMode.Open, FileAccess.Read);
+            // using: T7Suite left the bin open until the GC ran, which on Windows blocked saving it (hex view)
+            using FileStream fsbr = new FileStream(inputfile, FileMode.Open, FileAccess.Read);
             if (fsbr == null) return _labels;
-            BinaryReader br = new BinaryReader(fsbr);
+            using BinaryReader br = new BinaryReader(fsbr);
             if (br == null)
             {
                 fsbr.Close();
@@ -1906,9 +1907,10 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
             /********************* DISASSEMBLY STARTS HERE *********************/
             /* Read all the preceding words first */
             //StreamWriter sw = new StreamWriter(outname, false);
-            FileStream fsbr = new FileStream(inputfile, FileMode.Open, FileAccess.Read);
+            // using: T7Suite left the bin open until the GC ran, which on Windows blocked saving it (hex view)
+            using FileStream fsbr = new FileStream(inputfile, FileMode.Open, FileAccess.Read);
             if (fsbr == null) return false;
-            BinaryReader br = new BinaryReader(fsbr);
+            using BinaryReader br = new BinaryReader(fsbr);
             if (br == null)
             {
                 fsbr.Close();
@@ -2372,11 +2374,12 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                        
             /********************* DISASSEMBLY STARTS HERE *********************/
             /* Read all the preceding words first */
-            StreamWriter sw = new StreamWriter(outputfile, false);
-            FileStream fsbr = new FileStream(inputfile, FileMode.Open, FileAccess.Read);
+            using StreamWriter sw = new StreamWriter(outputfile, false);
+            // using: T7Suite left the bin open until the GC ran, which on Windows blocked saving it (hex view)
+            using FileStream fsbr = new FileStream(inputfile, FileMode.Open, FileAccess.Read);
             if (fsbr == null)
                 return false;
-            BinaryReader br = new BinaryReader(fsbr);
+            using BinaryReader br = new BinaryReader(fsbr);
             if (br == null)
             {
                 fsbr.Close();

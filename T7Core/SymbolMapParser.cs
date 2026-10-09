@@ -34,9 +34,10 @@ namespace T7.Parser
             m_nrOfSymbols = 0;
             if (!File.Exists(a_t7File))
                 return false;
-            FileStream fs = new FileStream(a_t7File, FileMode.Open, FileAccess.Read);
+            // using: T7Suite never closed it
+            using FileStream fs = new FileStream(a_t7File, FileMode.Open, FileAccess.Read);
             fs.Position = 0;
-           
+
             StreamReader reader = new StreamReader( a_t7File );
             string content = reader.ReadToEnd();
             reader.Close();
