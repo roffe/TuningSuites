@@ -208,6 +208,9 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedViewer = document;
     }
 
+    /// <summary>The symbol list's selected rows (Export as tuning package).</summary>
+    public System.Collections.Generic.IReadOnlyList<SymbolHelper> SelectedSymbols { get; set; } = [];
+
     partial void OnSelectedViewerChanged(DocumentViewModel? oldValue, DocumentViewModel? newValue)
     {
         if (oldValue != null) oldValue.IsSelected = false;

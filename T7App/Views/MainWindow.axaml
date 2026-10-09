@@ -111,6 +111,14 @@
                     <MenuItem Header="{Binding ClearFeedbackCaption}" Command="{Binding ClearAfrFeedbackMapCommand}" />
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="_Window">
+                <MenuItem Header="Floating windows" Click="OnFloatingWindows" />
+                <MenuItem Header="Tabbed documents" Click="OnTabbedDocuments" />
+                <Separator />
+                <MenuItem Header="Cascade" Click="OnCascade" />
+                <MenuItem Header="Tile horizontally" Click="OnTileHorizontal" />
+                <MenuItem Header="Tile vertically" Click="OnTileVertical" />
+            </MenuItem>
             <MenuItem Header="_Information">
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
             </MenuItem>
@@ -128,91 +136,28 @@
             </Grid>
         </Border>
 
-        <Grid ColumnDefinitions="420,4,*">
-            <DockPanel Grid.Column="0">
-                <TextBlock DockPanel.Dock="Top" Text="Symbol list" FontWeight="SemiBold" Margin="8,6" />
-                <TextBox DockPanel.Dock="Top" Margin="6,0,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
-                <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}"
-                          CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
-                          GridLinesVisibility="Horizontal" SelectionMode="Extended"
-                          DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded">
-                    <DataGrid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Read symbol from ECU" Click="OnReadSymbolFromEcu" />
-                            <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
-                            <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
-                            <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
-                            <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
-                            <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
-                            <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
-                        </ContextMenu>
-                    </DataGrid.ContextMenu>
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
-                            <DataTemplate x:DataType="cs:SymbolHelper">
-                                <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
-                                    <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" />
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" SortMemberPath="Flash_start_address"
-                                            Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
-                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
-                                            Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
-                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
-                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" Binding="{Binding Userdescription}" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </DockPanel>
-
-            <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
-
-            <!-- one viewer per open map; all stay alive so switching tabs keeps their camera and selection -->
-            <DockPanel Grid.Column="2">
-                <TabStrip DockPanel.Dock="Top" ItemsSource="{Binding Viewers}" SelectedItem="{Binding SelectedViewer}">
-                    <TabStrip.ItemTemplate>
-                        <DataTemplate x:DataType="vm:DocumentViewModel">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                                <Button Content="✕" Padding="4,0" Background="Transparent" VerticalAlignment="Center"
-                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseViewerCommand}"
-                                        CommandParameter="{Binding}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </TabStrip.ItemTemplate>
-                </TabStrip>
-                <ItemsControl ItemsSource="{Binding Viewers}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Panel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.DataTemplates>
-                        <DataTemplate DataType="vm:MapViewerViewModel">
-                            <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
-                                          SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
-                                          ReadEcuCommand="{Binding EcuReadCommand}" WriteEcuCommand="{Binding EcuWriteCommand}"
-                                          OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
-                                          CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
-                                          IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
-                                          DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
-                                          OpenLoopMark="{Binding OpenLoopMark}" LiveCell="{Binding LiveCell}" />
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:CompareResultsViewModel">
-                            <v:CompareResultsView IsVisible="{Binding IsSelected}" />
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:RealtimeViewModel">
-                            <v:RealtimeView IsVisible="{Binding IsSelected}" />
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:LogViewerViewModel">
-                            <v:LogViewerView IsVisible="{Binding IsSelected}" />
-                        </DataTemplate>
-                        <DataTemplate DataType="vm:SearchResultsViewModel">
-                            <v:SearchResultsView IsVisible="{Binding IsSelected}" />
-                        </DataTemplate>
-                    </ItemsControl.DataTemplates>
-                </ItemsControl>
-            </DockPanel>
-        </Grid>
+        <!-- T7Suite's workspace: a dockable symbol list and the documents as inner windows (or tabs) -->
+        <DockControl x:Name="Workspace" InitializeLayout="True" InitializeFactory="True">
+            <DockControl.Factory>
+                <Factory HideToolsOnClose="True" />
+            </DockControl.Factory>
+            <RootDock Id="Root" IsCollapsable="False" DefaultDockable="{Binding #MainLayout}">
+                <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal" IsCollapsable="False">
+                    <ToolDock Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="False">
+                        <Tool Id="SymbolList" Title="Symbol list" CanClose="False" x:DataType="Tool">
+                            <v:SymbolListView DataContext="{Binding $parent[Window].DataContext}" />
+                        </Tool>
+                    </ToolDock>
+                    <ProportionalDockSplitter />
+                    <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False">
+                        <DocumentDock.DocumentTemplate>
+                            <DocumentTemplate>
+                                <ContentControl x:DataType="Document" Content="{Binding Context}" />
+                            </DocumentTemplate>
+                        </DocumentDock.DocumentTemplate>
+                    </DocumentDock>
+                </ProportionalDock>
+            </RootDock>
+        </DockControl>
     </DockPanel>
 </Window>

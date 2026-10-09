@@ -53,7 +53,7 @@ SetupT7/                   WiX MSI (chunk 8)
 | DevExpress XtraGrid (map tables) | `MapGrid`: our own control, a `Render(DrawingContext)` override modelled on txlogger's mapviewer |
 | DevExpress XtraGrid (symbol list, compare lists) | Avalonia `DataGrid` |
 | Nevron 3D and 2D, XtraCharts | `Surface3D`: port meshgrid's CPU rasterizer and axes to Skia `DrawVertices` in an `ICustomDrawOperation`. Port the GLSL shader to SkSL later if needed. `Graph2D`: port txlogger's graph2d |
-| XtraBars ribbon and docking, XtraTab | Menu, toolbar, tabs for now; MDI-style inner windows and a dockable symbol list later (see chunk 7) |
+| XtraBars ribbon and docking, XtraTab | Menu bar; Dock.Avalonia 12.1 (MIT) for the workspace: documents as MDI inner windows or tabs, the symbol list as a dockable tool pane |
 | XtraWizard | A plain step-by-step view |
 | XtraReports (TuningReport) | Drop it. Export HTML if anyone misses it |
 | Office Excel COM, OleDb ACE | CSV export, plus copying as tab-separated text so it pastes into Excel |
@@ -181,11 +181,11 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] View knock count / false knock / real knock / misfire map from the ECU
 - Deliberate differences: a failed read keeps the last value (T7Suite's failed short read threw and lost the rest of the pass); layouts and logs are written with invariant numbers and read with either separator; a layout's symbol takes the open bin's address (T7Suite trusted the saved one); the AFR digits show AFR in AFR mode (T7Suite showed λ there); Reset peak values is visible; sound notifications aren't ported yet
 - [x] `.t7l` round-trip test, both decimal separators
-- [ ] Not ported yet: sound notifications (needs a cross-platform audio player), Combi adapter ADC / thermocouple channels, auto-logging triggers (T7Suite never used them), the CAN frame sniffing T7Suite kept switched off
-- [ ] Tested against a running engine
+- Moved to later (see After T7): sound notifications, Combi adapter ADC / thermocouple channels. Not ported: auto-logging triggers (T7Suite never used them), the CAN frame sniffing T7Suite kept switched off
+- [x] Tested on a bench ECU: realtime values look right. Not yet on a running engine (wideband, autotune, live cells)
 
 ### 7. Tools
-- [ ] T7Suite's workspace: map viewers, compare results etc. as inner windows that can be moved, resized, snapped and tabbed, and a dockable symbol list. Candidate: Dock.Avalonia (MIT). Replaces the tab strip; the documents are already view models, so only the host changes
+- [x] T7Suite's workspace with Dock.Avalonia: the documents (`Viewers`) are the DocumentDock's ItemsSource in MDI mode (inner windows: move, resize, minimise, maximise; Window → Cascade / Tile horizontally / Tile vertically) or tabbed (Window menu, remembered), the symbol list is a dockable / floatable tool pane. Closing goes through the unsaved-changes question; selection follows both ways
 - [ ] TuneToStage and the tuning wizard
 - [ ] Airmass result view (about 800 lines of logic to pull out of ctrlAirmassResult first)
 - [ ] Compressor map
@@ -205,6 +205,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - **T8Suite:** extract the shared parts of T7Core and the app into a shared Core and Controls layer, then port T8 on top. Expect much of the T7 UI to carry over.
 - **T5Suite2.0:** last. It is the largest UI (Trionic5Controls alone is 63k LOC) and the oldest code. T5 support is already in the new TrionicCANLib.
+- **Realtime leftovers from chunk 6:** sound notifications (3 slots, needs a cross-platform audio player) and the Combi adapter's ADC / thermocouple channels with their settings.
 - **Dead code to delete eventually:** T7CANFlasher/ (replaced by TrionicCANFlasher), the T7Libs/ wrapper DLLs, AquaGauge, LBIndustrialCtrls, ProCharts, MouseGestures.
 
 ## Open questions
@@ -215,6 +216,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 7: docking workspace (MDI inner windows / tabs, dockable symbol list).
+- 2026-10-09: Chunk 6 bench tested (realtime values OK); sounds and Combi ADC moved to later. Chunk 7 started.
 - 2026-10-09: Chunk 6 done apart from sounds and Combi ADC channels: log viewer, CSV / LogWorks exports, log filters, knock and misfire maps; waiting for a test on a running engine.
 - 2026-10-09: Chunk 6: wideband, AFR maps and autotune; WidebandSupport vendored (Apache 2.0).
 - 2026-10-09: Chunk 6 in progress: realtime engine, panel, .t7l logging and live cell tracking.

@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T7App.ViewModels"
+             xmlns:v="using:T7App.Views"
+             xmlns:cs="using:CommonSuite"
+             x:Class="T7App.Views.SymbolListView"
+             x:DataType="vm:MainWindowViewModel">
+    <DockPanel>
+        <TextBox DockPanel.Dock="Top" Margin="6,6,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
+        <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}"
+                  CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal" SelectionMode="Extended"
+                  DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded" SelectionChanged="OnSelectionChanged">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Read symbol from ECU" Click="OnReadSymbolFromEcu" />
+                    <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
+                    <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
+                    <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
+                    <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
+                    <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
+                    <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
+                    <DataTemplate x:DataType="cs:SymbolHelper">
+                        <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
+                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" SortMemberPath="Flash_start_address"
+                                    Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
+                                    Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" Binding="{Binding Userdescription}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

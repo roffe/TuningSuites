@@ -60,7 +60,7 @@ namespace T7App.Services
             var ok = new Button { Content = "Ok", MinWidth = 80, IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
             ok.Click += (_, _) => dlg.Close();
             var body = new DockPanel { Margin = new Thickness(12) };
-            DockPanel.SetDock(ok, Dock.Bottom);
+            DockPanel.SetDock(ok, Avalonia.Controls.Dock.Bottom);
             body.Children.Add(ok);
             body.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, FontFamily = new Avalonia.Media.FontFamily("monospace") });
             dlg.Content = body;

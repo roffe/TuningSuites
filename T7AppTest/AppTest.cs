@@ -70,7 +70,8 @@ namespace T7AppTest
 
                 // Enter in the symbol list opens the selected map
                 vm.SelectedSymbol = vm.Binary!.Find("IgnNormCal.Map");
-                var grid = window.FindControl<DataGrid>("SymbolGrid")!;
+                window.CaptureRenderedFrame();
+                var grid = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
                 grid.Focus();
                 window.KeyPress(Avalonia.Input.Key.Enter, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Enter, null);
                 Assert.HasCount(1, vm.Viewers);
@@ -437,6 +438,53 @@ namespace T7AppTest
                 filters.Show();
                 Save(filters, "logfilters");
                 filters.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
+        public void WorkspaceWindowsAndClosing()
+        {
+            string file = Path.Combine(s_dir, "workspace.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                vm.OpenSymbolByName("IgnNormCal.Map");
+                vm.OpenSymbolByName("BFuelCal.Map");
+                window.CaptureRenderedFrame();
+                var docs = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!;
+                var dock = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Dock.Avalonia.Controls.DocumentDockControl>().First().DataContext as Dock.Model.Controls.IDocumentDock;
+                Assert.HasCount(2, dock!.VisibleDockables!);
+                var ign = (MapViewerViewModel)vm.Viewers[0];
+
+                // selecting in the view model brings the window to the front, and the other way round
+                vm.SelectedViewer = ign;
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.AreSame(ign, dock.ActiveDockable!.Context);
+                docs.Factory!.SetActiveDockable(dock.VisibleDockables!.First(d => d.Context != ign));
+                Assert.AreNotSame(ign, vm.SelectedViewer);
+
+                // the window's close button asks about unsaved changes: Cancel keeps it, No closes it
+                ign.Map.Set([(0, ign.Map[0] + 1)]);
+                bool? answer = null;
+                int asked = 0;
+                vm.AskYesNoCancel = _ => { asked++; return System.Threading.Tasks.Task.FromResult(answer); };
+                var ignDock = dock.VisibleDockables!.First(d => d.Context == ign);
+                docs.Factory.CloseDockable(ignDock);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.AreEqual(1, asked);
+                Assert.Contains(ign, vm.Viewers);
+                answer = false;
+                docs.Factory.CloseDockable(ignDock);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Assert.DoesNotContain(ign, vm.Viewers);
+                Assert.HasCount(1, dock.VisibleDockables!);
+                Save(window, "workspace");
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();

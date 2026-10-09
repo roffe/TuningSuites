@@ -12,12 +12,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        // Enter opens the symbol; the grid would move to the next row, so catch it on the way down, unless a cell is being edited
-        SymbolGrid.AddHandler(KeyDownEvent, OnSymbolKeyDown, RoutingStrategies.Tunnel);
-        SymbolGrid.BeginningEdit += (_, _) => m_editingSymbol = true;
+        InitWorkspace();
     }
-
-    private bool m_editingSymbol;
 
     private MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;
 
@@ -26,6 +22,8 @@ public partial class MainWindow : Window
         base.OnDataContextChanged(e);
         if (DataContext is MainWindowViewModel vm)
         {
+            Documents.ItemsSource = vm.Viewers;
+            vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.SelectedViewer)) ActivateDocument(vm.SelectedViewer); };
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildQuickMaps(); };
             vm.MyMapsChanged += BuildMyMaps;
             BuildMyMaps();
@@ -109,7 +107,7 @@ public partial class MainWindow : Window
         if (await Dialogs.OpenFile(this, "SRAM dump files", "*.RAM") is { } file) Vm.ImportSramSnapshot(file);
     }
 
-    private async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)
+    internal async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is not { } sh || Vm.Binary is not { } bin) return;
         Vm.OpenSymbolByName(sh.SmartVarname);
@@ -148,12 +146,12 @@ public partial class MainWindow : Window
         if (await new LogFiltersWindow { DataContext = filters }.ShowDialog<bool>(this)) Vm.SaveLogFilters(filters.ToCollection());
     }
 
-    private void OnAddToRealtime(object? sender, RoutedEventArgs e)
+    internal void OnAddToRealtime(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is { } sh) Vm.AddToRealtime(sh);
     }
 
-    private void OnReadFromSramFile(object? sender, RoutedEventArgs e)
+    internal void OnReadFromSramFile(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is { } sh) Vm.OpenFromSramFile(sh);
     }
@@ -204,7 +202,7 @@ public partial class MainWindow : Window
         if (await new MyMapsWindow { DataContext = maps }.ShowDialog<bool>(this)) Vm.SaveMyMaps(maps.Maps);
     }
 
-    private void OnAddToMyMaps(object? sender, RoutedEventArgs e)
+    internal void OnAddToMyMaps(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is { } sh) Vm.AddToMyMaps(sh);
     }
@@ -264,20 +262,20 @@ public partial class MainWindow : Window
         if (await Dialogs.SaveFile(this, "CSV files", "csv", name) is { } target) T7.SymbolFiles.ExportMapCsv(bin, sh, target);
     }
 
-    private async void OnExportPackage(object? sender, RoutedEventArgs e)
+    internal async void OnExportPackage(object? sender, RoutedEventArgs e)
     {
-        var selected = SymbolGrid.SelectedItems.OfType<CommonSuite.SymbolHelper>().ToList();
+        var selected = Vm.SelectedSymbols.ToList();
         if (Vm.Binary is { } bin && selected.Count > 0 && await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } target)
             T7.SymbolFiles.ExportPackage(bin, selected, target);
     }
 
-    private async void OnExportFixedPackage(object? sender, RoutedEventArgs e)
+    internal async void OnExportFixedPackage(object? sender, RoutedEventArgs e)
     {
         if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } target)
             T7.SymbolFiles.ExportPackage(bin, T7.SymbolFiles.FixedPackage(bin), target);
     }
 
-    private async void OnExportSymbolCsv(object? sender, RoutedEventArgs e)
+    internal async void OnExportSymbolCsv(object? sender, RoutedEventArgs e)
     {
         if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "CSV files", "csv") is { } target)
         {
@@ -394,18 +392,73 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void OnSymbolCellEditEnded(object? sender, DataGridCellEditEndedEventArgs e)
+    // ---- workspace ----
+
+    private bool m_syncingDock;
+    private readonly System.Collections.Generic.HashSet<Dock.Model.Core.IDockable> m_sized = [];
+
+    private Dock.Model.Core.IFactory? DockFactory => Workspace.Factory;
+
+    private const string LayoutKey = "DocumentLayout";
+
+    private void InitWorkspace()
     {
-        m_editingSymbol = false;
-        if (e.EditAction == DataGridEditAction.Commit) Vm.SaveUserDescriptions();
+        // the close button goes through the view model, which asks about unsaved maps and then drops the document
+        DockFactory!.DockableClosing += (_, e) =>
+        {
+            if (e.Dockable?.Context is not DocumentViewModel doc) return;
+            e.Cancel = true;
+            _ = Vm.CloseViewerAsync(doc);
+        };
+        DockFactory!.ActiveDockableChanged += (_, e) =>
+        {
+            if (!m_syncingDock && e.Dockable?.Context is DocumentViewModel doc) Vm.SelectedViewer = doc;
+        };
+        using var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite);
+        if (settings.GetValue(LayoutKey) is "Tabbed") Documents.LayoutMode = Dock.Model.Core.DocumentLayoutMode.Tabbed;
     }
 
-    private void OnSymbolDoubleTapped(object? sender, TappedEventArgs e) => Vm.OpenSymbolCommand.Execute(Vm.SelectedSymbol);
-
-    private void OnSymbolKeyDown(object? sender, KeyEventArgs e)
+    // a document shown from the view model comes to the front (the dock's own document appears after the collection change)
+    private void ActivateDocument(DocumentViewModel? viewer)
     {
-        if (e.Key != Key.Enter || m_editingSymbol) return;
-        Vm.OpenSymbolCommand.Execute(Vm.SelectedSymbol);
-        e.Handled = true;
+        if (viewer == null) return;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (Documents.VisibleDockables?.FirstOrDefault(d => d.Context == viewer) is not { } dockable) return;
+            // a new inner window opens at a working size, cascaded below the last one (Dock's default is small)
+            if (dockable is Dock.Model.Controls.IMdiDocument mdi && m_sized.Add(dockable))
+            {
+                int n = Documents.VisibleDockables.Count - 1;
+                double width = System.Math.Max(640, Workspace.Bounds.Width * 0.6), height = System.Math.Max(460, Workspace.Bounds.Height * 0.8);
+                mdi.MdiBounds = new Dock.Model.Core.DockRect(24 * (n % 8), 24 * (n % 8), width, height);
+            }
+            m_syncingDock = true;
+            try
+            {
+                DockFactory!.SetActiveDockable(dockable);
+                DockFactory!.SetFocusedDockable(Documents, dockable);
+            }
+            finally
+            {
+                m_syncingDock = false;
+            }
+        });
     }
+
+    private void SetLayout(Dock.Model.Core.DocumentLayoutMode mode)
+    {
+        Documents.LayoutMode = mode;
+        using var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite);
+        settings.SetValue(LayoutKey, mode.ToString());
+    }
+
+    private void OnFloatingWindows(object? sender, RoutedEventArgs e) => SetLayout(Dock.Model.Core.DocumentLayoutMode.Mdi);
+
+    private void OnTabbedDocuments(object? sender, RoutedEventArgs e) => SetLayout(Dock.Model.Core.DocumentLayoutMode.Tabbed);
+
+    private void OnCascade(object? sender, RoutedEventArgs e) => Documents.CascadeDocuments?.Execute(null);
+
+    private void OnTileHorizontal(object? sender, RoutedEventArgs e) => Documents.TileDocumentsHorizontal?.Execute(null);
+
+    private void OnTileVertical(object? sender, RoutedEventArgs e) => Documents.TileDocumentsVertical?.Execute(null);
 }
