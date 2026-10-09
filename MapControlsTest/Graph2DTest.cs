@@ -7,6 +7,15 @@ namespace MapControlsTest
     public class Graph2DTest
     {
         [TestMethod]
+        public void PaletteRunsGreenYellowRedOverTheRange()
+        {
+            // txlogger's scale: the lowest value green, whatever the map's offset
+            Assert.AreEqual(Avalonia.Media.Color.FromRgb(0, 255, 0), HeatColor.Interpolate(900, 1000, 900));
+            Assert.AreEqual(Avalonia.Media.Color.FromRgb(255, 255, 0), HeatColor.Interpolate(900, 1000, 950));
+            Assert.AreEqual(Avalonia.Media.Color.FromRgb(255, 0, 0), HeatColor.Interpolate(900, 1000, 1000));
+        }
+
+        [TestMethod]
         public void NiceSteps()
         {
             Assert.AreEqual(1.0, Graph2D.NiceStep(8, 8));

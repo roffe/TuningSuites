@@ -16,7 +16,7 @@ public enum OpenLoopMark { None = 0, Box = 1, Corner = 2 }
 
 /// <summary>
 /// The map table, replacing MapViewerEx's DevExpress grid: X axis values as column headers, Y axis values as row headers,
-/// cells coloured like T7Suite (green→red by value/max, a red-white variant, a light tint in online mode), open-loop marks
+/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's red-white variant and online tint kept), open-loop marks
 /// and the yellow live cell. Behaves like the DevExpress grid T7Suite used: click/drag selects a block, Shift extends, Ctrl
 /// toggles, arrows move (Shift extends); typing, F2 or Enter edits the focused cell (Easy view starts from the value with two
 /// decimals) and Enter commits it; +/- step by one, PgUp/PgDn by ten (0x10 in hex), Home sets max, End zero, on every
@@ -185,9 +185,11 @@ public class MapGrid : Control
         return (Math.Clamp(row, 0, map.Rows - 1), Math.Clamp(col, 0, map.Cols - 1));
     }
 
-    private Color CellColor(int raw, int max)
+    private Color CellColor(int raw, int min, int max)
     {
-        // T7Suite: b = raw*255/max (integer), green→red, or alpha red, or a white→red tint online
+        // txlogger's green → yellow → red over min..max; T7Suite's raw*255/max made a fuel map red from its lowest cell
+        if (!OnlineMode && !IsRedWhite) return HeatColor.Interpolate(min, max, raw);
+        // T7Suite: b = raw*255/max (integer), alpha red, or a white→red tint online
         int b = raw * 255;
         if (max != 0) b /= max;
         if (OnlineMode)
@@ -195,9 +197,7 @@ public class MapGrid : Control
             int r = Math.Clamp(b / 2, 0, 255);
             return Color.FromRgb((byte)r, (byte)(255 - r), (byte)(255 - r));
         }
-        if (IsRedWhite) return Color.FromArgb((byte)Math.Min(Math.Abs(b), 255), 255, 0, 0);
-        int g = Math.Clamp(b, 0, 255);
-        return Color.FromRgb((byte)g, (byte)(255 - g), 0);
+        return Color.FromArgb((byte)Math.Min(Math.Abs(b), 255), 255, 0, 0);
     }
 
     public override void Render(DrawingContext context)
@@ -223,7 +223,7 @@ public class MapGrid : Control
             context.DrawText(t, new Point(4, m_headerH + r * m_cellH + (m_cellH - t.Height) / 2));
         }
 
-        int max = map.MaxValue();
+        int max = map.MaxValue(), min = map.MinValue();
         bool colors = !DisableColors && ViewType != MapViewType.Ascii;
         for (int r = 0; r < map.Rows; r++)
             for (int c = 0; c < map.Cols; c++)
@@ -234,7 +234,7 @@ public class MapGrid : Control
                 IBrush textBrush = fg;
                 if (colors)
                 {
-                    Color col = CellColor(map[i], max);
+                    Color col = CellColor(map[i], min, max);
                     context.FillRectangle(new ImmutableSolidColorBrush(col), rect);
                     if (!IsRedWhite) textBrush = Brushes.Black;
                 }

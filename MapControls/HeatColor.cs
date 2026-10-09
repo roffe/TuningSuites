@@ -3,10 +3,13 @@ using Avalonia.Media;
 
 namespace MapControls;
 
-/// <summary>T7Suite's 3D/graph palette: five stops at 0/25/50/75/100 % of the value range, interpolated in between.</summary>
+/// <summary>
+/// The map palette over the value range: txlogger's green → yellow → red (T7Suite's five stops from dark green made most
+/// maps look red), and T7Suite's online palette.
+/// </summary>
 public static class HeatColor
 {
-    private static readonly Color[] Offline = [Colors.Green, Colors.Yellow, Colors.Orange, Colors.OrangeRed, Colors.Red];
+    private static readonly Color[] Offline = [Color.FromRgb(0, 255, 0), Color.FromRgb(255, 255, 0), Color.FromRgb(255, 0, 0)];
     private static readonly Color[] Online = [Colors.Wheat, Colors.LightBlue, Colors.SteelBlue, Colors.Blue, Colors.DarkBlue];
 
     public static Color Interpolate(double min, double max, double value, bool online = false)

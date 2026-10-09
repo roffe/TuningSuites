@@ -29,7 +29,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | Settings | JSON at `<AppData>/MattiasC/T7SuitePro/settings.json`, plus a one-time import from `HKCU\Software\MattiasC\T7SuitePro` (and its MRU key `HKCU\Software\T7SuitePro\MRUList`) on Windows, as the flasher does |
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`; self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
-| Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, colours, menus, clipboard) follows T7Suite; from txlogger only the meshgrid 3D projection/drawing and the graph2d layout |
+| Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, menus, clipboard) follows T7Suite; from txlogger the meshgrid 3D projection/drawing, the graph2d layout and the colour scale (green → yellow → red over the map's min..max; T7Suite's raw ÷ max made a fuel map red from its lowest cell). T7Suite's red-white option and online tint stay |
 | Shared T7/T8 code | Not yet. CommonSuite logic is copied into T7Core. Shared Core and Controls projects get extracted when T8 starts: T7 and T8 share 67 filenames but only 8 identical files, so a shared layer now would be guesswork |
 
 ## Layout (new projects)
@@ -53,7 +53,7 @@ SetupT7/                   WiX MSI (chunk 8)
 | DevExpress XtraGrid (map tables) | `MapGrid`: our own control, a `Render(DrawingContext)` override modelled on txlogger's mapviewer |
 | DevExpress XtraGrid (symbol list, compare lists) | Avalonia `DataGrid` |
 | Nevron 3D and 2D, XtraCharts | `Surface3D`: port meshgrid's CPU rasterizer and axes to Skia `DrawVertices` in an `ICustomDrawOperation`. Port the GLSL shader to SkSL later if needed. `Graph2D`: port txlogger's graph2d |
-| XtraBars ribbon and docking, XtraTab | Menu, toolbar, `TabControl` (no docking library) |
+| XtraBars ribbon and docking, XtraTab | Menu, toolbar, tabs for now; MDI-style inner windows and a dockable symbol list later (see chunk 7) |
 | XtraWizard | A plain step-by-step view |
 | XtraReports (TuningReport) | Drop it. Export HTML if anyone misses it |
 | Office Excel COM, OleDb ACE | CSV export, plus copying as tab-separated text so it pastes into Excel |
@@ -179,6 +179,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [ ] From frmMain: realtime engine (10929-12607), status codes and realtime table persistence (9129-9553), AFR and autotune (15292-15777, 17833-18234). `.t7l` round-trip test (decimal separator!)
 
 ### 7. Tools
+- [ ] T7Suite's workspace: map viewers, compare results etc. as inner windows that can be moved, resized, snapped and tabbed, and a dockable symbol list. Candidate: Dock.Avalonia (MIT). Replaces the tab strip; the documents are already view models, so only the host changes
 - [ ] TuneToStage and the tuning wizard
 - [ ] Airmass result view (about 800 lines of logic to pull out of ctrlAirmassResult first)
 - [ ] Compressor map
@@ -209,6 +210,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Map colours switched to txlogger's scale; the window gets its own X11 class (T7App) so the taskbar shows T7Suite's icon instead of a launcher's named T7Suite.desktop; docking added to chunk 7.
 - 2026-10-09: Chunk 5 done apart from SaabOpenTech: tuning packages to / from the ECU and the SRAM compares.
 - 2026-10-09: Chunk 5 bench tested: flash read and write, SRAM writes; refused SRAM writes are now reported and closing waits for a running flash session.
 - 2026-10-09: Chunk 5 implemented (ECU session, flashing, SRAM maps, snapshots, fault codes, sync); waiting for a bench test.

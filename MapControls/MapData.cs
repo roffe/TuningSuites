@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace MapControls;
 
@@ -79,6 +80,9 @@ public sealed class MapData
         foreach (int v in m_raw) max = Math.Max(max, v);
         return max;
     }
+
+    /// <summary>Smallest raw value: the bottom of the colour scale.</summary>
+    public int MinValue() => m_raw.Length == 0 ? 0 : m_raw.Min();
 
     public int DataRow(int displayRow) => UpsideDown ? Rows - 1 - displayRow : displayRow;
 
