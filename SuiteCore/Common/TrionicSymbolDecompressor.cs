@@ -113,7 +113,15 @@ namespace CommonSuite
         /// </summary>
         /// <param name="bytes"></param>
         /// <param name="symbols"></param>
-        public static void ExpandComprStream(byte[] bytes, out string[] symbols)               // sub_107DE
+        // ponytail: one decode at a time, the tables below are static; per-call tables if decoding in parallel ever matters
+        private static readonly object s_tablesLock = new object();
+
+        public static void ExpandComprStream(byte[] bytes, out string[] symbols)
+        {
+            lock (s_tablesLock) Expand(bytes, out symbols);
+        }
+
+        private static void Expand(byte[] bytes, out string[] symbols)               // sub_107DE
         {
 
             // Convert byte array to a BitStream
