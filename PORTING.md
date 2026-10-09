@@ -2,7 +2,7 @@
 
 Goal: lift T7Suite, T8Suite and T5Suite from .NET Framework 4 / WinForms to .NET 10 / Avalonia so they run on Windows, Linux and macOS, and replace every non-free dependency (DevExpress, Nevron, Office Interop). T7Suite goes first.
 
-This file is the tracker. Update the checkboxes and the log at the bottom as work lands. How the old T7Suite behaves, read from its code, is collected in `docs/T7SUITE-BEHAVIOUR.md`; keep adding to it before porting a feature.
+This file is the tracker. Update the checkboxes and the log at the bottom as work lands. How the old T7Suite behaves, read from its code, is collected in `docs/T7SUITE-BEHAVIOUR.md`, and how T8Suite differs from it in `docs/T8SUITE-BEHAVIOUR.md`; keep adding to them before porting a feature.
 
 ## Starting point (2026-10-09)
 
@@ -23,14 +23,14 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | UI framework | Avalonia 12, Fluent theme, compiled bindings (same as TrionicCANFlasher) |
 | UI pattern | MVVM with CommunityToolkit.Mvvm. The suites are too complex for code-behind |
 | Copy/paste | Keep T7Suite's format byte for byte: `<viewtype digit><col>:<row>:<value>:~…` |
-| Repo | Work happens on branch `net10` in TuningSuites |
+| Repo | T7Suite was ported on branch `net10` (merged), T8Suite is on `net10-t8` |
 | TrionicCANLib | ProjectReference to `Trionic/TrionicCANLib/TrionicCANLib.csproj` in the `Trionic` submodule (roffe/Trionic), set once in `Directory.Build.props` as `$(TrionicDir)` and overridable with `-p:TrionicDir=…` (e.g. `../Trionic` while working on both) |
 | WidebandSupport | Vendored into `WidebandSupport/` (from f0c0e87) with an SDK-style net10 csproj and the System.IO.Ports package. No licence file upstream, but every source file carries George Daswani's Apache License 2.0 header |
 | Settings | JSON at `<AppData>/MattiasC/T7SuitePro/settings.json`, plus a one-time import from `HKCU\Software\MattiasC\T7SuitePro` (and its MRU key `HKCU\Software\T7SuitePro\MRUList`) on Windows, as the flasher does |
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`, one tag prefix per suite, upstream's release tags (`T7suite_v2.0.0`, later `T8suite_v`, `T5suite_v`), set by the app project's `VersionTagPrefix`, so a tag versions one suite; libraries and tests build as `0.0.0-<sha>`. One repo for all suites (revisit splitting after the T8 port, then with NuGet packages rather than submodules); self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
 | Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, menus, clipboard) follows T7Suite; from txlogger the meshgrid 3D projection/drawing, the graph2d layout and the colour scale (green → yellow → red over the map's min..max; T7Suite's raw ÷ max made a fuel map red from its lowest cell). T7Suite's red-white option and online tint stay |
-| Shared T7/T8 code | Not yet. CommonSuite logic is copied into T7Core. Shared Core and Controls projects get extracted when T8 starts: T7 and T8 share 67 filenames but only 8 identical files, so a shared layer now would be guesswork |
+| Shared T7/T8 code | Extracted when T8 started: `SuiteCore` (no UI: the lifted CommonSuite code, the update check, the DTC catalog) and `SuiteApp` (Avalonia: theme, workspace controls, dialogs). The rest of T7Core / T7App moves there when T8 needs it, behind a base class T7Binary and T8Binary share, so each piece is generalised against a second real consumer. T7 and T8 share 67 file names but only 8 identical files, so nothing is shared up front |
 
 ## Layout (new projects)
 
@@ -38,11 +38,15 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 TuningSuites.slnx          new solution (the old *.sln files stay for reference)
 Directory.Build.props      from the flasher, plus $(TrionicDir) = Trionic (submodule)
 WidebandSupport/           vendored, net10
+SuiteCore/                 shared, no UI: the lifted CommonSuite code (Common/, namespace CommonSuite), update check, DTC catalog
+SuiteCoreTest/             MSTest: settings, crypto, S19, VIN decoder, transaction log, update check, source encoding
+SuiteApp/                  shared Avalonia library: SuiteTheme.axaml (T7Suite's skin), workspace controls, dialogs
 T7Core/                    net10 class library, no UI: file, symbols, axes, checksum glue, projects, transaction log, realtime engine, tuning logic
 T7CoreTest/                MSTest, golden tests over T7Binaries/
 MapControls/               Avalonia controls: MapGrid, Surface3D, Graph2D, MapData codec
 MapControlsDemo/           standalone app for working on the controls with fake data
 T7App/                     Avalonia MVVM app, AssemblyName T7Suite
+T8App/                     Avalonia MVVM app, AssemblyName T8Suite (scaffold)
 SetupT7/                   WiX MSI (chunk 8)
 packaging/linux/           udev rule, desktop entry installer and icon for the tar.gz (chunk 8)
 ```
@@ -207,9 +211,101 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Logs: T7Suite's NLog.config and files (`<AppData>/MattiasC/T7`), every CAN frame only with Settings → Enable CAN logging (T7Suite's option, which its config ignored)
 - [x] README with an OS × adapter support table, installation, updates, building, versioning
 
+## Chunks: T8Suite
+
+### Starting point (2026-10-09)
+
+- Read from the old code into `docs/T8SUITE-BEHAVIOUR.md`, which lists only where T8Suite differs from T7Suite.
+- **The window is T7Suite's.** The same ribbon pages and mostly the same buttons. T8 lacks:
+  - SID information, ESP, TCM and AFR maps / autotune;
+  - Synchronize and the tuning packages to / from the ECU;
+  - the SRAM snapshot and compares, Compare to original file, the MRU list and P&E micro.
+- **T8 adds:**
+  - the TEM and PID editors, the bitmask viewer and the map preview popup;
+  - Get ECU information and Recover ECU (Legion bootloader by default);
+  - Create binary from TIS file, Compare binary outside symbolrange;
+  - a working tuning wizard (`.t8x` packs) and dynamic live data.
+- **The file side is all new.**
+  - **Bins:** 1 MB, starting `00 10 0C 00` or `00 00 0C 00`.
+  - **Symbol table:** behind `sYMBOLtABLE`, packed the T7 way or Blowfish-encrypted into a password-protected zip.
+  - **Map metadata:** factors, units, axes and descriptions come from SymbolDictionary (8,500 entries), English only.
+  - **Checksum:** TrionicCANLib's two-layer ChecksumT8, checked (and with AutoChecksum silently fixed) on every open.
+  - **Header:** a PI area plus MFS / flash blocks (VIN, immobilizer code) instead of T7's footer.
+  - **Addresses:** SRAM addresses are mapped to flash once at open.
+- **Size of the old code:** Form1.cs 15.5k lines, 59k lines of non-designer code in all. The T8-only logic: Trionic8File 1.9k, T8Header 1k, SymbolDictionary 8.7k (data), SymbolFiller 0.7k, blowfish 0.9k.
+- **TrionicCANLib:** every Trionic8, ChecksumT8 and FileT8 call T8Suite makes still exists with the same signature. The library has no T8 header or symbol table code, so that stays in T8Core.
+- **Stock bins:** `T8Binaries/` (72 bins) is the golden corpus. All verify their checksum and none is open software.
+  - **Names:** 45 tables are packed and 27 encrypted (14 keys). 71 bins get names; 1 has a corrupt table.
+  - **Tables:** every bin has a PID table, none a TEM table.
+  - **File names:** 69 end in `.BIN`, so enumerate case-insensitively.
+
+### Decisions (T8)
+
+| Topic | Decision |
+|---|---|
+| Behaviour | T8Suite's behaviour wins for T8, as T7Suite's did for T7. The shared window's improvements (Recent files, multi-step undo, ...) stay, unless T8Suite contradicts them |
+| Shared layer | Grows chunk by chunk (see the Decisions table above). Each suite keeps its own menus, in its ribbon's order and with its captions; the rest of the main window is shared |
+| SharpZipLib | Package 1.4.2 (MIT) for the encrypted name tables (a ZipCrypto zip, which System.IO.Compression can't open), without T8Suite's code page 850 line. With the old 0.86 on .NET 10 that line throws, the error is swallowed, and the 27 encrypted bins open without names |
+| State | Per binary. Trionic8File's statics (open flag, address offsets) and Form1's static PID / TEM tables become T8Binary's, so opening a compare or transfer file no longer replaces the open file's |
+| Settings | JSON at `<AppData>/MattiasC/T8SuitePro/settings.json`, imported once from `HKCU\Software\MattiasC\T8SuitePro` plus `HKCU\Software\T8SuitePro\TransferSettings` (outside MattiasC) |
+| Releases | `T8suite_v` tags (T8App's VersionTagPrefix), `T8suite_nightly`; the MSI replaces the old T8Suite (its upgrade code) |
+
+### 0. Shared layer and scaffold
+- [x] `SuiteCore`: T7Core/Common (the lifted CommonSuite), UpdateCheck (the tag prefix is now a parameter), DtcCatalog and T8Pub.pem moved out of T7Core. `T7Log.Number` became `LogFile.Number`. `SuiteCoreTest` takes the tests of that code; SourceEncodingTest now checks every project in the solution
+- [x] `SuiteApp`: T7App's theme (`SuiteTheme.axaml`, the `T7*` resource keys renamed `Suite*`), ArrangedMdiLayoutPanel, NoRecycling, LinearGauge, LogGraph, Dialogs and Logging. Headless renders of T7App are pixel-identical before and after (apart from timestamps and an expander caught mid-animation)
+- [x] `T8App` scaffold: an empty window "T8SuitePro v<version>" with File → Exit, `T8suite_` versioning, T8Suite's icon, x86 apphost on Windows
+- [x] CI runs SuiteCoreTest
+- [x] `docs/T8SUITE-BEHAVIOUR.md`
+
+### 1. T8Core
+- [ ] Lift from T8Suite (namespace `T8SuitePro` kept): Trionic8File, T8Header, FlashBlock(Collection), pidCode, SymbolDictionary (`iconv -f CP1252` first: it's Windows-1252), SymbolTranslator, SymbolAxesTranslator, SymbolnamesDictionary, blowfish, SymbolFiller, PartNumberConverter, PartnumberCollection, Disassembler, IdaProIdcFile, AirmassLimitType. Dropped: crc64 (unused), Plot3D, Settings, MapViewerFactory. Minimal edits: no MessageBox / StartupPath, `using` streams (CountNq leaks a handle on 10 of the stock bins, which blocks saving on Windows), no `C:\T8Decode` dumps or Console output
+- [ ] `T8Binary`, lifted from Form1 as T7Binary was from frmMain: open (TryToOpenFile 557: validate, extract, symbol XML from the program folder by software-version prefix, then `<bin>.xml`, SymbolFiller when MapDetectionActive), addresses (GetSymbolAddress 1366), read / write (readdatafromfile 1627, savedatatobinary 1830), axes (GetX/YaxisValues 1656-1828: raw, X unsigned / Y signed, static "N : v…" axes, duplicate axes), table width (GetTableMatrixWitdhByName 1419), 16-bit (isSixteenBitTable 1598), factor from SymbolDictionary (GetMapCorrectionFactor 1569), ChecksumT8 (UpdateChecksum 3557), PID / TEM tables, bitmask words (StartBitMaskViewer 2469)
+- [ ] `T8CoreTest`: golden test over the 72 bins (header, checksum, symbol table kind / key, symbols with addresses, axes, widths, factors; PID entries). It also asserts that the 27 encrypted bins get their names, so a SharpZipLib regression can't become the baseline. Plus a checksum test (a flipped byte below CHPTR fails layer 1, an update fixes it)
+- Known T8Suite bugs this chunk fixes: the placeholder name "Symbolnumber N" is one off from `Symbol_number` (N+1), so user names saved to `<bin>.xml` get lost on a later save; the process-wide statics above
+
+### 2. MapControls
+- Nothing T8-specific expected. T8's MapViewerEx differences go with the viewer in chunk 3:
+  - the file / ECU buttons follow the symbol's addresses;
+  - static axes and units as captions;
+  - no open-loop marks;
+  - the axis menu opens the axis map.
+
+### 3. Read-only app
+- [ ] A base class shared by T7Binary and T8Binary. The main window, symbol list, map viewer and their view models move from T7App into SuiteApp; T7App and T8App keep their own menus and the suite-specific views. T7AppTest stays green
+- [ ] T8App: open (bin / S19; "File has incorrect length" / "File does not seem to be a Trionic 8 file"), the symbol list with T8's columns and its "Only symbols within binary" filter, map viewers, firmware information read-only (PI area, flash blocks and their browser, engine type by software version and by VIN)
+- [ ] T8AppTest, headless on a stock bin
+
+### 4. Offline tuning
+- [ ] Save with ChecksumT8, Verify checksum (T8Suite showed the result only in the status bar and fixed it silently), projects (same files as T7), compare / transfer maps / copy address table / Compare binary outside symbolrange, search, imports (XML / CSV / AS2) and exports (S19, Idc, CSV instead of Excel), `.t8p` tuning packages, My Maps, the Tuning menu (DynamicTuningMenu's old / new calibration captions), settings window with T8's options, Lookup partnumber
+- [ ] Firmware editing: software version, VIN and immobilizer code
+- Known T8Suite bugs to fix:
+  - "Edit a tuning package" saved the open bin's bytes instead of the edited rows;
+  - "Clear" VIN wrote the file without a checksum update;
+  - a short VIN / serial threw after part of it was written;
+  - firmware edits after double-clicking "Serial number" were dropped.
+
+### 5. ECU
+- [ ] `T8Ecu`: Trionic8 on its own thread, as T7Ecu. Connect, Read ECU / Flash (Legion bootloader by default), Recover ECU (with `SetCANFilterIds(FilterIdRecovery)` as the flasher does), Get ECU information, fault codes and clear, SRAM maps read / written through `readMemoryNew` / `writeMemoryNew`, UserPrompt wired for the Legion questions
+- Known T8Suite bugs to fix:
+  - every action built a new adapter without closing the last;
+  - ReadFlash hung when security access was refused;
+  - the "attempt to recover?" answer was compared with OK, so recovery never started;
+  - the fault codes window's Clear did nothing.
+
+### 6. Realtime
+- [ ] Dynamic live data (`3B 17` / `1A 18` list) with the fallback to reads by address, `.t8l` logs (T7's format), log viewer, matrix from log, knock count map / misfire tab, wideband, notifications
+- Known T8Suite bug to fix: a row that can't go into the dynamic list shifted the matching, so every later row lost its value
+
+### 7. Tools
+- [ ] TEM editor, PID editor, bitmask viewer, axis browser, hex view, disassembler / vectors / Idc (MC68377 map, 120 vectors), airmass result viewer and compressor map (T8's torque request → airmass and tables), tuning wizard (`.t8x` packs, signature checked as T7Core's Crypto does), Create binary from TIS file, map preview popup
+- Not ported: the Debug ribbon group (registry-only DebugMode), "Tune me up™" and "Easy tune to stage III" (hidden in T8Suite)
+
+### 8. Release
+- [ ] SetupT8 MSI replacing the old T8Suite, packages with `T8Binaries/` in `Binaries/` (T8Extras' job), T8Suite's NLog.config and manuals, the CI matrix, the updater on `T8suite_v` releases, README
+
 ## After T7
 
-- **T8Suite:** extract the shared parts of T7Core and the app into a shared Core and Controls layer, then port T8 on top. Expect much of the T7 UI to carry over.
+- **T8Suite:** in progress, see Chunks: T8Suite above.
 - **T5Suite2.0:** last. It is the largest UI (Trionic5Controls alone is 63k LOC) and the oldest code. T5 support is already in the new TrionicCANLib.
 - **Realtime leftovers from chunk 6:** sound notifications (3 slots, needs a cross-platform audio player) and the Combi adapter's ADC / thermocouple channels with their settings.
 - **Dead code to delete eventually:** T7CANFlasher/ (replaced by TrionicCANFlasher), the T7Libs/ wrapper DLLs, AquaGauge, LBIndustrialCtrls, ProCharts, MouseGestures.
@@ -220,6 +316,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-09: T8Suite port started on branch `net10-t8`. Its behaviour is read into `docs/T8SUITE-BEHAVIOUR.md` and the T8 chunks are planned. T8 chunk 0 is done: SuiteCore and SuiteApp were extracted from T7Core / T7App with T7 unchanged (tests green, renders identical), and T8App is scaffolded.
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
 - 2026-10-09: Chunk 8 implemented: packages and releases per tag (`T7suite_v`, upstream's scheme; `t7suite/` dropped), the MSI replacing the old T7Suite, Open with for `.bin`, the GitHub release update check, logs, README. Waiting for a first CI run and the first tag.
