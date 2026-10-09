@@ -61,6 +61,10 @@ jobs:
     - name: Test app
       run: dotnet test T7AppTest -c Release --no-build
 
+    # T8Suite on the shared window, headless on a stock bin
+    - name: Test T8 app
+      run: dotnet test T8AppTest -c Release --no-build
+
   # T7Suite for each platform, packaged as roffe/Trionic packages the flasher
   package:
     needs: test

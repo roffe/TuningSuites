@@ -22,6 +22,9 @@
 
   <ItemGroup>
     <AvaloniaResource Include="T8Suite.ico" />
+    <!-- Help → T8Suite user manual / Trionic 8 technical documentation -->
+    <None Include="..\T8_manual.pdf" Link="T8_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Trionic 8.pdf" Link="Trionic 8.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\T8Core\T8Core.csproj" />
     <ProjectReference Include="..\SuiteApp\SuiteApp.csproj" />
   </ItemGroup>
 
