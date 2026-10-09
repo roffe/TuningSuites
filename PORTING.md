@@ -173,13 +173,16 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Realtime engine on the ECU thread (`RealtimeEngine` in T7Core): passes back to back, other ECU actions queue between two passes instead of T7Suite's m_prohibitReading; per-row Delay/Reload, ≤4 bytes by SRAM address, longer by symbol number, signed by name, per-cylinder knock/misfire rows, Performance.Mode every 21 passes
 - [x] Realtime panel (a document tab until docking): dashboard (3 × 3 displays, AFR/λ and airmass gauges with the fading peak), bottom panel with decoded limiter / lambda / fuelcut status, Night/Day, Eco/Norm/Sport, Free logging grid (add / edit / remove / reorder, save / load .t7rtl, rtsymbols.txt, Add to realtime list), Shift+F1, F6
 - [x] `.t7l` logging: a line per pass while the panel runs, `<bin>-yyyyMMdd-CanTraceExt.t7l`, invariant numbers, read with either decimal separator
-- [ ] DIF / LogWorks and CSV exports, log filters
+- [x] Exports: LogWorks (.dif through the lifted DifGenerator; LogWorks isn't started, it's Windows-only) and CSV, with a symbol and time range selection; log filters (setup dialog, applied to the viewer and both exports). Deliberate differences: CSV exports the chosen symbols (T7Suite ignored the selection) and leaves a missing value's column empty (T7Suite shifted the rest left); removed filters stay removed; numbers parse with either separator
 - [x] Wideband: the ECU symbol (AD_Scanner with the voltage → AFR settings, LambdaScanner) or a serial device through WidebandSupport, logged as "Wideband"; settings group instead of frmWidebandConfig
 - [x] Live cell tracking in open map viewers (T7Suite's map → axis table, nearest breakpoint)
 - [x] AFR target / feedback / counter maps (AFRMaps folder, viewers, clear, Actions → Import AFR feedback data) and autotune (fuel, open binaries; auto update or the accept grid on stop). Deliberate differences: .afr files written invariant and read with either separator (T7Suite's culture trick read "14.70" as 0 on Linux sv-SE); saving the target map keeps unsaved samples; lambda-mode feedback is compared as AFR on import; autotune writes the file once with a transaction entry and one checksum update (T7Suite updated the checksum per cell and logged nothing) and doesn't close the realtime panel on stop; the ping sound isn't ported; settings T7Suite stored but never used are left out
-- [ ] Log viewer (replaces RealtimeGraph)
+- [x] Log viewer (`LogGraph`, replaces RealtimeGraph): sections split at 10 s gaps with a chooser (the first line after a gap is kept), channels autoscaled on black with T7Suite's names and symbol colours, legend values under the cursor, hover readout, wheel zoom, drag pan, arrows; starts on the first 3 minutes
+- [x] View knock count / false knock / real knock / misfire map from the ECU
 - Deliberate differences: a failed read keeps the last value (T7Suite's failed short read threw and lost the rest of the pass); layouts and logs are written with invariant numbers and read with either separator; a layout's symbol takes the open bin's address (T7Suite trusted the saved one); the AFR digits show AFR in AFR mode (T7Suite showed λ there); Reset peak values is visible; sound notifications aren't ported yet
-- [ ] From frmMain: realtime engine (10929-12607), status codes and realtime table persistence (9129-9553), AFR and autotune (15292-15777, 17833-18234). `.t7l` round-trip test (decimal separator!)
+- [x] `.t7l` round-trip test, both decimal separators
+- [ ] Not ported yet: sound notifications (needs a cross-platform audio player), Combi adapter ADC / thermocouple channels, auto-logging triggers (T7Suite never used them), the CAN frame sniffing T7Suite kept switched off
+- [ ] Tested against a running engine
 
 ### 7. Tools
 - [ ] T7Suite's workspace: map viewers, compare results etc. as inner windows that can be moved, resized, snapped and tabbed, and a dockable symbol list. Candidate: Dock.Avalonia (MIT). Replaces the tab strip; the documents are already view models, so only the host changes
@@ -212,6 +215,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 6 done apart from sounds and Combi ADC channels: log viewer, CSV / LogWorks exports, log filters, knock and misfire maps; waiting for a test on a running engine.
 - 2026-10-09: Chunk 6: wideband, AFR maps and autotune; WidebandSupport vendored (Apache 2.0).
 - 2026-10-09: Chunk 6 in progress: realtime engine, panel, .t7l logging and live cell tracking.
 - 2026-10-09: Map colours switched to txlogger's scale; the window gets its own X11 class (T7App) so the taskbar shows T7Suite's icon instead of a launcher's named T7Suite.desktop; docking added to chunk 7.

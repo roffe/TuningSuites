@@ -22,12 +22,8 @@ namespace CommonSuite
 
         private double ConvertToDouble(string v)
         {
-            double d = 0;
-            if (v == "") return d;
-            string vs = "";
-            vs = v.Replace(System.Threading.Thread.CurrentThread.CurrentCulture.NumberFormat.NumberGroupSeparator, System.Threading.Thread.CurrentThread.CurrentCulture.NumberFormat.NumberDecimalSeparator);
-            Double.TryParse(vs, out d);
-            return d;
+            // either decimal separator (the culture trick read "12.5" as 0 on sv-SE)
+            return T7.T7Log.Number(v);
         }
 
         private float FetchPreviousValueFromLine(string previousline, string varnametofetch)

@@ -94,6 +94,16 @@
                 <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
                 <Separator />
+                <MenuItem Header="Load trionic 7 logfile" Click="OnOpenLog" />
+                <MenuItem Header="Export logfile to CSV" Click="OnExportLogCsv" />
+                <MenuItem Header="Export logfile to LogWorks" Click="OnExportLogDif" />
+                <MenuItem Header="Setup log filters" Click="OnLogFilters" />
+                <Separator />
+                <MenuItem Header="View knock count map" Command="{Binding ShowEcuMapCommand}" CommandParameter="KnkDetAdap.KnkCntMap" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="View false knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.FKnkCntMap" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="View real knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.RKnkCntMap" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="View misfire map" Command="{Binding ShowEcuMapCommand}" CommandParameter="MissfAdap.MissfCntMap" IsEnabled="{Binding HasFile}" />
+                <Separator />
                 <MenuItem Header="AFR maps" IsEnabled="{Binding HasFile}">
                     <MenuItem Header="Show AFR target map" Command="{Binding ShowAfrTargetMapCommand}" />
                     <MenuItem Header="{Binding FeedbackMapCaption}" Command="{Binding ShowAfrFeedbackMapCommand}" />
@@ -193,6 +203,9 @@
                         </DataTemplate>
                         <DataTemplate DataType="vm:RealtimeViewModel">
                             <v:RealtimeView IsVisible="{Binding IsSelected}" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:LogViewerViewModel">
+                            <v:LogViewerView IsVisible="{Binding IsSelected}" />
                         </DataTemplate>
                         <DataTemplate DataType="vm:SearchResultsViewModel">
                             <v:SearchResultsView IsVisible="{Binding IsSelected}" />

@@ -399,6 +399,50 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void LogViewerAndExports()
+        {
+            string log = Path.Combine(s_dir, "drive-20261009-CanTraceExt.t7l");
+            var t0 = new System.DateTime(2026, 10, 9, 12, 0, 0);
+            var lines = new System.Collections.Generic.List<string> { T7.T7Log.Line(t0.AddMinutes(-5), [("ActualIn.n_Engine", 800)], false) };
+            for (int i = 0; i < 600; i++)
+            {
+                double rpm = 900 + 2500 * System.Math.Sin(i / 60.0) * System.Math.Sin(i / 60.0);
+                lines.Add(T7.T7Log.Line(t0.AddMilliseconds(i * 100), [("ActualIn.n_Engine", rpm), ("In.p_AirInlet", rpm / 4000 - 0.3), ("Out.fi_Ignition", 30 - rpm / 200)], i == 300));
+            }
+            File.WriteAllLines(log, lines);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                System.Collections.Generic.IReadOnlyList<string>? offered = null;
+                await vm.OpenLogAsync(log, sections =>
+                {
+                    offered = sections;
+                    return System.Threading.Tasks.Task.FromResult<int?>(1);
+                });
+                Assert.HasCount(2, offered!);
+                var viewer = (LogViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("CANBus logfile: drive-20261009-CanTraceExt.t7l", viewer.Title);
+                Assert.AreEqual("Rpm", viewer.Channels[0].Name);
+                Assert.HasCount(600, viewer.Channels[0].Time);
+                Save(window, "logviewer");
+
+                var selection = vm.LogSelection(log);
+                selection.Symbols.First(c => c.Name == "Out.fi_Ignition").Selected = false;
+                vm.ExportLogCsv(log, selection);
+                Assert.AreEqual("Time,ActualIn.n_Engine,IMPORTANTLINE,In.p_AirInlet", File.ReadLines(Path.ChangeExtension(log, ".csv")).First());
+
+                var filters = new LogFiltersWindow { DataContext = new LogFiltersViewModel(vm.LoadLogFilters(), ["ActualIn.n_Engine"]) };
+                filters.Show();
+                Save(filters, "logfilters");
+                filters.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void EcuWithoutHardware()
         {
             string file = Path.Combine(s_dir, "ecu.bin");

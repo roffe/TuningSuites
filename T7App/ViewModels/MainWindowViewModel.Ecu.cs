@@ -103,6 +103,19 @@ public partial class MainWindowViewModel
         _ = panel.StartAsync();
     }
 
+    /// <summary>View knock count / false knock / real knock / misfire map (ShowRealtimeMapFromECU): read from SRAM.</summary>
+    [RelayCommand]
+    private async Task ShowEcuMap(string name)
+    {
+        if (Binary is not { } bin) return;
+        if (bin.FindAny(name) is not { } sh)
+        {
+            ShowInfo($"Symbol {name} does not exist in this file");
+            return;
+        }
+        await OpenSramSymbolAsync(bin, sh);
+    }
+
     /// <summary>Write log marker [F6].</summary>
     [RelayCommand]
     private void WriteLogMarker() => Realtime?.WriteLogMarkerCommand.Execute(null);

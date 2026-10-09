@@ -18,6 +18,15 @@ namespace CommonSuite
 
         public void SaveFiltersToRegistry(LogFilterCollection filters)
         {
+            // removed filters go too (T7Suite never deleted them, so they came back)
+            using (SettingsKey all = SettingsKey.Open(_suiteRegistry.getRegistryPath(), "LogFilters"))
+            {
+                foreach (string index in all.GetSubKeyNames())
+                {
+                    using SettingsKey old = SettingsKey.Open(_suiteRegistry.getRegistryPath(), "LogFilters\\" + index);
+                    foreach (string name in old.GetValueNames()) old.DeleteValue(name);
+                }
+            }
             foreach (LogFilter filter in filters)
             {
                 SaveFilter(filter);
@@ -63,7 +72,7 @@ namespace CommonSuite
             {
                 using (SettingsKey saveSettings = SettingsKey.Open(_suiteRegistry.getRegistryPath(), "LogFilters\\" + filter.Index.ToString()))
                 {
-                    saveSettings.SetValue("value", filter.Value.ToString());
+                    saveSettings.SetValue("value", filter.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     saveSettings.SetValue("type", (int)filter.Type);
                     saveSettings.SetValue("index", filter.Index);
                     saveSettings.SetValue("symbol", filter.Symbol);
@@ -101,12 +110,8 @@ namespace CommonSuite
 
         private double ConvertToDouble(string v)
         {
-            double d = 0;
-            if (v == "") return d;
-            string vs = "";
-            vs = v.Replace(System.Threading.Thread.CurrentThread.CurrentCulture.NumberFormat.NumberGroupSeparator, System.Threading.Thread.CurrentThread.CurrentCulture.NumberFormat.NumberDecimalSeparator);
-            Double.TryParse(vs, out d);
-            return d;
+            // either decimal separator (the culture trick read "12.5" as 0 on sv-SE)
+            return T7.T7Log.Number(v);
         }
     }
 }
