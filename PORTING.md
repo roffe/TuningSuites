@@ -58,7 +58,6 @@ SetupT7/                   WiX MSI (chunk 8)
 | XtraWizard | A plain step-by-step view |
 | XtraReports (TuningReport) | Drop it. Export HTML if anyone misses it |
 | Office Excel COM, OleDb ACE | CSV export, plus copying as tab-separated text so it pastes into Excel |
-| ICSharpCode.TextEditor (disassembler) | AvaloniaEdit (check that it supports Avalonia 12) |
 | Be.Windows.Forms.HexBox | AvaloniaHex or a small custom view |
 | AquaGauge, ProGauges, LBIndustrialCtrls, Owf DigitalDisplay | One custom gauge/display control. AquaGauge, LBIndustrialCtrls and ProCharts are unused, so they just go |
 | PSTaskDialog, SuiteLauncher, MouseGestures | Plain dialogs; drop the rest |

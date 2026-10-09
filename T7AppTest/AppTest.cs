@@ -702,6 +702,20 @@ namespace T7AppTest
                 vm.Info += infos.Add;
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
+                // the symbol list's header menu: sorting, grouping, the auto filter row
+                vm.GroupSymbols(null);
+                vm.SortSymbols(nameof(CommonSuite.SymbolHelper.Length), descending: true);
+                var first = (CommonSuite.SymbolHelper)vm.Symbols!.Cast<object>().First();
+                Assert.AreEqual(vm.Binary!.Symbols.Cast<CommonSuite.SymbolHelper>().Max(sh => sh.Length), first.Length);
+                vm.ShowFilterRow = true;
+                vm.ColumnFilters[0].Text = "IgnNormCal.";
+                Assert.IsTrue(vm.Symbols!.Cast<CommonSuite.SymbolHelper>().All(sh => sh.Varname.Contains("IgnNormCal.")));
+                Save(window, "symbolfilter");
+                vm.ShowFilterRow = false;
+                Assert.IsTrue(vm.Symbols!.Cast<object>().Count() > 100);
+                vm.GroupSymbols(nameof(CommonSuite.SymbolHelper.Category));
+                vm.SortSymbols(null);
+
                 await vm.SaveAllCommand.ExecuteAsync(null);
                 Assert.AreEqual("Binary was already up to date!", infos[^1]);
                 vm.CreateBackupFileCommand.Execute(null);

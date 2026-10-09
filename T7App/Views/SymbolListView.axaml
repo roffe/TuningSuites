@@ -7,6 +7,19 @@
              x:DataType="vm:MainWindowViewModel">
     <DockPanel>
         <TextBox DockPanel.Dock="Top" Margin="6,6,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
+        <!-- the auto filter row: one box per column -->
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding ColumnFilters}" IsVisible="{Binding ShowFilterRow}" Margin="6,0,6,6">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ColumnFilter">
+                    <TextBox Text="{Binding Text}" PlaceholderText="{Binding Header}" Margin="0,0,4,0" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}"
                   CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
                   GridLinesVisibility="Horizontal" SelectionMode="Extended"
@@ -35,8 +48,8 @@
                                     Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
                                     Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" Binding="{Binding Userdescription}" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" SortMemberPath="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" SortMemberPath="Userdescription" Binding="{Binding Userdescription}" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

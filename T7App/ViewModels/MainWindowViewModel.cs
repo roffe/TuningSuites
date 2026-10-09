@@ -99,6 +99,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel()
     {
+        foreach (ColumnFilter f in ColumnFilters) f.PropertyChanged += (_, _) => Symbols?.Refresh();
         Trionic7File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Percentage >= 55 ? "" : e.Info);
         LoadRecent();
         InitEcu();
@@ -162,10 +163,55 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => Symbols?.Refresh();
 
-    // the find panel: any shown column containing the text
+    /// <summary>The symbol list's auto filter row: per column text the cell has to contain.</summary>
+    public ObservableCollection<ColumnFilter> ColumnFilters { get; } =
+    [
+        new("Symbol name", nameof(SymbolHelper.Varname)), new("Address", nameof(SymbolHelper.Flash_start_address)),
+        new("Length", nameof(SymbolHelper.Length)), new("Description", nameof(SymbolHelper.Description)),
+        new("User description", nameof(SymbolHelper.Userdescription)),
+    ];
+
+    [ObservableProperty]
+    private bool _showFilterRow;
+
+    partial void OnShowFilterRowChanged(bool value)
+    {
+        if (!value) foreach (ColumnFilter f in ColumnFilters) f.Text = "";
+    }
+
+    private string CellText(SymbolHelper sh, string path) => path switch
+    {
+        nameof(SymbolHelper.Varname) => sh.Varname,
+        nameof(SymbolHelper.Flash_start_address) => SymbolFormat.Number(sh.Flash_start_address, Settings.ShowAddressesInHex),
+        nameof(SymbolHelper.Length) => SymbolFormat.Number(sh.Length, Settings.ShowAddressesInHex),
+        nameof(SymbolHelper.Description) => sh.Description,
+        _ => sh.Userdescription,
+    };
+
+    /// <summary>The header menu's sorting: by one column, or none (the grid's own order).</summary>
+    public void SortSymbols(string? path, bool descending = false, bool add = false)
+    {
+        if (Symbols is not { } view) return;
+        if (!add) view.SortDescriptions.Clear();
+        if (path != null)
+            view.SortDescriptions.Add(DataGridSortDescription.FromPath(path, descending ? System.ComponentModel.ListSortDirection.Descending : System.ComponentModel.ListSortDirection.Ascending));
+    }
+
+    /// <summary>Group by this column / by category (T7Suite's default) / not at all.</summary>
+    public void GroupSymbols(string? path)
+    {
+        if (Symbols is not { } view) return;
+        view.GroupDescriptions.Clear();
+        if (path != null) view.GroupDescriptions.Add(new DataGridPathGroupDescription(path));
+    }
+
+    // the find panel: any shown column containing the text, and every filter row text in its column
     private bool MatchesSearch(object o)
     {
-        if (string.IsNullOrWhiteSpace(SearchText) || o is not SymbolHelper sh) return true;
+        if (o is not SymbolHelper sh) return true;
+        foreach (ColumnFilter f in ColumnFilters)
+            if (!string.IsNullOrWhiteSpace(f.Text) && !Contains(CellText(sh, f.Path), f.Text.Trim())) return false;
+        if (string.IsNullOrWhiteSpace(SearchText)) return true;
         string t = SearchText.Trim();
         return Contains(sh.Varname, t) || Contains(sh.Description, t) || Contains(sh.Userdescription, t)
             || Contains(SymbolFormat.Number(sh.Flash_start_address, Settings.ShowAddressesInHex), t)
@@ -780,4 +826,14 @@ public partial class MainWindowViewModel : ObservableObject
 public static class SymbolFormat
 {
     public static string Number(long value, bool hex) => hex ? value.ToString("X6") : value.ToString();
+}
+
+/// <summary>A cell of the symbol list's auto filter row.</summary>
+public partial class ColumnFilter(string header, string path) : ObservableObject
+{
+    public string Header { get; } = header;
+    public string Path { get; } = path;
+
+    [ObservableProperty]
+    private string _text = "";
 }
