@@ -14,28 +14,10 @@ using TrionicCANLib.Checksum;
 
 namespace T7App.ViewModels;
 
-public record FaultCode(string Code, string Description);
-
-/// <summary>The ECU side of the main window (frmMain's CAN flasher, SRAM and fault code features).</summary>
+/// <summary>The ECU side of the main window over T7Ecu (frmMain's CAN flasher, SRAM and fault code features).</summary>
 public partial class T7MainWindowViewModel
 {
     public T7Ecu Ecu { get; } = new();
-
-    /// <summary>m_RealtimeConnectedToECU.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConnectCaption))]
-    private bool _isConnected;
-
-    /// <summary>The imported SRAM snapshot (.RAM), "SRAM: name" in the status bar.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSramFile))]
-    private string? _sramFile;
-
-    partial void OnSramFileChanged(string? value) => SramFileText = value == null ? "" : "SRAM: " + Path.GetFileNameWithoutExtension(value);
-
-    public bool HasSramFile => SramFile != null && File.Exists(SramFile);
-
-    public override bool HasEcu => true;
 
     protected override bool EcuConnected => Ecu.IsConnected;
 
@@ -43,51 +25,24 @@ public partial class T7MainWindowViewModel
 
     public override void Shutdown() => Ecu.Dispose();
 
-    public string ConnectCaption => IsConnected ? "Disconnect ECU" : "Connect ECU";
-
-    private DispatcherTimer? m_sramTimer;
-
     private void InitEcu()
     {
         Ecu.Info += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Info);
         Ecu.Progress += (_, p) => Dispatcher.UIThread.Post(() => ProgressText = p >= 100 ? "Done" : $"{p} %");
-        RestartSramTimer();
     }
 
-    /// <summary>RealtimeCheckAndConnect.</summary>
-    public async Task<bool> EnsureConnectedAsync()
-    {
-        if (Ecu.IsConnected) return true;
-        CanStatus = "Initializing CANbus interface";
-        try
-        {
-            IsConnected = await Ecu.ConnectAsync(Settings);
-        }
-        catch (InvalidOperationException e)
-        {
-            CanStatus = "";
-            ShowInfo(e.Message);
-            return false;
-        }
-        CanStatus = IsConnected ? "Connected" : "Failed to start KWP session";
-        return IsConnected;
-    }
+    protected override async Task<string?> ConnectEcuAsync() => await Ecu.ConnectAsync(Settings) ? "Connected" : null;
 
-    [RelayCommand]
-    private async Task ConnectDisconnect()
-    {
-        if (Ecu.IsConnected)
-        {
-            await Ecu.DisconnectAsync();
-            IsConnected = false;
-            CanStatus = "";
-            foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>()) v.OnlineMode = false;
-        }
-        else
-        {
-            await EnsureConnectedAsync();
-        }
-    }
+    protected override string ConnectFailedText => "Failed to start KWP session";
+
+    protected override Task DisconnectEcuAsync() => Ecu.DisconnectAsync();
+
+    // the library never reports a failed read, it returns zeros
+    protected override async Task<byte[]?> ReadEcuMapAsync(SymbolHelper sh) => await Ecu.ReadMapAsync(sh);
+
+    protected override Task<bool> WriteEcuMapAsync(SymbolHelper sh, byte[] data) => Ecu.WriteMapAsync(sh, data);
+
+    protected override string WriteRefusedText(string map) => base.WriteRefusedText(map) + " Writing to SRAM needs an open binary in the ECU.";
 
     // ---- realtime ----
 
@@ -255,138 +210,24 @@ public partial class T7MainWindowViewModel
         RefreshViewers(bin.FileName);
     }
 
-    // ---- SRAM maps ----
-
-    /// <summary>A map that only lives in SRAM: read it from the ECU (connecting first) and show it.</summary>
-    protected override async Task OpenSramSymbolAsync(SuiteBinary bin, SymbolHelper sh)
-    {
-        if (!await EnsureConnectedAsync())
-        {
-            ShowInfo("An active CAN bus connection is needed to get data from the ECU");
-            return;
-        }
-        byte[] data = await Ecu.ReadMapAsync(sh);
-        if (MapViewerViewModel.Create(this, bin, sh, data, sram: true) is { } viewer)
-        {
-            viewer.OnlineMode = true;
-            ShowDocument(viewer);
-        }
-    }
-
-    /// <summary>The viewer's Read from ECU: every viewer of the map shows the ECU's data.</summary>
-    public override async Task ReadMapFromEcuAsync(MapViewerViewModel viewer)
-    {
-        if (!await EnsureConnectedAsync())
-        {
-            ShowInfo("An active CAN bus connection is needed to get data from the ECU");
-            return;
-        }
-        byte[] data = await Ecu.ReadMapAsync(viewer.Symbol);
-        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(v => v.MapName == viewer.MapName && !v.IsReadOnly))
-        {
-            if (data.Length == v.Map.Count * (v.Map.SixteenBit ? 2 : 1)) v.Map.Load(data);
-            v.OnlineMode = true;
-        }
-    }
-
-    /// <summary>The viewer's Save to ECU (WriteMapToSRAM).</summary>
-    public override async Task WriteMapToEcuAsync(MapViewerViewModel viewer)
-    {
-        if (!await EnsureConnectedAsync())
-        {
-            ShowInfo("An active CAN bus connection is needed to write data to the ECU");
-            return;
-        }
-        if (!await Ecu.WriteMapAsync(viewer.Symbol, viewer.Map.ToBytes()))
-            ShowInfo($"The ECU did not accept {viewer.MapName}. Writing to SRAM needs an open binary in the ECU.");
-    }
-
-    /// <summary>AutoUpdateSRAMViewers: online viewers without edits re-read every AutoUpdateInterval seconds.</summary>
-    public void RestartSramTimer()
-    {
-        m_sramTimer?.Stop();
-        if (!Settings.AutoUpdateSRAMViewers) return;
-        m_sramTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Clamp(Settings.AutoUpdateInterval, 5, 60)) };
-        m_sramTimer.Tick += async (_, _) =>
-        {
-            if (!Ecu.IsConnected) return;
-            foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(v => v.OnlineMode && !v.Map.Mutated).ToList())
-                await ReadMapFromEcuAsync(v);
-        };
-        m_sramTimer.Start();
-    }
-
     // ---- flashing ----
 
-    private async Task DisconnectRealtimeAsync()
-    {
-        if (!Ecu.IsConnected) return;
-        await Ecu.DisconnectAsync();
-        IsConnected = false;
-        CanStatus = "";
-    }
-
     /// <summary>Read ECU: the flash into a file; the result is the library's own message.</summary>
-    public async Task ReadEcuAsync(string file)
+    public override Task ReadEcuAsync(string file) => RunFlasherAsync(async () =>
     {
-        await DisconnectRealtimeAsync();
-        IsBusy = true;
-        CanStatus = "Initializing CANbus interface";
-        try
-        {
-            var (ok, message) = await Ecu.ReadFlashAsync(Settings, file);
-            ShowInfo(ok ? $"Download done: {file}" : message);
-        }
-        catch (InvalidOperationException e)
-        {
-            ShowInfo(e.Message);
-        }
-        finally
-        {
-            IsBusy = false;
-            CanStatus = "";
-            ProgressText = "";
-        }
-    }
+        var (ok, message) = await Ecu.ReadFlashAsync(Settings, file);
+        ShowInfo(ok ? $"Download done: {file}" : message);
+    });
 
-    /// <summary>
-    /// Flash current file to ECU. Unlike T7Suite, a checksum that doesn't verify is fixed (AutoChecksum) or offered to be
-    /// fixed first, and unsaved map changes are pointed out; the file on disk is what gets flashed.
-    /// </summary>
-    public async Task FlashEcuAsync(Func<string, Task<bool>> askYesNo)
+    /// <summary>Flash current file to ECU, the file on disk once it's ready (FlashableBinaryAsync).</summary>
+    public override async Task FlashEcuAsync(Func<string, Task<bool>> askYesNo)
     {
-        if (Binary is not T7Binary bin || !File.Exists(bin.FileName))
-        {
-            ShowInfo("No file has been loaded");
-            return;
-        }
-        if (Viewers.OfType<MapViewerViewModel>().Any(v => v.FileName == bin.FileName && v.Map.Mutated)
-            && !await askYesNo("Some maps have changes that are not saved to the file and will not be flashed. Flash the file as it is?"))
-            return;
-        if (bin.VerifyChecksum() != ChecksumResult.Ok)
-        {
-            if (!Settings.AutoChecksum && !await askYesNo("Checksums did not verify ok, do you want to recalculate and update the checksums?"))
-                return;
-            bin.UpdateChecksum(Settings.AutoFixFooter);
-        }
-        await DisconnectRealtimeAsync();
-        IsBusy = true;
-        CanStatus = "Initializing CANbus interface";
-        try
+        if (await FlashableBinaryAsync(askYesNo) is not { } bin) return;
+        await RunFlasherAsync(async () =>
         {
             var (ok, message) = await Ecu.WriteFlashAsync(Settings, bin.FileName);
             ShowInfo(ok ? "Flash sequence done" : message);
-        }
-        catch (InvalidOperationException e)
-        {
-            ShowInfo(e.Message);
-        }
-        finally
-        {
-            IsBusy = false;
-            CanStatus = "";
-            ProgressText = "";
-        }
+        });
     }
 
     /// <summary>Get SRAM snapshot: SRAM&lt;time&gt;.RAM next to the bin, or Snapshots/Snapshot&lt;time&gt;.RAM in a project.</summary>
@@ -427,10 +268,8 @@ public partial class T7MainWindowViewModel
 
     // ---- fault codes ----
 
-    private Dictionary<string, DTCDescription>? m_dtcCatalog;
-
     /// <summary>Get fault codes (OBDII): obdFaults from SRAM, with descriptions. Codes without one are listed too (T7Suite hid them).</summary>
-    public async Task<List<FaultCode>?> ReadFaultCodesAsync()
+    public override async Task<List<FaultCode>?> ReadFaultCodesAsync()
     {
         if (!await EnsureConnectedAsync())
         {
@@ -442,12 +281,10 @@ public partial class T7MainWindowViewModel
             ShowInfo("Cannot find symbolnumber for symbol obdFaults, ECU binary must be loaded");
             return null;
         }
-        m_dtcCatalog ??= DtcCatalog.Load();
-        string[] codes = await Ecu.ReadFaultCodesAsync(obdFaults);
-        return codes.Distinct().Select(c => new FaultCode(c, m_dtcCatalog.TryGetValue(c, out var d) ? d.Description : "")).ToList();
+        return Describe(await Ecu.ReadFaultCodesAsync(obdFaults));
     }
 
-    public async Task<List<FaultCode>?> ClearFaultCodeAsync(string code)
+    public override async Task<List<FaultCode>?> ClearFaultCodeAsync(string code)
     {
         if (!await EnsureConnectedAsync()) return null;
         await Ecu.ClearFaultCodeAsync(code);
@@ -458,26 +295,6 @@ public partial class T7MainWindowViewModel
     private async Task ClearDtcAndKnockCounters()
     {
         if (await EnsureConnectedAsync()) await Ecu.ClearAllFaultCodesAsync();
-    }
-
-    // ---- SRAM snapshot files ----
-
-    public void ImportSramSnapshot(string file) => SramFile = file;
-
-    /// <summary>Read from SRAM file: the symbol's bytes at its SRAM address in the snapshot, as "SRAM Symbol: name [file]".</summary>
-    public void OpenFromSramFile(SymbolHelper sh, string? file = null)
-    {
-        file ??= SramFile;
-        if (Binary is not T7Binary bin || file == null || !File.Exists(file)) return;
-        byte[] ram = File.ReadAllBytes(file);
-        if (ram.Length == 0) return;
-        byte[] data = SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length);
-        string title = $"SRAM Symbol: {sh.SmartVarname} [{Path.GetFileName(file)}]";
-        if (MapViewerViewModel.Create(this, bin, sh, data, sram: true, title: title) is { } viewer)
-        {
-            viewer.OnlineMode = true;
-            ShowDocument(viewer);
-        }
     }
 
     // ---- synchronize ----

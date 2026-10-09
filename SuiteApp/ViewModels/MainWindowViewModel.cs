@@ -127,6 +127,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         foreach (ColumnFilter f in ColumnFilters) f.PropertyChanged += (_, _) => Symbols?.Refresh();
         LoadRecent();
         WatchFloating();
+        RestartSramTimer();
     }
 
     // ---- what each suite does its own way ----
@@ -169,24 +170,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>A symbol that doesn't open as a map (T8Suite's bit mask symbols); true when handled.</summary>
     protected virtual bool OpenOther(SuiteBinary bin, SymbolHelper sh) => false;
 
-    /// <summary>A map that only lives in SRAM: read from the ECU, where the suite has one.</summary>
-    protected virtual Task OpenSramSymbolAsync(SuiteBinary bin, SymbolHelper sh)
-    {
-        ShowInfo($"{sh.SmartVarname} only lives in the ECU's SRAM");
-        return Task.CompletedTask;
-    }
-
-    /// <summary>Map viewers get the ECU buttons.</summary>
-    public virtual bool HasEcu => false;
-
-    /// <summary>New viewers show the ECU's data (an open realtime connection).</summary>
-    protected virtual bool EcuConnected => false;
-
-    /// <summary>A viewer's Read from ECU.</summary>
-    public virtual Task ReadMapFromEcuAsync(MapViewerViewModel viewer) => Task.CompletedTask;
-
-    /// <summary>A viewer's Save to ECU.</summary>
-    public virtual Task WriteMapToEcuAsync(MapViewerViewModel viewer) => Task.CompletedTask;
+    /// <summary>The suite's realtime session is open: new viewers show the ECU's data.</summary>
+    protected abstract bool EcuConnected { get; }
 
     /// <summary>Verify checksum, the suite's way.</summary>
     protected abstract Task VerifyChecksumAsync();
@@ -497,6 +482,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         Symbols?.Refresh();
+        RestartSramTimer();
     }
 
     // ---- projects ----

@@ -35,7 +35,7 @@ namespace T7CoreTest
                 var e = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => ecu.ConnectAsync(settings));
                 Assert.AreEqual("Check settings, no CAN adapter has been selected!", e.Message);
                 Assert.IsFalse(ecu.IsConnected);
-                CollectionAssert.Contains(T7Ecu.AdapterTypes, "SLCAN");
+                CollectionAssert.Contains(CanAdapters.Types, "SLCAN");
             }
             finally
             {

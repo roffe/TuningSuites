@@ -1,90 +1,28 @@
 using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using CommonSuite;
-using NLog;
 using TrionicCANLib.API;
 
 namespace T7
 {
     /// <summary>
-    /// The connection to a T7 ECU. TrionicCANLib's KWP handler holds a thread-affine mutex and expects one thread per session,
-    /// so every call of a session runs on this object's own thread, queued and awaited (the flasher's RunOnWorker, kept alive
-    /// for as long as the suite stays connected). Events from the library arrive on its threads; the UI posts them over.
+    /// The connection to a T7 ECU over KWP2000, on EcuWorker's own thread (TrionicCANLib's KWP handler holds a thread-affine
+    /// mutex and expects one thread per session), kept alive for as long as the suite stays connected.
     /// </summary>
-    public sealed class T7Ecu : IDisposable
+    public sealed class T7Ecu : EcuWorker<Trionic7>
     {
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-
-        private readonly BlockingCollection<Action> m_work = new();
-        private readonly Thread m_thread;
-
-        public Trionic7 Trionic { get; } = new();
-
-        /// <summary>m_RealtimeConnectedToECU: a KWP session is open.</summary>
-        public bool IsConnected { get; private set; }
-
-        /// <summary>A read, flash or snapshot session is running; closing the app now would leave it half done.</summary>
-        public bool IsFlashing { get; private set; }
-
-        public event EventHandler<ITrionic.CanInfoEventArgs> Info;
-        public event EventHandler<int> Progress;
-
-        public T7Ecu()
+        public T7Ecu() : base(new Trionic7(), "T7 ECU")
         {
-            Trionic.onCanInfo += (s, e) => Info?.Invoke(this, e);
-            Trionic.onReadProgress += (s, e) => Progress?.Invoke(this, e.Percentage);
-            Trionic.onWriteProgress += (s, e) => Progress?.Invoke(this, e.Percentage);
-            m_thread = new Thread(() =>
-            {
-                foreach (Action work in m_work.GetConsumingEnumerable()) work();
-            })
-            {
-                IsBackground = true,
-                Name = "T7 ECU",
-            };
-            try { m_thread.Priority = ThreadPriority.AboveNormal; } catch (Exception) { }
-            m_thread.Start();
         }
-
-        /// <summary>Runs a call on the ECU thread.</summary>
-        public Task<T> RunAsync<T>(Func<Trionic7, T> call)
-        {
-            var done = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-            m_work.Add(() =>
-            {
-                try
-                {
-                    done.SetResult(call(Trionic));
-                }
-                catch (Exception e)
-                {
-                    logger.Debug(e);
-                    done.SetException(e);
-                }
-            });
-            return done.Task;
-        }
-
-        public Task RunAsync(Action<Trionic7> call) => RunAsync<bool>(t => { call(t); return true; });
-
-        /// <summary>The adapter types the settings offer, in CANBusAdapter order (their descriptions are what AppSettings stores).</summary>
-        public static string[] AdapterTypes => Enum.GetValues<CANBusAdapter>().Select(a => EnumHelper.GetDescription(a)).ToArray();
-
-        public static CANBusAdapter? AdapterFromDescription(string description) =>
-            Enum.GetValues<CANBusAdapter>().Cast<CANBusAdapter?>().FirstOrDefault(a => EnumHelper.GetDescription(a.Value) == description);
 
         /// <summary>
-        /// frmMain.SetupCanAdapter + RealtimeCheckAndConnect: P-bus only, latency, forced baudrate for the serial adapters,
-        /// adapter type and the chosen adapter, then a KWP session. Throws a message when no adapter is configured.
-        /// SLCAN is set up too (T7Suite's if-chain had no SLCAN branch, so choosing it connected nothing).
+        /// frmMain.SetupCanAdapter + RealtimeCheckAndConnect: the adapter, then a KWP session. Throws a message when no adapter
+        /// is configured.
         /// </summary>
         public Task<bool> ConnectAsync(AppSettings settings, Latency latency = Latency.Low) => RunAsync(t =>
         {
             if (IsConnected) return true;
-            Setup(t, settings, latency);
+            CanAdapters.Setup(t, settings, latency);
             if (t.openDevice())
             {
                 IsConnected = true;
@@ -95,24 +33,11 @@ namespace T7
             return false;
         });
 
-        private static void Setup(Trionic7 t, AppSettings settings, Latency latency)
-        {
-            if (AdapterFromDescription(settings.AdapterType) is not { } adapter)
-                throw new InvalidOperationException("Check settings, no CAN adapter has been selected!");
-            t.OnlyPBus = settings.OnlyPBus;
-            t.Latency = latency;
-            if (adapter is CANBusAdapter.ELM327 or CANBusAdapter.JUST4TRIONIC or CANBusAdapter.SLCAN) t.ForcedBaudrate = settings.Baudrate;
-            t.setCANDevice(adapter);
-            if (!string.IsNullOrEmpty(settings.Adapter)) t.SetSelectedAdapter(settings.Adapter);
-            else if (adapter != CANBusAdapter.COMBI) throw new InvalidOperationException("Check settings, no CAN adapter has been selected!");
-        }
-
-        public Task DisconnectAsync() => RunAsync(t =>
+        protected override void Close(Trionic7 t)
         {
             t.SuspendAlivePolling();
-            t.Cleanup();
-            IsConnected = false;
-        });
+            base.Close(t);
+        }
 
         // ---- flashing: a session of its own (FlasherConnect: Latency.Default, closes a realtime connection first) ----
 
@@ -164,13 +89,8 @@ namespace T7
 
         private Task<bool> OpenFlasherAsync(AppSettings settings) => RunAsync(t =>
         {
-            if (IsConnected || t.isOpen())
-            {
-                t.SuspendAlivePolling();
-                t.Cleanup();
-                IsConnected = false;
-            }
-            Setup(t, settings, Latency.Default);
+            if (IsConnected || t.isOpen()) Close(t);
+            CanAdapters.Setup(t, settings, Latency.Default);
             if (t.openDevice()) return true;
             t.Cleanup();
             return false;
@@ -250,15 +170,5 @@ namespace T7
             t.ReadDTC();
             t.ClearDTCCodes();
         });
-
-        /// <summary>
-        /// Closes whatever session is open (realtime or flasher) so the library's adapter threads end and the process can exit.
-        /// </summary>
-        public void Dispose()
-        {
-            if (m_work.IsAddingCompleted) return;
-            try { DisconnectAsync().Wait(TimeSpan.FromSeconds(5)); } catch (Exception e) { logger.Debug(e); }
-            m_work.CompleteAdding();
-        }
     }
 }

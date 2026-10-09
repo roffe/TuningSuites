@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using T7App.ViewModels;
+using SuiteApp.ViewModels;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
-/// <summary>frmFaultcodes: the codes read from the ECU; Clear clears the selected one and reads them again.</summary>
+/// <summary>frmFaultcodes: the codes read from the ECU; Clear clears the selected one (T8: all of them) and reads them again.</summary>
 public partial class FaultCodesWindow : Window
 {
-    private readonly T7MainWindowViewModel? m_vm;
+    private readonly MainWindowViewModel? m_vm;
 
     public FaultCodesWindow() => InitializeComponent();
 
-    public FaultCodesWindow(T7MainWindowViewModel vm, List<FaultCode> codes) : this()
+    public FaultCodesWindow(MainWindowViewModel vm, List<FaultCode> codes) : this()
     {
         m_vm = vm;
         Grid.ItemsSource = codes;

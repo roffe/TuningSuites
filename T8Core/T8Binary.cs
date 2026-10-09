@@ -286,6 +286,9 @@ namespace T8SuitePro
         /// </summary>
         public override double GetMapCorrectionFactor(string symbolname) => SymbolDictionary.GetSymbolUnit(symbolname);
 
+        /// <summary>T8Suite gave the viewer its ECU buttons only for symbols with an SRAM address.</summary>
+        public override bool InSram(SymbolHelper sh) => sh.Start_address >= 0x100000;
+
         public override string Describe(string symbolname) => SymbolTranslator.ToDescription(symbolname);
 
         public override bool ImportXmlSymbols(string file) => Trionic8File.TryToLoadAdditionalXMLSymbols(file, Symbols);

@@ -18,6 +18,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     {
         // "Symbol: ...", "Adding symbol names: ", "Importing symbols"; "Idle" / "Completed" clear it
         Trionic8File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Info is "Idle" or "Completed" ? "" : e.Info);
+        InitEcu();
     }
 
     protected override uint FileLength => FileT8.Length;
@@ -75,9 +76,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     /// </summary>
     private async Task CheckChecksumAsync(string file)
     {
-        bool correct = Settings.AutoChecksum;
-        ChecksumResult result = await Task.Run(() => ChecksumT8.VerifyChecksum(file, correct, (layer, inFile, real) =>
-            UserPrompt.AskYesNo($"{layer}\n\nFile checksum: {inFile}\nActual checksum: {real}\n\nUpdate the checksum?", "Trionic checksum")));
+        ChecksumResult result = await VerifyFileChecksumAsync(file);
         ChecksumText = result switch
         {
             ChecksumResult.Ok => "Checksum: OK",
@@ -86,6 +85,13 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
             ChecksumResult.InvalidFileLength => "Checksum: no checksum area",
             _ => "Checksum: update failed",
         };
+    }
+
+    private Task<ChecksumResult> VerifyFileChecksumAsync(string file)
+    {
+        bool correct = Settings.AutoChecksum;
+        return Task.Run(() => ChecksumT8.VerifyChecksum(file, correct, (layer, inFile, real) =>
+            UserPrompt.AskYesNo($"{layer}\n\nFile checksum: {inFile}\nActual checksum: {real}\n\nUpdate the checksum?", "Trionic checksum")));
     }
 
     /// <summary>Create project (Form1 9132): car model = T8Header's CarDescription (empty, T8Suite never read it), "&lt;partnumber&gt; &lt;software version&gt;".</summary>

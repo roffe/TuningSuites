@@ -54,6 +54,9 @@ namespace CommonSuite
         /// <summary>The symbol's address in the file, 0 when it isn't there.</summary>
         public abstract long SymbolAddress(string symbolname);
 
+        /// <summary>The symbol has a copy in the ECU's SRAM, which the map viewer can read and write (T7Suite offered it for every map).</summary>
+        public virtual bool InSram(SymbolHelper sh) => true;
+
         /// <summary>Where compare, transfer and search read a symbol in the file.</summary>
         public virtual long AddressOf(SymbolHelper sh) => sh.Flash_start_address;
 

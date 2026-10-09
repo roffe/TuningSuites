@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the fault code descriptions T8Suite shipped (DtcCatalog reads every DTC_*.xml next to the program) -->
+    <Content Include="DTC_SaabHSTRC.xml;DTC_SaabLSTRC.xml;DTC_SaabTRC.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- MIT; the encrypted symbol name tables are password-protected (ZipCrypto) zips, which System.IO.Compression can't open -->
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
   </ItemGroup>

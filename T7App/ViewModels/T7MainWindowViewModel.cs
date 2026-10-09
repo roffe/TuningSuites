@@ -87,7 +87,6 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
     {
         base.SettingsChanged();
         if (Binary is T7Binary bin) bin.AutoFixFooter = Settings.AutoFixFooter;
-        RestartSramTimer();
         OnPropertyChanged(nameof(FeedbackMapCaption));
         OnPropertyChanged(nameof(ClearFeedbackCaption));
     }

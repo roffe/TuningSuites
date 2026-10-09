@@ -41,19 +41,6 @@ public partial class MainWindow : SuiteMainWindow
 
     // ---- ECU ----
 
-    private async void OnReadEcu(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.SaveFile(this, "Binary files", "bin") is { } file) await Vm.ReadEcuAsync(file);
-    }
-
-    private async void OnFlashEcu(object? sender, RoutedEventArgs e) =>
-        await Vm.FlashEcuAsync(text => Dialogs.YesNo(this, text, "Question"));
-
-    private async void OnFaultCodes(object? sender, RoutedEventArgs e)
-    {
-        if (await Vm.ReadFaultCodesAsync() is { } codes) new FaultCodesWindow(Vm, codes).Show(this);
-    }
-
     private async void OnSyncToBinary(object? sender, RoutedEventArgs e)
     {
         if (await Dialogs.OkCancel(this, "This will overwrite data in your binary file. Are you sure you want to proceed?", "Warning!")) await Vm.SyncToBinaryAsync();
@@ -85,11 +72,6 @@ public partial class MainWindow : SuiteMainWindow
             await Vm.CompareSramAsync(first, second);
     }
 
-    private async void OnImportSram(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "SRAM dump files", "*.RAM") is { } file) Vm.ImportSramSnapshot(file);
-    }
-
     private async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is not { } sh || Vm.Binary is not T7.T7Binary bin) return;
@@ -97,7 +79,6 @@ public partial class MainWindow : SuiteMainWindow
         if (Vm.SelectedViewer is MapViewerViewModel { CanSaveToFile: true } viewer && viewer.MapName == sh.SmartVarname)
             await Vm.ReadMapFromEcuAsync(viewer);
     }
-
 
     private async void OnSidInfo(object? sender, RoutedEventArgs e)
     {
@@ -152,8 +133,6 @@ public partial class MainWindow : SuiteMainWindow
         Vm.TransactionsAdded(count);
         Vm.RefreshViewers(bin.FileName);
     }
-
-
 
     private async void OnVectors(object? sender, RoutedEventArgs e)
     {
@@ -214,11 +193,6 @@ public partial class MainWindow : SuiteMainWindow
     private void OnAddToRealtime(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is { } sh) Vm.AddToRealtime(sh);
-    }
-
-    private void OnReadFromSramFile(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.SelectedSymbol is { } sh) Vm.OpenFromSramFile(sh);
     }
 
     private async void OnSettings(object? sender, RoutedEventArgs e)

@@ -1,11 +1,13 @@
+using System;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TrionicCANLib.API;
 
 namespace SuiteApp.ViewModels;
 
 /// <summary>
 /// frmSettings, the settings both suites have that do something here (of the docking / window size options only Hide symbol
-/// window); each suite's dialog adds its own.
+/// window) and the connection; each suite's dialog adds its own.
 /// </summary>
 public partial class SuiteSettingsViewModel : ObservableObject
 {
@@ -23,6 +25,33 @@ public partial class SuiteSettingsViewModel : ObservableObject
 
     public string[] ViewTypes { get; } = ["Hexadecimal view", "Decimal view", "Easy view"];
 
+    // realtime settings: the connection, the same for every suite
+    [ObservableProperty] private string _adapterType = "";
+    [ObservableProperty] private string? _adapter;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAdapters))]
+    private string[] _adapters = [];
+
+    public bool HasAdapters => Adapters.Length > 0;
+    [ObservableProperty] private bool _adapterNeedsBaudrate;
+    [ObservableProperty] private int _baudrate;
+    [ObservableProperty] private bool _onlyPBus;
+    [ObservableProperty] private bool _autoUpdateSRAMViewers;
+    [ObservableProperty] private decimal? _autoUpdateInterval;
+
+    public string[] AdapterTypes { get; } = CanAdapters.Types;
+
+    // frmComportSettings' speeds, plus the SLCAN ones the flasher offers
+    public int[] Baudrates { get; } = [9600, 38400, 115200, 230400, 1000000, 2000000, 3000000];
+
+    partial void OnAdapterTypeChanged(string value)
+    {
+        CANBusAdapter? type = CanAdapters.FromDescription(value);
+        Adapters = type is { } t ? ITrionic.GetAdapterNames(t) ?? [] : [];
+        if (Adapter == null || !Array.Exists(Adapters, a => a == Adapter)) Adapter = Adapters.Length > 0 ? Adapters[0] : null;
+        AdapterNeedsBaudrate = CanAdapters.NeedsBaudrate(type);
+    }
+
     public SuiteSettingsViewModel(AppSettings s)
     {
         _showRedWhite = s.ShowRedWhite;
@@ -37,6 +66,13 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _requestProjectNotes = s.RequestProjectNotes;
         _hideSymbolTable = s.HideSymbolTable;
         _projectFolder = s.ProjectFolder;
+        _adapter = s.Adapter;
+        _baudrate = s.Baudrate;
+        _onlyPBus = s.OnlyPBus;
+        _autoUpdateSRAMViewers = s.AutoUpdateSRAMViewers;
+        _autoUpdateInterval = Math.Clamp(s.AutoUpdateInterval, 5, 60);
+        // not the field: the setter fills the adapter list
+        AdapterType = Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
     }
 
     /// <summary>OK: every value back into AppSettings (each setter saves).</summary>
@@ -52,6 +88,12 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.ShowAddressesInHex = ShowAddressesInHex;
         s.RequestProjectNotes = RequestProjectNotes;
         s.HideSymbolTable = HideSymbolTable;
+        s.AdapterType = AdapterType;
+        s.Adapter = Adapter ?? "";
+        s.Baudrate = Baudrate;
+        s.OnlyPBus = OnlyPBus;
+        s.AutoUpdateSRAMViewers = AutoUpdateSRAMViewers;
+        s.AutoUpdateInterval = (int)(AutoUpdateInterval ?? 20);
         // an empty folder fell back to <program>\Projects; the program folder isn't writable on Linux, so the default instead
         s.ProjectFolder = string.IsNullOrWhiteSpace(ProjectFolder)
             ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "TxSuite", "Projects")

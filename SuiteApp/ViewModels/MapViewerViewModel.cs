@@ -49,9 +49,9 @@ public partial class MapViewerViewModel : DocumentViewModel
     /// <summary>AFR maps live in files of their own, not in the ECU.</summary>
     public bool IsAfrMap { get; init; }
 
-    /// <summary>The viewer's Read from ECU / Save to ECU buttons, none for AFR maps or where the suite has no ECU yet.</summary>
-    public IAsyncRelayCommand? EcuReadCommand => IsAfrMap || NoEcu || !Owner.HasEcu ? null : ReadEcuCommand;
-    public IAsyncRelayCommand? EcuWriteCommand => IsAfrMap || NoEcu || !Owner.HasEcu ? null : WriteEcuCommand;
+    /// <summary>The viewer's Read from ECU / Save to ECU buttons: none for AFR maps, nor for symbols without an SRAM copy (T8).</summary>
+    public IAsyncRelayCommand? EcuReadCommand => IsAfrMap || NoEcu || !Binary.InSram(Symbol) ? null : ReadEcuCommand;
+    public IAsyncRelayCommand? EcuWriteCommand => IsAfrMap || NoEcu || !Binary.InSram(Symbol) ? null : WriteEcuCommand;
 
     /// <summary>No ECU buttons (a tuning package's map).</summary>
     public bool NoEcu { get; set; }

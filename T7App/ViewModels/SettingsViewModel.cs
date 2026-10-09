@@ -5,7 +5,7 @@ using SuiteApp.ViewModels;
 namespace T7App.ViewModels;
 
 /// <summary>
-/// frmSettings: the shared settings plus T7Suite's own (closed loop indicator, timestamp marker, footer fix, the connection).
+/// frmSettings: the shared settings and connection plus T7Suite's own (closed loop indicator, timestamp marker, footer fix, CAN log).
 /// Wideband and autotune have groups here instead of T7Suite's extra dialogs.
 /// </summary>
 public partial class SettingsViewModel : SuiteSettingsViewModel
@@ -14,20 +14,8 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
     [ObservableProperty] private bool _writeTimestampInBinary;
     [ObservableProperty] private bool _autoFixFooter;
 
-    // realtime settings: the connection
-    [ObservableProperty] private string _adapterType;
-    [ObservableProperty] private string? _adapter;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasAdapters))]
-    private string[] _adapters = [];
-
-    public bool HasAdapters => Adapters.Length > 0;
-    [ObservableProperty] private bool _adapterNeedsBaudrate;
-    [ObservableProperty] private int _baudrate;
-    [ObservableProperty] private bool _onlyPBus;
+    // realtime settings beyond the connection
     [ObservableProperty] private bool _enableCanLog;
-    [ObservableProperty] private bool _autoUpdateSRAMViewers;
-    [ObservableProperty] private decimal? _autoUpdateInterval;
 
     // wideband and AFR maps (frmSettings' wideband options, frmWidebandConfig)
     [ObservableProperty] private bool _autoCreateAFRMaps;
@@ -61,19 +49,6 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
 
     public string[] FuelMaps { get; } = ["BFuelCal.Map", "BFuelCal.E85Map", "BFuelCal.StartMap"];
 
-    public string[] AdapterTypes { get; } = T7.T7Ecu.AdapterTypes;
-
-    // frmComportSettings' speeds, plus the SLCAN ones the flasher offers
-    public int[] Baudrates { get; } = [9600, 38400, 115200, 230400, 1000000, 2000000, 3000000];
-
-    partial void OnAdapterTypeChanged(string value)
-    {
-        TrionicCANLib.API.CANBusAdapter? type = T7.T7Ecu.AdapterFromDescription(value);
-        Adapters = type is { } t ? TrionicCANLib.API.ITrionic.GetAdapterNames(t) ?? [] : [];
-        if (Adapter == null || !System.Array.Exists(Adapters, a => a == Adapter)) Adapter = Adapters.Length > 0 ? Adapters[0] : null;
-        AdapterNeedsBaudrate = type is TrionicCANLib.API.CANBusAdapter.ELM327 or TrionicCANLib.API.CANBusAdapter.JUST4TRIONIC or TrionicCANLib.API.CANBusAdapter.SLCAN;
-    }
-
     public string[] ClosedLoopIndicators { get; } = ["No closed loop indicator", "Square closed loop indicator", "Triangle closed loop indicator"];
 
     public SettingsViewModel(AppSettings s) : base(s)
@@ -81,12 +56,7 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
         _standardFill = System.Math.Clamp(s.StandardFill, 0, 2);
         _writeTimestampInBinary = s.WriteTimestampInBinary;
         _autoFixFooter = s.AutoFixFooter;
-        _adapter = s.Adapter;
-        _baudrate = s.Baudrate;
-        _onlyPBus = s.OnlyPBus;
         _enableCanLog = s.EnableCanLog;
-        _autoUpdateSRAMViewers = s.AutoUpdateSRAMViewers;
-        _autoUpdateInterval = System.Math.Clamp(s.AutoUpdateInterval, 5, 60);
         _autoCreateAFRMaps = s.AutoCreateAFRMaps;
         _measureAFRInLambda = s.MeasureAFRInLambda;
         _useWidebandLambda = s.UseWidebandLambda;
@@ -105,8 +75,6 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
         _maximumAdjustment = System.Math.Clamp(s.MaximumAdjustmentPerCyclePercentage, 1, 20);
         _autoUpdateFuelMap = s.AutoUpdateFuelMap;
         _disableClosedLoopOnStartAutotune = s.DisableClosedLoopOnStartAutotune;
-        // not the field: the setter fills the adapter list
-        AdapterType = System.Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
     }
 
     public override void Apply(AppSettings s)
@@ -115,13 +83,7 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
         s.StandardFill = StandardFill;
         s.WriteTimestampInBinary = WriteTimestampInBinary;
         s.AutoFixFooter = AutoFixFooter;
-        s.AdapterType = AdapterType;
-        s.Adapter = Adapter ?? "";
-        s.Baudrate = Baudrate;
-        s.OnlyPBus = OnlyPBus;
         s.EnableCanLog = EnableCanLog;
-        s.AutoUpdateSRAMViewers = AutoUpdateSRAMViewers;
-        s.AutoUpdateInterval = (int)(AutoUpdateInterval ?? 20);
         s.AutoCreateAFRMaps = AutoCreateAFRMaps;
         s.MeasureAFRInLambda = MeasureAFRInLambda;
         s.UseWidebandLambda = UseWidebandLambda;

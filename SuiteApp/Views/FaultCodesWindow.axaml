@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:T7App.ViewModels"
-        x:Class="T7App.Views.FaultCodesWindow"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        x:Class="SuiteApp.Views.FaultCodesWindow"
         Title="Fault codes" Width="585" Height="303" WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
