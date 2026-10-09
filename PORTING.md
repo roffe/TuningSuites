@@ -29,6 +29,7 @@ This file is the tracker. Update the checkboxes and the log at the bottom as wor
 | Settings | JSON at `<AppData>/MattiasC/T7SuitePro/settings.json`, plus a one-time import from `HKCU\Software\MattiasC\T7SuitePro` (and its MRU key `HKCU\Software\T7SuitePro\MRUList`) on Windows, as the flasher does |
 | Versioning, CI, packaging | Copy the flasher's: version from git tags in `Directory.Build.props`; self-contained win-x86 / linux-x64 / linux-arm64 / osx builds; WiX MSI, tar.gz and zip |
 | Threading | The ECU and realtime loop run on worker threads and report back with `Dispatcher.UIThread.Post`, never a blocking Invoke (the flasher deadlocked that way). Wrap the library's sync calls in a worker plus a `TaskCompletionSource`, like the flasher's `RunOnWorker` |
+| Map controls | Own Avalonia controls in `MapControls/`. Behaviour (selection, editing, keys, colours, menus, clipboard) follows T7Suite; from txlogger only the meshgrid 3D projection/drawing and the graph2d layout |
 | Shared T7/T8 code | Not yet. CommonSuite logic is copied into T7Core. Shared Core and Controls projects get extracted when T8 starts: T7 and T8 share 67 filenames but only 8 identical files, so a shared layer now would be guesswork |
 
 ## Layout (new projects)
@@ -105,24 +106,27 @@ SetupT7/                   WiX MSI (chunk 8)
 - Changed plan: frmMain's logic gets pulled out in the chunk whose view needs it (listed there with line ranges), so every service is built against a real consumer and tested there instead of guessed up front. The `.t7l` round-trip test moved to chunk 6 with the logging code.
 
 ### 2. MapControls (can run in parallel with chunk 1)
-- [ ] `MapData` codec: bytes ↔ raw ↔ physical; 8/16-bit big-endian; Hex/Decimal/Easy/ASCII; factor and offset; the >0xF000 signed rule; upside-down
-- [ ] `MapGrid`:
-  - axis headers, heat map (green→red and red-white variants), open-loop overlay, live cell highlight
-  - range selection with Shift and Ctrl
-  - keys: ±1, PgUp/PgDn ±10, Home = max, End = 0, type a value and Enter
-- [ ] Edit operations: add, multiply, divide, fill, smooth (proper bilinear for blocks), select by value
-- [ ] Multi-step undo (an improvement; the old viewer only reverts everything)
-- [ ] Clipboard in the T7Suite format (paste at the original position or at the selected cell), plus copy as tab-separated text
-- [ ] `Surface3D`:
-  - meshgrid port: orbit, roll, pan, zoom, axes labelled with real values, live cursor
-  - compare overlay (original vs compare surfaces)
-- [ ] `Graph2D`: one slice with a slice selector, 1-D maps, drag points to edit
-- [ ] Sync camera and selection between viewers that show the same map
-- [ ] Tests: codec round-trip, edit operations, clipboard round-trip, projection and axis geometry (port meshgrid's)
+Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only rendering techniques come from txlogger (see Decisions).
+- [x] `MapData` (`MapControls/MapData.cs`): bytes ↔ raw ↔ display; 8-bit unsigned, 16-bit big-endian with 0xF001..0xFFFF negative; Hex/Decimal/Easy/ASCII text and parsing exactly as MapViewerEx (Easy is display only: raw*factor+offset, `F2`, `°`/`%` for the T5 names); partial last row; upside-down display; open-loop test (limit per data row > X value); every change through `Set` = one undo step
+- [x] `MapGrid`: X/Y axis headers (hex in hex view), T7Suite cell colours (raw*255/max green→red, red-white alpha, online white→red tint, off), open-loop marks (box / SeaGreen corner), yellow live cell (`SetHighlight(col, dataRow)` = T7Suite's HighlightCell), DevExpress-style selection (click/drag, Shift, Ctrl, arrows), cell editor (typing / F2 / Enter, Easy starts from the value with `F2`, Enter commits the focused cell), steps on the selection (+/- 1, PgUp/PgDn 10 or 0x10, Home max, End 0), context menu with T7Suite's items (Copy selected cells, Paste selected cells at original position / at currently selected location, Smooth selection) plus undo/redo
+- [x] `MapOps`: steps, add/multiply/divide/fill with the old formulas and truncation, smooth (old algorithm: integer-step line for a row/column, in-place neighbour average for a block), select by value (physical within 0.009), T7Suite clipboard copy/paste
+- [x] Multi-step undo/redo (an improvement; the old viewer could only revert everything); Ctrl+Z/Y
+- [x] `Surface3D`: txlogger meshgrid's projection and drawing (Skia Gouraud triangles in painter's order, Lambert shading, axis scales with real axis values, orbit/roll/pan/zoom, live cursor), T7Suite's palette (green → yellow → orange → orange-red → red, online wheat → dark blue)
+- [x] `Graph2D`: one row/column with markers, value callouts, nice ticks, live cursor; T7Suite palette for the markers
+- [x] `MapControlsDemo`: `dotnet run --project MapControlsDemo [file.bin]` shows IgnNormCal.Map / BFuelCal.Map / TorqueCal.M_NominalMap of a bin (axes, factors and open-loop limits as frmMain computes them) with view type, online and red-white toggles, 3D and a 2D slice slider
+- [x] Tests (`MapControlsTest`, 18): MapData decode/encode/format/parse/undo, every op, smooth, clipboard round trip, keyboard and mouse on a live headless window, and headless Skia renders of every control and of the demo on a real bin (`MAPCONTROLS_DUMP=<dir>` saves them as PNG to look at)
+- Moved: the compare overlay in 3D (original / compare surfaces) goes with compare in chunk 4; viewer sync, the slice selector and the "Edit x-axis / y-axis" menu items go with the map viewer view in chunk 3. Dropped: dragging points in the 2D chart (only the legacy MapViewer had it).
+- Deliberate differences from MapViewerEx, where the old behaviour was a bug:
+  - 16-bit cells accept -0xFFF..0xF000, the values that survive save and reload (the old viewer accepted up to ±78643 and Home wrote 0xFFFF, which reloads as -1); 8-bit cells reject negatives (the old one accepted them and then dropped the byte on save, shifting every later value)
+  - hex view shows a negative 16-bit value as its two bytes (`FFFF`), not `FFFFFFFF`
+  - paste always treats clipboard values as raw and clamps them (pasting across view types wrote hex text into decimal cells or read decimals as hex)
+  - ASCII view is read-only instead of throwing; smoothing works in hex view too (it always worked on raw values)
+  - the colour scale uses the current largest value (the old one kept the value from load, only raised by + and Home)
+  - copy with nothing selected copies the whole map without asking; clicking another cell commits a pending edit, like leaving the DevExpress editor did
 
 ### 3. Read-only app (first usable release)
 - [ ] Main window: open a bin, symbol list (DataGrid with search and filter), maps open in tabs, MRU
-- [ ] Map viewer view: MapGrid with Surface3D or Graph2D, view type, axis lock
+- [ ] Map viewer view: MapGrid with Surface3D or Graph2D (tab), slice slider, view type, axis lock, splitter, "Edit x-axis / y-axis", save/read file, sync of selection and 3D camera between viewers of the same map, the math toolbar (add/multiply/divide/fill, select by value)
 - [ ] Firmware information view
 - [ ] Wire `UserPrompt.YesNo` / `Notify` to dialogs
 - [ ] From frmMain: file open and import (504-890, 5126-6030), axis/symbol metadata (6032-6658), firmware information (4686-5093)
@@ -130,7 +134,7 @@ SetupT7/                   WiX MSI (chunk 8)
 ### 4. Offline tuning (replaces the old T7Suite for offline work)
 - [ ] Edit and save the bin; checksum verify and update
 - [ ] Projects, transaction log, rollback and roll-forward, backups
-- [ ] Compare against a file: list of differing symbols, difference map
+- [ ] Compare against a file: list of differing symbols, difference map, original/compare overlay in Surface3D
 - [ ] Symbol import from XML, CSV and AS2; mymaps
 - [ ] Settings view
 - [ ] Export: CSV, XDF, S19, IDC (Excel COM export 3263-3611 becomes CSV)
@@ -185,4 +189,5 @@ SetupT7/                   WiX MSI (chunk 8)
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 2 done: MapControls (MapData, MapOps, MapGrid, Surface3D, Graph2D), MapControlsDemo, MapControlsTest with headless Skia renders. Behaviour follows T7Suite, txlogger only for rendering.
 - 2026-10-09: Chunk 1 done: T7Core with the lifted logic and JSON settings, T7CoreTest with the golden baseline over 256 bins (28 tests, ~22 s). frmMain extraction moved into chunks 3-7.

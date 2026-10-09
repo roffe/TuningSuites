@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace T7
 {
-    class SymbolTranslator
+    public class SymbolTranslator
     {
         public static string ToHelpText(string symbolname, int ApplicationLanguage)
         {

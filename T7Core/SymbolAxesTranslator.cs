@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace T7
 {
-    class SymbolAxesTranslator
+    public class SymbolAxesTranslator
     {
         // AirCompCal.AirTab same y axis as AirCompCal.AirLimTab
 

@@ -2,6 +2,9 @@
   <Folder Name="/external/">
     <Project Path="../Trionic/TrionicCANLib/TrionicCANLib.csproj" />
   </Folder>
+  <Project Path="MapControls/MapControls.csproj" />
+  <Project Path="MapControlsDemo/MapControlsDemo.csproj" />
+  <Project Path="MapControlsTest/MapControlsTest.csproj" />
   <Project Path="T7App/T7App.csproj" />
   <Project Path="T7Core/T7Core.csproj" />
   <Project Path="T7CoreTest/T7CoreTest.csproj" />

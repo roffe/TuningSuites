@@ -44,3 +44,7 @@ jobs:
     # golden parse of every bin in T7Binaries, settings, crypto, S19, transaction log
     - name: Test
       run: dotnet test TuningSuites/T7CoreTest -c Release --no-build
+
+    # map controls: model and ops, keyboard/mouse and Skia renders in a headless window
+    - name: Test map controls
+      run: dotnet test TuningSuites/MapControlsTest -c Release --no-build
