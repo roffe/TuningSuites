@@ -101,6 +101,20 @@ public partial class SymbolListView : UserControl
         if (e.EditAction == DataGridEditAction.Commit) Vm?.SaveUserDescriptions();
     }
 
+    // T8Suite's map preview popup (frmMapHelper): the hovered name's map as a table, read only; nothing when the suite has none
+    private void OnNameToolTipOpening(object? sender, CancelRoutedEventArgs e)
+    {
+        if (sender is not Control c || c.DataContext is not SymbolHelper sh || Vm?.MapPreview(sh) is not { } preview)
+        {
+            e.Cancel = true;
+            return;
+        }
+        ToolTip.SetTip(c, new MapControls.MapGrid
+        {
+            Map = preview.Map, ViewType = preview.ViewType, IsRedWhite = preview.IsRedWhite, DisableColors = preview.DisableColors, IsReadOnly = true,
+        });
+    }
+
     private void OnSymbolDoubleTapped(object? sender, TappedEventArgs e) => Vm?.OpenSymbolCommand.Execute(Vm.SelectedSymbol);
 
     private void OnSymbolKeyDown(object? sender, KeyEventArgs e)

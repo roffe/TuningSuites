@@ -23,8 +23,6 @@
 
   <ItemGroup>
     <AvaloniaResource Include="T7Suite.ico" />
-    <AvaloniaResource Include="Assets\Compressormaps\*" />
-    <AvaloniaResource Include="Assets\ASM-Mode.xshd" />
     <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
     <!-- Help → User manual / Trionic 7 documentation -->
     <None Include="..\T7_manual.pdf" Link="T7_manual.pdf" CopyToOutputDirectory="PreserveNewest" />

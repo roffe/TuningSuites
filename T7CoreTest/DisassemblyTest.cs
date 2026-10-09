@@ -22,19 +22,21 @@ namespace T7CoreTest
             {
                 T7Binary bin = T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
                 var watch = Stopwatch.StartNew();
-                string asm = Disassembly.Functions(bin, Path.Combine(dir, "x.asm"));
+                string asm = Path.Combine(dir, "x.asm");
+                bin.Disassemble(asm, false);
                 TestContext.WriteLine($"functions: {watch.ElapsedMilliseconds} ms");
                 string[] lines = File.ReadAllLines(asm);
                 Assert.IsTrue(lines.Any(l => l.StartsWith("RESET_INITIAL_PROGRAM_COUNTER:") || l.StartsWith("Function_")));
                 Assert.IsTrue(lines.Any(l => l.StartsWith("0x") && l.Contains('\t')));
 
                 watch.Restart();
-                string full = Disassembly.Full(bin, Path.Combine(dir, "x_full.asm"));
+                string full = Path.Combine(dir, "x_full.asm");
+                bin.Disassemble(full, true);
                 TestContext.WriteLine($"full: {watch.ElapsedMilliseconds} ms");
                 Assert.IsGreaterThan(100000, File.ReadLines(full).Count());
                 Assert.IsFalse(File.ReadAllText(full).Contains(@"\par"));
 
-                var vectors = Disassembly.Vectors(bin);
+                var vectors = bin.InterruptVectors();
                 Assert.HasCount(256, vectors);
                 Assert.AreEqual("User defined vector 191", vectors[255].Name);
             }

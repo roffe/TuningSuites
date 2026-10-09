@@ -16,6 +16,10 @@
         <Style Selector="DataGridRow:selected DataGridCell">
             <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
         </Style>
+        <!-- the map preview popup is as large as its map -->
+        <Style Selector="ToolTip">
+            <Setter Property="MaxWidth" Value="1600" />
+        </Style>
         <Style Selector="DataGridRow:selected TextBlock.onLight">
             <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedNameForeground}" />
         </Style>
@@ -53,7 +57,8 @@
             <DataGrid.Columns>
                 <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
                     <DataTemplate x:DataType="cs:SymbolHelper">
-                        <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
+                        <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2"
+                                ToolTip.Tip="" ToolTip.ShowDelay="100" ToolTip.Placement="Right" ToolTip.ToolTipOpening="OnNameToolTipOpening">
                             <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Classes.onLight="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=light}"
                                        Classes.onDark="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=dark}" />
                         </Border>

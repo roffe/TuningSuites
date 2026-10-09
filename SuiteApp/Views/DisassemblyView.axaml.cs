@@ -11,9 +11,9 @@ using AvaloniaEdit.Highlighting.Xshd;
 using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.Search;
 using AvaloniaHex.Document;
-using T7App.ViewModels;
+using SuiteApp.ViewModels;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 public partial class DisassemblyView : UserControl
 {
@@ -29,7 +29,7 @@ public partial class DisassemblyView : UserControl
 
     private static IHighlightingDefinition Load(System.Collections.Generic.Dictionary<string, Color>? colors)
     {
-        using var stream = AssetLoader.Open(new Uri("avares://T7Suite/Assets/ASM-Mode.xshd"));
+        using var stream = AssetLoader.Open(new Uri("avares://SuiteApp/Assets/ASM-Mode.xshd"));
         using var reader = XmlReader.Create(stream);
         IHighlightingDefinition definition = HighlightingLoader.Load(reader, HighlightingManager.Instance);
         if (colors != null)

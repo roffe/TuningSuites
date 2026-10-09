@@ -134,18 +134,6 @@ public partial class MainWindow : SuiteMainWindow
         Vm.RefreshViewers(bin.FileName);
     }
 
-    private async void OnVectors(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.Binary is T7.T7Binary bin) await new VectorsWindow(T7.Disassembly.Vectors(bin)).ShowDialog(this);
-    }
-
-    private async void OnDisassembly(object? sender, RoutedEventArgs e) =>
-        await Vm.ShowDisassemblyAsync(false, text => Dialogs.YesNo(this, text, "Question"));
-
-    // the full sweep is reused when it exists, as T7Suite did
-    private async void OnFullDisassembly(object? sender, RoutedEventArgs e) =>
-        await Vm.ShowDisassemblyAsync(true, _ => System.Threading.Tasks.Task.FromResult(false));
-
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings);
@@ -156,8 +144,4 @@ public partial class MainWindow : SuiteMainWindow
         Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);
     }
 
-    private void OnBrowseAxes(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.SelectedSymbol is { } sh) Vm.BrowseAxes(sh.SmartVarname);
-    }
 }

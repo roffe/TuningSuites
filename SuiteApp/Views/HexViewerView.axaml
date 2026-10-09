@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:T7App.ViewModels"
+             xmlns:vm="using:SuiteApp.ViewModels"
              xmlns:hex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
              xmlns:r="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
-             x:Class="T7App.Views.HexViewerView"
+             x:Class="SuiteApp.Views.HexViewerView"
              x:DataType="vm:HexViewerViewModel">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="4">

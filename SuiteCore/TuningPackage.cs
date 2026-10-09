@@ -35,12 +35,15 @@ namespace CommonSuite
         public List<SearchReplace> Patterns { get; } = [];
         public List<string> BinActions { get; } = [];
 
-        public static TuningPackage Read(string file, SuiteBinary bin)
+        public static TuningPackage Read(string file, SuiteBinary bin) => Parse(File.ReadLines(file), bin);
+
+        /// <summary>The package's lines (T8Suite's wizard packs decrypt theirs first).</summary>
+        public static TuningPackage Parse(IEnumerable<string> lines, SuiteBinary bin)
         {
             var pkg = new TuningPackage();
             string name = "";
             int length = 0;
-            foreach (string raw in File.ReadLines(file))
+            foreach (string raw in lines)
             {
                 string line = raw.Trim();
                 if (line.StartsWith("symbol=")) name = line[7..];

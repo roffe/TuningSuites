@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:T7App.ViewModels"
-             xmlns:c="using:T7App.Controls"
-             x:Class="T7App.Views.AirmassResultView"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             xmlns:c="using:SuiteApp.Controls"
+             x:Class="SuiteApp.Views.AirmassResultView"
              x:DataType="vm:AirmassResultViewModel">
     <DockPanel>
         <!-- Options and the limiter legend -->
@@ -11,7 +11,7 @@
                 <TextBlock Text="Options" FontWeight="SemiBold" />
                 <CheckBox Content="Car has automatic gearbox" IsChecked="{Binding Automatic}" />
                 <CheckBox Content="Car runs E85" IsChecked="{Binding E85}" IsEnabled="{Binding CanE85}" />
-                <CheckBox Content="Car is a convertible" IsChecked="{Binding Convertible}" IsEnabled="{Binding CanConvertible}" />
+                <CheckBox Content="{Binding VariantCaption}" IsChecked="{Binding Variant}" IsEnabled="{Binding CanVariant}" />
                 <CheckBox Content="View in overboost" IsChecked="{Binding Overboost}" IsEnabled="{Binding CanOverboost}" />
                 <CheckBox Content="Use trionic calculation for torque" IsChecked="{Binding TrionicTorque}" />
                 <CheckBox Content="Firmware limited" IsChecked="{Binding FirmwareLimited}" />

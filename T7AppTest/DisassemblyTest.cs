@@ -13,6 +13,8 @@ using AvaloniaHex.Rendering;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7App.ViewModels;
 using T7App.Views;
+using SuiteApp.ViewModels;
+using SuiteApp.Views;
 
 namespace T7AppTest
 {

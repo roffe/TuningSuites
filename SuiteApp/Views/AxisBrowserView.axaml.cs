@@ -1,9 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using T7;
-using T7App.ViewModels;
+using CommonSuite;
+using SuiteApp.ViewModels;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 public partial class AxisBrowserView : UserControl
 {

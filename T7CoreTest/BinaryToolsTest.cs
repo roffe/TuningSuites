@@ -34,10 +34,10 @@ namespace T7CoreTest
                 CollectionAssert.AreEqual(File.ReadAllBytes(a), File.ReadAllBytes(b));
                 Assert.AreEqual(ChecksumResult.Ok, T7Binary.OpenRaw(b).VerifyChecksum());
 
-                var axes = BinaryTools.Axes(bin);
+                var axes = bin.AxisRows();
                 var ign = axes.Single(r => r.Symbol == "IgnNormCal.Map");
                 Assert.AreEqual("IgnNormCal.m_AirXSP", ign.XAxis);
-                Assert.HasCount(1, BinaryTools.Axes(bin, "IgnNormCal.Map"));
+                Assert.HasCount(1, bin.AxisRows("IgnNormCal.Map"));
             }
             finally
             {

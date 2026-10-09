@@ -6,10 +6,7 @@ using CommonSuite;
 
 namespace T7
 {
-    /// <summary>A row of the axis browser: a map, its description and its two axes.</summary>
-    public sealed record AxisInfo(string Symbol, string Description, string XAxis, string XDescription, string YAxis, string YDescription);
-
-    /// <summary>The remaining File / Actions / Information tools of frmMain: the address table copy, the axis browser, the Idc file.</summary>
+    /// <summary>The remaining File / Actions / Information tools of frmMain: the address table copy, the Idc file, part numbers.</summary>
     public static class BinaryTools
     {
         /// <summary>GetStartOfAddressTableOffset: from 0x30000, the 0x20 that ends eight zero bytes; 0 when there is none.</summary>
@@ -55,20 +52,6 @@ namespace T7
             return Path.Combine(Path.GetDirectoryName(bin.FileName), Path.GetFileNameWithoutExtension(bin.FileName) + "-autogen.idc");
         }
 
-        /// <summary>Browse axis information: every symbol with an x or y axis (one symbol when given).</summary>
-        public static List<AxisInfo> Axes(T7Binary bin, string only = null)
-        {
-            var rows = new List<AxisInfo>();
-            foreach (string name in bin.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Distinct().OrderBy(n => n))
-            {
-                if (only != null && name != only) continue;
-                var (x, y, xd, yd, _) = bin.AxisSymbols(name);
-                if (x == "" && y == "") continue;
-                rows.Add(new AxisInfo(name, SymbolTranslator.ToHelpText(name, bin.Language), x, xd, y, yd));
-            }
-            return rows;
-        }
-    
         /// <summary>frmPartnumberLookup: what the part number is, or null when it isn't known.</summary>
         public static PartInfo LookupPartNumber(string partNumber)
         {

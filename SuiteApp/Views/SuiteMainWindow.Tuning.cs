@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -178,11 +179,15 @@ public partial class SuiteMainWindow
     private MenuItem Shortcut(MapShortcut m) =>
         new() { Header = MenuTextConverter.Escape(m.Caption), Command = Vm.OpenShortcutCommand, CommandParameter = m, [ToolTip.TipProperty] = m.Symbol };
 
-    // the ribbon's map buttons, grouped as the ribbon was, the ones this bin has (DynamicTuningMenu)
+    private List<object?>? m_tuningItems;
+
+    // the ribbon's map buttons, grouped as the ribbon was, the ones this bin has (DynamicTuningMenu), after the menu's own items
     private void BuildQuickMaps()
     {
         if (this.FindControl<MenuItem>("QuickMapsMenu") is not { } menu) return;
+        m_tuningItems ??= menu.Items.ToList();
         menu.Items.Clear();
+        foreach (object? item in m_tuningItems) menu.Items.Add(item);
         foreach (var group in (Vm.Binary?.QuickMaps() ?? []).GroupBy(m => m.Group))
         {
             var item = new MenuItem { Header = MenuTextConverter.Escape(group.Key) };

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using CommonSuite;
@@ -24,10 +25,10 @@ namespace T8SuitePro
         public int SecondaryOffset { get; }
 
         /// <summary>The PID table (the PID editor), null when none was found.</summary>
-        public PidCollection Pids { get; }
+        public PidCollection Pids { get; private set; }
 
         /// <summary>The TEM table (the TEM editor), null when none was found; none of the stock bins has one.</summary>
-        public PidCollection Tems { get; }
+        public PidCollection Tems { get; private set; }
 
         /// <summary>A symbol list (XML) gave the names, so map detection didn't run.</summary>
         public bool SymbolListLoaded { get; }
@@ -296,6 +297,64 @@ namespace T8SuitePro
         public override int AddressTableStart(string file) => Trionic8File.AddressTableStart(file);
 
         public override string ExportIdc() => IdaProIdcFile.create(FileName, Symbols, IsSoftwareOpen);
+
+        /// <summary>
+        /// Show disassembly with T8Suite's disassembler (the MC68377's registers, flash below 0x100000): the functions reached
+        /// from the 120 vectors; full: a linear sweep of the file, plain text.
+        /// </summary>
+        public override void Disassemble(string output, bool full)
+        {
+            var disasm = new Disassembler();
+            if (full)
+            {
+                disasm.DisassembleFileRtf(FileName, output, new FileInfo(FileName).Length, Symbols, false);
+                return;
+            }
+            disasm.DisassembleFile(FileName, Symbols);
+            Disassembly.WriteFunctions(disasm.Mnemonics, output);
+        }
+
+        /// <summary>Show interrupt vectors: the 120 vectors of the MC68377 ("User defined vector 0" onwards above 63).</summary>
+        public override List<(string Name, long Address)> InterruptVectors()
+        {
+            long[] addresses = Trionic8File.GetVectorAddresses(FileName);
+            string[] names = Trionic8File.GetVectorNames();
+            return addresses.Select((a, i) => (names[i].Replace('_', ' '), a)).ToList();
+        }
+
+        /// <summary>
+        /// The PID editor's Ok (btnPidEdit_ItemClick): every row back as [PID][00 00][symbol index][flags], 7 bytes (the pad byte
+        /// left), and the edited table replaces the open one. No transaction entry, as in T8Suite; the caller checks the checksum.
+        /// </summary>
+        public void WritePids(PidCollection pids)
+        {
+            foreach (PidHelper ph in pids)
+            {
+                int pid = int.TryParse(ph.PID, NumberStyles.HexNumber, null, out int p) ? p : -1;
+                if (pid is >= 0 and < 0x10000) WriteEntry(ph, [(byte)(pid >> 8), (byte)pid, 0, 0, (byte)(ph.SymbolIndex >> 8), (byte)ph.SymbolIndex, ph.PackedFlags]);
+            }
+            Pids = pids;
+        }
+
+        /// <summary>The TEM editor's Ok (btnTemEdit_ItemClick): every row as [symbol index][label, zero padded to 4]; "OFF" (index 0) is never written.</summary>
+        public void WriteTems(PidCollection tems)
+        {
+            foreach (PidHelper ph in tems)
+            {
+                var data = new byte[6];
+                data[0] = (byte)(ph.SymbolIndex >> 8);
+                data[1] = (byte)ph.SymbolIndex;
+                for (int i = 0; i < Math.Min(ph.PID.Length, 4); i++) data[i + 2] = (byte)ph.PID[i];
+                WriteEntry(ph, data);
+            }
+            Tems = tems;
+        }
+
+        // only inside the program area, and only with a symbol: the name table has no index, so the first is 1
+        private void WriteEntry(PidHelper ph, byte[] data)
+        {
+            if (ph.FileAddress >= 0x20000 && ph.FileAddress + data.Length <= FileSize && ph.SymbolIndex is > 0 and < 0x10000) WriteData(ph.FileAddress, data);
+        }
 
         /// <summary>
         /// Copy address table to another binary (Form1 13268): the 10-byte records from 17 bytes before the table's start while

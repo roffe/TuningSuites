@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,7 +124,10 @@ namespace SuiteApp.Services
 
         /// <param name="patterns">e.g. "*.bin"</param>
         /// <returns>local path, or null when cancelled</returns>
-        public static async Task<string?> OpenFile(Window owner, string filterName, params string[] patterns)
+        public static Task<string?> OpenFile(Window owner, string filterName, params string[] patterns) => OpenFileIn(owner, null, null, filterName, patterns);
+
+        /// <summary>OpenFile with the picker's title and first folder, where the suite's dialog had them.</summary>
+        public static async Task<string?> OpenFileIn(Window owner, string? title, string? folder, string filterName, params string[] patterns)
         {
             // GTK / portal globs are case-sensitive (Windows' aren't): *.bin must also list FOO.BIN
             // ponytail: mixed case like *.Bin still hidden
@@ -134,6 +138,8 @@ namespace SuiteApp.Services
             {
                 var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
+                    Title = title,
+                    SuggestedStartLocation = folder != null && Directory.Exists(folder) ? await owner.StorageProvider.TryGetFolderFromPathAsync(folder) : null,
                     AllowMultiple = false,
                     FileTypeFilter = new[] { new FilePickerFileType(filterName) { Patterns = patterns.Concat(patterns.Select(p => p.ToUpperInvariant())).Distinct().ToArray() } },
                 });
@@ -147,13 +153,14 @@ namespace SuiteApp.Services
 
         /// <param name="extension">default extension without dot, e.g. "bin"</param>
         /// <returns>local path, or null when cancelled</returns>
-        public static async Task<string?> SaveFile(Window owner, string filterName, string extension, string? suggestedName = null)
+        public static async Task<string?> SaveFile(Window owner, string filterName, string extension, string? suggestedName = null, string? title = null)
         {
             owner.IsEnabled = false; // see OpenFile
             try
             {
                 var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
+                    Title = title,
                     DefaultExtension = extension,
                     SuggestedFileName = suggestedName,
                     ShowOverwritePrompt = true,

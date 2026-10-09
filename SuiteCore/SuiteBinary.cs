@@ -6,6 +6,9 @@ using TrionicCANLib.Checksum;
 
 namespace CommonSuite
 {
+    /// <summary>A row of the axis browser: a map, its description and its two axes.</summary>
+    public sealed record AxisInfo(string Symbol, string Description, string XAxis, string XDescription, string YAxis, string YDescription);
+
     /// <summary>
     /// An opened binary as the suites' windows use it: its symbols, where a map sits in the file, how to read and write it, its
     /// axes and how to show it. T7Binary and T8Binary read their own formats; lookups by name go by SmartVarname, as the suites did.
@@ -129,6 +132,26 @@ namespace CommonSuite
 
         /// <summary>Generate Idc file: &lt;bin&gt;-autogen.idc next to the bin, for IDA Pro. Its path.</summary>
         public abstract string ExportIdc();
+
+        /// <summary>Show disassembly (the functions reached from the interrupt vectors) or the full one (a linear sweep) into output.</summary>
+        public abstract void Disassemble(string output, bool full);
+
+        /// <summary>Show interrupt vectors: the vector table at the start of the flash, named.</summary>
+        public abstract List<(string Name, long Address)> InterruptVectors();
+
+        /// <summary>Browse axis information: every symbol with an x or y axis (one symbol when given).</summary>
+        public List<AxisInfo> AxisRows(string only = null)
+        {
+            var rows = new List<AxisInfo>();
+            foreach (string name in Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Distinct().OrderBy(n => n))
+            {
+                if (only != null && name != only) continue;
+                var (x, y, xd, yd, _) = AxisSymbols(name);
+                if (x == "" && y == "") continue;
+                rows.Add(new AxisInfo(name, Describe(name), x, xd, y, yd));
+            }
+            return rows;
+        }
 
         /// <summary>The quick maps menu (the Tuning page's map buttons) for this binary.</summary>
         public virtual List<MapShortcut> QuickMaps() => [];

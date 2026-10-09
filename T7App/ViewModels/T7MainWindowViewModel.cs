@@ -91,58 +91,36 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
         OnPropertyChanged(nameof(ClearFeedbackCaption));
     }
 
-    /// <summary>Information → Browse axis information (the symbol list's "Browse axis info" passes one symbol).</summary>
-    [RelayCommand]
-    public void BrowseAxes(string? symbol)
-    {
-        if (Binary is T7Binary bin) ShowDocument(new AxisBrowserViewModel(this, bin, symbol));
-    }
-
-    /// <summary>
-    /// Show disassembly (full: the linear sweep): &lt;bin&gt;.asm / &lt;bin&gt;_full.asm next to the bin, redone when asked or when
-    /// it isn't there yet, then shown beside the bin's bytes.
-    /// </summary>
-    public async Task ShowDisassemblyAsync(bool full, Func<string, Task<bool>> redo)
-    {
-        if (Binary is not T7Binary bin) return;
-        string file = Path.Combine(Path.GetDirectoryName(bin.FileName) ?? "", Path.GetFileNameWithoutExtension(bin.FileName) + (full ? "_full.asm" : ".asm"));
-        if (!File.Exists(file) || await redo("Assemblerfile already exists, do you want to redo the disassembly?"))
-        {
-            IsBusy = true;
-            ProgressText = "Disassembling...";
-            try
-            {
-                await Task.Run(() => full ? Disassembly.Full(bin, file) : Disassembly.Functions(bin, file));
-            }
-            finally
-            {
-                IsBusy = false;
-                ProgressText = "";
-            }
-        }
-        ShowDocument(new DisassemblyViewModel(file, File.ReadAllBytes(bin.FileName), full, bin));
-    }
-
-    /// <summary>View file in hex: the bin, and the imported SRAM snapshot next to it.</summary>
-    [RelayCommand]
-    private void ViewHex()
-    {
-        if (Binary is not T7Binary bin) return;
-        ShowDocument(new HexViewerViewModel(bin.FileName, bin));
-        if (SramFile is { } ram && File.Exists(ram)) ShowDocument(new HexViewerViewModel(ram, bin, sram: true));
-    }
-
     /// <summary>Actions → Airmass result viewer, when the bin has the tables it needs (T7Suite silently did nothing otherwise).</summary>
     [RelayCommand]
     private void ShowAirmassResult()
     {
         if (Binary is not T7Binary bin) return;
-        if (!AirmassResult.Available(bin))
+        if (!T7AirmassResult.Available(bin))
         {
             ShowInfo("This file lacks the pedal, torque or airmass tables the airmass result viewer needs");
             return;
         }
-        ShowDocument(new AirmassResultViewModel(this, bin));
+        (int, double) compressor = (CompressorMap.T1752, 2.0);
+        try
+        {
+            compressor = T7AirmassResult.CompressorDefaults(T7.FirmwareInfo.Read(bin).PartNumber);
+        }
+        catch (Exception)
+        {
+            // ponytail: an unreadable footer keeps the T1752 / 2.0 litre defaults
+        }
+        ShowDocument(new AirmassResultViewModel(this, bin.FileName, new AirmassSuite(
+            (file, options) => new T7AirmassResult(T7Binary.Open(file, Settings.ApplicationLanguage, false), options),
+            T7Binary.IsValidFile, "File is not a Trionic 7 binary file!", "Car is a convertible", false,
+            ["Reverse", "First gear", "Second gear", "Third gear", "Fourth gear", "Fifth gear"],
+            [
+                (AirmassLimitType.TorqueLimiterEngine, "Engine torque limiter"), (AirmassLimitType.AirmassLimiter, "Airmass limiter"),
+                (AirmassLimitType.TurboSpeedLimiter, "Turbospeed limiter"), (AirmassLimitType.TorqueLimiterEngineE85, "E85 engine torque limiter"),
+                (AirmassLimitType.TorqueLimiterEngineE85Auto, "E85Auto engine torque limiter"), (AirmassLimitType.TorqueLimiterGear, "Gear torque limiter"),
+                (AirmassLimitType.FuelCutLimiter, "Fuelcut limiter"), (AirmassLimitType.OverBoostLimiter, "Overboost limiter"),
+            ],
+            compressor)));
     }
 
     /// <summary>"Compare to original file": the stock bin with this part number, when Binaries has exactly one.</summary>

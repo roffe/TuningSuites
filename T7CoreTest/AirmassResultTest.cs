@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7;
 
@@ -15,8 +16,8 @@ namespace T7CoreTest
         public void WotRowOnAStockBin()
         {
             T7Binary bin = T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
-            Assert.IsTrue(AirmassResult.Available(bin));
-            var r = new AirmassResult(bin, new AirmassOptions());
+            Assert.IsTrue(T7AirmassResult.Available(bin));
+            var r = new T7AirmassResult(bin, new AirmassOptions());
             int wot = r.Pedal.Length - 1, c2400 = System.Array.IndexOf(r.Rpm, 2400);
             // stock: the engine torque table limits WOT everywhere
             Assert.AreEqual(759, r.Airmass[wot, c2400]);
@@ -28,7 +29,7 @@ namespace T7CoreTest
             Assert.IsTrue(Enumerable.Range(0, r.Rpm.Length).All(c => r.Airmass[0, c] <= r.Airmass[wot, c]));
 
             // no firmware limit and a much higher torque table: the airmass limiter takes over somewhere
-            var free = new AirmassResult(bin, new AirmassOptions { FirmwareLimited = false, Automatic = true });
+            var free = new T7AirmassResult(bin, new AirmassOptions { FirmwareLimited = false, Automatic = true });
             Assert.IsTrue(Enumerable.Range(0, r.Rpm.Length).All(c => free.Airmass[wot, c] > 0));
 
             // the interpolation: clamped at both ends, linear in between

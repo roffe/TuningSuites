@@ -6,6 +6,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>T8SuitePro</RootNamespace>
     <AssemblyName>T8Core</AssemblyName>
+    <!-- the lifted disassembler passes target addresses by pointer, as T7Core's -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Company>MattiasC</Company>
     <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
   </PropertyGroup>

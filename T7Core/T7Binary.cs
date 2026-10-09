@@ -439,6 +439,27 @@ namespace T7
 
         public override string ExportIdc() => BinaryTools.ExportIdc(this);
 
+        /// <summary>Show disassembly: the functions reached from the 256 vectors; full: a linear sweep of the file, plain text (not RTF).</summary>
+        public override void Disassemble(string output, bool full)
+        {
+            var disasm = new Disassembler();
+            if (full)
+            {
+                disasm.DisassembleFileRtf(FileName, output, new FileInfo(FileName).Length, Symbols, false);
+                return;
+            }
+            disasm.DisassembleFile(null, FileName, output, Symbols);
+            Disassembly.WriteFunctions(disasm.Mnemonics, output);
+        }
+
+        /// <summary>frmVectorlist: the 256 vectors with their names ("User defined vector 0" onwards above 63).</summary>
+        public override List<(string Name, long Address)> InterruptVectors()
+        {
+            long[] addresses = Trionic7File.GetVectorAddresses(FileName);
+            string[] names = Trionic7File.GetVectorNames();
+            return addresses.Select((a, i) => (names[i].Replace('_', ' '), a)).ToList();
+        }
+
         public override int AddressTableStart(string file) => BinaryTools.AddressTableOffset(File.ReadAllBytes(file));
 
         public override void CopyAddressTable(string target) => BinaryTools.CopyAddressTable(FileName, target, AutoFixFooter);

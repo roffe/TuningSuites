@@ -7,10 +7,10 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
+using CommonSuite;
 using MapControls;
-using T7;
 
-namespace T7App.Controls;
+namespace SuiteApp.Controls;
 
 /// <summary>The airmass result's limiter colours (the legend's swatches).</summary>
 public static class LimiterColors

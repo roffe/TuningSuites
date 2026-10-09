@@ -604,7 +604,7 @@ namespace T7AppTest
                 tabs.SelectedIndex = 0;
 
                 // a legend entry opens its map
-                am.OpenLimiterCommand.Execute(T7.AirmassLimitType.TorqueLimiterEngine);
+                am.OpenLimiterCommand.Execute(AirmassLimitType.TorqueLimiterEngine);
                 Assert.AreEqual("TorqueCal.M_EngMaxTab", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
                 vm.SelectedViewer = am;
                 window.Close();

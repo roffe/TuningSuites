@@ -165,6 +165,12 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Symbol names coloured by their prefix (T7Suite did, T8Suite didn't).</summary>
     public virtual bool ColorSymbolNames => true;
 
+    /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
+    public virtual bool ShowsMapPreview => false;
+
+    /// <summary>The map preview popup's content: the hovered map from the file, read only; null for one that only lives in SRAM.</summary>
+    public MapViewerViewModel? MapPreview(SymbolHelper sh) => ShowsMapPreview && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
+
     /// <summary>The symbol list's predefined filters; none for T7Suite.</summary>
     public virtual IReadOnlyList<SymbolFilter> SymbolFilters => [];
 

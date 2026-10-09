@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="T7App.Views.VectorsWindow"
+        x:Class="SuiteApp.Views.VectorsWindow"
         Title="Interrupt vector list" Width="520" Height="620" WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">
         <Button DockPanel.Dock="Bottom" Content="OK" HorizontalAlignment="Right" MinWidth="80" Margin="0,8,0,0" IsDefault="True" IsCancel="True" Click="OnOk" />

@@ -7,16 +7,15 @@ using AvaloniaEdit.Document;
 using AvaloniaHex.Document;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
-using T7;
 using SuiteApp.ViewModels;
 
-namespace T7App.ViewModels;
+namespace SuiteApp.ViewModels;
 
 /// <summary>
 /// "Disassembly: file" (ctrlDisassembler / AsmViewer): the .asm text, editable and saved back to its file, beside a read-only
 /// hex view of the bin it came from (ctrlDisassembler's hexViewer1); the text caret and the hex view follow each other.
 /// </summary>
-public partial class DisassemblyViewModel(string file, byte[] binary, bool full = false, T7Binary? bin = null) : DocumentViewModel
+public partial class DisassemblyViewModel(string file, byte[] binary, bool full = false, SuiteBinary? bin = null) : DocumentViewModel
 {
     /// <summary>The hex pane's caret: offset and the symbol there (T7Suite's HexViewer showed it on its toolbar).</summary>
     [ObservableProperty]
@@ -98,7 +97,7 @@ public partial class DisassemblyViewModel(string file, byte[] binary, bool full 
 /// </summary>
 public partial class HexViewerViewModel : DocumentViewModel
 {
-    private readonly T7Binary? m_bin;
+    private readonly SuiteBinary? m_bin;
     private readonly bool m_sram;
 
     public string FileName { get; }
@@ -109,7 +108,7 @@ public partial class HexViewerViewModel : DocumentViewModel
     [ObservableProperty] private bool _isModified;
     [ObservableProperty] private string _status = "";
 
-    public HexViewerViewModel(string file, T7Binary? bin, bool sram = false)
+    public HexViewerViewModel(string file, SuiteBinary? bin, bool sram = false)
     {
         FileName = file;
         m_bin = bin;
@@ -122,7 +121,7 @@ public partial class HexViewerViewModel : DocumentViewModel
     public void CaretAt(ulong offset) => Status = HexStatus(m_bin, offset, Document.Length, m_sram);
 
     /// <summary>"0xOFFSET    symbol": the symbol a byte belongs to (addresses wrap at the file size; SRAM files by SRAM address).</summary>
-    public static string HexStatus(T7Binary? bin, ulong offset, ulong length, bool sram = false)
+    public static string HexStatus(SuiteBinary? bin, ulong offset, ulong length, bool sram = false)
     {
         string symbol = "No symbol";
         if (bin != null && length > 0)
