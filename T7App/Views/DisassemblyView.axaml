@@ -2,13 +2,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:T7App.ViewModels"
              xmlns:ae="using:AvaloniaEdit"
+             xmlns:hex="clr-namespace:AvaloniaHex;assembly=AvaloniaHex"
+             xmlns:r="clr-namespace:AvaloniaHex.Rendering;assembly=AvaloniaHex"
              x:Class="T7App.Views.DisassemblyView"
              x:DataType="vm:DisassemblyViewModel">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="4">
             <Button Content="Save" Click="OnSave" />
-            <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="Ctrl+F finds, Ctrl+H replaces" />
+            <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="Ctrl+F finds, Ctrl+H replaces, double-click a byte to find its address" />
         </StackPanel>
-        <ae:TextEditor x:Name="Editor" ShowLineNumbers="True" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13" />
+        <!-- ctrlDisassembler's splitter: the listing left, the bin's bytes right at a fixed width, 16 per line (UseFixedBytesPerLine) -->
+        <Grid x:Name="Panes" ColumnDefinitions="*,Auto,640">
+            <ae:TextEditor x:Name="Editor" ShowLineNumbers="True" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13" />
+            <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" />
+            <hex:HexEditor x:Name="Hex" Grid.Column="2" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13">
+                <hex:HexEditor.Columns>
+                    <r:OffsetColumn />
+                    <r:HexColumn />
+                    <r:AsciiColumn />
+                </hex:HexEditor.Columns>
+            </hex:HexEditor>
+        </Grid>
     </DockPanel>
 </UserControl>

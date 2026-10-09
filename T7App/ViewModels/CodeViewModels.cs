@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using AvaloniaEdit.Document;
 using AvaloniaHex.Document;
 using CommonSuite;
@@ -9,8 +11,11 @@ using T7;
 
 namespace T7App.ViewModels;
 
-/// <summary>"Disassembly: file" (ctrlDisassembler / AsmViewer): the .asm text, editable and saved back to its file.</summary>
-public class DisassemblyViewModel(string file) : DocumentViewModel
+/// <summary>
+/// "Disassembly: file" (ctrlDisassembler / AsmViewer): the .asm text, editable and saved back to its file, beside a read-only
+/// hex view of the bin it came from (ctrlDisassembler's hexViewer1); the text caret and the hex view follow each other.
+/// </summary>
+public class DisassemblyViewModel(string file, byte[] binary, bool full = false) : DocumentViewModel
 {
     public string FileName { get; } = file;
 
@@ -18,7 +23,66 @@ public class DisassemblyViewModel(string file) : DocumentViewModel
 
     public TextDocument Document { get; } = new(File.ReadAllText(file));
 
+    /// <summary>The bin's bytes in memory (T7Suite copied the bin to a temp file it never deleted).</summary>
+    public MemoryBinaryDocument Binary { get; } = new(binary, true);
+
+    /// <summary>The full disassembly's "SSSSAAAA: ..." listing rather than the functions' "0xADDRESS\t..." one.</summary>
+    public bool Full { get; } = full;
+
     public void Save() => File.WriteAllText(FileName, Document.Text);
+
+    /// <summary>Text → hex (Caret_PositionChanged): the bytes of the instruction on a 1-based line, clamped to the bin; null without an address.</summary>
+    public (ulong Start, ulong End)? LineBytes(int line)
+    {
+        if (line < 1 || line > Document.LineCount) return null;
+        string text = Document.GetText(Document.GetLineByNumber(line));
+        string? next = line < Document.LineCount ? Document.GetText(Document.GetLineByNumber(line + 1)) : null;
+        if (InstructionRange(text, next) is not { } r || r.Start >= Binary.Length) return null;
+        return (r.Start, Math.Min(r.End, Binary.Length));
+    }
+
+    /// <summary>Hex → text (hexViewer1_onSelectionChanged): where a byte address is in the listing, or null.</summary>
+    public (int Offset, int Length)? FindAddress(ulong address) => FindAddress(Document.Text, (uint)address, Full);
+
+    /// <summary>
+    /// The address a listing line starts with: "0xADDRESS" (the word up to the tab) or the full listing's 8 hex digits and ':'.
+    /// Labels ("LBL_...:", vector names) and blank lines have none.
+    /// </summary>
+    public static bool TryParseAddress(string line, out uint address)
+    {
+        address = 0;
+        if (line.StartsWith("0x", StringComparison.Ordinal))
+        {
+            int end = 2;
+            while (end < line.Length && !char.IsWhiteSpace(line[end])) end++;
+            return uint.TryParse(line.AsSpan(2, end - 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out address);
+        }
+        return line.Length > 8 && line[8] == ':' &&
+               uint.TryParse(line.AsSpan(0, 8), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out address);
+    }
+
+    /// <summary>
+    /// The instruction on a line: from its address up to the next line's address, or 4 bytes on when the next line has none.
+    /// T7Suite selected a negative length when the next address was lower; that falls back to 4 bytes too.
+    /// </summary>
+    public static (uint Start, uint End)? InstructionRange(string line, string? next)
+    {
+        if (!TryParseAddress(line, out uint start)) return null;
+        uint end = next != null && TryParseAddress(next, out uint n) && n > start ? n : start + 4;
+        return (start, end);
+    }
+
+    /// <summary>
+    /// The first "0x%08X" of an address as a whole word, match case (T7Suite's search); in the full listing the "%08X:"
+    /// that starts its line.
+    /// </summary>
+    public static (int Offset, int Length)? FindAddress(string text, uint address, bool full)
+    {
+        Match m = full
+            ? Regex.Match(text, $"^{address:X8}:", RegexOptions.Multiline | RegexOptions.CultureInvariant)
+            : Regex.Match(text, $@"\b0x{address:X8}\b", RegexOptions.CultureInvariant);
+        return m.Success ? (m.Index, m.Length) : null;
+    }
 }
 
 /// <summary>

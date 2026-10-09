@@ -323,7 +323,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     /// Show disassembly (full: the linear sweep): &lt;bin&gt;.asm / &lt;bin&gt;_full.asm next to the bin, redone when asked or when
-    /// it isn't there yet, then shown.
+    /// it isn't there yet, then shown beside the bin's bytes.
     /// </summary>
     public async Task ShowDisassemblyAsync(bool full, Func<string, Task<bool>> redo)
     {
@@ -343,7 +343,7 @@ public partial class MainWindowViewModel : ObservableObject
                 ProgressText = "";
             }
         }
-        ShowDocument(new DisassemblyViewModel(file));
+        ShowDocument(new DisassemblyViewModel(file, File.ReadAllBytes(bin.FileName), full));
     }
 
     /// <summary>View file in hex: the bin, and the imported SRAM snapshot next to it.</summary>
