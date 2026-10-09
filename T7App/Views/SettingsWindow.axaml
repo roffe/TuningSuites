@@ -46,7 +46,10 @@
                 <TextBlock Grid.Row="2" Text="Serial speed" VerticalAlignment="Center" IsVisible="{Binding AdapterNeedsBaudrate}" />
                 <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Baudrates}" SelectedItem="{Binding Baudrate}" HorizontalAlignment="Stretch"
                           IsVisible="{Binding AdapterNeedsBaudrate}" />
-                <CheckBox Grid.Row="3" Grid.ColumnSpan="2" Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}" />
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="24">
+                    <CheckBox Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}" />
+                    <CheckBox Content="Enable CAN logging" IsChecked="{Binding EnableCanLog}" ToolTip.Tip="Every CAN frame into canLog&lt;date&gt;.txt" />
+                </StackPanel>
                 <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
                     <CheckBox Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}" />
                     <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="110" />

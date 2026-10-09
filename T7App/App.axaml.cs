@@ -18,6 +18,7 @@ public partial class App : Application
         {
             var vm = new MainWindowViewModel();
             SymbolNumberConverter.Hex = vm.Settings.ShowAddressesInHex;
+            Logging.ApplyCanLogging(vm.Settings.EnableCanLog);
             var window = new MainWindow { DataContext = vm };
             desktop.MainWindow = window;
 

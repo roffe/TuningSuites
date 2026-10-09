@@ -36,6 +36,8 @@ namespace T7AppTest
         {
             s_dir = Directory.CreateTempSubdirectory("t7app").FullName;
             SettingsKey.BaseFolder = Path.Combine(s_dir, "settings");
+            // T7App's NLog.config comes along; its log files would go to the real AppData
+            NLog.LogManager.SuspendLogging();
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), Path.Combine(s_dir, "5168646.bin"));
             s_session = HeadlessUnitTestSession.StartNew(typeof(AppTest));
         }

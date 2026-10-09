@@ -439,6 +439,7 @@ public partial class MainWindow : Window
         settings.Apply(Vm.Settings);
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
+        Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);
     }
 
     /// <summary>

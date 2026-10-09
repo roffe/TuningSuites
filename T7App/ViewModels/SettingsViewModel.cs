@@ -35,6 +35,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _adapterNeedsBaudrate;
     [ObservableProperty] private int _baudrate;
     [ObservableProperty] private bool _onlyPBus;
+    [ObservableProperty] private bool _enableCanLog;
     [ObservableProperty] private bool _autoUpdateSRAMViewers;
     [ObservableProperty] private decimal? _autoUpdateInterval;
 
@@ -106,6 +107,7 @@ public partial class SettingsViewModel : ObservableObject
         _adapter = s.Adapter;
         _baudrate = s.Baudrate;
         _onlyPBus = s.OnlyPBus;
+        _enableCanLog = s.EnableCanLog;
         _autoUpdateSRAMViewers = s.AutoUpdateSRAMViewers;
         _autoUpdateInterval = System.Math.Clamp(s.AutoUpdateInterval, 5, 60);
         _autoCreateAFRMaps = s.AutoCreateAFRMaps;
@@ -150,6 +152,7 @@ public partial class SettingsViewModel : ObservableObject
         s.Adapter = Adapter ?? "";
         s.Baudrate = Baudrate;
         s.OnlyPBus = OnlyPBus;
+        s.EnableCanLog = EnableCanLog;
         s.AutoUpdateSRAMViewers = AutoUpdateSRAMViewers;
         s.AutoUpdateInterval = (int)(AutoUpdateInterval ?? 20);
         s.AutoCreateAFRMaps = AutoCreateAFRMaps;
