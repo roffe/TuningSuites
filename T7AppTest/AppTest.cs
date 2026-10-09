@@ -21,7 +21,7 @@ namespace T7AppTest
     /// settings in a temp folder. T7APP_DUMP=&lt;dir&gt; saves the rendered windows as PNG.
     /// </summary>
     [TestClass]
-    public class AppTest
+    public partial class AppTest
     {
         public static AppBuilder BuildAvaloniaApp() =>
             AppBuilder.Configure<T7App.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
