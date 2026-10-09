@@ -50,7 +50,10 @@ namespace T7AppTest
             string asm = "\nLBL_00000100:\n0x000001000\tNOP\n0x00000100\tNOP\n";
             Assert.AreEqual((asm.IndexOf("0x00000100\t"), 10), DisassemblyViewModel.FindAddress(asm, 0x100, false));
             Assert.IsNull(DisassemblyViewModel.FindAddress(asm, 0x200, false));
-            Assert.IsNull(DisassemblyViewModel.FindAddress(asm.ToLowerInvariant(), 0xABC, false));
+            // match case: a lower-case address isn't the address
+            string hexLetters = "0x0000ABCD\tNOP\n";
+            Assert.AreEqual((0, 10), DisassemblyViewModel.FindAddress(hexLetters, 0xABCD, false));
+            Assert.IsNull(DisassemblyViewModel.FindAddress(hexLetters.ToLowerInvariant(), 0xABCD, false));
 
             string full = "00000100: 4E71\t\t\t\tBRA\t00000102:\r\n00000102: 4E75\t\t\t\tRTS\r\n";
             Assert.AreEqual((full.IndexOf("00000102: 4E75"), 9), DisassemblyViewModel.FindAddress(full, 0x102, true));

@@ -126,7 +126,10 @@ public class MapGrid : Control
     private Typeface Typeface => new(FontFamily);
 
     private FormattedText Text(string s, IBrush brush) =>
-        new(s, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface, FontSize, brush);
+        new(s, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface, FontSize * m_textScale, brush);
+
+    // narrow columns get smaller text, as T7Suite's Small / ExtraSmall views did, down to 60 % of the font; below that it clips
+    private double m_textScale = 1;
 
     private string XLabel(int col)
     {
@@ -153,6 +156,7 @@ public class MapGrid : Control
         MapData? map = Map;
         if (map == null) return default;
         IBrush b = Brushes.Black;
+        m_textScale = 1; // the natural size; Layout scales down again for a narrow width
         double cellW = 0, headerW = 0, h = Text("0", b).Height;
         for (int i = 0; i < map.Count; i++) cellW = Math.Max(cellW, Text(map.FormatCell(i, ViewType), b).Width);
         for (int c = 0; c < map.Cols; c++) cellW = Math.Max(cellW, Text(XLabel(c), b).Width);
@@ -164,6 +168,14 @@ public class MapGrid : Control
     private void Layout(MapData map)
     {
         IBrush b = Brushes.Black;
+        m_textScale = 1;
+        double widest = 0;
+        for (int i = 0; i < map.Count; i++) widest = Math.Max(widest, Text(map.FormatCell(i, ViewType), b).Width);
+        for (int c = 0; c < map.Cols; c++) widest = Math.Max(widest, Text(XLabel(c), b).Width);
+        double rowHeader = 0;
+        for (int r = 0; r < map.Rows; r++) rowHeader = Math.Max(rowHeader, Text(YLabel(r), b).Width);
+        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - 4;
+        if (widest > 0 && room < widest) m_textScale = Math.Clamp(room / widest, 0.6, 1);
         double headerW = 0;
         for (int r = 0; r < map.Rows; r++) headerW = Math.Max(headerW, Text(YLabel(r), b).Width);
         m_headerW = headerW + 10;
@@ -215,7 +227,9 @@ public class MapGrid : Control
         for (int c = 0; c < map.Cols; c++)
         {
             var t = Text(XLabel(c), fg);
-            context.DrawText(t, new Point(m_headerW + c * m_cellW + (m_cellW - t.Width) / 2, (m_headerH - t.Height) / 2));
+            // a squeezed column cuts its text at the cell like the DevExpress grid did, instead of writing over its neighbours
+            using (context.PushClip(new Rect(m_headerW + c * m_cellW, 0, m_cellW, m_headerH)))
+                context.DrawText(t, new Point(m_headerW + c * m_cellW + Math.Max(1, (m_cellW - t.Width) / 2), (m_headerH - t.Height) / 2));
         }
         for (int r = 0; r < map.Rows; r++)
         {
@@ -268,7 +282,8 @@ public class MapGrid : Control
                 if (editing) context.FillRectangle(Brushes.White, rect.Deflate(1));
                 if (editing) textBrush = Brushes.Black;
                 var t = Text(editing ? m_input : map.FormatCell(i, ViewType), textBrush);
-                context.DrawText(t, new Point(rect.X + (rect.Width - t.Width) / 2, rect.Y + (rect.Height - t.Height) / 2));
+                using (context.PushClip(rect))
+                    context.DrawText(t, new Point(rect.X + Math.Max(1, (rect.Width - t.Width) / 2), rect.Y + (rect.Height - t.Height) / 2));
             }
 
         for (int c = 0; c <= map.Cols; c++)

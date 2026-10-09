@@ -15,8 +15,14 @@ namespace T7App.ViewModels;
 /// "Disassembly: file" (ctrlDisassembler / AsmViewer): the .asm text, editable and saved back to its file, beside a read-only
 /// hex view of the bin it came from (ctrlDisassembler's hexViewer1); the text caret and the hex view follow each other.
 /// </summary>
-public class DisassemblyViewModel(string file, byte[] binary, bool full = false) : DocumentViewModel
+public partial class DisassemblyViewModel(string file, byte[] binary, bool full = false, T7Binary? bin = null) : DocumentViewModel
 {
+    /// <summary>The hex pane's caret: offset and the symbol there (T7Suite's HexViewer showed it on its toolbar).</summary>
+    [ObservableProperty]
+    private string _hexStatus = "";
+
+    public void HexCaretAt(ulong offset) => HexStatus = HexViewerViewModel.HexStatus(bin, offset, Binary.Length);
+
     public string FileName { get; } = file;
 
     public override string Title => "Disassembly: " + Path.GetFileName(FileName);
@@ -112,22 +118,25 @@ public partial class HexViewerViewModel : DocumentViewModel
     }
 
     /// <summary>The caret moved: "Ln / Col" and the symbol there (addresses wrap at the file size; SRAM files go by SRAM address).</summary>
-    public void CaretAt(ulong offset)
+    public void CaretAt(ulong offset) => Status = HexStatus(m_bin, offset, Document.Length, m_sram);
+
+    /// <summary>"0xOFFSET    symbol": the symbol a byte belongs to (addresses wrap at the file size; SRAM files by SRAM address).</summary>
+    public static string HexStatus(T7Binary? bin, ulong offset, ulong length, bool sram = false)
     {
         string symbol = "No symbol";
-        if (m_bin != null)
+        if (bin != null && length > 0)
         {
             long a = (long)offset;
-            SymbolHelper? sh = m_bin.Symbols.Cast<SymbolHelper>().FirstOrDefault(s =>
+            SymbolHelper? sh = bin.Symbols.Cast<SymbolHelper>().FirstOrDefault(s =>
             {
-                long start = m_sram ? s.Start_address : s.Flash_start_address;
+                long start = sram ? s.Start_address : s.Flash_start_address;
                 if (start <= 0 || s.Length <= 0) return false;
-                start %= (long)Document.Length;
+                start %= (long)length;
                 return a >= start && a < start + s.Length && !s.SmartVarname.StartsWith("Pressure map");
             });
             if (sh != null) symbol = sh.SmartVarname;
         }
-        Status = $"0x{offset:X6}    {symbol}";
+        return $"0x{offset:X6}    {symbol}";
     }
 
     public void Save()

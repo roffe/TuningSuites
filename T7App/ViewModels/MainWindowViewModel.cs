@@ -343,7 +343,7 @@ public partial class MainWindowViewModel : ObservableObject
                 ProgressText = "";
             }
         }
-        ShowDocument(new DisassemblyViewModel(file, File.ReadAllBytes(bin.FileName), full));
+        ShowDocument(new DisassemblyViewModel(file, File.ReadAllBytes(bin.FileName), full, bin));
     }
 
     /// <summary>View file in hex: the bin, and the imported SRAM snapshot next to it.</summary>

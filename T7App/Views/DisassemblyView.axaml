@@ -12,16 +12,25 @@
             <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="Ctrl+F finds, Ctrl+H replaces, double-click a byte to find its address" />
         </StackPanel>
         <!-- ctrlDisassembler's splitter: the listing left, the bin's bytes right at a fixed width, 16 per line (UseFixedBytesPerLine) -->
-        <Grid x:Name="Panes" ColumnDefinitions="*,Auto,640">
+        <!-- the listing keeps room to read; the hex pane gives way in a narrow window and stops at 16 bytes per line -->
+        <Grid x:Name="Panes">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="280" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MaxWidth="640" />
+            </Grid.ColumnDefinitions>
             <ae:TextEditor x:Name="Editor" ShowLineNumbers="True" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13" />
             <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" />
-            <hex:HexEditor x:Name="Hex" Grid.Column="2" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13">
+            <DockPanel Grid.Column="2">
+            <TextBlock DockPanel.Dock="Top" Margin="6,2" Text="{Binding HexStatus}" />
+            <hex:HexEditor x:Name="Hex" FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" FontSize="13">
                 <hex:HexEditor.Columns>
                     <r:OffsetColumn />
                     <r:HexColumn />
                     <r:AsciiColumn />
                 </hex:HexEditor.Columns>
             </hex:HexEditor>
+            </DockPanel>
         </Grid>
     </DockPanel>
 </UserControl>

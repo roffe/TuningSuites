@@ -23,7 +23,7 @@ public partial class MainWindowViewModel
 
     /// <summary>Set symbol colors lists the bin's symbols that have an SRAM address, as T7Suite did.</summary>
     public SymbolColorsViewModel SymbolColorChoices() =>
-        new(Binary?.Symbols.Cast<SymbolHelper>().Where(s => s.Start_address > 0).Select(s => s.SmartVarname) ?? []);
+        new(Binary?.Symbols.Cast<SymbolHelper>().Where(s => s.Start_address > 0).Select(s => s.SmartVarname).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList() ?? []);
 
     private List<T7LogLine> FilteredLines(string file)
     {

@@ -1,12 +1,14 @@
-using System;
 using System.Xml;
-using Avalonia;
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform;
-using AvaloniaEdit.Highlighting;
+using Avalonia.Styling;
+using Avalonia;
 using AvaloniaEdit.Highlighting.Xshd;
+using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.Search;
 using AvaloniaHex.Document;
 using T7App.ViewModels;
@@ -15,21 +17,38 @@ namespace T7App.Views;
 
 public partial class DisassemblyView : UserControl
 {
-    // T7Suite's ASM-Mode.xshd (the old SharpDevelop format AvaloniaEdit still reads)
-    private static readonly Lazy<IHighlightingDefinition> Asm = new(() =>
+    // T7Suite's ASM-Mode.xshd colours, and a lighter set of the same hues for the dark theme (MidnightBlue / DarkBlue on a dark
+    // background were unreadable)
+    private static readonly Lazy<IHighlightingDefinition> Asm = new(() => Load(null));
+    private static readonly Lazy<IHighlightingDefinition> AsmDark = new(() => Load(new()
+    {
+        ["Comment"] = Color.FromRgb(0x9A, 0xA8, 0xB4), ["Label"] = Color.FromRgb(0x8C, 0xC8, 0xFF), ["Digits"] = Color.FromRgb(0x7F, 0xB4, 0xFF),
+        ["Keyword1"] = Color.FromRgb(0x56, 0x9C, 0xD6), ["Keyword2"] = Color.FromRgb(0x9C, 0xDC, 0xFE), ["Keyword3"] = Color.FromRgb(0xF4, 0x87, 0x71),
+        ["Keyword4"] = Color.FromRgb(0xFF, 0x70, 0x70), ["Puntuation"] = Color.FromRgb(0x6C, 0xC0, 0x6C),
+    }));
+
+    private static IHighlightingDefinition Load(System.Collections.Generic.Dictionary<string, Color>? colors)
     {
         using var stream = AssetLoader.Open(new Uri("avares://T7Suite/Assets/ASM-Mode.xshd"));
         using var reader = XmlReader.Create(stream);
-        return HighlightingLoader.Load(reader, HighlightingManager.Instance);
-    });
+        IHighlightingDefinition definition = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+        if (colors != null)
+            foreach (HighlightingColor c in definition.NamedHighlightingColors)
+                if (colors.TryGetValue(c.Name, out Color color)) c.Foreground = new SimpleHighlightingBrush(color);
+        return definition;
+    }
+
+    private IHighlightingDefinition Highlighting() => ActualThemeVariant == ThemeVariant.Dark ? AsmDark.Value : Asm.Value;
 
     public DisassemblyView()
     {
         InitializeComponent();
-        Editor.SyntaxHighlighting = Asm.Value;
+        Editor.SyntaxHighlighting = Highlighting();
         SearchPanel.Install(Editor);
         Hex.HexView.BytesPerLine = 16;
         Editor.TextArea.Caret.PositionChanged += (_, _) => ShowLineBytes();
+        Hex.Caret.LocationChanged += (_, _) => (DataContext as DisassemblyViewModel)?.HexCaretAt(Hex.Caret.Location.ByteIndex);
+        ActualThemeVariantChanged += (_, _) => Editor.SyntaxHighlighting = Highlighting();
         // after the hex editor's own handler has moved its caret to the clicked byte
         Hex.AddHandler(PointerPressedEvent, (_, e) =>
         {
@@ -53,6 +72,8 @@ public partial class DisassemblyView : UserControl
         if (DataContext is not DisassemblyViewModel vm || vm.LineBytes(Editor.TextArea.Caret.Line) is not { } bytes) return;
         Hex.Caret.Location = new BitLocation(bytes.Start);
         Hex.Selection.Range = new BitRange(bytes.Start, bytes.End);
+        // HexViewer.SelectText: 64 bytes (4 lines) past the selection come into view too
+        if (vm.Binary.Length > 0) Hex.HexView.BringIntoView(new BitLocation(Math.Min(bytes.End + 63, vm.Binary.Length - 1)));
         Hex.HexView.BringIntoView(Hex.Caret.Location);
     }
 
@@ -64,19 +85,6 @@ public partial class DisassemblyView : UserControl
         Editor.TextArea.Caret.Offset = found.Offset + found.Length;
         var at = vm.Document.GetLocation(found.Offset);
         Editor.ScrollTo(at.Line, at.Column);
-    }
-
-    // Dock's MDI panel measures every inner window at the whole workspace's size and the Grid then keeps its row that tall,
-    // hiding the bottom of both views under the window's edge: measure at the size the window really gives us
-    protected override Size MeasureOverride(Size availableSize) => base.MeasureOverride(Bounds.Width > 0
-        ? new Size(Math.Min(availableSize.Width, Bounds.Width), Math.Min(availableSize.Height, Bounds.Height))
-        : availableSize);
-
-    protected override void OnSizeChanged(SizeChangedEventArgs e)
-    {
-        base.OnSizeChanged(e);
-        InvalidateMeasure();
-        Panes.InvalidateMeasure(); // measuring again with a smaller size doesn't make the Grid arrange again on its own
     }
 
     private void OnSave(object? sender, RoutedEventArgs e) => (DataContext as DisassemblyViewModel)?.Save();
