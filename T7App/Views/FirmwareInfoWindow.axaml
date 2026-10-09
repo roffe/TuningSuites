@@ -1,0 +1,95 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.FirmwareInfoWindow"
+        x:DataType="vm:FirmwareInfoViewModel"
+        Title="Trionic 7 firmware information"
+        SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <Window.Styles>
+        <Style Selector="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="MinWidth" Value="240" />
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+        </Style>
+    </Window.Styles>
+    <StackPanel Margin="16" Spacing="12">
+        <HeaderedContentControl Header="Firmware details">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
+                <TextBlock Classes="label" Grid.Row="0" Text="Engine type" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Info.CarDescription, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="1" Text="Software version" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Info.SoftwareVersion, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="2" Text="Partnumber" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Info.PartNumber, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="3" Text="Immobilizer code" />
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Info.ImmobilizerID, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="4" Text="Chassis ID" />
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Info.ChassisID, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="5" Text="Original cartype" />
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Info.OriginalCarType, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="6" Text="Original enginetype" />
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Info.OriginalEngineType, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="7" Text="Programming date" />
+                <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding ProgrammingDate, Mode=OneWay}" />
+                <TextBlock Classes="label" Grid.Row="8" Text="SID date" />
+                <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding Info.SIDDate, Mode=OneWay}" />
+            </Grid>
+        </HeaderedContentControl>
+
+        <WrapPanel>
+            <CheckBox Content="Checksum enabled" IsChecked="{Binding Info.ChecksumEnabled}" Margin="0,0,16,0" />
+            <CheckBox Content="Compressed symboltable" IsChecked="{Binding Info.CompressedSymbolTable}" Margin="0,0,16,0" />
+            <CheckBox Content="No symboltable present" IsChecked="{Binding Info.NoSymbolTable}" />
+        </WrapPanel>
+
+        <HeaderedContentControl Header="Options">
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16">
+                <CheckBox Grid.Row="0" Grid.Column="0" Content="Open SID info" IsEnabled="{Binding Info.OpenSIDInfo.Available}" IsChecked="{Binding Info.OpenSIDInfo.Enabled}" />
+                <CheckBox Grid.Row="0" Grid.Column="1" Content="Torque limiters enabled" IsEnabled="{Binding Info.TorqueLimiters.Available}" IsChecked="{Binding Info.TorqueLimiters.Enabled}" />
+                <CheckBox Grid.Row="1" Grid.Column="0" Content="Catalyst lightoff" IsEnabled="{Binding Info.CatalystLightOff.Available}" IsChecked="{Binding Info.CatalystLightOff.Enabled}" />
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="Second lambda sonde enabled" IsEnabled="{Binding Info.SecondLambda.Available}" IsChecked="{Binding Info.SecondLambda.Enabled}" />
+                <CheckBox Grid.Row="2" Grid.Column="0" Content="OBDII functions enabled" IsEnabled="{Binding Info.OBDII.Available}" IsChecked="{Binding Info.OBDII.Enabled}" />
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="Biopower enabled" IsEnabled="{Binding Info.BioPower.Available}" IsChecked="{Binding Info.BioPower.Enabled}" />
+                <CheckBox Grid.Row="3" Grid.Column="0" Content="Fast throttle response" IsEnabled="{Binding Info.FastThrottleResponse.Available}" IsChecked="{Binding Info.FastThrottleResponse.Enabled}" />
+                <CheckBox Grid.Row="3" Grid.Column="1" Content="Extra fast throttle reponse" IsEnabled="{Binding Info.ExtraFastThrottleResponse.Available}" IsChecked="{Binding Info.ExtraFastThrottleResponse.Enabled}" />
+                <CheckBox Grid.Row="4" Grid.Column="0" Content="No TCS" IsEnabled="{Binding Info.NoTCS.Available}" IsChecked="{Binding Info.NoTCS.Enabled}" />
+                <CheckBox Grid.Row="4" Grid.Column="1" Content="Disable emission limiting function" IsEnabled="{Binding Info.DisableEmissionLimiting.Available}" IsChecked="{Binding Info.DisableEmissionLimiting.Enabled}" />
+                <CheckBox Grid.Row="5" Grid.Column="0" Content="Disable startscreen" IsEnabled="{Binding Info.DisableStartScreen.Available}" IsChecked="{Binding Info.DisableStartScreen.Enabled}" />
+                <CheckBox Grid.Row="5" Grid.Column="1" Content="Disable adaption messages" IsEnabled="{Binding Info.DisableAdaptionMessages.Available}" IsChecked="{Binding Info.DisableAdaptionMessages.Enabled}" />
+            </Grid>
+        </HeaderedContentControl>
+
+        <Expander Header="VIN decoder">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
+                <TextBlock Classes="label" Grid.Row="0" Text="Car model" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Vin.CarModel}" />
+                <TextBlock Classes="label" Grid.Row="1" Text="Engine type" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Vin.EngineType}" />
+                <TextBlock Classes="label" Grid.Row="2" Text="Turbo" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Turbo}" />
+                <TextBlock Classes="label" Grid.Row="3" Text="Makeyear" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Vin.Makeyear}" />
+                <TextBlock Classes="label" Grid.Row="4" Text="Assembly plant" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Vin.PlantInfo}" />
+                <TextBlock Classes="label" Grid.Row="5" Text="Series" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Vin.Series}" />
+                <TextBlock Classes="label" Grid.Row="6" Text="Body" />
+                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Vin.Body}" />
+                <TextBlock Classes="label" Grid.Row="7" Text="Gearbox" />
+                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Vin.GearboxDescription}" />
+                <TextBlock Classes="label" Grid.Row="8" Text="VIN checksum" />
+                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding VinChecksum}" />
+            </Grid>
+        </Expander>
+
+        <Button Content="Ok" HorizontalAlignment="Right" MinWidth="80" IsDefault="True" IsCancel="True" Click="OnOk" />
+    </StackPanel>
+</Window>

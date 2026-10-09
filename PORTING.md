@@ -2,7 +2,7 @@
 
 Goal: lift T7Suite, T8Suite and T5Suite from .NET Framework 4 / WinForms to .NET 10 / Avalonia so they run on Windows, Linux and macOS, and replace every non-free dependency (DevExpress, Nevron, Office Interop). T7Suite goes first.
 
-This file is the tracker. Update the checkboxes and the log at the bottom as work lands.
+This file is the tracker. Update the checkboxes and the log at the bottom as work lands. How the old T7Suite behaves, read from its code, is collected in `docs/T7SUITE-BEHAVIOUR.md`; keep adding to it before porting a feature.
 
 ## Starting point (2026-10-09)
 
@@ -125,14 +125,24 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - copy with nothing selected copies the whole map without asking; clicking another cell commits a pending edit, like leaving the DevExpress editor did
 
 ### 3. Read-only app (first usable release)
-- [ ] Main window: open a bin, symbol list (DataGrid with search and filter), maps open in tabs, MRU
-- [ ] Map viewer view: MapGrid with Surface3D or Graph2D (tab), slice slider, view type, axis lock, splitter, "Edit x-axis / y-axis", save/read file, sync of selection and 3D camera between viewers of the same map, the math toolbar (add/multiply/divide/fill, select by value)
-- [ ] Firmware information view
-- [ ] Wire `UserPrompt.YesNo` / `Notify` to dialogs
-- [ ] From frmMain: file open and import (504-890, 5126-6030), axis/symbol metadata (6032-6658), firmware information (4686-5093)
+- [x] `T7Core/T7Binary.cs`: an opened bin, lifted from frmMain: `Open` (TryToOpenFileUsingClass: header, SRAM offset, ExtractFile, BioPower E85 rename), `IsValidFile` (0x80000 bytes starting FF FF EF FC), symbol address with the open-software SRAM mapping, `ReadSymbol` (StartTableViewer), X/Y axis values, `TableWidth`, `IsSixteenBitTable`, `GetMapCorrectionFactor`, the open-loop table
+- [x] `T7Core/FirmwareInfo.cs`: everything the firmware information dialog shows, detected like frmMain (header fields, part number lookup, programming stamp, checksum enabled, compressed / missing symbol table, the option checks, open/closed SID indicator, SID start screen / adaption and emission offsets)
+- [x] Main window (`T7App/Views/MainWindow.axaml`, `MainWindowViewModel`):
+  - File > Open (bin or S19, converted first), Recent (T7Suite's MRU: appended, no limit; imported once from `HKCU\Software\T7SuitePro\MRUList`), Exit; command-line .bin and AutoLoadLastFile at startup
+  - symbol list: Symbol name (coloured by prefix like T7Suite), Address and Length (X6 or decimal per ShowAddressesInHex), Description, User description; grouped by category, sorted by length; search over every column; Enter / double-click opens the map
+  - title `T7SuitePro v<version> [ file ]`, status bar with open/normal binary, file name, progress, read-only state
+  - "File is not a Trionic 7 binary file!" and the known-symbol-list prompts as dialogs (`UserPrompt` wired; the worker thread waits for the answer)
+- [x] Map viewers as tabs titled `Symbol: <name> [<file>]`; opening one again focuses it; viewers of a previous file stay open (as in T7Suite). `MapControls/MapViewer.cs` is the reusable composite (view type, table, 3D / 2D tabs with the column slider, splitter); viewers with the same map name follow each other's selection and 3D camera (`SyncGroup`, replaces frmMain's sync handlers). Settings used: DefaultViewType, ShowRedWhite, DisableMapviewerColors, ShowGraphs, StandardFill (open-loop marks)
+- [x] Information > Firmware information: read-only, with the VIN decoder inline
+- [x] Tests: `T7CoreTest` (T7Binary on a stock bin, firmware info and the SID indicator scan), `MapControlsTest` (viewer sync), `T7AppTest` (the real app headless with Skia: open a bin, symbol list and search, open a map twice, firmware information; `T7APP_DUMP=<dir>` saves the windows as PNG)
+- Deliberate differences: the BioPower rename (BFuelCal.StartMap → BFuelCal.E85Map) now happens; in T7Suite it scanned the previous file's symbols and never fired at open. Feature checks read a symbol through the symbol that matched, not by looking its name up again (on the 123 stock bins with stripped names the old lookup found nothing and read offset 0). "Resolution is" factors are parsed culture-independently. The MRU is saved when it changes, not only on exit.
+- Not yet: the map viewer's math toolbar, save / read file, Edit x-axis / y-axis, and firmware editing go with chunk 4 (they write the bin); SRAM-only symbols need the ECU (chunk 5); docking/floating windows, view sizes, My Maps, the ribbon's quick map buttons (DynamicTuningMenu) and the symbol-list context menu come with the features behind them.
 
 ### 4. Offline tuning (replaces the old T7Suite for offline work)
-- [ ] Edit and save the bin; checksum verify and update
+- [ ] Edit and save the bin; checksum verify and update; editable user description (saves `<bin>.xml`)
+- [ ] Map viewer: save / read file buttons, the math toolbar (add/multiply/divide/fill, select by value in the view combo), Edit x-axis / y-axis, close prompt for unsaved changes
+- [ ] Firmware information editing: footer fields, programming date, option patches, SID/emission patches, TIS footer fix (spec: `docs/T7SUITE-BEHAVIOUR.md`, "Firmware information")
+- [ ] My Maps (mymaps.xml) and the ribbon's quick map buttons (DynamicTuningMenu)
 - [ ] Projects, transaction log, rollback and roll-forward, backups
 - [ ] Compare against a file: list of differing symbols, difference map, original/compare overlay in Surface3D
 - [ ] Symbol import from XML, CSV and AS2; mymaps
@@ -189,5 +199,6 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 3 done: T7Binary and FirmwareInfo in T7Core, the main window with symbol list, map viewer tabs (MapViewer composite with sync) and firmware information, T7AppTest driving the app headless.
 - 2026-10-09: Chunk 2 done: MapControls (MapData, MapOps, MapGrid, Surface3D, Graph2D), MapControlsDemo, MapControlsTest with headless Skia renders. Behaviour follows T7Suite, txlogger only for rendering.
 - 2026-10-09: Chunk 1 done: T7Core with the lifted logic and JSON settings, T7CoreTest with the golden baseline over 256 bins (28 tests, ~22 s). frmMain extraction moved into chunks 3-7.

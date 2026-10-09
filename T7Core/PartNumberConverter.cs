@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,7 +6,7 @@ using System.Text;
 
 namespace T7
 {
-    class PartNumberConverter
+    public class PartNumberConverter
     {
 
         public PartNumberConverter()
@@ -3258,14 +3258,14 @@ namespace T7
         }
     }
 
-    enum CarModel : int
+    public enum CarModel : int
     {
         Unknown = 0,
         Saab93 = 1,
         Saab95 = 2
     }
 
-    enum EngineType : int
+    public enum EngineType : int
     {
         Unknown,
         B204,
@@ -3334,7 +3334,7 @@ namespace T7
         LEV_TUN_US
     }
 
-    class ECUInformation
+    public class ECUInformation
     {
         double _stage1airmass = 1300;
         double _stage1torque = 350;

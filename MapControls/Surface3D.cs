@@ -65,6 +65,28 @@ public class Surface3D : Control
 
     public SurfaceRenderMode RenderMode { get; set; } = SurfaceRenderMode.SolidWireframe;
 
+    /// <summary>Rotation, zoom and pan, to keep viewers of the same map looking the same way (T7Suite's surface view sync).</summary>
+    public readonly record struct CameraState(double[] Rotation, double Scale, double PanX, double PanY);
+
+    /// <summary>The user rotated, zoomed or panned (raised on release and on each wheel step).</summary>
+    public event EventHandler? CameraChanged;
+
+    public CameraState Camera
+    {
+        get => new([m_camera.M00, m_camera.M01, m_camera.M02, m_camera.M10, m_camera.M11, m_camera.M12, m_camera.M20, m_camera.M21, m_camera.M22], m_scale, m_camX, m_camY);
+        set
+        {
+            double[] r = value.Rotation;
+            m_camera = new M3(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]);
+            m_scale = value.Scale;
+            m_camX = value.PanX;
+            m_camY = value.PanY;
+            m_fitted = true;
+            UpdateVertexPositions();
+            InvalidateVisual();
+        }
+    }
+
     /// <summary>T7Suite's online palette (wheat → dark blue) instead of green → red.</summary>
     public bool OnlineMode
     {
@@ -371,6 +393,7 @@ public class Surface3D : Control
     {
         base.OnPointerReleased(e);
         e.Pointer.Capture(null);
+        CameraChanged?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -405,6 +428,7 @@ public class Surface3D : Control
         base.OnPointerWheelChanged(e);
         Zoom(e.Delta.Y > 0 ? 1.1 : 0.9);
         e.Handled = true;
+        CameraChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public override void Render(DrawingContext context)

@@ -6,6 +6,7 @@
   <Project Path="MapControlsDemo/MapControlsDemo.csproj" />
   <Project Path="MapControlsTest/MapControlsTest.csproj" />
   <Project Path="T7App/T7App.csproj" />
+  <Project Path="T7AppTest/T7AppTest.csproj" />
   <Project Path="T7Core/T7Core.csproj" />
   <Project Path="T7CoreTest/T7CoreTest.csproj" />
 </Solution>

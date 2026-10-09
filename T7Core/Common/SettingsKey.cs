@@ -25,8 +25,11 @@ namespace CommonSuite
         private readonly Dictionary<string, string> m_values;
         private bool m_dirty;
 
-        public static string Folder(string suite) =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MattiasC", suite);
+        /// <summary>Where the suites keep their settings, &lt;AppData&gt;/MattiasC; tests point it at a temp folder.</summary>
+        public static string BaseFolder { get; set; } =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MattiasC");
+
+        public static string Folder(string suite) => Path.Combine(BaseFolder, suite);
 
         public static SettingsKey Open(string suite, string subkey = null) =>
             new SettingsKey(Path.Combine(Folder(suite), "settings.json"), @"Software\MattiasC\" + suite, subkey);
@@ -95,7 +98,11 @@ namespace CommonSuite
             }
         }
 
-        private static Dictionary<string, string> ImportRegistry(string registryPath)
+        /// <summary>
+        /// The values (and subkey values as "Sub\\Name") under HKCU\&lt;registryPath&gt;, empty off Windows. Also for keys T7Suite
+        /// kept outside MattiasC, like its MRU list.
+        /// </summary>
+        public static Dictionary<string, string> ImportRegistry(string registryPath)
         {
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (!OperatingSystem.IsWindows() || registryPath == null) return values;

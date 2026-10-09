@@ -282,7 +282,7 @@ namespace T7
         /// </summary>
         /// <param name="m_currentfile"></param>
         /// <returns></returns>
-        private static bool IsBinaryPackedVersion(string m_currentfile, int filelength)
+        public static bool IsBinaryPackedVersion(string m_currentfile, int filelength)
         {
             int len = 0;
             int ival = 0;

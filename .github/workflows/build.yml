@@ -48,3 +48,7 @@ jobs:
     # map controls: model and ops, keyboard/mouse and Skia renders in a headless window
     - name: Test map controls
       run: dotnet test TuningSuites/MapControlsTest -c Release --no-build
+
+    # the app headless on a stock bin: open, symbol list, map viewer, firmware information
+    - name: Test app
+      run: dotnet test TuningSuites/T7AppTest -c Release --no-build

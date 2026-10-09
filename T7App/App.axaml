@@ -16,5 +16,12 @@
                                        BaseLow="#1CFFFFFF" BaseMediumLow="#40FFFFFF" />
             </FluentTheme.Palettes>
         </FluentTheme>
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+        <!-- Fluent's tab headers are sized for touch, the suite is a dense desktop tool -->
+        <Style Selector="TabStripItem, TabItem">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="10,2" />
+        </Style>
     </Application.Styles>
 </Application>

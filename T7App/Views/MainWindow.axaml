@@ -1,21 +1,106 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
+        xmlns:v="using:T7App.Views"
+        xmlns:mc="using:MapControls"
+        xmlns:cs="using:CommonSuite"
         x:Class="T7App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
         Icon="/T7Suite.ico"
-        Width="1280" Height="800"
+        Width="1400" Height="900"
         WindowStartupLocation="CenterScreen">
     <DockPanel>
         <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File">
+            <MenuItem x:Name="FileMenu" Header="_File">
+                <MenuItem Header="_Open file..." Click="OnOpenFile" />
+                <MenuItem x:Name="RecentMenu" Header="_Recent" ItemsSource="{Binding Recent}">
+                    <MenuItem.Styles>
+                        <!-- only Recent's own entries; "MenuItem > MenuItem" would also match Recent itself, which sits inside File -->
+                        <Style Selector="MenuItem#RecentMenu > MenuItem" x:DataType="vm:RecentFile">
+                            <Setter Property="Header" Value="{Binding Name}" />
+                            <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
+                            <Setter Property="Command" Value="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenRecentCommand}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                        </Style>
+                    </MenuItem.Styles>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
             </MenuItem>
+            <MenuItem Header="_Information">
+                <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
+            </MenuItem>
         </Menu>
-        <Border DockPanel.Dock="Bottom" Padding="8,4" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
-            <TextBlock Text="{Binding Status}" />
+
+        <!-- ribbonStatusBar1: open/normal binary, file name, progress, read-only state -->
+        <Border DockPanel.Dock="Bottom" Padding="8,3" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding OpenClosedText}" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="1" Text="{Binding FileNameText}" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="2" Text="{Binding ProgressText}" HorizontalAlignment="Right" Margin="0,0,16,0" />
+                <TextBlock Grid.Column="3" Text="{Binding ReadOnlyText}" />
+            </Grid>
         </Border>
-        <Panel />
+
+        <Grid ColumnDefinitions="420,4,*">
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="Symbol list" FontWeight="SemiBold" Margin="8,6" />
+                <TextBox DockPanel.Dock="Top" Margin="6,0,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
+                <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}"
+                          IsReadOnly="True" CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                          GridLinesVisibility="Horizontal" SelectionMode="Single"
+                          DoubleTapped="OnSymbolDoubleTapped" KeyDown="OnSymbolKeyDown">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190">
+                            <DataTemplate x:DataType="cs:SymbolHelper">
+                                <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
+                                    <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" />
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" SortMemberPath="Flash_start_address"
+                                            Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
+                                            Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description}" Width="300" />
+                        <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" Binding="{Binding Userdescription}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+
+            <!-- one viewer per open map; all stay alive so switching tabs keeps their camera and selection -->
+            <DockPanel Grid.Column="2">
+                <TabStrip DockPanel.Dock="Top" ItemsSource="{Binding Viewers}" SelectedItem="{Binding SelectedViewer}">
+                    <TabStrip.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MapViewerViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                                <Button Content="✕" Padding="4,0" Background="Transparent" VerticalAlignment="Center"
+                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseViewerCommand}"
+                                        CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </TabStrip.ItemTemplate>
+                </TabStrip>
+                <ItemsControl ItemsSource="{Binding Viewers}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Panel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MapViewerViewModel">
+                            <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding MapName}"
+                                          IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
+                                          DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
+                                          OpenLoopMark="{Binding OpenLoopMark}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Grid>
     </DockPanel>
 </Window>

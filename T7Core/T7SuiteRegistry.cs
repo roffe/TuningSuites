@@ -6,7 +6,7 @@ using CommonSuite;
 
 namespace T7
 {
-    class T7SuiteRegistry : SuiteRegistry
+    public class T7SuiteRegistry : SuiteRegistry
     {
         private const string T7SuitePro = "T7SuitePro";
 
