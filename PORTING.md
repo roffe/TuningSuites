@@ -52,7 +52,7 @@ SetupT7/                   WiX MSI (chunk 8)
 |---|---|
 | DevExpress XtraGrid (map tables) | `MapGrid`: our own control, a `Render(DrawingContext)` override modelled on txlogger's mapviewer |
 | DevExpress XtraGrid (symbol list, compare lists) | Avalonia `DataGrid` |
-| Nevron 3D and 2D, XtraCharts | `Surface3D`: port meshgrid's CPU rasterizer and axes to Skia `DrawVertices` in an `ICustomDrawOperation`. Port the GLSL shader to SkSL later if needed. `Graph2D`: port txlogger's graph2d |
+| Nevron 3D and 2D, XtraCharts | `Surface3D`: meshgrid's fragment shader ported to an SkSL runtime effect (per-pixel ray cast) in an `ICustomDrawOperation`, with its CPU rasterizer on Skia `DrawVertices` as the fallback, and its axes. `Graph2D`: port txlogger's graph2d |
 | ICSharpCode.TextEditor, Be.HexBox | Avalonia.AvaloniaEdit 12 and AvaloniaHex (both MIT) |
 | XtraBars ribbon and docking, XtraTab | Menu bar; Dock.Avalonia 12.1 (MIT) for the workspace: documents as MDI inner windows or tabs, the symbol list as a dockable tool pane |
 | XtraWizard | A plain step-by-step view |
@@ -111,7 +111,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] `MapGrid`: X/Y axis headers (hex in hex view), T7Suite cell colours (raw*255/max green→red, red-white alpha, online white→red tint, off), open-loop marks (box / SeaGreen corner), yellow live cell (`SetHighlight(col, dataRow)` = T7Suite's HighlightCell), DevExpress-style selection (click/drag, Shift, Ctrl, arrows), cell editor (typing / F2 / Enter, Easy starts from the value with `F2`, Enter commits the focused cell), steps on the selection (+/- 1, PgUp/PgDn 10 or 0x10, Home max, End 0), context menu with T7Suite's items (Copy selected cells, Paste selected cells at original position / at currently selected location, Smooth selection) plus undo/redo
 - [x] `MapOps`: steps, add/multiply/divide/fill with the old formulas and truncation, smooth (old algorithm: integer-step line for a row/column, in-place neighbour average for a block), select by value (physical within 0.009), T7Suite clipboard copy/paste
 - [x] Multi-step undo/redo (an improvement; the old viewer could only revert everything); Ctrl+Z/Y
-- [x] `Surface3D`: txlogger meshgrid's projection and drawing (Skia Gouraud triangles in painter's order, Lambert shading, axis scales with real axis values, orbit/roll/pan/zoom, live cursor), T7Suite's palette (green → yellow → orange → orange-red → red, online wheat → dark blue)
+- [x] `Surface3D`: txlogger meshgrid's projection and drawing (its SkSL-ported shader on GPU canvases: ray cast height field through the raw values, Blinn-Phong with fake AO and an unlit underside; otherwise Skia Gouraud triangles in painter's order, Lambert shading; axis scales with real axis values, orbit/roll/pan/zoom, live cursor), T7Suite's palette (green → yellow → orange → orange-red → red, online wheat → dark blue)
 - [x] `Graph2D`: one row/column with markers, value callouts, nice ticks, live cursor; T7Suite palette for the markers
 - [x] `MapControlsDemo`: `dotnet run --project MapControlsDemo [file.bin]` shows IgnNormCal.Map / BFuelCal.Map / TorqueCal.M_NominalMap of a bin (axes, factors and open-loop limits as frmMain computes them) with view type, online and red-white toggles, 3D and a 2D slice slider
 - [x] Tests (`MapControlsTest`, 18): MapData decode/encode/format/parse/undo, every op, smooth, clipboard round trip, keyboard and mouse on a live headless window, and headless Skia renders of every control and of the demo on a real bin (`MAPCONTROLS_DUMP=<dir>` saves them as PNG to look at)
@@ -219,6 +219,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: The 3D view draws with txlogger's meshgrid shader ported to SkSL on GPU canvases; the triangle renderer stays for CPU canvases, single columns and grids too large for the shader's loop.
 - 2026-10-09: Inner windows measured at the workspace's size by Dock's MDI panel (the real cause of the off-centre, clipped 3D graph and cut tables): documents are now measured at their own size, map tables shrink their text to fit, the 3D view and its scales follow the light / dark skin; Set symbol colors and the disassembly's linked hex view added.
 - 2026-10-09: Chunk 7 done: disassembler, hex view and interrupt vectors; tuning packs, SID, ESP / TCM, matrix from log and the smaller tools before that.
 - 2026-10-09: Menus in T7Suite's ribbon order: File (with Project), Actions (with firmware information), Tuning, My Maps, Realtime, ECU (in Programmer's place), Skin (light / dark / system and window layout), Help (manuals, About).

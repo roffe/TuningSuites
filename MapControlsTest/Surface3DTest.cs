@@ -71,6 +71,96 @@ namespace MapControlsTest
             });
         }
 
+        private static double[] Rotation(M3 r) => [r.M00, r.M01, r.M02, r.M10, r.M11, r.M12, r.M20, r.M21, r.M22];
+
+        // mean luminance of the pixels that differ from the background
+        private static double MeshLuminance(Avalonia.Media.Imaging.WriteableBitmap frame, int width, int height)
+        {
+            uint bg = Headless.Pixel(frame, 2, 2);
+            double sum = 0;
+            int n = 0;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    uint p = Headless.Pixel(frame, x, y);
+                    if (p == bg) continue;
+                    // RGBA in memory
+                    sum += 0.2126 * (p & 0xff) + 0.7152 * ((p >> 8) & 0xff) + 0.0722 * ((p >> 16) & 0xff);
+                    n++;
+                }
+            Assert.IsGreaterThan(1000, n, "mesh pixels");
+            return sum / n;
+        }
+
+        // brightest red or green channel of the solid surface: the pixels without blue, which the palette lacks and every
+        // axis colour, both backgrounds and so the silhouette's blend with them have
+        private static int MeshPeak(Avalonia.Media.Imaging.WriteableBitmap frame, int width, int height)
+        {
+            int peak = 0, n = 0;
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    uint p = Headless.Pixel(frame, x, y);
+                    if (((p >> 16) & 0xff) != 0) continue;
+                    peak = Math.Max(peak, (int)Math.Max(p & 0xff, (p >> 8) & 0xff));
+                    n++;
+                }
+            Assert.IsGreaterThan(1000, n, "surface pixels");
+            return peak;
+        }
+
+        [TestMethod]
+        public void ShaderLightsTheTopAndLeavesTheUndersideDark()
+        {
+            Headless.Run(() =>
+            {
+                var (v, x, y) = IgnitionMap();
+                var views = new (string name, M3 rotation)[]
+                {
+                    ("above", M3.RotX(55) * M3.RotZ(-35)),
+                    ("below", M3.RotX(125) * M3.RotZ(-35)),
+                    ("oblique", M3.RotZ(-20) * M3.RotX(70) * M3.RotZ(40)),
+                };
+                // the headless canvas is a CPU one, which otherwise keeps the triangles
+                Surface3D.ShadeOnCpu = true;
+                try
+                {
+                    foreach (var theme in new[] { Avalonia.Styling.ThemeVariant.Dark, Avalonia.Styling.ThemeVariant.Light })
+                    {
+                        Avalonia.Application.Current!.RequestedThemeVariant = theme;
+                        var lum = new double[views.Length];
+                        for (int i = 0; i < views.Length; i++)
+                        {
+                            // solid only: the underside's grid lines are drawn brighter than its ambient fill
+                            var surface = new Surface3D { RenderMode = SurfaceRenderMode.Solid };
+                            surface.SetData(v, 18, 16, x, y, "mg/c", "rpm", "° BTDC", 0, 0, 1);
+                            var rotation = views[i].rotation;
+                            var frame = Headless.Render(surface, 640, 480, $"surface3d-shader-{views[i].name}-{theme}",
+                                _ => surface.Camera = new Surface3D.CameraState(Rotation(rotation), 1, 0, 0));
+                            Assert.IsTrue(surface.Shaded, "drawn by the SkSL shader");
+                            lum[i] = MeshLuminance(frame, 640, 480);
+                            // every palette colour has a full channel, so the unlit underside's ambient 0.32 caps it at 82
+                            // (the means below miss it: the view-space light leaves most of the underside unlit anyway); lit
+                            // by the diffuse term instead, some of its faces get twice that
+                            if (i == 1)
+                            {
+                                int peak = MeshPeak(frame, 640, 480);
+                                Assert.IsLessThanOrEqualTo(84, peak, $"below peak {peak} ({theme})");
+                            }
+                        }
+                        string seen = $"above {lum[0]:F1}, below {lum[1]:F1}, oblique {lum[2]:F1} ({theme})";
+                        Assert.IsLessThan(lum[0] * 0.75, lum[1], seen);
+                        Assert.IsLessThan(lum[2] * 0.75, lum[1], seen);
+                    }
+                }
+                finally
+                {
+                    Surface3D.ShadeOnCpu = false;
+                    Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
+                }
+            });
+        }
+
         [TestMethod]
         public void FlatAndSingleCellMapsDoNotBreak()
         {
@@ -83,6 +173,10 @@ namespace MapControlsTest
                 var column = new Surface3D();
                 column.SetData([1, 2, 3, 4, 5], 1, 5, null, [1, 2, 3, 4, 5], "", "rpm", "", 0, 0, 0);
                 Headless.Render(column, 300, 200, "surface3d-column");
+
+                var row = new Surface3D();
+                row.SetData([1, 3, 2, 5, 4], 5, 1, [1, 2, 3, 4, 5], null, "", "", "", 0, 0, 0);
+                Headless.Render(row, 300, 200, "surface3d-row");
             });
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -10,6 +11,7 @@ using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using SkiaSharp;
 
 namespace MapControls;
@@ -17,10 +19,11 @@ namespace MapControls;
 public enum SurfaceRenderMode { SolidWireframe, Solid, Wireframe }
 
 /// <summary>
-/// 3D surface of a map, ported from txlogger's meshgrid (image backend): one quad per cell on a corner-vertex grid,
+/// 3D surface of a map, ported from txlogger's meshgrid: ray cast per pixel by its fragment shader (see
+/// <see cref="SurfaceShader"/>) on a GPU canvas, otherwise by its image backend, one quad per cell on a corner-vertex grid
 /// drawn back to front as two Gouraud triangles folded along the diagonal with the smaller value gap, Lambert shaded per
-/// triangle, plus T7Suite-style axis scales along three edges of the bounding box. Left drag orbits, right drag rolls,
-/// middle drag pans, the wheel zooms.
+/// triangle. T7Suite-style axis scales ride three edges of the bounding box. Left drag orbits, right drag rolls, middle
+/// drag pans, the wheel zooms.
 /// </summary>
 public class Surface3D : Control
 {
@@ -74,6 +77,13 @@ public class Surface3D : Control
 
     private Point m_lastPointer;
     private readonly SurfaceAxes m_axes;
+
+    // shader backend: vertex values as a data image, rebuilt when the values change
+    private SKImage? m_dataImage;
+    private volatile bool m_shaded;
+
+    /// <summary>The last frame was drawn by the SkSL shader rather than the triangle fallback (tests).</summary>
+    internal bool Shaded => m_shaded;
 
     public SurfaceRenderMode RenderMode { get; set; } = SurfaceRenderMode.SolidWireframe;
 
@@ -241,6 +251,7 @@ public class Surface3D : Control
     // one quad per cell; each corner takes the average of the 1-4 cell values touching it
     private void CreateVertices()
     {
+        m_dataImage = null;
         double zrange = m_zrange == 0 ? 1 : m_zrange;
         int vRows = m_rows + 1, vCols = m_cols + 1, n = vRows * vCols;
         if (m_ox.Length != n)
@@ -477,7 +488,11 @@ public class Surface3D : Control
         context.FillRectangle(Background ?? (IsDark ? DarkBackground : Brushes.White), bounds);
         if (m_size.Width <= 0 || m_size.Height <= 0) return;
 
-        context.Custom(new SurfaceDrawOperation(bounds, BuildCells()));
+        // until the first draw tells whether the canvas is on the GPU, the triangles go along as well
+        SKRuntimeEffect? effect = ShaderEffect();
+        SurfaceShader.Frame? frame = effect != null ? BuildShaderFrame() : null;
+        Cells? cells = effect == null || s_backend == Backend.Unknown ? BuildCells() : null;
+        context.Custom(new SurfaceDrawOperation(bounds, this, effect, frame, cells));
         m_axes.Draw(context);
 
         if (m_showCursor)
@@ -485,6 +500,77 @@ public class Surface3D : Control
             Point c = CursorScreenPosition();
             context.DrawEllipse(new SolidColorBrush(CursorFill), new Pen(Brushes.White, 2), c, 6, 6);
         }
+    }
+
+    // The shader takes the raw cell values as vertices once the map spans a quad between data points (2x2 and up), so the
+    // surface passes through every value the way T7Suite's does and a low cell only pulls down the triangles meeting at
+    // it; a 1xN / Nx1 map keeps the corner-averaged grid. Vertex (gx, gy) sits at model (gx * cell + offset), the data
+    // vertices on the cell centres where the axis ticks are.
+    private bool DataVertexMode => m_cols >= 2 && m_rows >= 2;
+
+    private enum Backend { Unknown, Gpu, Raster }
+
+    // Skia's raster pipeline runs the shader at around a frame a second, so a CPU-rendered canvas keeps the triangles;
+    // set from the first draw (Avalonia renders every window through one backend)
+    private static volatile Backend s_backend;
+
+    /// <summary>Shade on a CPU canvas too (headless tests).</summary>
+    internal static bool ShadeOnCpu { get; set; }
+
+    // The shader for this frame, or null to draw triangles: SkSL refused it, the canvas is not on the GPU, the DDA walk may
+    // outrun its loop, or a single column, whose starting view looks along the ribbon and so shows only as the triangle
+    // renderer's outline.
+    private SKRuntimeEffect? ShaderEffect()
+    {
+        if (m_cols == 1 || s_buildFailed || s_backend == Backend.Raster && !ShadeOnCpu) return null;
+        SurfaceShader.Variant? v = SurfaceShader.For(RenderMode == SurfaceRenderMode.Wireframe);
+        int cells = DataVertexMode ? m_cols - 1 + m_rows - 1 : m_cols + m_rows;
+        return v != null && cells <= v.MaxSteps ? v.Effect : null;
+    }
+
+    private SurfaceShader.Frame BuildShaderFrame()
+    {
+        bool dv = DataVertexMode;
+        int w = dv ? m_cols : m_cols + 1, h = dv ? m_rows : m_rows + 1;
+        double zrange = m_zrange == 0 ? 1 : m_zrange;
+        // data row r is vertex row rows-1-r (corner row i is rows-i), so data row 0 stays at the far, high-Y end
+        m_dataImage ??= dv
+            ? SurfaceShader.DataImage((gx, gy) => (m_values[(m_rows - 1 - gy) * m_cols + gx] - m_zmin) / zrange, w, h)
+            : SurfaceShader.DataImage((gx, gy) => (m_v[(m_rows - gy) * (m_cols + 1) + gx] - m_zmin) / zrange, w, h);
+        double offX = dv ? CellSize / 2 : 0, offY = dv ? 1.5 * CellSize : CellSize;
+
+        double minZ = double.PositiveInfinity, maxZ = double.NegativeInfinity;
+        foreach (double z in m_vz)
+        {
+            minZ = Math.Min(minZ, z);
+            maxZ = Math.Max(maxZ, z);
+        }
+        double zRange = maxZ - minZ;
+        if (zRange == 0) zRange = 1;
+
+        // the fixed view-space light of the fallback, moved to model space: transpose(R) * l
+        double lx = 0.3, ly = -0.5, lz = 0.8, il = 1 / Math.Sqrt(lx * lx + ly * ly + lz * lz);
+        lx *= il; ly *= il; lz *= il;
+        M3 r = m_camera;
+        return new SurfaceShader.Frame
+        {
+            Data = m_dataImage,
+            Colormap = SurfaceShader.ColormapImage(m_online, m_zrange == 0),
+            Rotation = [(float)r.M00, (float)r.M10, (float)r.M20, (float)r.M01, (float)r.M11, (float)r.M21, (float)r.M02, (float)r.M12, (float)r.M22],
+            GridCols = w - 1,
+            GridRows = h - 1,
+            ScalePx = (float)(CellSize * m_scale),
+            HeightUnits = (float)(m_depth / CellSize),
+            ZOff = 0,
+            ZGain = m_zrange == 0 ? 0 : (float)(m_depth / CellSize),
+            Center = [(float)((m_cx - offX) / CellSize), (float)((m_cy - offY) / CellSize), (float)(m_cz / CellSize)],
+            Cam = [(float)m_camX, (float)m_camY],
+            Size = [(float)m_size.Width, (float)m_size.Height],
+            Light = [(float)(r.M00 * lx + r.M10 * ly + r.M20 * lz), (float)(r.M01 * lx + r.M11 * ly + r.M21 * lz), (float)(r.M02 * lx + r.M12 * ly + r.M22 * lz)],
+            ViewZMin = (float)minZ,
+            ViewZRange = (float)zRange,
+            RenderMode = (float)RenderMode,
+        };
     }
 
     /// <summary>The geometry of one frame, captured on the UI thread for the render thread.</summary>
@@ -604,9 +690,19 @@ public class Surface3D : Control
     private static SKColor Fade(SKColor c, double f) =>
         new((byte)(c.Red * f), (byte)(c.Green * f), (byte)(c.Blue * f), c.Alpha);
 
-    // the marker sits mid-cell on the corner grid, bilinear over the transformed corners
+    // the marker sits mid-cell on the corner grid, bilinear over the transformed corners; on the shaded data-vertex
+    // surface it sits on the cell's own vertex, bilinear between the values
     private Point CursorScreenPosition()
     {
+        if (DataVertexMode && ShaderEffect() != null)
+        {
+            int c0 = (int)m_cursorX, r0 = (int)m_cursorY, c1 = Math.Min(c0 + 1, m_cols - 1), r1 = Math.Min(r0 + 1, m_rows - 1);
+            double fc = m_cursorX - c0, fr = m_cursorY - r0;
+            double v = (1 - fr) * ((1 - fc) * m_values[r0 * m_cols + c0] + fc * m_values[r0 * m_cols + c1])
+                + fr * ((1 - fc) * m_values[r1 * m_cols + c0] + fc * m_values[r1 * m_cols + c1]);
+            double oz = m_zrange == 0 ? 0 : (v - m_zmin) / m_zrange * m_depth;
+            return Project((m_cursorX + 0.5) * CellSize, (m_rows + 0.5 - m_cursorY) * CellSize, oz);
+        }
         int vCols = m_cols + 1;
         double sx = m_cursorX + 0.5, sy = m_cursorY + 0.5;
         int x0 = (int)sx, y0 = (int)sy, x1 = Math.Min(x0 + 1, m_cols), y1 = Math.Min(y0 + 1, m_rows);
@@ -617,7 +713,11 @@ public class Surface3D : Control
         return new Point(m_size.Width * 0.5 + vx, m_size.Height * 0.5 + vy);
     }
 
-    private sealed class SurfaceDrawOperation(Rect bounds, Cells cells) : ICustomDrawOperation
+    // Skia refused the uniforms once: draw triangles from then on
+    private static volatile bool s_buildFailed;
+
+    private sealed class SurfaceDrawOperation(Rect bounds, Surface3D owner, SKRuntimeEffect? effect, SurfaceShader.Frame? frame, Cells? cells)
+        : ICustomDrawOperation
     {
         public Rect Bounds => bounds;
         public bool HitTest(Point p) => false;
@@ -630,6 +730,33 @@ public class Surface3D : Control
             if (lease == null) return;
             using var api = lease.Lease();
             SKCanvas canvas = api.SkCanvas;
+            bool gpu = api.GrContext != null;
+            // the cursor was placed for the shaded surface, place it again for the triangles
+            if (!gpu && s_backend == Backend.Unknown && frame != null && !ShadeOnCpu) Dispatcher.UIThread.Post(owner.InvalidateVisual);
+            s_backend = gpu ? Backend.Gpu : Backend.Raster;
+            owner.m_shaded = effect != null && frame != null && (gpu || ShadeOnCpu) && DrawShaded(canvas, effect, frame);
+            if (!owner.m_shaded && cells != null) DrawCells(canvas, cells);
+        }
+
+        private bool DrawShaded(SKCanvas canvas, SKRuntimeEffect effect, SurfaceShader.Frame frame)
+        {
+            // device px per logical px, for one-pixel lines whatever the render scaling
+            SKMatrix m = canvas.TotalMatrix;
+            float pixScale = MathF.Sqrt(m.ScaleX * m.ScaleX + m.SkewY * m.SkewY);
+            using SKShader? shader = SurfaceShader.Build(effect, frame, pixScale > 0 ? pixScale : 1);
+            if (shader == null)
+            {
+                if (!s_buildFailed) Trace.WriteLine("Surface3D: Skia refused the mesh shader's uniforms");
+                s_buildFailed = true;
+                return false;
+            }
+            using var paint = new SKPaint { Shader = shader };
+            canvas.DrawRect(SKRect.Create((float)bounds.Width, (float)bounds.Height), paint);
+            return true;
+        }
+
+        private static void DrawCells(SKCanvas canvas, Cells cells)
+        {
             // vertex colours are modulated with the paint colour, white keeps them as they are
             using var fill = new SKPaint { IsAntialias = false, Color = SKColors.White };
             using var line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
