@@ -126,7 +126,7 @@ namespace MapControlsTest
             Headless.Run(() =>
             {
                 // an 18-column table is ~870 px wide at its natural size, the viewer is much narrower
-                var viewer = new MapViewer { Map = MapGridTest.IgnitionMapData(), ReadEcuCommand = s_nop, WriteEcuCommand = s_nop, CloseCommand = s_nop };
+                var viewer = new MapViewer { Map = MapGridTest.IgnitionMapData(), ReadEcuCommand = s_nop, WriteEcuCommand = s_nop };
                 var window = new Window { Width = 500, Height = 700, Content = viewer };
                 window.Show();
                 AssertFits(window, viewer, "mapviewer-narrow");
@@ -138,7 +138,7 @@ namespace MapControlsTest
 
                 // an MDI inner window: measured at the workspace's size, arranged at its own (the graph tabs used to be laid
                 // out at the table's natural width, the mesh off centre and its scales clipped)
-                viewer = new MapViewer { Map = MapGridTest.IgnitionMapData(), ReadEcuCommand = s_nop, WriteEcuCommand = s_nop, CloseCommand = s_nop };
+                viewer = new MapViewer { Map = MapGridTest.IgnitionMapData(), ReadEcuCommand = s_nop, WriteEcuCommand = s_nop };
                 var mdi = new MdiLikePanel { Inner = new Rect(0, 0, 500, 700), Children = { viewer } };
                 window = new Window { Width = 1200, Height = 900, Content = mdi };
                 window.Show();

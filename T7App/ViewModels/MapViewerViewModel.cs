@@ -57,10 +57,6 @@ public partial class MapViewerViewModel : DocumentViewModel
     /// <summary>No ECU buttons (a tuning package's map).</summary>
     public bool NoEcu { get; set; }
 
-    /// <summary>The viewer's Close button: the same question about unsaved changes as the window's.</summary>
-    [RelayCommand]
-    private Task Close() => Owner.CloseViewerAsync(this);
-
     [RelayCommand]
     private Task ReadEcu() => Owner.ReadMapFromEcuAsync(this);
 

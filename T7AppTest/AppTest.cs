@@ -548,15 +548,14 @@ namespace T7AppTest
                 Assert.HasCount(1, dock.VisibleDockables!);
                 Save(window, "workspace");
 
-                // the viewer's buttons under the graphs, in order, and Close closes it
+                // the viewer's buttons under the graphs, in order (no Close: the title bar has one)
                 window.CaptureRenderedFrame();
                 var viewer = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<MapControls.MapViewer>().Single();
-                string[] buttons = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(viewer).OfType<Button>()
-                    .Where(b => b.IsVisible && b.Content is string t && (t.Contains("ECU") || t.Contains("file") || t == "Close")).Select(b => (string)b.Content!).ToArray();
-                CollectionAssert.AreEqual(new[] { "Read from ECU", "Save to ECU", "Read from file", "Save to file", "Close" }, buttons);
-                var close = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(viewer).OfType<Button>().Single(b => b.Content is "Close");
-                Assert.IsTrue(close.Bounds.Bottom <= viewer.Bounds.Height);
-                close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+                var shown = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(viewer).OfType<Button>()
+                    .Where(b => b.IsVisible && b.Content is string t && (t.Contains("ECU") || t.Contains("file") || t == "Close")).ToList();
+                CollectionAssert.AreEqual(new[] { "Read from ECU", "Save to ECU", "Read from file", "Save to file" }, shown.Select(b => (string)b.Content!).ToArray());
+                Assert.IsTrue(shown[^1].TranslatePoint(new Point(0, shown[^1].Bounds.Height), viewer)!.Value.Y <= viewer.Bounds.Height);
+                docs.Factory.CloseDockable(dock.VisibleDockables![0]);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Assert.IsEmpty(vm.Viewers);
                 window.Close();

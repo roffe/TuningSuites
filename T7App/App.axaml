@@ -55,7 +55,7 @@
     <Application.DataTemplates>
         <DataTemplate DataType="vm:MapViewerViewModel">
             <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
-                          SaveCommand="{Binding SaveCommand}" CloseCommand="{Binding CloseCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
+                          SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
                           ReadEcuCommand="{Binding EcuReadCommand}" WriteEcuCommand="{Binding EcuWriteCommand}"
                           OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
                           CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
