@@ -86,7 +86,7 @@ packaging/linux/           udev rule, desktop entry installer and icon for the t
 - [ ] Projects: projectproperties.xml, TransActionLogV2.ttl (binary, auto-upgraded from v1), ProjectLogbook.log, backups
 - [ ] rtsymbols.txt / .t7rtl, mymaps.xml. SymbolViewLayout.xml is a DevExpress layout and is dropped
 - [ ] `.t7l` logs: write with the same format. Values use the system's decimal separator today, so read both `,` and `.`
-- [ ] `.afr` maps, `.t7p` / `.t7x` tuning packs. The crypto is ported and tested against the shipped packs (T8Pub.pem ships from T7Core); reading and applying packs comes with chunk 7
+- [x] `.afr` maps, `.t7p` / `.t8p` tuning packages, and the `.t8x` packs of T8Suite's Tuning Wizard (signatures checked against T8Pub.pem, which ships from SuiteCore). T7Suite never read `.t7x` packs: its wizard is unreachable
 - [x] `Encoding.Default` in T7SidEdit was ANSI on .NET Framework and is UTF-8 on .NET 10, now `Encoding.Latin1` (maps every byte 1:1; writing was ASCII anyway)
 - [x] Source files: the old compiler read them in the ANSI code page, the SDK reads UTF-8. 24 old files are Windows-1252 and garble their non-ASCII literals ("Trollhättan") when lifted as they are. Convert with `iconv -f CP1252 -t UTF-8`; `SourceEncodingTest` fails on any new project file that isn't UTF-8
 - [ ] Replace about 94 `"\\"` path joins with `Path.Combine`, and `Application.StartupPath` with `AppContext.BaseDirectory`. Done in T7Core; the rest are in frmMain and go with each extraction
@@ -421,10 +421,72 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - **Dynamic list:** the data was matched to the rows by counting, so a row that couldn't go into the list shifted every later row's value; the data now goes to the rows it was read for.
   - **Boost map cell:** the tracking rule misspelt AirCtrlCal (AirCrtlCal), so the boost map never showed its cell.
 - T7 fix from the sharing: the per-cylinder rows (KnockCyl1-4, MisfCyl1-4) and the serial wideband's row are marked as derived. After the table changed (a symbol added, moved or removed) the engine used to poll them as rows of their own, which put 0 on screen over their values.
-- Not yet: sound notifications and the Combi adapter's ADC / thermocouple channels (for both suites, see After T7). Not on a bench yet.
+- Not yet: sound notifications and the Combi adapter's ADC / thermocouple channels (for both suites, see After T7).
+- Bench, 2026-10-10: the realtime panel works on a T8 ECU.
+- Fixed after the bench test: Disconnect ECU while the panel polled ended it with "Realtime stopped: Object reference not set to an instance of an object". The disconnect waited on the ECU thread behind the running pass, so the loop still saw the session open and queued one more pass, which ran on the closed adapter. A pass that finds the session closed now ends the polling quietly (T7 too), and closing a T8 session ends the keep-alive stall, so the next connection keeps its tester present.
 
 ### 7. Tools
-- [ ] TEM editor, PID editor, bitmask viewer, axis browser, hex view, disassembler / vectors (MC68377 map, 120 vectors; the Idc file came with chunk 4), airmass result viewer and compressor map (T8's torque request → airmass and tables), tuning wizard (`.t8x` packs, signature checked as T7Core's Crypto does), Create binary from TIS file, map preview popup
+- [x] Shared now (moved from T7Core / T7App):
+  - **SuiteCore:** `SuiteBinary.Disassemble`, `InterruptVectors` and `AxisRows`, each suite with its own disassembler (T7: the 68332 and 256 vectors; T8: the MC68377 and 120), and `Disassembly.WriteFunctions` for the listing. `Airmass.cs` holds the airmass result viewer's base: the grid, the interpolation, the torque, power, injector, lambda, EGT and fuel flow estimates, the options, the limiter types and the compressor map. Each suite keeps its tables and limiters (`T7AirmassResult`, `T8AirmassResult`).
+  - **SuiteApp:** the disassembly, hex view, interrupt vectors and axis browser views; the airmass result viewer with its grid, dyno graph and compressor map (the suite passes its calculation, captions, gears and legend as an `AirmassSuite`); the compressor map images and the disassembly's highlighting; the Information handlers (`MainWindowViewModel.Tools.cs`, `SuiteMainWindow.Tools.cs`).
+  - **Smaller shared changes:** the Tuning menu keeps the items an app's XAML puts in it before the map buttons (T8's Tuning Wizard). Open pickers can have a title and a first folder, save pickers a title. The symbol list can show a map preview (T8). `TuningPackage.Parse` reads a package's lines (the wizard decrypts its packs first).
+  - T7's tests pass with the moved names, and its renders are identical (apart from the usual timestamps).
+- [x] T8Suite's tools:
+  - **Information:** Browse axis information (and the symbol list's Browse axis info), Show interrupt vectors (120), Show disassembly and Show full disassembly (T8Suite's Disassembler, lifted into T8Core).
+  - **General actions:** View file in hex, and the Airmass result viewer:
+    - the pedal map is a torque request, turned into airmass through TrqMastCal.m_AirTorqMap;
+    - T8's limiters: TrqLimCal, FFTrqCal on E85, TMCCal with an automatic, Trq_ManGear per gear;
+    - VE in 1/128, the EGT estimate always made richer;
+    - "Car is high output (175/210 hp)" picks the Tab1 tables, else Tab2;
+    - gears from Undefined to Sixth, then Reverse; six legend entries; the compressor map's first guess from the VIN.
+  - **Edit:** TEM editor (only with a TEM table of more than one entry) and PID editor.
+    - A copy of the table with T8Suite's columns, symbol lookups, validation messages and colours, and a find box.
+    - Ok writes every row back (`T8Binary.WritePids` / `WriteTems`) and checks the checksum as on open.
+  - **Bit mask symbols** open the bit mask viewer ("Bit masked view of symbol"): the 16 bits, named by the symbols at the same address. The word comes from the file, or from the ECU for an SRAM symbol. Ok writes it into the file with a transaction entry and checks the checksum, or writes it into SRAM.
+  - **Map preview popup** (Settings → Show map preview popup, off by default): hovering a name in the symbol list shows that map's table, read only.
+  - **File → Create binary from TIS file** (`TisFile`):
+    - a base bin's bootloader and adaption data (0x00000-0x1FFFF);
+    - the TIS file's program from 0x20000, decoded (a .gbf or .s19, gzipped or not);
+    - T8Suite's programming station field and adaption flag after it, FF elsewhere.
+  - **Tuning → Tuning wizards → Tuning Wizard** (`WizardPack`):
+    - the 16 signed `.t8x` packs from `TuningPacks/`, which T8App copies next to the program, filtered by bintype, whitelist and blacklist;
+    - T8Suite's pages;
+    - the pack is applied as Import tuning package, after a backup `<bin>-<time>-BACKUP-BEFORE-WIZARD-<pack>.bin`; then the PI area gets the programmer name and release date, and the pack's message is shown.
+- [x] T8CoreTest:
+  - the PID / TEM write-back, the vectors, the disassembly, the axis rows;
+  - the TIS builder (raw, gzipped, S19);
+  - the packs: 16 verify, compatibility, applying with the backup and PI area;
+  - the airmass result on a stock bin.
+- [x] T8AppTest:
+  - the PID editor (validation, colours, lookup, write-back);
+  - the bit mask viewer (a flash write, an SRAM symbol without an ECU);
+  - the map preview popup, the wizard's pages and result;
+  - the information tools and the airmass viewer, with renders.
+- Deliberate differences:
+  - **PID / TEM editors:** symbols are named by SmartVarname, as in the symbol list. The find box filters rows (T8Suite's grid had a find panel). The PID editor is disabled without an open file, like the other Actions (T8Suite said "Please open a Trionic 8 file before playing with this feature"); a file without a table still opens it empty.
+  - **Bit mask viewer:**
+    - SRAM bit mask symbols open it from the symbol list too (T8Suite showed them there as a 2-byte SRAM map, and the viewer only when opened by name).
+    - It connects first, as the port's viewers do.
+    - Ok writes an SRAM word into the ECU (T8Suite's branch for that was empty).
+  - **Map preview popup:** a tooltip beside the hovered name that hides when the pointer leaves it. T8Suite used a window right of the list at the mouse's height.
+  - **Create binary from TIS file:**
+    - An S19 is converted in a temporary folder and a gzipped file is unpacked in memory. T8Suite left `<name>.bin` next to the S19 and the unpacked file in the current folder.
+    - A TIS file too large for a bin says so (T8Suite threw).
+  - **Tuning wizard:**
+    - A pack that can't be read is logged and skipped (T8Suite failed to start).
+    - The packs are read when the wizard first opens (T8Suite: at startup).
+    - The code page shows only for packs with a code; none of the shipped packs has one.
+  - **Airmass result viewer:**
+    - Tables the bin lacks don't limit, as in the T7 port. T8Suite read them as 0, which capped every cell at the first m_AirTorqMap column or zeroed it.
+    - Target lambda rounds as T7Suite's did; T8Suite rounded after the injector correction, which is at most 0.01 apart.
+    - An invalid compare file keeps the current compare (T8Suite dropped it).
+    - A bin without the tables says so (T8Suite did nothing).
+    - A legend entry whose table isn't in the bin does nothing (T8Suite: "Symbol … does not exist in this file").
+  - **View file in hex** also shows an imported SRAM file, as T7Suite did (T8Suite's call was commented out).
+  - **Disassembly tab:** titled "Disassembly: <bin>.asm", as in the T7 port (T8Suite: "T8Suite Disassembler").
+- Known T8Suite bugs fixed:
+  - **Disassembler:** it left the bin open until the garbage collector ran.
+  - **Tuning wizard's code page:** Next compared the text from before the last keystroke, so it came one key late; after Back the page showed for every pack.
 - Not ported: the Debug ribbon group (registry-only DebugMode), "Tune me up™" and "Easy tune to stage III" (hidden in T8Suite)
 
 ### 8. Release
@@ -442,6 +504,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
+
+- 2026-10-10: T8 chunk 7 implemented: the disassembly, hex view, vectors, axis browser and airmass result viewer moved into the shared projects; T8Suite's PID / TEM editors, bit mask viewer, map preview popup, Create binary from TIS file and Tuning Wizard (.t8x packs). Disconnect ECU with the realtime panel polling no longer ends it with an error.
 
 - 2026-10-10: T8 chunk 6 implemented: the realtime table, engine loop, panel and log tools moved into the shared projects; T8 reads over GMLAN's dynamic list (by address as the fallback) with T8Suite's rows, names and texts, and logs .t8l. Waiting for a bench test.
 
