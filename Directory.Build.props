@@ -1,7 +1,11 @@
 <Project>
 
   <!--
+    Each suite is versioned by its own tags: the app project sets VersionTagPrefix (T7App: t7suite/) and the version comes from
+    the nearest <prefix>vX.Y.Z tag, so tagging t7suite/v3.0.0 doesn't touch T8Suite or T5Suite. Libraries and tests have no
+    prefix and build as 0.0.0-<sha> quietly; nothing ships them on their own.
     The version comes from the nearest vX.Y.Z git tag, nothing in the code holds it (same scheme as roffe/Trionic, see its README "Versioning and releasing"):
+      (tags below with the project's prefix, e.g. t7suite/v0.1.75)
       HEAD at tag v0.1.75, clean tree    0.1.75
       commits after the tag              0.1.75-<first 9 of the commit sha>
       uncommitted changes                0.1.75-<sha>-dirty
@@ -34,11 +38,11 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitSha" />
       <Output TaskParameter="ExitCode" PropertyName="_GitShaExit" />
     </Exec>
-    <Exec Command="git describe --tags --abbrev=0 --match &quot;v[0-9]*&quot; 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
+    <Exec Command="git describe --tags --abbrev=0 --match &quot;$(VersionTagPrefix)v[0-9]*&quot; 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
           ConsoleToMSBuild="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low">
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitTag" />
     </Exec>
-    <Exec Command="git describe --tags --exact-match --match &quot;v[0-9]*&quot; 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
+    <Exec Command="git describe --tags --exact-match --match &quot;$(VersionTagPrefix)v[0-9]*&quot; 2>$(_GitNull)" WorkingDirectory="$(MSBuildThisFileDirectory)"
           IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" StandardOutputImportance="low">
       <Output TaskParameter="ExitCode" PropertyName="_GitExactExit" />
     </Exec>
@@ -51,9 +55,10 @@
     <PropertyGroup>
       <_GitSha9 Condition="'$(_GitShaExit)' == '0' and $(_GitSha.Length) &gt;= 9">$(_GitSha.Substring(0, 9))</_GitSha9>
       <_GitSha9 Condition="'$(_GitSha9)' == ''">unknown</_GitSha9>
-      <!-- vX.Y[.Z[.W]] with an optional label (v0.1.76-beta), the label only goes into InformationalVersion -->
-      <_GitTagOk>$([System.Text.RegularExpressions.Regex]::IsMatch('$(_GitTag)', '^v\d+(\.\d+){1,3}(-[0-9A-Za-z.-]+)?$'))</_GitTagOk>
-      <_GitBase Condition="'$(_GitTagOk)' == 'True'">$(_GitTag.Substring(1))</_GitBase>
+      <!-- <prefix>vX.Y[.Z[.W]] with an optional label (v0.1.76-beta), the label only goes into InformationalVersion -->
+      <_GitTagVersion Condition="'$(_GitTag)' != '' and $(_GitTag.StartsWith('$(VersionTagPrefix)'))">$(_GitTag.Substring($(VersionTagPrefix.Length)))</_GitTagVersion>
+      <_GitTagOk>$([System.Text.RegularExpressions.Regex]::IsMatch('$(_GitTagVersion)', '^v\d+(\.\d+){1,3}(-[0-9A-Za-z.-]+)?$'))</_GitTagOk>
+      <_GitBase Condition="'$(_GitTagOk)' == 'True'">$(_GitTagVersion.Substring(1))</_GitBase>
       <_GitBase Condition="'$(_GitTagOk)' != 'True'">0.0.0</_GitBase>
       <_GitNumeric>$([System.Text.RegularExpressions.Regex]::Match('$(_GitBase)', '^\d+(\.\d+)*').Value)</_GitNumeric>
       <_GitDirty Condition="'$(_GitStatus)' != ''">-dirty</_GitDirty>
@@ -65,10 +70,10 @@
       <FileVersion>$(Version)</FileVersion>
     </PropertyGroup>
 
-    <Warning Condition="'$(_GitTagOk)' != 'True' and '$(_GitTag)' == ''"
-             Text="No vX.Y.Z git tag found (no git, a shallow clone or the tags not fetched), building as version $(InformationalVersion). Run 'git fetch --tags' ('git fetch --unshallow --tags' in a shallow clone) or pass -p:Version=X.Y.Z." />
+    <Warning Condition="'$(_GitTagOk)' != 'True' and '$(_GitTag)' == '' and '$(VersionTagPrefix)' != ''"
+             Text="No $(VersionTagPrefix)vX.Y.Z git tag found (no git, a shallow clone or the tags not fetched), building as version $(InformationalVersion). Run 'git fetch --tags' ('git fetch --unshallow --tags' in a shallow clone) or pass -p:Version=X.Y.Z." />
     <Warning Condition="'$(_GitTagOk)' != 'True' and '$(_GitTag)' != ''"
-             Text="The nearest git tag $(_GitTag) is not a vX.Y.Z or vX.Y.Z-label version, building as version $(InformationalVersion)." />
+             Text="The nearest git tag $(_GitTag) is not a $(VersionTagPrefix)vX.Y.Z or $(VersionTagPrefix)vX.Y.Z-label version, building as version $(InformationalVersion)." />
   </Target>
 
 </Project>

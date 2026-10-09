@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <RootNamespace>T7App</RootNamespace>
     <AssemblyName>T7Suite</AssemblyName>
+    <!-- the version comes from the nearest t7suite/vX.Y.Z tag (Directory.Build.props) -->
+    <VersionTagPrefix>t7suite/</VersionTagPrefix>
     <ApplicationIcon>T7Suite.ico</ApplicationIcon>
     <Company>MattiasC</Company>
     <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>

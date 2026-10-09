@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v7
       with:
         path: TuningSuites
-        fetch-depth: 0 # history and tags, the version comes from the nearest v* tag (Directory.Build.props)
+        fetch-depth: 0 # history and tags, each suite's version comes from its nearest <suite>/v* tag (Directory.Build.props)
 
     # TrionicCANLib is referenced from a sibling checkout (Directory.Build.props TrionicDir)
     # ponytail: tracks the Trionic net10 branch, pin a sha or move to a submodule once it is merged
