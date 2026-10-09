@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="T7Suite.ico" />
+    <AvaloniaResource Include="Assets\Compressormaps\*" />
   </ItemGroup>
 
   <ItemGroup>

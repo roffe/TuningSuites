@@ -56,6 +56,9 @@
         <DataTemplate DataType="vm:LogViewerViewModel">
             <v:LogViewerView />
         </DataTemplate>
+        <DataTemplate DataType="vm:AirmassResultViewModel">
+            <v:AirmassResultView />
+        </DataTemplate>
         <DataTemplate DataType="vm:SearchResultsViewModel">
             <v:SearchResultsView />
         </DataTemplate>

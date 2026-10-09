@@ -186,9 +186,9 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ### 7. Tools
 - [x] T7Suite's workspace with Dock.Avalonia: the documents (`Viewers`) are the DocumentDock's ItemsSource in MDI mode (inner windows: move, resize, minimise, maximise; Window → Cascade / Tile horizontally / Tile vertically) or tabbed (Window menu, remembered), the symbol list is a dockable / floatable tool pane. Closing goes through the unsaved-changes question; selection follows both ways
-- [ ] TuneToStage and the tuning wizard
-- [ ] Airmass result view (about 800 lines of logic to pull out of ctrlAirmassResult first)
-- [ ] Compressor map
+- [ ] TuneToStage and the tuning wizard: both are unreachable in T7Suite (buttons removed in 2017, see docs/T7SUITE-BEHAVIOUR.md). Port only if wanted
+- [x] Airmass result viewer (Actions menu): `AirmassResult` in T7Core with T7Suite's limiter order and interpolation, the table with limiter triangles and display modes, the dyno graph (with compare file), legend entries open their maps. Deliberate differences: tables the bin lacks don't limit (T7Suite read them as 0, which zeroed the result or showed nothing at all); a message instead of nothing when the bin lacks the needed tables; first gear opens TorqueCal.M_1GearTab, the table the calculation uses; the compare file doesn't replace the open file's tables
+- [x] Compressor map (third tab of the airmass result viewer): T7Suite's 14 compressor images and calibrations, the WOT points at 14.7 / 12.5 / 15.4 psi, turbo and engine guessed from the part number, VE and intake temperature
 - [ ] Tuning packs: apply, create, search and replace
 - [ ] SID information and editing
 - [ ] Disassembler (AvaloniaEdit), hex view
@@ -216,6 +216,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - 2026-10-09: Feasibility analysis done; plan agreed. Branch `net10` created.
 - 2026-10-09: Chunk 0 done locally: solution, versioning props, T7App shell on Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.0, CI workflow.
+- 2026-10-09: Chunk 7: airmass result viewer with the dyno graph and compressor map; TuneToStage / tuning wizard found unreachable in T7Suite.
 - 2026-10-09: Chunk 7: docking workspace (MDI inner windows / tabs, dockable symbol list).
 - 2026-10-09: Chunk 6 bench tested (realtime values OK); sounds and Combi ADC moved to later. Chunk 7 started.
 - 2026-10-09: Chunk 6 done apart from sounds and Combi ADC channels: log viewer, CSV / LogWorks exports, log filters, knock and misfire maps; waiting for a test on a running engine.

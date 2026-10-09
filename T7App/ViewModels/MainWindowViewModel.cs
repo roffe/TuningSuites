@@ -208,6 +208,19 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedViewer = document;
     }
 
+    /// <summary>Actions → Airmass result viewer, when the bin has the tables it needs (T7Suite silently did nothing otherwise).</summary>
+    [RelayCommand]
+    private void ShowAirmassResult()
+    {
+        if (Binary is not { } bin) return;
+        if (!AirmassResult.Available(bin))
+        {
+            ShowInfo("This file lacks the pedal, torque or airmass tables the airmass result viewer needs");
+            return;
+        }
+        ShowDocument(new AirmassResultViewModel(this, bin));
+    }
+
     /// <summary>The symbol list's selected rows (Export as tuning package).</summary>
     public System.Collections.Generic.IReadOnlyList<SymbolHelper> SelectedSymbols { get; set; } = [];
 

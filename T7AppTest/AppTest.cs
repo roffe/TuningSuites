@@ -1,3 +1,4 @@
+using Avalonia.LogicalTree;
 using System;
 using System.IO;
 using System.Linq;
@@ -497,6 +498,44 @@ namespace T7AppTest
                 close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Assert.IsEmpty(vm.Viewers);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
+        public void AirmassResultViewer()
+        {
+            string file = Path.Combine(s_dir, "airmass.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1600, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                vm.ShowAirmassResultCommand.Execute(null);
+                var am = (AirmassResultViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Airmass result viewer: airmass.bin", am.Title);
+                int wot = am.Result!.Pedal.Length - 1, c2400 = System.Array.IndexOf(am.Result.Rpm, 2400);
+                Assert.AreEqual("759", am.Texts![wot, c2400]);
+                am.DisplayMode = 1;
+                Assert.AreEqual("245", am.Texts![wot, c2400]);
+                Assert.AreEqual(4, am.Series.Count);                           // power, torque, injector DC, lambda
+                Assert.AreEqual(3, am.CompressorPoints!.Length);
+                Save(window, "airmass-table");
+                var tabs = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<AirmassResultView>().Single()
+                    .GetLogicalDescendants().OfType<TabControl>().First();
+                tabs.SelectedIndex = 1;
+                Save(window, "airmass-dyno");
+                tabs.SelectedIndex = 2;
+                Save(window, "airmass-compressor");
+                tabs.SelectedIndex = 0;
+
+                // a legend entry opens its map
+                am.OpenLimiterCommand.Execute(T7.AirmassLimitType.TorqueLimiterEngine);
+                Assert.AreEqual("TorqueCal.M_EngMaxTab", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
+                vm.SelectedViewer = am;
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();
