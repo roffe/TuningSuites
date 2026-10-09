@@ -123,6 +123,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
   - ASCII view is read-only instead of throwing; smoothing works in hex view too (it always worked on raw values)
   - the colour scale uses the current largest value (the old one kept the value from load, only raised by + and Home)
   - copy with nothing selected copies the whole map without asking; clicking another cell commits a pending edit, like leaving the DevExpress editor did
+- Additions on request: typing a value with several cells selected sets all of them (one undo step); the old editor set only the focused cell
 
 ### 3. Read-only app (first usable release)
 - [x] `T7Core/T7Binary.cs`: an opened bin, lifted from frmMain: `Open` (TryToOpenFileUsingClass: header, SRAM offset, ExtractFile, BioPower E85 rename), `IsValidFile` (0x80000 bytes starting FF FF EF FC), symbol address with the open-software SRAM mapping, `ReadSymbol` (StartTableViewer), X/Y axis values, `TableWidth`, `IsSixteenBitTable`, `GetMapCorrectionFactor`, the open-loop table

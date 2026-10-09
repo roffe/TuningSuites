@@ -264,7 +264,7 @@ public class MapGrid : Control
                 }
                 if (m_selected.Contains(i)) context.FillRectangle(SelectionFill, rect);
 
-                bool editing = m_editing && r == m_focusRow && c == m_focusCol;
+                bool editing = m_editing && (r == m_focusRow && c == m_focusCol || m_selected.Contains(i) && m_selected.Contains(map.Index(m_focusRow, m_focusCol)));
                 if (editing) context.FillRectangle(Brushes.White, rect.Deflate(1));
                 if (editing) textBrush = Brushes.Black;
                 var t = Text(editing ? m_input : map.FormatCell(i, ViewType), textBrush);
@@ -476,11 +476,14 @@ public class MapGrid : Control
         int i = map.Index(m_focusRow, m_focusCol);
         if (i >= 0 && text.Length > 0)
         {
-            if (map.TryParse(text, ViewType, out int raw, out string error)) map.Set([(i, raw)]);
+            if (map.TryParse(text, ViewType, out int raw, out string error)) map.Set(EditTargets(i).Select(c => (c, raw)));
             else EditRejected?.Invoke(this, error);
         }
         InvalidateVisual();
     }
+
+    // a typed value goes to every selected cell when the focused cell is one of them (one undo step); T7Suite set only the focused one
+    private IEnumerable<int> EditTargets(int focused) => m_selected.Contains(focused) ? m_selected : [focused];
 
     private void MoveFocus(Key key, bool extend)
     {

@@ -49,17 +49,16 @@ namespace MapControlsTest
                 Assert.HasCount(6, grid.SelectedCells);
                 int[] cells = grid.SelectedCells.ToArray();
 
-                // typing edits only the focused cell (the drag's end, display row 2 col 4), as the DevExpress editor did
+                // typing sets every selected cell (T7Suite's editor set only the focused one), as one undo step
                 int focused = map.Index(2, 4);
                 int[] before = map.RawValues();
                 window.KeyTextInput("12.5");
                 window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
-                Assert.AreEqual(125, map[focused]);
-                Assert.IsTrue(cells.Where(i => i != focused).All(i => map[i] == before[i]));
+                Assert.IsTrue(cells.All(i => map[i] == 125));
 
                 // steps apply to the whole selection; + and - don't open the editor
                 window.KeyPress(Key.PageUp, RawInputModifiers.None, PhysicalKey.PageUp, null);
-                Assert.IsTrue(cells.All(i => map[i] == (i == focused ? 125 : before[i]) + 10));
+                Assert.IsTrue(cells.All(i => map[i] == 135));
                 window.KeyPress(Key.Subtract, RawInputModifiers.None, PhysicalKey.NumPadSubtract, "-");
                 window.KeyTextInput("-");
                 Assert.AreEqual(134, map[focused]);
@@ -69,7 +68,18 @@ namespace MapControlsTest
 
                 window.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, null);
                 window.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, null);
-                Assert.AreEqual(125, map[focused]);
+                Assert.IsTrue(cells.All(i => map[i] == 125));
+                window.KeyPress(Key.Z, RawInputModifiers.Control, PhysicalKey.Z, null);
+                Assert.IsTrue(cells.All(i => map[i] == before[i]));
+
+                // a focused cell outside the selection (ctrl-click toggled it off) is edited alone
+                window.KeyPress(Key.Y, RawInputModifiers.Control, PhysicalKey.Y, null);
+                window.MouseDown(grid.CellCenter(2, 4), MouseButton.Left, RawInputModifiers.Control);
+                window.MouseUp(grid.CellCenter(2, 4), MouseButton.Left, RawInputModifiers.Control);
+                window.KeyTextInput("20");
+                window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+                Assert.AreEqual(200, map[focused]);
+                Assert.IsTrue(cells.Where(i => i != focused).All(i => map[i] == 125));
 
                 grid.SetHighlight(6, 9);
                 Headless.Capture(window, "mapgrid");
