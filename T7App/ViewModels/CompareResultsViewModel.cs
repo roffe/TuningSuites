@@ -8,6 +8,7 @@ using Avalonia.Collections;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
@@ -15,12 +16,12 @@ namespace T7App.ViewModels;
 public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<string> Open)
 {
     /// <summary>The open bin: its own viewer, the one that edits.</summary>
-    public static CompareSide Bin(MainWindowViewModel owner, T7Binary bin) =>
+    public static CompareSide Bin(T7MainWindowViewModel owner, T7Binary bin) =>
         new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
             name => { if (bin.FindAny(name) is { } sh) owner.OpenSymbolByName(sh.SmartVarname); });
 
     /// <summary>Another bin: a read-only compare viewer.</summary>
-    public static CompareSide OtherBin(MainWindowViewModel owner, T7Binary bin) =>
+    public static CompareSide OtherBin(T7MainWindowViewModel owner, T7Binary bin) =>
         new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
             name =>
             {
@@ -28,7 +29,7 @@ public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<st
             });
 
     /// <summary>An SRAM snapshot, laid out by the open bin's symbols: "SRAM Symbol" viewers.</summary>
-    public static CompareSide Sram(MainWindowViewModel owner, T7Binary bin, string file)
+    public static CompareSide Sram(T7MainWindowViewModel owner, T7Binary bin, string file)
     {
         byte[] ram = File.ReadAllBytes(file);
         return new(file, name => bin.FindAny(name) is { } sh ? T7Compare.ReadSram(ram, sh.Start_address, sh.Length) : null,
@@ -42,7 +43,7 @@ public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<st
 /// </summary>
 public partial class CompareResultsViewModel : DocumentViewModel
 {
-    private readonly MainWindowViewModel m_owner;
+    private readonly T7MainWindowViewModel m_owner;
     private readonly string m_title, m_differenceTitle;
 
     public T7Binary Current { get; }
@@ -55,7 +56,7 @@ public partial class CompareResultsViewModel : DocumentViewModel
 
     public override string Title => m_title;
 
-    public CompareResultsViewModel(MainWindowViewModel owner, T7Binary current, CompareSide first, CompareSide second, List<CompareRow> rows,
+    public CompareResultsViewModel(T7MainWindowViewModel owner, T7Binary current, CompareSide first, CompareSide second, List<CompareRow> rows,
         string title, string differenceTitle)
     {
         m_owner = owner;
@@ -69,7 +70,7 @@ public partial class CompareResultsViewModel : DocumentViewModel
     }
 
     /// <summary>Compare with another bin: "Compare results: other.bin".</summary>
-    public static CompareResultsViewModel Binaries(MainWindowViewModel owner, T7Binary current, T7Binary other, List<CompareRow> rows) =>
+    public static CompareResultsViewModel Binaries(T7MainWindowViewModel owner, T7Binary current, T7Binary other, List<CompareRow> rows) =>
         new(owner, current, CompareSide.Bin(owner, current), CompareSide.OtherBin(owner, other), rows,
             $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]");
 

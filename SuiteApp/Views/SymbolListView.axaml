@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             xmlns:v="using:SuiteApp.Views"
+             xmlns:cs="using:CommonSuite"
+             x:Class="SuiteApp.Views.SymbolListView"
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.onLight">
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+        <Style Selector="TextBlock.onDark">
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <!-- the selected row's text: T7Suite's MediumBlue in the light skin, the usual colours in the dark one -->
+        <Style Selector="DataGridRow:selected DataGridCell">
+            <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
+        </Style>
+        <Style Selector="DataGridRow:selected TextBlock.onLight">
+            <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedNameForeground}" />
+        </Style>
+    </UserControl.Styles>
+    <DockPanel>
+        <TextBox DockPanel.Dock="Top" Margin="6,6,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
+        <!-- T8Suite's predefined filters ("Only symbols within binary"), none for T7Suite -->
+        <ComboBox x:Name="FilterChoice" DockPanel.Dock="Top" Margin="6,0,6,6" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding SymbolFilters}" SelectedItem="{Binding SymbolFilter}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SymbolFilter">
+                    <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+        <!-- the auto filter row: one box per column -->
+        <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding ColumnFilters}" IsVisible="{Binding ShowFilterRow}" Margin="6,0,6,6">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ColumnFilter">
+                    <TextBox Text="{Binding Text}" PlaceholderText="{Binding Header}" Margin="0,0,4,0" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- every column a suite shows; the suite's SymbolColumns pick and order them (SortMemberPath is the key). The rows' menu
+             is the suite's, the main window's resource SymbolListMenu -->
+        <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}" ContextMenu="{DynamicResource SymbolListMenu}"
+                  CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal" SelectionMode="Extended"
+                  DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded" SelectionChanged="OnSelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
+                    <DataTemplate x:DataType="cs:SymbolHelper">
+                        <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2">
+                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Classes.onLight="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=light}"
+                                       Classes.onDark="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=dark}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" SortMemberPath="Flash_start_address"
+                                    Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
+                                    Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" SortMemberPath="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" SortMemberPath="Userdescription" Binding="{Binding Userdescription}" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Number" SortMemberPath="Symbol_number" Binding="{Binding Symbol_number, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Type" SortMemberPath="Symbol_type" Binding="{Binding Symbol_type, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="SRAM Address" SortMemberPath="Start_address"
+                                    Binding="{Binding Start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Bit mask" SortMemberPath="BitMask"
+                                    Binding="{Binding BitMask, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Category" SortMemberPath="Category" Binding="{Binding Category}" IsReadOnly="True" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

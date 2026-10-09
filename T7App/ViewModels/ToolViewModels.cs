@@ -3,11 +3,12 @@ using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
 /// <summary>Browse axis information: every map with its axes; double-clicking opens the map or the clicked axis.</summary>
-public class AxisBrowserViewModel(MainWindowViewModel owner, T7Binary bin, string? only = null) : DocumentViewModel
+public class AxisBrowserViewModel(T7MainWindowViewModel owner, T7Binary bin, string? only = null) : DocumentViewModel
 {
     public override string Title => "Axis browser: " + Path.GetFileName(bin.FileName) + (only == null ? "" : " " + only);
 

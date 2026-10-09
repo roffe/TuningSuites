@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using T7;
 using T7App.Controls;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
@@ -22,7 +23,7 @@ public record LimiterLegend(AirmassLimitType Type, string Name, IBrush Brush);
 /// </summary>
 public partial class AirmassResultViewModel : DocumentViewModel
 {
-    private readonly MainWindowViewModel m_owner;
+    private readonly T7MainWindowViewModel m_owner;
     private readonly T7Binary m_bin;
     private AirmassResult? m_compare;
     private string m_compareName = "";
@@ -86,7 +87,7 @@ public partial class AirmassResultViewModel : DocumentViewModel
 
     private static IBrush Brush(AirmassLimitType t) => new Avalonia.Media.Immutable.ImmutableSolidColorBrush(LimiterColors.All[t]);
 
-    public AirmassResultViewModel(MainWindowViewModel owner, T7Binary bin)
+    public AirmassResultViewModel(T7MainWindowViewModel owner, T7Binary bin)
     {
         m_owner = owner;
         m_bin = bin;

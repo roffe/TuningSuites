@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SuiteApp.Views.UpdateAvailableWindow"
+        Width="544" SizeToContent="Height" CanResize="False" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner">
+    <!-- frmUpdateAvailable; OK downloads the setup (the release page off Windows), Ignore leaves it until the next start -->
+    <StackPanel Margin="12" Spacing="8">
+        <Border BorderThickness="1" BorderBrush="Gray" Padding="4">
+            <TextBlock x:Name="Heading" FontSize="29" TextWrapping="Wrap" />
+        </Border>
+        <TextBlock x:Name="Available" FontSize="15" HorizontalAlignment="Center" Text="Available version: " />
+        <DockPanel>
+            <Button Content="Show change log" Click="OnChangeLog" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                <Button Content="OK" MinWidth="75" IsDefault="True" Click="OnOk" />
+                <Button Content="Ignore" MinWidth="75" IsCancel="True" Click="OnIgnore" />
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>

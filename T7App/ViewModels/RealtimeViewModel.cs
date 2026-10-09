@@ -10,6 +10,7 @@ using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using T7;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
@@ -52,7 +53,7 @@ public partial class RealtimeRow(RealtimeSymbol symbol) : ObservableObject
 /// </summary>
 public partial class RealtimeViewModel : DocumentViewModel
 {
-    private readonly MainWindowViewModel m_owner;
+    private readonly T7MainWindowViewModel m_owner;
     private readonly T7Binary m_bin;
     private readonly RealtimeEngine m_engine;
     private readonly CellTracker m_tracker;
@@ -134,7 +135,7 @@ public partial class RealtimeViewModel : DocumentViewModel
     public bool IsNormal => PerformanceMode == 1;
     public bool IsSport => PerformanceMode == 2;
 
-    public RealtimeViewModel(MainWindowViewModel owner, T7Binary bin)
+    public RealtimeViewModel(T7MainWindowViewModel owner, T7Binary bin)
     {
         m_owner = owner;
         m_bin = bin;
@@ -151,7 +152,7 @@ public partial class RealtimeViewModel : DocumentViewModel
     }
 
     /// <summary>rtsymbols.txt: the user rows, kept between sessions.</summary>
-    public string LayoutFile => Path.Combine(SettingsKey.Folder(MainWindowViewModel.Suite), "rtsymbols.txt");
+    public string LayoutFile => Path.Combine(SettingsKey.Folder(m_owner.Suite), "rtsymbols.txt");
 
     private void PushRows() => m_engine.Rows = Rows.Select(r => r.Symbol).ToList();
 
@@ -239,6 +240,8 @@ public partial class RealtimeViewModel : DocumentViewModel
         m_cancel?.Cancel();
         SaveUserRows();
     }
+
+    public override void Closed() => Stop();
 
     /// <summary>Write log marker [F6]: the next line gets IMPORTANTLINE=1.</summary>
     [RelayCommand]

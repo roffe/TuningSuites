@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             xmlns:mc="using:MapControls"
+             x:Class="SuiteApp.Views.MapViewerView"
+             x:DataType="vm:MapViewerViewModel">
+    <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
+                  SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
+                  ReadEcuCommand="{Binding EcuReadCommand}" WriteEcuCommand="{Binding EcuWriteCommand}"
+                  OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
+                  CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
+                  IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
+                  DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
+                  OpenLoopMark="{Binding OpenLoopMark}" LiveCell="{Binding LiveCell}" />
+</UserControl>

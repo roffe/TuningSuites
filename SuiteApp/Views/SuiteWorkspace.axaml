@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="using:SuiteApp.Views"
+             x:Class="SuiteApp.Views.SuiteWorkspace">
+    <!-- the suites' workspace: a dockable symbol list and the documents as inner windows (or tabs) -->
+    <DockControl x:Name="Workspace" InitializeLayout="True" InitializeFactory="True">
+        <DockControl.Factory>
+            <Factory HideToolsOnClose="True" />
+        </DockControl.Factory>
+        <RootDock Id="Root" IsCollapsable="False" CanDrop="False" DefaultDockable="{Binding #MainLayout}">
+            <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal" IsCollapsable="False" CanDrop="False">
+                <ToolDock x:Name="SymbolPane" Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="True" CanDrop="False" CanFloat="False">
+                    <Tool x:Name="SymbolTool" Id="SymbolList" Title="Symbol list" CanClose="False" CanFloat="False" CanDrag="False" x:DataType="Tool">
+                        <v:SymbolListView DataContext="{Binding $parent[Window].DataContext}" />
+                    </Tool>
+                </ToolDock>
+                <ProportionalDockSplitter />
+                <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False" CanDrop="False" CanFloat="False">
+                    <DocumentDock.DocumentTemplate>
+                        <DocumentTemplate>
+                            <ContentControl x:DataType="Document" Content="{Binding Context}" />
+                        </DocumentTemplate>
+                    </DocumentDock.DocumentTemplate>
+                </DocumentDock>
+            </ProportionalDock>
+        </RootDock>
+    </DockControl>
+</UserControl>

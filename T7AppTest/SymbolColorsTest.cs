@@ -20,7 +20,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 Assert.IsTrue(await vm.OpenFileAsync(file, true));
                 const string symbol = "ActualIn.p_AirInlet";
 

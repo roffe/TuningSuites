@@ -13,6 +13,8 @@ using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7App.ViewModels;
 using T7App.Views;
+using SuiteApp.Views;
+using SuiteApp.ViewModels;
 
 namespace T7AppTest
 {
@@ -49,6 +51,13 @@ namespace T7AppTest
             Directory.Delete(s_dir, true);
         }
 
+        // the workspace lives in the shared SuiteWorkspace control, with its own name scope
+        private static T? WorkspacePart<T>(Avalonia.Controls.Window w, string name) where T : class =>
+            Avalonia.Controls.NameScope.GetNameScope(w.GetLogicalDescendants().OfType<SuiteWorkspace>().First())!.Find<T>(name);
+
+        private static Dock.Avalonia.Controls.DockControl DockHost(Avalonia.Controls.Window w) =>
+            WorkspacePart<Dock.Avalonia.Controls.DockControl>(w, "Workspace")!;
+
         private static void Save(Avalonia.Controls.Window w, string name)
         {
             WriteableBitmap frame = w.CaptureRenderedFrame()!;
@@ -65,7 +74,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 string? info = null;
@@ -143,7 +152,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 vm.Settings.ProjectFolder = Path.Combine(s_dir, "Projects");
                 vm.Settings.RequestProjectNotes = true;
                 vm.AskText = _ => Task.FromResult<string?>("leaner at idle");
@@ -217,7 +226,7 @@ namespace T7AppTest
             binB.WriteSymbol(binB.FileAddress(map), changed, false);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(a, true));
@@ -263,7 +272,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -288,7 +297,7 @@ namespace T7AppTest
                 settingsWindow.Close();
                 settings.Apply(vm.Settings);
                 vm.SettingsChanged();
-                Assert.IsFalse(T7App.Views.SymbolNumberConverter.Hex);
+                Assert.IsFalse(SuiteApp.Views.SymbolNumberConverter.Hex);
                 Assert.IsNull(((MapViewerViewModel)vm.SelectedViewer!).SyncGroup);
                 var settings2 = new SettingsViewModel(vm.Settings) { ShowAddressesInHex = true, SynchronizeMapviewers = true };
                 settings2.Apply(vm.Settings);
@@ -328,7 +337,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -417,7 +426,7 @@ namespace T7AppTest
             File.WriteAllLines(log, lines);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 System.Collections.Generic.IReadOnlyList<string>? offered = null;
@@ -469,7 +478,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -493,7 +502,7 @@ namespace T7AppTest
                         ((Avalonia.Media.ISolidColorBrush)t.Foreground!).Color, t.Text);
                 Avalonia.Application.Current.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
                 vm.SearchText = "";
-                var docs = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!;
+                var docs = DockHost(window);
                 var dock = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Dock.Avalonia.Controls.DocumentDockControl>().First().DataContext as Dock.Model.Controls.IDocumentDock;
                 Assert.HasCount(2, dock!.VisibleDockables!);
                 var ign = (MapViewerViewModel)vm.Viewers[0];
@@ -572,7 +581,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1600, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -610,7 +619,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -652,11 +661,12 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                var sid = new SidInfoViewModel(vm.Binary!, T7.SidInfo.Read(vm.Binary!)!);
+                var bin = (T7.T7Binary)vm.Binary!;
+                var sid = new SidInfoViewModel(bin, T7.SidInfo.Read(bin)!);
                 Assert.IsFalse(sid.Rows[0].CanEdit);
-                var choice = vm.Binary!.FindAny("In.v_Vehicle")!;
+                var choice = bin.FindAny("In.v_Vehicle")!;
                 sid.Rows[2].T7Symbol = "In.v_Vehicle";
                 Assert.AreEqual(choice.Flash_start_address.ToString("X6"), sid.Rows[2].AddressText);
                 sid.Rows[2].Symbol = "Toolong";
@@ -702,7 +712,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -735,7 +745,7 @@ namespace T7AppTest
                 vm.SelectedViewer = axes;
                 Save(window, "axisbrowser");
 
-                var about = new AboutWindow("2.5.0");
+                var about = window.NewAboutWindow("2.5.0");
                 about.Show();
                 Save(about, "about");
                 about.Close();
@@ -760,7 +770,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -793,7 +803,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -854,7 +864,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
 

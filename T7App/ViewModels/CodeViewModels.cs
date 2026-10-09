@@ -8,6 +8,7 @@ using AvaloniaHex.Document;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
@@ -144,5 +145,15 @@ public partial class HexViewerViewModel : DocumentViewModel
         File.Copy(FileName, FileName + "-backup" + DateTime.Now.Ticks, true);
         File.WriteAllBytes(FileName, Document.Memory.ToArray());
         IsModified = false;
+    }
+
+    /// <summary>Closing with changes: "Do you want to save changes?" Yes / No / Cancel.</summary>
+    public override async System.Threading.Tasks.Task<bool> CanCloseAsync(MainWindowViewModel owner)
+    {
+        if (!IsModified || owner.AskYesNoCancel == null) return true;
+        bool? save = await owner.AskYesNoCancel("Do you want to save changes?");
+        if (save == null) return false;
+        if (save == true) Save();
+        return true;
     }
 }

@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        x:Class="SuiteApp.Views.FloatingDocumentWindow"
+        x:DataType="vm:DocumentViewModel"
+        Title="{Binding Title}" Width="900" Height="700">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="4" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <Button Content="Dock back into main window" HorizontalAlignment="Right" Click="OnDock" />
+        </Border>
+        <ContentControl Content="{Binding}" />
+    </DockPanel>
+</Window>

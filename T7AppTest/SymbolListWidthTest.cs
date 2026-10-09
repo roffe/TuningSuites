@@ -7,6 +7,7 @@ using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7App.ViewModels;
 using T7App.Views;
+using SuiteApp.Views;
 
 namespace T7AppTest
 {
@@ -21,7 +22,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(() =>
             {
-                var window = new MainWindow { DataContext = new MainWindowViewModel(), Width = 1500, Height = 950 };
+                var window = new MainWindow { DataContext = new T7MainWindowViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 window.CaptureRenderedFrame();
                 double before = SymbolListWidth(window);
@@ -35,13 +36,13 @@ namespace T7AppTest
                 Assert.IsGreaterThan(before + 150, dragged);
                 window.Close();
 
-                window = new MainWindow { DataContext = new MainWindowViewModel(), Width = 1500, Height = 950 };
+                window = new MainWindow { DataContext = new T7MainWindowViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 window.CaptureRenderedFrame();
                 Assert.AreEqual(dragged, SymbolListWidth(window), 2);
                 window.Close();
                 // the other tests start from the default width
-                using (var settings = CommonSuite.SettingsKey.Open(MainWindowViewModel.Suite)) settings.DeleteValue("SymbolListProportion");
+                using (var settings = CommonSuite.SettingsKey.Open("T7SuitePro")) settings.DeleteValue("SymbolListProportion");
                 return true;
             }, default).GetAwaiter().GetResult();
         }
@@ -63,12 +64,12 @@ namespace T7AppTest
         {
             s_session!.Dispatch(() =>
             {
-                var window = new MainWindow { DataContext = new MainWindowViewModel(), Width = 1500, Height = 950 };
+                var window = new MainWindow { DataContext = new T7MainWindowViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 double docked = DocumentsLeft(window);
                 Assert.IsGreaterThan(300, docked);
-                var factory = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!.Factory!;
-                var tool = Avalonia.Controls.NameScope.GetNameScope(window)!.Find<Dock.Model.Avalonia.Controls.Tool>("SymbolTool")!;
+                var factory = DockHost(window).Factory!;
+                var tool = WorkspacePart<Dock.Model.Avalonia.Controls.Tool>(window, "SymbolTool")!;
                 factory.PinDockable(tool);
                 Assert.IsLessThan(50, DocumentsLeft(window), "only the pinned tab strip left of the windows");
                 factory.UnpinDockable(tool);
@@ -86,15 +87,15 @@ namespace T7AppTest
             System.IO.File.Copy(System.IO.Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 vm.Settings.HideSymbolTable = true;
                 try
                 {
                     var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                     window.Show();
                     Assert.IsLessThan(50, DocumentsLeft(window));
-                    var factory = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!.Factory!;
-                    var tool = Avalonia.Controls.NameScope.GetNameScope(window)!.Find<Dock.Model.Avalonia.Controls.Tool>("SymbolTool")!;
+                    var factory = DockHost(window).Factory!;
+                    var tool = WorkspacePart<Dock.Model.Avalonia.Controls.Tool>(window, "SymbolTool")!;
                     Assert.IsTrue(factory.IsDockablePinned(tool));
                     Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                     factory.PreviewPinnedDockable(tool);

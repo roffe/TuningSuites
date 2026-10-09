@@ -9,6 +9,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7App.ViewModels;
+using SuiteApp.ViewModels;
 
 namespace T7AppTest
 {
@@ -50,14 +51,14 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new T7App.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.OpenSymbolByName("IgnNormCal.Map");
                 vm.OpenSymbolByName("BFuelCal.Map");
                 window.CaptureRenderedFrame();
-                var docs = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!;
+                var docs = DockHost(window);
                 var dock = (Dock.Model.Controls.IDocumentDock)window.GetVisualDescendants().OfType<Dock.Avalonia.Controls.DocumentDockControl>().First().DataContext!;
                 var ign = (MapViewerViewModel)vm.Viewers[0];
                 var back = dock.VisibleDockables!.First(d => d.Context == ign);
@@ -107,7 +108,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new T7App.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -141,14 +142,14 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new MainWindowViewModel();
+                var vm = new T7MainWindowViewModel();
                 var window = new T7App.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.OpenSymbolByName("IgnNormCal.Map");
                 vm.OpenSymbolByName("BFuelCal.Map");
                 window.CaptureRenderedFrame();
-                var docs = window.FindControl<Dock.Avalonia.Controls.DockControl>("Workspace")!;
+                var docs = DockHost(window);
                 var dock = (Dock.Model.Controls.IDocumentDock)window.GetVisualDescendants().OfType<Dock.Avalonia.Controls.DocumentDockControl>().First().DataContext!;
                 int Shown()
                 {

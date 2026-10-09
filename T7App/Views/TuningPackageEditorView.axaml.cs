@@ -23,7 +23,7 @@ public partial class TuningPackageEditorView : UserControl
     // the symbol list's selection stands in for T7Suite's drag and drop
     private void OnAdd(object? sender, RoutedEventArgs e)
     {
-        if (Owner?.DataContext is MainWindowViewModel main) Vm.Add(main.SelectedSymbols);
+        if (Owner?.DataContext is T7MainWindowViewModel main) Vm.Add(main.SelectedSymbols);
     }
 
     private void OnRemove(object? sender, RoutedEventArgs e) => Vm.Remove(Grid.SelectedItems.OfType<TuningPackageRow>());

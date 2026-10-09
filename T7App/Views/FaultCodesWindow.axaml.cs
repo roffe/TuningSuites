@@ -8,11 +8,11 @@ namespace T7App.Views;
 /// <summary>frmFaultcodes: the codes read from the ECU; Clear clears the selected one and reads them again.</summary>
 public partial class FaultCodesWindow : Window
 {
-    private readonly MainWindowViewModel? m_vm;
+    private readonly T7MainWindowViewModel? m_vm;
 
     public FaultCodesWindow() => InitializeComponent();
 
-    public FaultCodesWindow(MainWindowViewModel vm, List<FaultCode> codes) : this()
+    public FaultCodesWindow(T7MainWindowViewModel vm, List<FaultCode> codes) : this()
     {
         m_vm = vm;
         Grid.ItemsSource = codes;

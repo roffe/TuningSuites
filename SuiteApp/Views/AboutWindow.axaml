@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SuiteApp.Views.AboutWindow"
+        Title="About..." Width="330" SizeToContent="Height" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <!-- frmAbout: the white title band, the credits, the support note and Ok -->
+    <StackPanel>
+        <Border Background="White" BorderBrush="#A0A0A0" BorderThickness="0,0,0,1" Padding="8,10">
+            <TextBlock x:Name="Heading" FontSize="29" FontStyle="Italic" Foreground="Black"
+                       HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </Border>
+        <StackPanel Margin="12,10,12,12" Spacing="10">
+            <TextBlock x:Name="Created" TextWrapping="Wrap" />
+            <StackPanel Spacing="4">
+                <TextBlock Text="Special thanks go out to:" />
+                <TextBlock x:Name="Thanks" TextWrapping="Wrap" Foreground="Green" />
+                <TextBlock x:Name="Signoff" TextWrapping="Wrap" Foreground="#FF1FBF" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock x:Name="Support" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="Ok" MinWidth="80" HorizontalContentAlignment="Center" VerticalAlignment="Bottom" IsDefault="True" IsCancel="True" Click="OnOk" />
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -1,51 +1,13 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:T7App.ViewModels"
-             xmlns:v="using:T7App.Views"
-             xmlns:mc="using:MapControls"
+             xmlns:s="using:SuiteApp"
              x:Class="T7App.App"
              RequestedThemeVariant="Default">
     <Application.Styles>
         <StyleInclude Source="avares://SuiteApp/SuiteTheme.axaml" />
     </Application.Styles>
-    <!-- the documents' views, here so floating document windows find them too -->
+    <!-- the documents' views by name (FooViewModel → FooView), here so floating document windows find them too -->
     <Application.DataTemplates>
-        <DataTemplate DataType="vm:MapViewerViewModel">
-            <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
-                          SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
-                          ReadEcuCommand="{Binding EcuReadCommand}" WriteEcuCommand="{Binding EcuWriteCommand}"
-                          OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
-                          CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
-                          IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
-                          DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
-                          OpenLoopMark="{Binding OpenLoopMark}" LiveCell="{Binding LiveCell}" />
-        </DataTemplate>
-        <DataTemplate DataType="vm:CompareResultsViewModel">
-            <v:CompareResultsView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:RealtimeViewModel">
-            <v:RealtimeView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:LogViewerViewModel">
-            <v:LogViewerView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:AirmassResultViewModel">
-            <v:AirmassResultView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:TuningPackageEditorViewModel">
-            <v:TuningPackageEditorView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:AxisBrowserViewModel">
-            <v:AxisBrowserView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:DisassemblyViewModel">
-            <v:DisassemblyView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:HexViewerViewModel">
-            <v:HexViewerView />
-        </DataTemplate>
-        <DataTemplate DataType="vm:SearchResultsViewModel">
-            <v:SearchResultsView />
-        </DataTemplate>
+        <s:ViewLocator />
     </Application.DataTemplates>
 </Application>

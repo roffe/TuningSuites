@@ -3,6 +3,7 @@ using System.IO;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
@@ -23,7 +24,7 @@ public partial class SearchMapsViewModel : ObservableObject
 }
 
 /// <summary>"Search results: file": the symbols found, opened like from the symbol list.</summary>
-public class SearchResultsViewModel(MainWindowViewModel owner, string file, List<SymbolHelper> results) : DocumentViewModel
+public class SearchResultsViewModel(T7MainWindowViewModel owner, string file, List<SymbolHelper> results) : DocumentViewModel
 {
     public override string Title => $"Search results: {Path.GetFileName(file)}";
 

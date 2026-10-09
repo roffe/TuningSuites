@@ -1,11 +1,10 @@
-<Window xmlns="https://github.com/avaloniaui"
+<sv:SuiteMainWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
-        xmlns:v="using:T7App.Views"
-        xmlns:mc="using:MapControls"
-        xmlns:cs="using:CommonSuite"
+        xmlns:svm="using:SuiteApp.ViewModels"
+        xmlns:sv="using:SuiteApp.Views"
         x:Class="T7App.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
+        x:DataType="vm:T7MainWindowViewModel"
         Title="{Binding Title}"
         Icon="/T7Suite.ico"
         Width="1400" Height="900"
@@ -14,6 +13,19 @@
         <KeyBinding Gesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" />
         <KeyBinding Gesture="F6" Command="{Binding WriteLogMarkerCommand}" />
     </Window.KeyBindings>
+    <Window.Resources>
+        <!-- the symbol list's row menu (gridViewSymbols' context menu) -->
+        <ContextMenu x:Key="SymbolListMenu" x:DataType="vm:T7MainWindowViewModel">
+            <MenuItem Header="Read symbol from ECU" Click="OnReadSymbolFromEcu" />
+            <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
+            <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
+            <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
+            <MenuItem Header="Browse axis info" Click="OnBrowseAxes" />
+            <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
+            <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
+            <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
+        </ContextMenu>
+    </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <!-- T7Suite's ribbon: its pages as menus, a page's groups between separators, buttons column by column -->
@@ -22,10 +34,10 @@
                 <MenuItem x:Name="RecentMenu" Header="_Recent" ItemsSource="{Binding Recent}">
                     <MenuItem.Styles>
                         <!-- only Recent's own entries; "MenuItem > MenuItem" would also match Recent itself, which sits inside File -->
-                        <Style Selector="MenuItem#RecentMenu > MenuItem" x:DataType="vm:RecentFile">
+                        <Style Selector="MenuItem#RecentMenu > MenuItem" x:DataType="svm:RecentFile">
                             <Setter Property="Header" Value="{Binding Name}" />
                             <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
-                            <Setter Property="Command" Value="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).OpenRecentCommand}" />
+                            <Setter Property="Command" Value="{Binding $parent[Window].((vm:T7MainWindowViewModel)DataContext).OpenRecentCommand}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
                         </Style>
                     </MenuItem.Styles>
@@ -146,58 +158,7 @@
             </MenuItem>
         </Menu>
 
-        <!-- ribbonStatusBar1: open/normal binary, file name, SRAM file, CAN status, update check; progress and read-only state on the right.
-             The accent bar with white text and dividers is the ribbon skin's; empty items are hidden as T7Suite showed nothing for them -->
-        <Border DockPanel.Dock="Bottom" Padding="4,2" Background="{DynamicResource SystemAccentColorDark1}" TextElement.Foreground="White">
-            <Border.Styles>
-                <Style Selector="TextBlock.status">
-                    <Setter Property="Padding" Value="8,0" />
-                    <Setter Property="VerticalAlignment" Value="Center" />
-                    <Setter Property="IsVisible" Value="{Binding $self.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                </Style>
-            </Border.Styles>
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <TextBlock Classes="status" Text="{Binding ProgressText}" />
-                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    <TextBlock Classes="status" Text="{Binding ReadOnlyText}" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Classes="status" Text="{Binding OpenClosedText}" />
-                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding OpenClosedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    <TextBlock Classes="status" Text="{Binding FileNameText}" />
-                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding SramFileText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    <TextBlock Classes="status" Text="{Binding SramFileText}" />
-                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding CanStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    <TextBlock Classes="status" Text="{Binding CanStatus}" />
-                    <Border Width="1" Margin="0,2" Background="#80FFFFFF" IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    <TextBlock Classes="status" Text="{Binding UpdateText}" />
-                </StackPanel>
-            </DockPanel>
-        </Border>
-
-        <!-- T7Suite's workspace: a dockable symbol list and the documents as inner windows (or tabs) -->
-        <DockControl x:Name="Workspace" InitializeLayout="True" InitializeFactory="True">
-            <DockControl.Factory>
-                <Factory HideToolsOnClose="True" />
-            </DockControl.Factory>
-            <RootDock Id="Root" IsCollapsable="False" CanDrop="False" DefaultDockable="{Binding #MainLayout}">
-                <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal" IsCollapsable="False" CanDrop="False">
-                    <ToolDock x:Name="SymbolPane" Id="SymbolPane" Proportion="0.28" Alignment="Left" IsCollapsable="True" CanDrop="False" CanFloat="False">
-                        <Tool x:Name="SymbolTool" Id="SymbolList" Title="Symbol list" CanClose="False" CanFloat="False" CanDrag="False" x:DataType="Tool">
-                            <v:SymbolListView DataContext="{Binding $parent[Window].DataContext}" />
-                        </Tool>
-                    </ToolDock>
-                    <ProportionalDockSplitter />
-                    <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False" CanDrop="False" CanFloat="False">
-                        <DocumentDock.DocumentTemplate>
-                            <DocumentTemplate>
-                                <ContentControl x:DataType="Document" Content="{Binding Context}" />
-                            </DocumentTemplate>
-                        </DocumentDock.DocumentTemplate>
-                    </DocumentDock>
-                </ProportionalDock>
-            </RootDock>
-        </DockControl>
+        <sv:StatusBar DockPanel.Dock="Bottom" />
+        <sv:SuiteWorkspace />
     </DockPanel>
-</Window>
+</sv:SuiteMainWindow>

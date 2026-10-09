@@ -6,6 +6,7 @@ using System.Linq;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 
@@ -41,7 +42,7 @@ public partial class TuningPackageRow : ObservableObject
 /// frmEditTuningPackage ("Edit a tuning package..."): a package's maps; symbols added from the symbol list, rows removed, a row's
 /// map opened next to the bin's in a viewer whose save goes back into the row, and the result saved as a new .t7p.
 /// </summary>
-public class TuningPackageEditorViewModel(MainWindowViewModel owner, T7Binary bin) : DocumentViewModel
+public class TuningPackageEditorViewModel(T7MainWindowViewModel owner, T7Binary bin) : DocumentViewModel
 {
     public override string Title => "Edit a tuning package" + (PackageFile == null ? "" : ": " + Path.GetFileName(PackageFile));
 

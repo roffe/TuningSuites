@@ -8,6 +8,7 @@ using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using T7;
 using SuiteApp.Controls;
+using SuiteApp.ViewModels;
 
 namespace T7App.ViewModels;
 

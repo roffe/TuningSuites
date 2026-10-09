@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SuiteApp.ViewModels"
+        xmlns:cs="using:CommonSuite"
+        x:Class="SuiteApp.Views.LogbookWindow"
+        x:DataType="vm:LogbookViewModel"
+        Title="Project logbook" Width="900" Height="500" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="12">
+        <Button DockPanel.Dock="Bottom" Content="Close" HorizontalAlignment="Right" MinWidth="80" Margin="0,8,0,0" IsCancel="True" Click="OnClose" />
+        <TextBlock DockPanel.Dock="Top" Text="Logbook entries" FontWeight="SemiBold" Margin="0,0,0,6" />
+        <DataGrid ItemsSource="{Binding Lines}" IsReadOnly="True" GridLinesVisibility="Horizontal">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="cs:SuiteProject+LogbookLine" Header="Timestamp" Binding="{Binding Timestamp, Mode=OneWay, StringFormat='dd/MM/yyyy HH:mm:ss'}" />
+                <DataGridTextColumn x:DataType="cs:SuiteProject+LogbookLine" Header="Type" Binding="{Binding Type}" />
+                <DataGridTextColumn x:DataType="cs:SuiteProject+LogbookLine" Header="Description" Binding="{Binding Description}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

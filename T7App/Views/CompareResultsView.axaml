@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:T7App.ViewModels"
              xmlns:v="using:T7App.Views"
+             xmlns:sv="using:SuiteApp.Views"
              xmlns:t7="using:T7"
              x:Class="T7App.Views.CompareResultsView"
              x:DataType="vm:CompareResultsViewModel">
@@ -23,7 +24,7 @@
         <DataGrid.Columns>
             <DataGridTextColumn x:DataType="t7:CompareRow" Header="Symbol" Binding="{Binding SymbolName, Mode=OneWay}" Width="200" />
             <DataGridTextColumn x:DataType="t7:CompareRow" Header="Description" Binding="{Binding Description, Mode=OneWay}" Width="260" />
-            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Length (bytes)" Binding="{Binding LengthBytes, Mode=OneWay, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+            <DataGridTextColumn x:DataType="t7:CompareRow" Header="Length (bytes)" Binding="{Binding LengthBytes, Mode=OneWay, Converter={x:Static sv:SymbolNumberConverter.Instance}}" />
             <DataGridTextColumn x:DataType="t7:CompareRow" Header="Percentage of values different" Binding="{Binding Percentage, Mode=OneWay, StringFormat='{}{0:F1}'}" />
             <DataGridTextColumn x:DataType="t7:CompareRow" Header="Number of values different" Binding="{Binding Differences, Mode=OneWay}" />
             <DataGridTextColumn x:DataType="t7:CompareRow" Header="Average difference" Binding="{Binding AverageDifference, Mode=OneWay, StringFormat='{}{0:F1}'}" />
