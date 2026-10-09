@@ -54,3 +54,18 @@ public class SymbolNumberConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
+
+/// <summary>CompareResults rows: Salmon when missing in the original file, CornflowerBlue when missing in the compare file.</summary>
+public class CompareRowColorConverter : IValueConverter
+{
+    public static readonly CompareRowColorConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
+    {
+        T7.CompareRow { MissingInOriFile: true } => Brushes.Salmon,
+        T7.CompareRow { MissingInCompareFile: true } => Brushes.CornflowerBlue,
+        _ => null,
+    };
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}

@@ -26,8 +26,19 @@
                     </MenuItem.Styles>
                 </MenuItem>
                 <Separator />
+                <MenuItem Header="Save as..." Click="OnSaveAs" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Export to S19" Click="OnExportS19" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import XML descriptor" Click="OnImportXml" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import CSV descriptor" Click="OnImportCsv" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import AS2 descriptor" Click="OnImportAs2" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="Settings" Click="OnSettings" />
+                <Separator />
                 <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
             </MenuItem>
+            <MenuItem x:Name="QuickMapsMenu" Header="_Maps" IsEnabled="{Binding HasFile}" />
+            <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
             <MenuItem Header="_Project">
                 <MenuItem Header="Create a project" Click="OnCreateProject" />
                 <MenuItem Header="Open a project" Click="OnOpenProject" />
@@ -45,6 +56,14 @@
             </MenuItem>
             <MenuItem Header="_Actions">
                 <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="Compare symbols with other binary" Click="OnCompareToFile" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare to original file" Command="{Binding CompareToOriginalCommand}" IsEnabled="{Binding OriginalFile, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <MenuItem Header="Compare binary with other binary" Click="OnBinaryCompare" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Transfer maps" Click="OnTransferMaps" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <MenuItem Header="_Information">
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
@@ -67,8 +86,16 @@
                 <TextBox DockPanel.Dock="Top" Margin="6,0,6,6" PlaceholderText="Search" Text="{Binding SearchText}" />
                 <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}"
                           CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
-                          GridLinesVisibility="Horizontal" SelectionMode="Single"
+                          GridLinesVisibility="Horizontal" SelectionMode="Extended"
                           DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
+                            <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
+                            <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
+                            <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
                             <DataTemplate x:DataType="cs:SymbolHelper">
@@ -93,7 +120,7 @@
             <DockPanel Grid.Column="2">
                 <TabStrip DockPanel.Dock="Top" ItemsSource="{Binding Viewers}" SelectedItem="{Binding SelectedViewer}">
                     <TabStrip.ItemTemplate>
-                        <DataTemplate x:DataType="vm:MapViewerViewModel">
+                        <DataTemplate x:DataType="vm:DocumentViewModel">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
                                 <Button Content="✕" Padding="4,0" Background="Transparent" VerticalAlignment="Center"
@@ -109,16 +136,22 @@
                             <Panel />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:MapViewerViewModel">
-                            <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding MapName}"
+                    <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="vm:MapViewerViewModel">
+                            <mc:MapViewer Map="{Binding Map}" ViewType="{Binding ViewType}" SyncGroup="{Binding SyncGroup}"
                                           SaveCommand="{Binding SaveCommand}" ReadCommand="{Binding ReadCommand}" EditAxisCommand="{Binding EditAxisCommand}"
                                           CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
                                           IsVisible="{Binding IsSelected}" IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
                                           DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
                                           OpenLoopMark="{Binding OpenLoopMark}" />
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:CompareResultsViewModel">
+                            <v:CompareResultsView IsVisible="{Binding IsSelected}" />
+                        </DataTemplate>
+                        <DataTemplate DataType="vm:SearchResultsViewModel">
+                            <v:SearchResultsView IsVisible="{Binding IsSelected}" />
+                        </DataTemplate>
+                    </ItemsControl.DataTemplates>
                 </ItemsControl>
             </DockPanel>
         </Grid>

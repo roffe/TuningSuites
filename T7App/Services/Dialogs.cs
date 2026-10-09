@@ -53,6 +53,20 @@ namespace T7App.Services
             return await dlg.ShowDialog<bool?>(owner);
         }
 
+        /// <summary>A long read-only text in a scrolling, resizable window (reports, binary diffs).</summary>
+        public static Task Text(Window owner, string caption, string text)
+        {
+            var dlg = new Window { Title = caption, Width = 900, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var ok = new Button { Content = "Ok", MinWidth = 80, IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
+            ok.Click += (_, _) => dlg.Close();
+            var body = new DockPanel { Margin = new Thickness(12) };
+            DockPanel.SetDock(ok, Dock.Bottom);
+            body.Children.Add(ok);
+            body.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, FontFamily = new Avalonia.Media.FontFamily("monospace") });
+            dlg.Content = body;
+            return dlg.ShowDialog(owner);
+        }
+
         /// <summary>One line of text (frmChangeNote "Remark for change"); null when cancelled.</summary>
         public static async Task<string?> Prompt(Window owner, string caption)
         {

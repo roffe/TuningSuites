@@ -11,7 +11,7 @@ using T7;
 namespace T7App.ViewModels;
 
 /// <summary>One open map, set up the way frmMain.StartTableViewer configured a MapViewerEx, saved like tabdet_onSymbolSave.</summary>
-public partial class MapViewerViewModel : ObservableObject
+public partial class MapViewerViewModel : DocumentViewModel
 {
     public required MainWindowViewModel Owner { get; init; }
     public required T7Binary Binary { get; init; }
@@ -24,20 +24,22 @@ public partial class MapViewerViewModel : ObservableObject
 
     public string FileName => Binary.FileName;
 
-    /// <summary>The dock panel title T7Suite used, also how an already open viewer is found.</summary>
-    public string Title => $"Symbol: {MapName} [{Path.GetFileName(FileName)}]";
+    public override string Title => TitleOverride ?? $"Symbol: {MapName} [{Path.GetFileName(FileName)}]";
+
+    /// <summary>"Symbol difference: ..." and other titles than a plain map's.</summary>
+    public string? TitleOverride { get; init; }
 
     [ObservableProperty]
     private MapViewType _viewType;
-
-    [ObservableProperty]
-    private bool _isSelected;
 
     public bool IsReadOnly { get; init; }
     public bool IsRedWhite { get; init; }
     public bool DisableColors { get; init; }
     public bool GraphVisible { get; init; }
     public OpenLoopMark OpenLoopMark { get; init; }
+
+    /// <summary>Viewers of the same map follow each other's selection and 3D view, when "Synchronize mapviewers" is on.</summary>
+    public string? SyncGroup => Owner.Settings.SynchronizeMapviewers ? MapName : null;
 
     /// <summary>The axis symbols, when the bin has them ("Edit x-axis" / "Edit y-axis").</summary>
     public string? XAxisSymbol { get; init; }
@@ -82,13 +84,16 @@ public partial class MapViewerViewModel : ObservableObject
         if ((x ? XAxisSymbol : YAxisSymbol) is { } axis) Owner.OpenSymbolByName(axis);
     }
 
-    /// <summary>Null when the map has no data in the file (it only lives in the ECU's SRAM).</summary>
-    public static MapViewerViewModel? Create(MainWindowViewModel owner, T7Binary bin, SymbolHelper sh)
+    /// <summary>
+    /// Null when the map has no data in the file (it only lives in the ECU's SRAM). content replaces the file's bytes (a
+    /// difference map), readOnly makes a compare viewer, title replaces "Symbol: name [file]".
+    /// </summary>
+    public static MapViewerViewModel? Create(MainWindowViewModel owner, T7Binary bin, SymbolHelper sh, byte[]? content = null, bool readOnly = false, string? title = null)
     {
         AppSettings settings = owner.Settings;
         string name = sh.SmartVarname;
         int address = bin.FileAddress(sh);
-        byte[]? content = bin.ReadSymbol(sh);
+        content ??= bin.ReadSymbol(sh);
         if (address < 0 || content == null || content.Length == 0) return null;
 
         var (xAxis, yAxis, xDescr, yDescr, zDescr) = T7Binary.AxisSymbols(name);
@@ -121,6 +126,8 @@ public partial class MapViewerViewModel : ObservableObject
             MapName = name,
             Map = map,
             Address = address,
+            IsReadOnly = readOnly,
+            TitleOverride = title,
             ViewType = viewType <= (int)MapViewType.Ascii ? (MapViewType)viewType : MapViewType.Easy,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,

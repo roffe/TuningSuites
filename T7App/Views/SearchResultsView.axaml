@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T7App.ViewModels"
+             xmlns:v="using:T7App.Views"
+             xmlns:cs="using:CommonSuite"
+             x:Class="T7App.Views.SearchResultsView"
+             x:DataType="vm:SearchResultsViewModel">
+    <DataGrid x:Name="Grid" ItemsSource="{Binding Results}" IsReadOnly="True" SelectionMode="Single" GridLinesVisibility="Horizontal"
+              DoubleTapped="OnDoubleTapped">
+        <DataGrid.Columns>
+            <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Symbol" Binding="{Binding Varname, Mode=OneWay}" Width="220" />
+            <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" Binding="{Binding Flash_start_address, Mode=OneWay, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+            <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" Binding="{Binding Length, Mode=OneWay, Converter={x:Static v:SymbolNumberConverter.Instance}}" />
+            <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" Binding="{Binding Description, Mode=OneWay}" Width="*" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

@@ -7,9 +7,9 @@ using CommonSuite;
 namespace T7
 {
 
-    class IdaProIdcFile
+    public class IdaProIdcFile
     {
-        protected internal static void create(string filename, SymbolCollection symbols)
+        public static void create(string filename, SymbolCollection symbols)
         {
             string outputfile = Path.GetDirectoryName(filename);
             outputfile = Path.Combine(outputfile, Path.GetFileNameWithoutExtension(filename) + "-autogen.idc");

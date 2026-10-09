@@ -61,6 +61,11 @@ namespace CommonSuite
             m_dirty = true;
         }
 
+        public void DeleteValue(string name)
+        {
+            if (m_values.Remove(m_prefix + name)) m_dirty = true;
+        }
+
         public void Dispose()
         {
             if (!m_dirty) return;

@@ -74,7 +74,7 @@ namespace T7AppTest
                 grid.Focus();
                 window.KeyPress(Avalonia.Input.Key.Enter, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Enter, null);
                 Assert.HasCount(1, vm.Viewers);
-                MapViewerViewModel viewer = vm.Viewers[0];
+                MapViewerViewModel viewer = (MapViewerViewModel)vm.Viewers[0];
                 Assert.IsFalse(viewer.IsReadOnly);
 
                 // edit, save, the file has it and its checksum still verifies
@@ -103,7 +103,7 @@ namespace T7AppTest
                 // Edit x-axis opens the axis symbol
                 viewer.EditAxisCommand.Execute(true);
                 Assert.HasCount(2, vm.Viewers);
-                Assert.AreEqual(viewer.XAxisSymbol, vm.Viewers[1].MapName);
+                Assert.AreEqual(viewer.XAxisSymbol, ((MapViewerViewModel)vm.Viewers[1]).MapName);
 
                 // firmware information: edit, OK, the bin has it
                 FirmwareInfoViewModel fw = vm.FirmwareInfo()!;
@@ -154,7 +154,7 @@ namespace T7AppTest
 
                 // a map save inside the project: transaction with the asked note, logbook line
                 vm.OpenSymbolByName("IgnNormCal.Map");
-                MapViewerViewModel viewer = vm.Viewers.Single(v => v.MapName == "IgnNormCal.Map");
+                MapViewerViewModel viewer = vm.Viewers.OfType<MapViewerViewModel>().Single(v => v.MapName == "IgnNormCal.Map");
                 int original = viewer.Map[0];
                 viewer.Map.Set([(0, original + 10)]);
                 await viewer.SaveCommand.ExecuteAsync(null);
@@ -199,6 +199,124 @@ namespace T7AppTest
         }
 
         [TestMethod]
+        public void CompareAndTransfer()
+        {
+            string a = Path.Combine(s_dir, "cmp-a.bin"), b = Path.Combine(s_dir, "cmp-b.bin"), target = Path.Combine(s_dir, "cmp-target.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), a, true);
+            File.Copy(a, b, true);
+            File.Copy(a, target, true);
+            var binB = T7.T7Binary.Open(b, 0, false);
+            var map = binB.Find("IgnNormCal.Map");
+            byte[] changed = binB.ReadSymbol(map);
+            changed[1] ^= 0x10;
+            binB.WriteSymbol(binB.FileAddress(map), changed, false);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(a, true));
+                await vm.CompareToFileAsync(b);
+                var results = (CompareResultsViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Compare results: cmp-b.bin", results.Title);
+                var row = results.Rows.Cast<T7.CompareRow>().Single(r => !r.MissingInCompareFile && !r.MissingInOriFile);
+                Assert.AreEqual("IgnNormCal.Map", row.SymbolName);
+                Assert.AreEqual(1, row.Differences); // one changed byte is one changed value (T7Suite showed 0)
+                Save(window, "compare");
+
+                results.Open(row);
+                var mine = vm.Viewers.OfType<MapViewerViewModel>().Single(v => v.FileName == vm.Binary!.FileName);
+                var theirs = vm.Viewers.OfType<MapViewerViewModel>().Single(v => v.Title == "Symbol: IgnNormCal.Map [cmp-b.bin]");
+                Assert.IsFalse(mine.IsReadOnly);
+                Assert.IsTrue(theirs.IsReadOnly);
+                Assert.AreNotEqual(mine.Map[0], theirs.Map[0]);
+
+                results.ShowDifferenceMap(row);
+                var diff = vm.Viewers.OfType<MapViewerViewModel>().Single(v => v.Title == "Symbol difference: IgnNormCal.Map [cmp-b.bin]");
+                Assert.AreEqual(0x10, diff.Map[0]);
+                Assert.AreEqual(0, diff.Map[1]);
+
+                string csv = Path.Combine(s_dir, "diffexport.csv");
+                results.ExportCsv(csv);
+                StringAssert.Contains(File.ReadAllText(csv), "IgnNormCal.Map");
+
+                // transfer the changed map from b (opened) into target
+                Assert.IsTrue(await vm.OpenPlainFileAsync(b, true));
+                var report = vm.TransferMaps(target, ["IgnNormCal.Map"]);
+                CollectionAssert.Contains(report, "Transferred symbol IgnNormCal.Map successfully");
+                CollectionAssert.Contains(vm.LastTransferSelection().ToList(), "IgnNormCal.Map");
+                CollectionAssert.AreEqual(changed, T7.T7Binary.Open(target, 0, false).ReadSymbol(map));
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
+        public void MenusSettingsAndImports()
+        {
+            string file = Path.Combine(s_dir, "menus.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+
+                var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                Assert.AreEqual("Fuel", ((MenuItem)quick.Items[0]!).Header);
+                var ve = (MenuItem)((MenuItem)quick.Items[0]!).Items[0]!;
+                Assert.AreEqual("VE map", ve.Header);
+                ve.Command!.Execute(ve.CommandParameter);
+                Assert.AreEqual("BFuelCal.Map", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
+
+                vm.AddToMyMaps(vm.Binary!.Find("IgnNormCal.Map"));
+                var my = window.FindControl<MenuItem>("MyMapsMenu")!;
+                var directly = my.Items.OfType<MenuItem>().Single(i => (string?)i.Header == "Directly added");
+                Assert.AreEqual("IgnNormCal.Map", ((MenuItem)directly.Items[0]!).Header);
+
+                // settings: hex off applies to the symbol list at once
+                var settings = new SettingsViewModel(vm.Settings) { ShowAddressesInHex = false, SynchronizeMapviewers = false };
+                var settingsWindow = new SettingsWindow { DataContext = settings };
+                settingsWindow.Show();
+                Save(settingsWindow, "settings");
+                settingsWindow.Close();
+                settings.Apply(vm.Settings);
+                vm.SettingsChanged();
+                Assert.IsFalse(T7App.Views.SymbolNumberConverter.Hex);
+                Assert.IsNull(((MapViewerViewModel)vm.SelectedViewer!).SyncGroup);
+                var settings2 = new SettingsViewModel(vm.Settings) { ShowAddressesInHex = true, SynchronizeMapviewers = true };
+                settings2.Apply(vm.Settings);
+                vm.SettingsChanged();
+
+                var myMapsWindow = new MyMapsWindow { DataContext = new MyMapsViewModel(T7.MapMenus.LoadMyMaps(vm.MyMapsFile)) };
+                myMapsWindow.Show();
+                Save(myMapsWindow, "mymaps");
+                myMapsWindow.Close();
+
+                // search map content: a results tab, its row opens the map
+                var searchWindow = new SearchMapsWindow { DataContext = new SearchMapsViewModel() };
+                searchWindow.Show();
+                searchWindow.Close();
+                vm.SearchMaps(new T7.MapSearchOptions(false, 0, true, "IgnNormCal.Map", true, false, false, 0));
+                var found = (SearchResultsViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Search results: menus.bin", found.Title);
+                Save(window, "search");
+                found.Open(found.Results.First(r => r.Varname == "IgnNormCal.Map"));
+                Assert.AreEqual("IgnNormCal.Map", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
+
+                // a CSV descriptor import through the view model refreshes the list
+                string csv = Path.Combine(s_dir, "names.csv");
+                var target = vm.Binary!.Find("IgnNormCal.Map");
+                File.WriteAllText(csv, $"{target.Symbol_number};My.Ignition;;;\n");
+                vm.ImportSymbols(bin => T7.SymbolFiles.ImportCsv(bin, csv));
+                Assert.AreEqual("My.Ignition", target.Userdescription);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        [TestMethod]
         public void OpenBinaryAndMap()
         {
             s_session!.Dispatch(async () =>
@@ -232,7 +350,7 @@ namespace T7AppTest
                 vm.OpenSymbolCommand.Execute(map);
                 vm.OpenSymbolCommand.Execute(map); // the second open focuses the first viewer
                 Assert.HasCount(1, vm.Viewers);
-                MapViewerViewModel viewer = vm.Viewers[0];
+                MapViewerViewModel viewer = (MapViewerViewModel)vm.Viewers[0];
                 Assert.AreEqual("Symbol: IgnNormCal.Map [5168646.bin]", viewer.Title);
                 Assert.AreEqual(18, viewer.Map.Cols);
                 Assert.IsNotNull(viewer.Map.OpenLoop);

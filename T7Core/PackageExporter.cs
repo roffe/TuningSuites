@@ -9,7 +9,7 @@ using NLog;
 
 namespace T7
 {
-    class PackageExporter
+    public class PackageExporter
     {
         private readonly Logger logger = LogManager.GetCurrentClassLogger();
 

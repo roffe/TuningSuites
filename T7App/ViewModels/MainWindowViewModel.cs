@@ -33,7 +33,7 @@ public partial class MainWindowViewModel : ObservableObject
     public AppSettings Settings { get; } = new(new T7SuiteRegistry());
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasFile))]
+    [NotifyPropertyChangedFor(nameof(HasFile), nameof(OriginalFile))]
     private T7Binary? _binary;
 
     [ObservableProperty]
@@ -46,7 +46,7 @@ public partial class MainWindowViewModel : ObservableObject
     private SymbolHelper? _selectedSymbol;
 
     [ObservableProperty]
-    private MapViewerViewModel? _selectedViewer;
+    private DocumentViewModel? _selectedViewer;
 
     [ObservableProperty]
     private string _title = $"T7SuitePro v{Version}";
@@ -85,7 +85,8 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Ok / Cancel question, answered by the view.</summary>
     public Func<string, Task<bool>>? AskOkCancel { get; set; }
 
-    public ObservableCollection<MapViewerViewModel> Viewers { get; } = new();
+    /// <summary>The open tabs: map viewers, compare results.</summary>
+    public ObservableCollection<DocumentViewModel> Viewers { get; } = new();
     public ObservableCollection<RecentFile> Recent { get; } = new();
 
     /// <summary>A message for the user (frmInfoBox / MessageBox), shown by the view.</summary>
@@ -178,7 +179,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (Binary is not { } bin || sh == null) return;
         if (sh.Flash_start_address == 0 && sh.Start_address == 0) return;
         string title = $"Symbol: {sh.SmartVarname} [{Path.GetFileName(bin.FileName)}]";
-        if (Viewers.FirstOrDefault(v => v.Title == title && v.FileName == bin.FileName) is { } open)
+        if (Viewers.OfType<MapViewerViewModel>().FirstOrDefault(v => v.Title == title && v.FileName == bin.FileName) is { } open)
         {
             SelectedViewer = open;
             return;
@@ -193,7 +194,19 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedViewer = viewer;
     }
 
-    partial void OnSelectedViewerChanged(MapViewerViewModel? oldValue, MapViewerViewModel? newValue)
+    /// <summary>Shows a document, or the open one with the same title (T7Suite reused dock panels by title).</summary>
+    public void ShowDocument(DocumentViewModel document)
+    {
+        if (Viewers.FirstOrDefault(v => v.Title == document.Title) is { } open)
+        {
+            SelectedViewer = open;
+            return;
+        }
+        Viewers.Add(document);
+        SelectedViewer = document;
+    }
+
+    partial void OnSelectedViewerChanged(DocumentViewModel? oldValue, DocumentViewModel? newValue)
     {
         if (oldValue != null) oldValue.IsSelected = false;
         if (newValue != null) newValue.IsSelected = true;
@@ -213,20 +226,20 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task CloseViewer(MapViewerViewModel viewer) => CloseViewerAsync(viewer);
+    private Task CloseViewer(DocumentViewModel viewer) => CloseViewerAsync(viewer);
 
     /// <summary>MapViewerEx's close: unsaved changes ask Yes (save) / No (discard) / Cancel (keep open). False when cancelled.</summary>
-    public async Task<bool> CloseViewerAsync(MapViewerViewModel viewer)
+    public async Task<bool> CloseViewerAsync(DocumentViewModel viewer)
     {
-        if (viewer.Map.Mutated && AskYesNoCancel != null)
+        if (viewer is MapViewerViewModel { Map.Mutated: true } map && AskYesNoCancel != null)
         {
             SelectedViewer = viewer;
             bool? save = await AskYesNoCancel("Data was mutated, do you want to save these changes in you binary?");
             if (save == null) return false;
             if (save == true)
             {
-                await viewer.SaveCommand.ExecuteAsync(null);
-                if (viewer.Map.Mutated) return false; // the save failed, keep the changes on screen
+                await map.SaveCommand.ExecuteAsync(null);
+                if (map.Map.Mutated) return false; // the save failed, keep the changes on screen
             }
         }
         int i = Viewers.IndexOf(viewer);
@@ -238,7 +251,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Before the app closes: every viewer with unsaved changes gets the same question. False when cancelled.</summary>
     public async Task<bool> CloseMutatedViewersAsync()
     {
-        foreach (MapViewerViewModel viewer in Viewers.Where(v => v.Map.Mutated).ToList())
+        foreach (MapViewerViewModel viewer in Viewers.OfType<MapViewerViewModel>().Where(v => v.Map.Mutated).ToList())
             if (!await CloseViewerAsync(viewer)) return false;
         return true;
     }
@@ -270,6 +283,122 @@ public partial class MainWindowViewModel : ObservableObject
         bool ok = await OpenFileAsync(path, showMessage);
         Settings.LastOpenedType = 0;
         return ok;
+    }
+
+    // ---- map menus ----
+
+    public string MyMapsFile => Path.Combine(SettingsKey.Folder(Suite), "mymaps.xml");
+
+    /// <summary>My Maps changed: the view rebuilds its menu.</summary>
+    public event Action? MyMapsChanged;
+
+    public void SaveMyMaps(IEnumerable<MapShortcut> maps)
+    {
+        MapMenus.SaveMyMaps(MyMapsFile, maps);
+        MyMapsChanged?.Invoke();
+    }
+
+    public void AddToMyMaps(SymbolHelper sh)
+    {
+        MapMenus.AddToMyMaps(MyMapsFile, sh.Varname);
+        MyMapsChanged?.Invoke();
+    }
+
+    /// <summary>A map button (quick maps / My Maps). The AFR feedback maps of My Maps need the realtime features.</summary>
+    [RelayCommand]
+    private void OpenShortcut(MapShortcut shortcut)
+    {
+        if (shortcut.Symbol is "targetafr" or "feedbackafr")
+        {
+            ShowInfo("The AFR maps come with the realtime features.");
+            return;
+        }
+        OpenSymbolByName(shortcut.Symbol);
+    }
+
+    /// <summary>After the settings dialog: what applies at once (T7Suite's SetupDisplayOptions); viewer settings apply to new viewers.</summary>
+    public void SettingsChanged()
+    {
+        Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
+        Symbols?.Refresh();
+    }
+
+    /// <summary>A descriptor import changed names: the list shows them (the import saved &lt;bin&gt;.xml).</summary>
+    public void ImportSymbols(Action<T7Binary> import)
+    {
+        if (Binary is not { } bin) return;
+        try
+        {
+            import(bin);
+        }
+        catch (Exception e) when (e is IOException or System.Data.DataException or System.Xml.XmlException)
+        {
+            ShowInfo("Failed to import: " + e.Message);
+        }
+        Symbols?.Refresh();
+    }
+
+    /// <summary>Search map content: "No results found..." or a results tab.</summary>
+    public void SearchMaps(MapSearchOptions options)
+    {
+        if (Binary is not { } bin) return;
+        List<SymbolHelper> hits = MapSearch.Find(bin, options);
+        if (hits.Count == 0) ShowInfo("No results found...");
+        else ShowDocument(new SearchResultsViewModel(this, bin.FileName, hits));
+    }
+
+    // ---- compare ----
+
+    /// <summary>"Compare symbols with other binary": the results open as a tab.</summary>
+    public async Task CompareToFileAsync(string otherFile)
+    {
+        if (Binary is not { } bin || bin.Symbols.Count == 0) return;
+        if (!T7Binary.IsValidFile(otherFile))
+        {
+            ShowInfo("File is not a Trionic 7 binary file!");
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            var (other, rows) = await Task.Run(() =>
+            {
+                T7Binary o = T7Binary.Open(otherFile, Settings.ApplicationLanguage, false);
+                return (o, T7Compare.Compare(bin, o, Settings.ApplicationLanguage));
+            });
+            ShowDocument(new CompareResultsViewModel(this, bin, other, rows));
+        }
+        finally
+        {
+            IsBusy = false;
+            ProgressText = "";
+        }
+    }
+
+    /// <summary>"Compare to original file": the stock bin with this part number, when Binaries has exactly one.</summary>
+    public string? OriginalFile => Binary is { } bin ? T7Compare.OriginalFile(bin) : null;
+
+    [RelayCommand]
+    private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
+
+    /// <summary>Transfer maps: the selection remembered between runs (T7Suite's TransferSettings key).</summary>
+    public HashSet<string> LastTransferSelection()
+    {
+        using var key = SettingsKey.Open(Suite, "TransferSettings");
+        return key.GetValueNames().ToHashSet();
+    }
+
+    public List<string> TransferMaps(string target, HashSet<string> selected)
+    {
+        using (var key = SettingsKey.Open(Suite, "TransferSettings"))
+        {
+            foreach (string old in key.GetValueNames()) key.DeleteValue(old);
+            foreach (string name in selected) key.SetValue(name, "1");
+        }
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        List<string> report = T7Compare.TransferMaps(Binary!, target, selected, Settings.ApplicationLanguage, Settings.AutoFixFooter, TransactionLog);
+        TransactionsAdded(before);
+        return report;
     }
 
     // ---- projects ----
@@ -410,7 +539,8 @@ public partial class MainWindowViewModel : ObservableObject
     /// <summary>Viewers of the file without unsaved changes show the file again after it changed underneath them.</summary>
     public void RefreshViewers(string file)
     {
-        foreach (MapViewerViewModel v in Viewers.Where(v => v.FileName == file && !v.Map.Mutated)) v.ReadCommand.Execute(null);
+        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(v => v.FileName == file && !v.Map.Mutated && !v.IsReadOnly))
+            v.ReadCommand.Execute(null);
     }
 
     [RelayCommand]

@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="16" Spacing="12">
+        <HeaderedContentControl Header="User interface settings">
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
+                <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
+                <CheckBox Grid.Row="0" Grid.Column="1" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}" />
+                <CheckBox Grid.Row="1" Grid.Column="0" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}" />
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}" />
+                <CheckBox Grid.Row="2" Grid.Column="0" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}" />
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="Write timestamp marker in binary" IsChecked="{Binding WriteTimestampInBinary}" />
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Default view type for maps" Margin="0,8,0,0" />
+                <ComboBox Grid.Row="4" Grid.Column="0" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="Closed loop indicator" Margin="0,8,0,0" />
+                <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ClosedLoopIndicators}" SelectedIndex="{Binding StandardFill}" HorizontalAlignment="Stretch" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="General settings">
+            <StackPanel Spacing="2">
+                <WrapPanel>
+                    <CheckBox Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" Margin="0,0,24,0" />
+                    <CheckBox Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" Margin="0,0,24,0" />
+                    <CheckBox Content="Auto fix footer" IsChecked="{Binding AutoFixFooter}" Margin="0,0,24,0" />
+                    <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}" />
+                </WrapPanel>
+                <TextBlock Text="Project folder" Margin="0,8,0,0" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="..." Margin="4,0,0,0" Click="OnBrowse" />
+                    <TextBox Text="{Binding ProjectFolder}" MinWidth="420" />
+                </DockPanel>
+            </StackPanel>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>
