@@ -22,7 +22,7 @@ namespace T7CoreTest
                 var maps = MapMenus.QuickMaps(T7Binary.Open(file, 0, false));
                 Assert.AreEqual("VE map", maps.First(m => m.Symbol == "BFuelCal.Map").Caption);
                 Assert.IsFalse(maps.Any(m => m.Symbol == "IgnE85Cal.fi_AbsMap"));
-                CollectionAssert.AreEqual(new[] { "Fuel", "Ignition", "Knock", "Boost calibration", "Boost control", "Airmass request", "Limiters" },
+                CollectionAssert.AreEqual(new[] { "Fuel", "Ignition", "Airmass request", "Boost control", "Knock", "Limiters" },
                     maps.Select(m => m.Group).Distinct().ToArray());
 
                 string xml = Path.Combine(dir, "mymaps.xml");

@@ -8,8 +8,8 @@ namespace T7
     public record MapShortcut(string Group, string Caption, string Symbol);
 
     /// <summary>
-    /// The ribbon's map buttons with DynamicTuningMenu's rules (BioPower names and E85 maps, B308 second maps, gas maps,
-    /// boost control and cab gear limit only when the bin has them), and My Maps (mymaps.xml).
+    /// The Tuning page's map buttons in its group and button order, with DynamicTuningMenu's rules (BioPower names and E85 maps,
+    /// B308 second maps, gas maps, boost control and cab gear limit only when the bin has them), and My Maps (mymaps.xml).
     /// </summary>
     public static class MapMenus
     {
@@ -37,11 +37,13 @@ namespace T7
             m.Add(new("Ignition", "Knock pull map", "IgnKnkCal.IndexMap"));
             m.Add(new("Ignition", "Max knock pull", "KnkFuelCal.fi_MapMaxOff"));
 
-            m.Add(new("Knock", "Knock enrichment", "KnkFuelCal.EnrichmentMap"));
-            m.Add(new("Knock", "Knock sensitivity", "KnkDetCal.RefFactorMap"));
+            m.Add(new("Airmass request", "Pedal request map", "PedalMapCal.m_RequestMap"));
+            m.Add(new("Airmass request", "Air/torque calibration", "TorqueCal.m_AirTorqMap"));
+            m.Add(new("Airmass request", "Nom. torque map", "TorqueCal.M_NominalMap"));
+            m.Add(new("Airmass request", "Pedal request airmass (Y)", "TorqueCal.m_PedYSP"));
+            m.Add(new("Airmass request", "Air/torque (X)", "TorqueCal.M_EngXSP"));
+            m.Add(new("Airmass request", "Nom. torque map (X)", "TorqueCal.m_AirXSP"));
 
-            m.Add(new("Boost calibration", "Boost calibr. map", "BoostCal.RegMap"));
-            m.Add(new("Boost calibration", "Overboost map", "TorqueCal.M_OverBoostTab"));
             if (bin.Has("BoostCal.RegMap"))
             {
                 m.Add(new("Boost control", "Boost calibr.", "BoostCal.RegMap"));
@@ -50,26 +52,22 @@ namespace T7
                 m.Add(new("Boost control", "D factors", "BoostCal.DMap"));
             }
 
-            m.Add(new("Airmass request", "Pedal request map", "PedalMapCal.m_RequestMap"));
-            m.Add(new("Airmass request", "Pedal request airmass (Y)", "TorqueCal.m_PedYSP"));
-            m.Add(new("Airmass request", "Nom. torque map", "TorqueCal.M_NominalMap"));
-            m.Add(new("Airmass request", "Nom. torque map (X)", "TorqueCal.m_AirXSP"));
-            m.Add(new("Airmass request", "Air/torque calibration", "TorqueCal.m_AirTorqMap"));
-            m.Add(new("Airmass request", "Air/torque (X)", "TorqueCal.M_EngXSP"));
+            m.Add(new("Knock", "Knock enrichment", "KnkFuelCal.EnrichmentMap"));
+            m.Add(new("Knock", "Knock sensitivity", "KnkDetCal.RefFactorMap"));
 
-            m.Add(new("Limiters", "Engine trq (M)", "TorqueCal.M_EngMaxTab"));
-            m.Add(new("Limiters", "Engine trq (A)", "TorqueCal.M_EngMaxAutTab"));
-            if (bio) m.Add(new("Limiters", "Engine trq for E85", "TorqueCal.M_EngMaxE85Tab"));
-            if (bio && bin.Has("TorqueCal.M_EngMaxE85TabAut")) m.Add(new("Limiters", "Engine trq for E85 (A)", "TorqueCal.M_EngMaxE85TabAut"));
             m.Add(new("Limiters", "Airmass (M)", "BstKnkCal.MaxAirmass"));
             m.Add(new("Limiters", "Airmass (A)", "BstKnkCal.MaxAirmassAu"));
-            m.Add(new("Limiters", "Gear trq (M)", "TorqueCal.M_ManGearLim"));
-            if (bin.Has("TorqueCal.M_CabGearLim")) m.Add(new("Limiters", "Gear trq (cab)", "TorqueCal.M_CabGearLim"));
-            m.Add(new("Limiters", "Gear trq (5th)", "TorqueCal.M_5GearLimTab"));
-            m.Add(new("Limiters", "Overboost", "TorqueCal.M_OverBoostTab"));
-            m.Add(new("Limiters", "Fuel cut", "FCutCal.m_AirInletLimit"));
             m.Add(new("Limiters", "RPM limiter", "MaxSpdCal.n_EngLimAir"));
+            m.Add(new("Limiters", "Engine trq (M)", "TorqueCal.M_EngMaxTab"));
+            m.Add(new("Limiters", "Engine trq (A)", "TorqueCal.M_EngMaxAutTab"));
+            m.Add(new("Limiters", "Fuel cut", "FCutCal.m_AirInletLimit"));
+            if (bio) m.Add(new("Limiters", "Engine trq for E85", "TorqueCal.M_EngMaxE85Tab"));
+            if (bio && bin.Has("TorqueCal.M_EngMaxE85TabAut")) m.Add(new("Limiters", "Engine trq for E85 (A)", "TorqueCal.M_EngMaxE85TabAut"));
             m.Add(new("Limiters", "Speed limiter", "MaxVehicCal.v_MaxSpeed"));
+            m.Add(new("Limiters", "Gear trq (M)", "TorqueCal.M_ManGearLim"));
+            m.Add(new("Limiters", "Gear trq (5th)", "TorqueCal.M_5GearLimTab"));
+            if (bin.Has("TorqueCal.M_CabGearLim")) m.Add(new("Limiters", "Gear trq (cab)", "TorqueCal.M_CabGearLim"));
+            m.Add(new("Limiters", "Overboost", "TorqueCal.M_OverBoostTab"));
             return m;
         }
 
