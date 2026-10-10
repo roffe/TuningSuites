@@ -178,6 +178,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Symbol names coloured by their prefix (T7Suite did, T8Suite didn't).</summary>
     public virtual bool ColorSymbolNames => true;
 
+    /// <summary>T5Suite coloured the description cell by the symbol's category instead.</summary>
+    public virtual bool ColorDescriptionsByCategory => false;
+
     /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
     public virtual bool ShowsMapPreview => false;
 

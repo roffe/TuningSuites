@@ -212,4 +212,6 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         symbols.OrderByDescending(s => s.XdfCategory).ThenBy(s => s.XdfSubcategory).ThenBy(s => s.Description, StringComparer.Ordinal);
 
     public override bool ColorSymbolNames => false;
+
+    public override bool ColorDescriptionsByCategory => true;
 }

@@ -76,6 +76,7 @@ public partial class SymbolListView : UserControl
         base.OnDataContextChanged(e);
         if (Vm is not { } vm) return;
         SymbolColorConverter.Enabled = vm.ColorSymbolNames;
+        CategoryColorConverter.Enabled = vm.ColorDescriptionsByCategory;
         FilterChoice.IsVisible = vm.SymbolFilters.Count > 0;
         // the suite's columns in its order, the others dropped; hidden ones stay in the column chooser
         var wanted = vm.SymbolColumns;

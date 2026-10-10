@@ -91,8 +91,11 @@ namespace T5AppTest
                 CollectionAssert.AreEqual(new[] { "Description", "Symbol" },
                     grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
 
-                // the main fuel map: 16 x 16 bytes, its factor and axes
+                // the main fuel map: 16 x 16 bytes, its factor and axes; its row coloured as a Fuel symbol
                 vm.SelectedSymbol = bin.Find("Insp_mat!");
+                grid.ScrollIntoView(vm.SelectedSymbol, null);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "symbols");
                 window.CaptureRenderedFrame();
                 grid.Focus();
                 window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
