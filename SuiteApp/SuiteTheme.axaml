@@ -137,9 +137,13 @@
     <Style Selector="MdiDocumentWindow /template/ Border#PART_DragHandle">
         <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
-    <!-- the light skin's MDI workspace, window titles and map headers (resources above, unset in Dark) -->
+    <!-- the light skin's MDI workspace, window titles and map headers (resources above, unset in Dark); the empty workspace's
+         embossed logo, in both (Dock's empty content host covers the workspace while no document is open) -->
     <Style Selector="MdiDocumentControl /template/ Border#PART_Root > Grid">
         <Setter Property="Background" Value="{DynamicResource SuiteMdiWorkspaceBrush}" />
+    </Style>
+    <Style Selector="MdiDocumentControl /template/ ContentControl#PART_EmptyContentHost">
+        <Setter Property="Background" Value="{x:Static c:WorkspaceLogo.Brush}" />
     </Style>
     <Style Selector="MdiDocumentWindow /template/ Border#PART_Header">
         <Setter Property="TextElement.Foreground" Value="{DynamicResource SuiteMdiTitleBrush}" />
