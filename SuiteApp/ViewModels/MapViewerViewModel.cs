@@ -155,6 +155,7 @@ public partial class MapViewerViewModel : DocumentViewModel
             ZName = zDescr,
             // TryToAddOpenLoopTables, drawn only on load
             OpenLoop = bin.OpenLoopLimits(name)?.Select(v => (double)((int)v * xScale / 100)).ToArray(),
+            Marks = owner.CellMarks(bin, name),
         };
 
         int viewType = (int)settings.DefaultViewType;
@@ -172,7 +173,7 @@ public partial class MapViewerViewModel : DocumentViewModel
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
-            OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
+            OpenLoopMark = owner.OpenLoopMarkStyle,
             XAxisSymbol = xAxis != "" && bin.Find(xAxis) != null ? xAxis : null,
             YAxisSymbol = yAxis != "" && bin.Find(yAxis) != null ? yAxis : null,
         };

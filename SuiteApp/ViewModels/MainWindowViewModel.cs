@@ -11,6 +11,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MapControls;
 
 namespace SuiteApp.ViewModels;
 
@@ -193,6 +194,12 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
     public virtual bool ShowsMapPreview => false;
+
+    /// <summary>The closed-loop mark: T7Suite's "Closed loop indicator" setting (none by default).</summary>
+    public virtual OpenLoopMark OpenLoopMarkStyle => (OpenLoopMark)Math.Clamp(Settings.StandardFill, 0, 2);
+
+    /// <summary>A map's cell marks in a bin (T5Suite's padlocks and adaption boxes); null for none, as T7Suite and T8Suite.</summary>
+    public virtual Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => null;
 
     /// <summary>The map preview popup's content: the hovered map from the file, read only; null for one that only lives in SRAM.</summary>
     public MapViewerViewModel? MapPreview(SymbolHelper sh) => ShowsMapPreview && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;

@@ -117,7 +117,7 @@ public partial class T7MainWindowViewModel
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
-            OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
+            OpenLoopMark = OpenLoopMarkStyle,
         };
     }
 

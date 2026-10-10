@@ -9,6 +9,8 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace MapControls;
 
@@ -16,8 +18,8 @@ public enum OpenLoopMark { None = 0, Box = 1, Corner = 2 }
 
 /// <summary>
 /// The map table, replacing MapViewerEx's DevExpress grid: X axis values as column headers, Y axis values as row headers,
-/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's red-white variant and online tint kept), open-loop marks
-/// and the yellow live cell. Behaves like the DevExpress grid T7Suite used: click/drag selects a block, Shift extends, Ctrl
+/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's red-white variant and online tint kept), open-loop marks,
+/// T5Suite's padlocks and adaption / sample boxes (<see cref="MapData.Marks"/>) and the yellow live cell. Behaves like the DevExpress grid T7Suite used: click/drag selects a block, Shift extends, Ctrl
 /// toggles, arrows move (Shift extends); typing, F2 or Enter edits the focused cell (Easy view starts from the value with two
 /// decimals) and Enter commits it; +/- step by one, PgUp/PgDn by ten (0x10 in hex), Home sets max, End zero, on every
 /// selected cell. Ctrl+C copies the shown text tab separated like DevExpress did; the context menu has T7Suite's copy/paste
@@ -70,6 +72,7 @@ public class MapGrid : Control
     private static readonly IBrush SelectionLine = new ImmutableSolidColorBrush(Color.FromRgb(0x33, 0x66, 0xFF));
     private static readonly IBrush FocusLine = new ImmutableSolidColorBrush(Color.FromRgb(0x10, 0x30, 0xC0));
     private static readonly IBrush OpenLoopCorner = new ImmutableSolidColorBrush(Colors.SeaGreen);
+    private static readonly Lazy<Bitmap> Padlock = new(() => new Bitmap(AssetLoader.Open(new Uri("avares://MapControls/Assets/lock.png"))));
 
     private readonly HashSet<int> m_selected = new();
     private int m_anchorRow, m_anchorCol, m_focusRow, m_focusCol;
@@ -186,8 +189,9 @@ public class MapGrid : Control
         for (int c = 0; c < map.Cols; c++) widest = Math.Max(widest, Text(XLabel(c), b).Width);
         double rowHeader = 0;
         for (int r = 0; r < map.Rows; r++) rowHeader = Math.Max(rowHeader, Text(YLabel(r), b).Width);
-        // the open-loop box takes 3 px on each side of the text
-        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (OpenLoopMark == OpenLoopMark.Box ? 10 : 4);
+        // the open-loop box (and T5Suite's boxes inside it) take 3 px on each side of the text, on a map that can have them
+        bool boxes = OpenLoopMark == OpenLoopMark.Box && map.OpenLoop != null || map.Marks != null;
+        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (boxes ? 10 : 4);
         if (widest > 0 && room < widest) m_textScale = Math.Clamp(room / widest, 0.6, 1);
         double headerW = 0;
         for (int r = 0; r < map.Rows; r++) headerW = Math.Max(headerW, Text(YLabel(r), b).Width);
@@ -288,6 +292,12 @@ public class MapGrid : Control
                     // outline the mark like the text; the green → red scale keeps T7Suite's plain corner
                     if (ColorMode != ColorBlindMode.Normal && !OnlineMode && !IsRedWhite) markOutline = new Pen(HeatColor.TextOn(col), 1);
                 }
+                // T5Suite's marks, none in the ASCII view as there; its padlock first, 10 × 10 at the right ending where the closed-loop box
+                // begins, which goes over it like the 1 px boxes (left out of a cell too narrow for it)
+                CellMarks marks = ViewType != MapViewType.Ascii ? map.Marks?.Invoke(i) ?? default : default;
+                bool padlock = marks.Locked && rect.Width >= 12;
+                if (padlock)
+                    context.DrawImage(Padlock.Value, new Rect(Snap(rect.Right - Pixels(3)) - 10, Snap(rect.Center.Y - 5), 10, 10));
                 if (OpenLoopMark != OpenLoopMark.None && map.IsOpenLoop(i))
                 {
                     if (OpenLoopMark == OpenLoopMark.Box)
@@ -308,6 +318,16 @@ public class MapGrid : Control
                         context.DrawGeometry(OpenLoopCorner, markOutline, tri);
                     }
                 }
+                // T5Suite's 1 px boxes just inside the closed-loop box: the knock adaption area blue, the boost adaption range white,
+                // the AFR samples from red (1) to green (255 and up)
+                Rect inner = rect.Deflate(Pixels(3));
+                if (marks.KnockAdaption) Frame(context, Brushes.Blue, inner, 1);
+                if (marks.BoostAdaption) Frame(context, Brushes.White, inner, 1);
+                if (marks.Samples > 0)
+                {
+                    byte n = (byte)Math.Min(marks.Samples, 255);
+                    Frame(context, new ImmutableSolidColorBrush(Color.FromRgb((byte)(255 - n), n, 0)), inner, 1);
+                }
                 if (i == m_highlight)
                 {
                     context.FillRectangle(Highlight, rect);
@@ -319,8 +339,11 @@ public class MapGrid : Control
                 if (editing) context.FillRectangle(Brushes.White, rect.Deflate(1));
                 if (editing) textBrush = Brushes.Black;
                 var t = Text(editing ? m_input : map.FormatCell(i, ViewType), textBrush);
-                // an edit wider than the cell keeps its end, where the typing is, in view
-                double x = editing && t.Width > rect.Width - 2 ? rect.Right - 1 - t.Width : rect.X + Math.Max(1, (rect.Width - t.Width) / 2);
+                // an edit wider than the cell keeps its end, where the typing is, in view; a value centred left of its padlock (T5Suite's
+                // text was left aligned) but clear of the closed-loop box, over the padlock in a narrow cell; the live cell hides the padlock
+                bool besidePadlock = padlock && !editing && i != m_highlight;
+                double x = editing && t.Width > rect.Width - 2 ? rect.Right - 1 - t.Width
+                    : rect.X + Math.Max(besidePadlock ? 3 : 1, (rect.Width - (besidePadlock ? 13 : 0) - t.Width) / 2);
                 using (context.PushClip(rect))
                     context.DrawText(t, new Point(x, rect.Y + (rect.Height - t.Height) / 2));
             }

@@ -9,6 +9,12 @@ namespace MapControls;
 public enum MapViewType { Hex = 0, Decimal = 1, Easy = 2, Ascii = 3 }
 
 /// <summary>
+/// T5Suite's marks on a cell: a padlock (locked, or below the knock pressure), in the knock adaption area, in the boost adaption
+/// rpm range, and the AFR samples taken in it (0: none).
+/// </summary>
+public readonly record struct CellMarks(bool Locked, bool KnockAdaption, bool BoostAdaption, int Samples);
+
+/// <summary>
 /// One map (calibration table) as T7Suite's MapViewerEx holds it: raw integers decoded from the symbol's bytes (8-bit
 /// unsigned, or 16-bit big-endian where 0xF001..0xFFFF read as negative), shown and edited as raw values; "Easy" view only
 /// changes the display to raw*factor+offset. Data index i is cell (row i / Cols, col i % Cols) in byte order; with
@@ -36,6 +42,9 @@ public sealed class MapData
 
     /// <summary>Open-loop load limit per data row in X-axis units; a cell is open loop when the limit is above its X value.</summary>
     public double[]? OpenLoop { get; set; }
+
+    /// <summary>T5Suite's marks of a data index, asked at every paint (autotune locks and the AFR samples come while logging); null: none.</summary>
+    public Func<int, CellMarks>? Marks { get; set; }
 
     /// <summary>
     /// Raw values above it read as negative (two's complement). 16-bit cells: 0xF000 (T7 / T8), so only -0xFFF..0xF000 survive a

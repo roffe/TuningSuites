@@ -459,13 +459,15 @@ In the DecimalNBar / EasyNBar views these have their **raw cell value scaled** b
   - `Fuel_knock_mat!` uses `Open_loop_knock!`.
   - The StandardFill setting (T7's black box or green triangle) exists in T5AppSettings but the viewer never reads it: always the box.
 - **Padlock icon** (`db_lock16_h`, 10×10 at the right) on `Ign_map_0!` / `Knock_count_map`:
-  - when `Turbo_press_tab[row] > xaxis[col]`: T5.5 `Knock_press_tab!`, T5.2 16 copies of `Knock_press!`;
+  - when `Turbo_press_tab[dataRow] > xaxis[col]`: T5.5 `Knock_press_tab!`, T5.2 16 copies of `Knock_press!` (the knock pressure: knock detection, and so the ignition autotune, is off below it);
   - or when the cell is locked in IgnitionMaps' lock map.
+  - The data row is taken as `open_loop.Length - 1 - displayRow` (MVE 2453): with lambda control off `open_loop` is null, the exception skips both kinds of padlock.
+  - The lock maps are read by display row (`[displayRow * W + col]`, MVE 2473 / 2507 / 2539) while the autotunes write and check them by data row: autotune locks show upside down, and a cell locked from the menu blocks the mirrored row in the autotune.
   - The AFR lock map gives the same icon on Insp_mat! / Inj_map_0! / TargetAFR / FeedbackAFR / FeedbackvsTargetAFR, the idle AFR lock map on Idle_fuel_korr! and the Idle*AFR maps.
 - **Knock adaption area:**
   - Blue 1-px box where `Kadapt_load_low! ≤ x ≤ Kadapt_load_high!` and `Kadapt_rpm_low!*10 ≤ rpm ≤ Kadapt_rpm_high!*10`.
   - On the last column, a white box over `GetAutoRpmLow..High` (automatic) or `GetManualRpmLow..High`: the **boost adaption** rpm range.
-- **Feedback\*** maps: AFR counter box colour (255−n, n, 0).
+- **Feedback\*** maps: AFR counter box colour (255−n, n, 0), n capped at 255, none at 0 (the IdleFeedback* maps get their counters but don't start with "Feedback", so they show none).
 - **Edited-cell marker** (T7 had none): a yellow triangle in the top-right corner of every cell edited since `InitEditValues` (open, Refresh, Undo). Save doesn't clear it. The ECU marker (orange, top-left) is never set.
 
 **Editing** (MVE 6650 `ValidatingEditor`, 7365 `ShownEditor`). Same as T7 (Easy edits start from F2, `(v−offset)/factor` via `Convert.ToInt32` = round half to even, "Value not valid..."), except the ranges:
