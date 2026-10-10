@@ -134,6 +134,9 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
 
     // ---- firmware information ----
 
+    /// <summary>The file's VIN, from its header (the firmware information's chassis ID).</summary>
+    public override string BinaryVin => FirmwareInfo()?.ChassisID ?? "";
+
     public FirmwareInfoViewModel? FirmwareInfo() =>
         Binary is T7Binary bin && File.Exists(bin.FileName) ? new FirmwareInfoViewModel(T7.FirmwareInfo.Read(bin), Settings.WriteTimestampInBinary) : null;
 

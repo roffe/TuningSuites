@@ -184,6 +184,9 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     }
 
     /// <summary>Actions → Firmware information.</summary>
+    /// <summary>The file's VIN, from the last valid flash block.</summary>
+    public override string BinaryVin => FirmwareInfo()?.ChassisId ?? "";
+
     public FirmwareInfo? FirmwareInfo() => Binary is { } bin && System.IO.File.Exists(bin.FileName) ? T8SuitePro.FirmwareInfo.Read(bin.FileName) : null;
 
     /// <summary>The firmware dialog's OK: the edits (transactions in a project), then the checksum as on open (Form1 3608).</summary>

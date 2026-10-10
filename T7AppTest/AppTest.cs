@@ -553,6 +553,12 @@ namespace T7AppTest
                 var menu = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Menu>().First();
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
                     menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
+                // Actions starts the same in every suite, VIN decoder right under Firmware information
+                CollectionAssert.AreEqual(new[] { "_Verify checksum", "_Firmware information", "VIN decoder", "Browse axis information" },
+                    ((MenuItem)menu.Items[1]!).Items.OfType<MenuItem>().Take(4).Select(m => m.Header as string).ToArray());
+                // the decoder opens with the file's VIN (it was an expander in the firmware dialog)
+                Assert.AreEqual(vm.FirmwareInfo()!.ChassisID, vm.BinaryVin);
+                Assert.AreEqual(17, vm.BinaryVin.Trim().Length);
 
                 // dark theme: the coloured symbol names get black text, the others keep the theme's light text
                 Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;

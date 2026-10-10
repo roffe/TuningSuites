@@ -37,10 +37,6 @@ public partial class MainWindow : SuiteMainWindow
         if (await Vm.ReadEcuInfoAsync() is { } rows) new EcuInfoWindow(rows).Show(this);
     }
 
-    // the file's VIN, from the last valid flash block
-    private async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
-        await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.FirmwareInfo()?.ChassisId ?? "") }.ShowDialog(this);
-
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings);

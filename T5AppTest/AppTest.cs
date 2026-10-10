@@ -93,6 +93,9 @@ namespace T5AppTest
                 var menu = window.GetVisualDescendants().OfType<Menu>().First();
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
                     menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
+                // Actions starts the same in every suite, VIN decoder right under Firmware information
+                CollectionAssert.AreEqual(new[] { "_Verify checksum", "_Firmware information", "VIN decoder", "Browse axis information" },
+                    ((MenuItem)menu.Items[1]!).Items.OfType<MenuItem>().Take(4).Select(m => m.Header as string).ToArray());
                 var fileMenu = menu.Items.OfType<MenuItem>().First().Items.OfType<MenuItem>().Select(m => m.Header as string).ToList();
                 CollectionAssert.IsSubsetOf(new[] { "_Open file...", "Save all", "Settings", "E_xit" }, fileMenu);
                 CollectionAssert.DoesNotContain(fileMenu, "Options and settings");

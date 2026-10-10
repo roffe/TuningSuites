@@ -34,6 +34,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>"T7Suite": message captions.</summary>
     public string Caption { get; }
 
+    /// <summary>The open file's VIN for Actions → VIN decoder; "" where the files carry none (T5).</summary>
+    public virtual string BinaryVin => "";
+
     /// <summary>The window title's name; the settings name unless the suite says otherwise (T5: settings "T5Suite2", title "T5Suite").</summary>
     protected virtual string TitleName => Suite;
 

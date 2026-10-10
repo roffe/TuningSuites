@@ -36,9 +36,6 @@ public partial class MainWindow : SuiteMainWindow
         };
     }
 
-    private async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
-        await new VinDecoderWindow { DataContext = new VinDecoderViewModel("") }.ShowDialog(this);
-
     private async void OnFirmwareOptions(object? sender, RoutedEventArgs e) => await Vm.EditFirmwareAsync();
 
     private async void OnSettings(object? sender, RoutedEventArgs e)

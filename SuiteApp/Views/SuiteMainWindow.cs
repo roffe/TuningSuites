@@ -231,6 +231,10 @@ public partial class SuiteMainWindow : Window
     // the old release notes viewer showed the updater's notes; they're the GitHub releases' now
     protected void OnReleaseNotes(object? sender, RoutedEventArgs e) => Dialogs.OpenWithShell(UpdateCheck.ReleasesPage);
 
+    // Actions → VIN decoder: the open file's VIN decoded, or one typed in
+    protected async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
+        await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.BinaryVin) }.ShowDialog(this);
+
     protected async void OnAbout(object? sender, RoutedEventArgs e)
     {
         string version = Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
