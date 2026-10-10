@@ -1329,3 +1329,1066 @@ Every same-named symbol is copied, RAM-only ones included when the source flash 
 - **"User library"** (File actions, 11642, frmUserLibrary "User library browser"): "Add files" scans a folder recursively for 0x20000 / 0x40000 bins and caches a row each in `<StartupPath>\UserLib.xml` (Filename, Engine type, Stage from `DetermineTuningStage`, Injectors / E85 guessed from max injection × Inj_konst!, Eftersta_fak![13] > 170 or Inj_konst! > 26 → E85, Mapsensor, Torque, T7 BCV, Partnumber, SoftwareID, CPU, RAM locked); "Open selected", "Compare to selected" (only with a file open), "Clear library", "Close".
 - **"Browse tunes in internet repository"** (Online page, frmBrowseTunes): downloads `http://trionic.mobixs.eu/t5tunes/t5tunes.xml`; the site is gone.
 - **"VIN decoder"** (4111, frmDecodeVIN): T5's own `VINDecoder` (Trionic5Tools/VINDecoder.cs): only `YK1…` / `YS3…`; shows Body, Car model, Engine type, Make year, Plant, Series, Turbo ("---" first); no gearbox line and no check-digit line (T7 has both).
+
+## Application shell, settings and projects
+
+Line numbers are `T5Suite2.0/frmMain.cs` unless another file is named. `T5AppSettings` is `Trionic5Tools/T5AppSettings.cs`.
+
+### Startup and shutdown
+
+**Program.cs.** It registers the DevExpress BonusSkins, then runs `Form1(args)`. There is no single-instance check and no exception dialog: the `ThreadException` and `UnhandledException` handlers only log (287, 378). An exception in any ribbon handler is therefore swallowed silently.
+
+**Constructor (285):**
+1. Shows `frmSplash`. The splash is 600×393 with a tiled background image, `lblVersion` = ProductVersion (2.0.30.0, `Properties/AssemblyInfo.cs`), and progress texts "Initializing...", "Loading components...", "Loading settings...", "Starting desktop...".
+2. `_immoValid = true` (311). The licence check above it is commented out (see Help page).
+3. `new T5AppSettings()` and `new SymbolColors(suiteRegistry)`. The SymbolColors object is never used afterwards.
+4. Creates the ECUConnection (CanDevice and wideband values).
+5. Registers the shell verb `SystemFileAssociations\.bin\shell\Edit in T5Suite 2.0\command` (354).
+6. Sets up the BDM callback.
+7. Command line: if `args[0]` ends in `.BIN`, it is remembered **upper-cased** (`args[0].ToUpper()`, 375). `.S19` is ignored, as in T7.
+
+**Form1_Load (2528):**
+1. Creates and disposes a MapViewerEx (a preload).
+2. `InitSkins`.
+3. `SetAdditionalHelpPanelSize`: the symbol description panel under the symbol list is shown only with ShowAdditionalSymbolInformation.
+4. `SetOnlineButtons(false)`.
+5. `LoadMyMaps`.
+
+**Form1_Shown (3605).** This is where T5 loads at startup (T7 does it in Load):
+1. Selects the ribbon page "File".
+2. `SetModeAndFilters` (Advanced mode, below).
+3. Hides the splash.
+4. Opens one of these:
+   - the command-line file, if it exists. It goes through `OpenWorkingFile` directly: no `CloseProject`, `LastOpenedType` is not reset, and the file name is upper-cased in the title.
+   - otherwise, with AutoLoadLastFile, depending on LastOpenedType:
+     - `0`: `OpenWorkingFile(Lastfilename)` if that file exists;
+     - `1`: `OpenProject(Lastprojectname)` if that name is not empty.
+5. Starts the update check (Help page).
+
+**Main window.**
+- Starts maximized, client area 1560×669.
+- Nothing is saved or restored: no window position, no dock layout, no symbol-grid layout (T7/T8 kept SymbolViewLayout.xml).
+- Pages are added in `Pages.Insert(3, ...)` order: File, Actions, Manual tuning, **My Maps**, Tuning wizards, ECU programming, Online tuning, Logfiles, Help.
+
+**Title:**
+
+| When | Title |
+|---|---|
+| Startup, and after `CloseProject` | `T5Suite Professional 2.0` |
+| After a file opens (963) | `T5Suite Professional 2.0 [<file name>]` |
+| After a project opens (7201) | `T5Suite Professional 2.0 [Project: <name>]` |
+
+T7 differs: its title has no "Professional 2.0", carries a version (`T7SuitePro v<ver> [ <file> ]`, with spaces inside the brackets) and has a `[ none ]` state.
+
+**Exit.** "Exit T5Suite 2.0" (hint "Try me!") calls `Close()`. `Form1_FormClosing` (4145) then:
+1. Saves the AFR maps (`SaveMaps`, `SaveIdleMaps`).
+2. Closes the BDM.
+3. Runs `CloseProject` if a project is open.
+4. If online, closes the ECU connection and sleeps 1 s.
+5. Saves `rtsymbols.txt`.
+6. Removes every dock panel except the symbol list, 100 ms each.
+7. Calls `Environment.Exit(0)`.
+
+There is no unsaved-changes prompt. Settings need no saving at exit: every setter writes immediately.
+
+### Status bar
+
+Each item below shows its initial caption first, then the captions the code sets later.
+
+| Item | Side | Captions (where set) |
+|---|---|---|
+| `btnSwitchMode` | left | "Go online"; "Connecting...", "Connected: <swversion>", "Not connected", "Go offline" (1988–2405) |
+| `barStaticItem2` | left | "File: none"; "File: <name>" (962), "No file" after close (8180). The initial and closed texts differ |
+| `barStaticItem3` | left | "SRAM file: none"; "Snapshot: <name>" (4652) |
+| `barStaticItem5` | left | "Mode: offline" / "Mode: online" |
+| `barECUType` | left | "--"; "T5.5" or "T5.2" (933) |
+| `barECUSpeed` | left | "--"; `props.CPUspeed` (943) |
+| `barECULocked` | left | "--"; "RAM locked" or "RAM unlocked" (946) |
+| `btnReadOnly` | left | "--"; at open, "File is READ ONLY" or "File access OK" from `FileInfo.IsReadOnly` (917) |
+| `barItemCombiAdapter` | left | never set |
+| `barStaticItem1` | right | " ECU: Not connected"; " ECU: <swversion>", " ECU: not connected". Drawn disabled |
+| `barStaticItem4` | right | "Idle"; `SetStatusText` (1105) writes every status message here, the update check's included |
+| `barEditItem1` | right | progress bar, 150 px |
+
+### Settings storage
+
+T5Suite 2.0 does **not** use CommonSuite's `AppSettings`. All of its settings are in its own `T5AppSettings` class, stored under **`HKCU\Software\T5Suite2`**. That key sits outside MattiasC (T7/T8: `HKCU\Software\MattiasC\T7SuitePro` / `T8SuitePro`).
+
+**Writing.** Every setter writes its value at once (`SaveRegistrySetting`, 1774), most of them only when the value changed. Bools are written as "True"/"False", ints as DWORD, doubles as `ToString()` in the current culture.
+
+**Scaled doubles.** These are stored ×1000 and divided by 1000 on read: IgnitionAdvancePerCycle, IgnitionRetardFirstKnock, IgnitionRetardFurtherKnocks, GlobalMaximumIgnitionAdvance and MaximumIgnitionAdvancePerSession. The Wideband*Voltage and Wideband*AFR values are also kept ×1000; the settings dialog shows them ÷1000.
+
+**Reading (ctor, 1989).**
+1. If `Software\T5Suite2` is missing, every known value is read from **`HKCU\Software\T5SuitePro`** (T5Suite 1.x) and written to T5Suite2 with `SaveSettings()`. This happens once.
+2. Then all values are read from T5Suite2.
+3. A value that fails to parse is logged and skipped, so its default is kept.
+4. DefaultViewType and MapViewerType values above 3 become 2.
+
+**Other keys.**
+
+| Key | Contents |
+|---|---|
+| `HKCU\Software\MattiasC\T5Suite2\LogFilters\<n>`, `\Channels`, `\SymbolColors` | Written by CommonSuite classes constructed with `T5SuiteRegistry` (`T5Suite2.0/T5SuiteRegistry.cs`, path "T5Suite2"): LogFilters, Channels, frmPlotSelection's SymbolColors |
+| `HKCU\Software\T5SuitePro\SymbolColors` | Read by the LogWorks export (`GetColorFromRegistry`, 3555). 2.0 never writes it, so the colours are 0 unless a 1.x install left values |
+| `HKCU\Software\T5SuitePro\ImmoID` | The licence (Trionic5Immo) |
+| `HKCR\SystemFileAssociations\.bin\shell\Edit in T5Suite 2.0\command` | The shell verb |
+
+There is no MRU list and no `TransferSettings` key.
+
+**Settings folder for files.** `configurationFilesPath = Directory.GetParent(Application.UserAppDataPath)` (280) holds `mymaps.xml` and `rtsymbols.txt`. The assembly's AssemblyCompany is empty, so by the WinForms naming rules (company falls back to the first part of Main's namespace, `T5Suite2._`) this resolves to `%APPDATA%\T5Suite2\T5Suite2.0`. That is derived, not seen on a real install.
+
+The update check writes `input.xml` and `Notes.xml` into the versioned `UserAppDataPath` below that folder. NLog logs to `%APPDATA%\MattiasC\T5\uiLog<date>.txt`.
+
+### Every T5AppSettings value
+
+"Dialog" means the caption in frmSettings or the sub-dialog that edits the value. "Registry only" means nothing in the UI sets it.
+
+**Offline / UI:**
+
+| Registry name | Default | Dialog | Effect |
+|---|---|---|---|
+| AutoSizeNewWindows | true | Auto size new mapwindows | as T7 |
+| AutoSizeColumnsInWindows | true | Auto size columns in mapviewer | as T7 |
+| ShowRedWhite | false | Use red and white maps (**disabled**) | MapViewerFactory |
+| DisableMapviewerColors | false | Don't display colors in mapviewer (**disabled**) | MapViewerFactory |
+| ViewInHex | false | View tables in hexadecimal values (**disabled**) | none |
+| ShowGraphs | true | Show graphs in mapviewer | as T7 |
+| ShowAddressesInHex | true | Show addresses in hex | X6 on the Flash/SRAM address columns (`SetFilterMode`, 2606). The tooltip is a copy of "Show graphs in mapviewer" |
+| RequestProjectNotes | false | Request a note on changes | as T7 (frmChangeNote) |
+| AutoDetectMapsensorType | false | Auto detect mapsensor type | `GetMapSensorType(auto)` at open; picks the 3-bar/3.5-bar view types |
+| UseEasyTrionicOptions | true | Show easy options screen | firmware options as checkboxes vs a property grid (5750) |
+| AutoLoadLastFile | true | Auto load last file on startup | startup, above |
+| FancyDocking | true | Fancy docking | DockMode VS2005 or Standard |
+| HideSymbolTable | false | Hide symbol window (**disabled**) | none |
+| AutoDockSameFile | false | Auto dock maps from same file | as T7 |
+| AutoDockSameSymbol | true | Auto dock maps with same name | as T7 |
+| NewPanelsFloating | false | New panels are floating | as T7 |
+| MapViewerType | 0 Fancy | Mapviewer to use: Fancy / Normal / Simple | MapViewerEx / MapViewer / SimpleMapViewer (`Trionic5Controls/MapViewerFactory.cs`). Replaces T7's "Use new mapviewer" |
+| DefaultViewSize | 0 | Default view size for maps: "High resolution screen (1600 * 1200)", "Normal resolution screen (1280 * 1024)", "Low resolution screen (1024 * 768)", "Touchscreen resolution (800*600)" | T7 has the first three |
+| DefaultViewType | 2 Easy | Default view type for maps: Hexadecimal view / Decimal view / Easy view / **ASCII** | ASCII is T5 only |
+| ProjectFolder | `<StartupPath>\Projects` | Project folder (button edit → FolderBrowserDialog; empty → `<StartupPath>\Projects`) | T7's default is MyDocuments\TxSuite\Projects. This setter has no equality check, so every OK of the dialog writes the value |
+| SynchronizeMapviewers | true | Synchronize mapviewers | as T7 |
+| TemperaturesInFahrenheit | false | Show temperatures in Fahrenheit (**disabled**) | none |
+| AutoChecksum | true | Auto update checksum | `Trionic5File.SetAutoUpdateChecksum`, **only at file open**. Every WriteData / WriteDataNoLog then fixes the checksum silently |
+| EnableAdvancedMode | false | Advanced mode enabled | see below |
+| ShowAdditionalSymbolInformation | false | Show additional symbol information | panel under the symbol list with `GetSymbolDescription(name)`, else "No additional help available" (`ShowContextSensitiveHelpOnSymbol`) |
+| AutoHighlightSelectedMap | false | Auto highlight selected map | opening a map selects and scrolls to its row in the symbol list (1302) |
+| LastFilename, LastProjectname, LastOpenedType | "", "", 0 | registry only | startup |
+| Skinname | "" | registry only (Help → Skins) | DevExpress skin |
+| LastXAxisFromMatrix / LastYAxisFromMatrix / LastZAxisFromMatrix | "" | registry only | last choice in View matrix from logfile |
+| StandardFill, RealtimeLength, RealtimeFont (Sans 8), AllowAskForPartnumber (true), AutoExtractSymbols (true), AlwaysRecreateRepositoryItems, ShowViewerInWindows, ShowTablesUpsideDown, PreventThreeBarRescaling (never persisted) | | registry only | **unused** |
+| DebugMode | false | read only | every use is commented out |
+| ReadECUBatchfile, WriteECUBatchfile (AMD), WriteECUIntelBatchfile, WriteECUAtmelBatchfile, EraseBruteForceBatchfile, TargetECUReadFile | "" | frmPeMicroParameters | P&E BDM (not portable) |
+
+**Realtime / ECU** (the realtime areas own the behaviour; listed here for completeness):
+
+| Registry name | Default | Dialog |
+|---|---|---|
+| CanDevice | "Lawicel" | CAN USB device: Lawicel, DIY, CombiAdapter, Just4Trionic, Kvaser. The T5AppSettings setter maps "Multiadapter" to "CombiAdapter"; frmSettings' own setter computes that mapping and then ignores it (415) |
+| useadc1..5, adc1..5channelname ("Channel1".."Channel5"), adcNlowvalue 0, adcNhighvalue 100000, adcNlowvoltage 0, adcNhighvoltage 5000, usethermo false, thermochannelname "EGT" | | Configuration (frmMultiAdapterConfig). Enabled only while CombiAdapter is selected |
+| UseWidebandLambdaThroughSymbol | false | Use wideband lambda through symbol |
+| WidebandLambdaSymbol | "" | AD_sond (pin 23) / AD_cat (pin 70) / AD_EGR (pin 69); stored without the " (pin n)" |
+| WidebandLowVoltage / WidebandHighVoltage / WidebandLowAFR / WidebandHighAFR | 0 / 5000 / 7390 / 22300 | "Low voltage (Volt) … equals AFR", "High voltage (Volt) … equals AFR" (shown ÷1000) |
+| AutoGenerateLogWorks | false | Auto generate LogWorks file after session (**disabled**) |
+| DirectSRAMWriteOnSymbolChange | false | Directly write to ECU on changing maps (**disabled**) |
+| InterpolateLogWorksTimescale | false | Interpolate timescale for LogWorks |
+| EnableCanLogging | false | Enable CAN bus logging (after OK, while connected: `EnableLogging(StartupPath)` / `DisableLogging`) |
+| PlayKnockSound | false | Play sound when entering knock condition |
+| AlwaysCreateAFRMaps | true | Always generate AFR maps |
+| KnockCounterSnapshot | false | Knock counter snapshot after disconnect (T5.5 only) |
+| AutoOpenLogFile / OneLogPerTypePerDay / OneLogForAllTypes | false | Automatically open logfile / One log per type per day / One log for all types |
+| notification1..3Active (false), symbol ("Exhaust.T_Calc", "", ""), condition (1), value (950, 0, 0), sound ("knock.wav", "", "") | | Notifications |
+| autoLoggingEnabled, autoLogTriggerStartSymbol, autoLogTriggerStopSymbol, autoLogStartSign, autoLogStopSign, autoLogStartValue, autoLogStopValue | false / "" / 0 | Autologging settings |
+| CapIgnitionMap true, AllowIdleAutoTune false, ResetFuelTrims false, PlayCellProcessedSound false, IgnitionAdvancePerCycle 0.1, IgnitionRetardFirstKnock 1.0, IgnitionRetardFurtherKnocks 0.5, GlobalMaximumIgnitionAdvance 35, MaximumIgnitionAdvancePerSession 2, MinimumEngineSpeedForIgnitionTuning 1200, IgnitionCellStableTime_ms 500, CellStableTime_ms 1000, CorrectionPercentage 50, AreaCorrectionPercentage 0, AcceptableTargetErrorPercentage 2, MaximumAdjustmentPerCyclePercentage 10, EnrichmentFilter 3, FuelCutDecayTime_ms 100, DisableClosedLoopOnStartAutotune true, DiscardFuelcutMeasurements true, DiscardClosedThrottleMeasurements true, AutoUpdateFuelMap false, MinimumAFRMeasurements 25, MaximumAFRDeviance 2 | | Autotune settings |
+
+**Overlap with CommonSuite `AppSettings`.** Most names (and defaults) are the same: CommonSuite's class was derived from this one.
+
+- Only in T5: AlwaysCreateAFRMaps, AutoDetectMapsensorType, AutoGenerateLogWorks, AutoHighlightSelectedMap, AutoOpenLogFile, CanDevice, CapIgnitionMap, DirectSRAMWriteOnSymbolChange, EnableAdvancedMode, EnableCanLogging, the five Ignition*/GlobalMaximum*/MaximumIgnition* values, IgnitionCellStableTime_ms, MinimumEngineSpeedForIgnitionTuning, KnockCounterSnapshot, MapViewerType, OneLogForAllTypes, OneLogPerTypePerDay, PlayKnockSound, RealtimeLength, ResetFuelTrims, ShowAdditionalSymbolInformation, TemperaturesInFahrenheit, UseEasyTrionicOptions, UseWidebandLambdaThroughSymbol, ViewInHex, WidebandLambdaSymbol, and the Intel/Atmel/erase batch files.
+- Same name, different default: ProjectFolder.
+
+### Settings dialog (frmSettings)
+
+**Window.** "Settings", opened by File → Application settings → "Options and settings" (hint "Allows you to configure T5Suite 2.0"; handler 2630).
+
+**Layout.** Two groups, no tabs:
+- **"User interface settings"**, three columns:
+  - **Column 1:** Auto size new mapwindows, Auto size columns in mapviewer, Use red and white maps, Don't display colors in mapviewer, View tables in hexadecimal values, Show graphs in mapviewer, Show addresses in hex, Request a note on changes, Auto detect mapsensor type, Show easy options screen.
+  - **Column 2:** Auto load last file on startup, Fancy docking, Hide symbol window, Auto dock maps from same file, Auto dock maps with same name, New panels are floating, then the label/combo rows Mapviewer to use, Default view size for maps, Default view type for maps, Project folder.
+  - **Column 3:** Synchronize mapviewers, Show temperatures in Fahrenheit, Auto update checksum, Advanced mode enabled, Show additional symbol information, Auto highlight selected map.
+- **"Realtime settings"**, in the order of the table above.
+
+Below the groups are the buttons "Autotune settings", "Autologging settings", "Cancel" and "Ok".
+
+**Differences from T7:**
+- There is no "General settings" group. Auto update checksum and Project folder are in the UI group; Request project notes is called "Request a note on changes".
+- No Auto fix footer, Use T7Suite AFR maps, Write timestamp marker, Show table upside down, Always re-create repository items, Show mapviewers in seperate windows, or closed-loop indicator combo.
+- No "Only P-bus connection", SRAM auto-update, com-port wideband or "Measure AFR in lambda".
+
+**Load and OK.**
+- Values are loaded from `m_appSettings`. Symbols are passed only when a file is open (they fill the wideband, notification and autolog symbol pickers).
+- On OK every value is written back, and then:
+  - `ctrlRealtime1.EnableAdvancedMode`;
+  - CAN logging on or off while connected;
+  - `_ecuConnection.CanusbDevice`;
+  - the DockMode (Fancy docking);
+  - the wideband values to the ECU connection;
+  - the realtime panel's autotune and autolog parameters.
+- `SetModeAndFilters()` and `SetAdditionalHelpPanelSize()` run **after OK and after Cancel** (2867).
+- The sub-dialogs Notifications and Configuration (Combi ADC) write straight into T5AppSettings and set `DialogResult = None`, so their changes stick even if Settings is cancelled.
+
+**Advanced mode** (`SetModeAndFilters`, 3010; also run on Shown and when going offline):
+- **On:**
+  - when offline, the symbol list is shown (`dockSymbols` Visible);
+  - "Tuning wizards" is shown with both "Basic tuning wizards" and "Advanced tuning wizards".
+- **Off (the default):**
+  - the symbol list is auto-hidden (`AutoHide` + `HideImmediately`);
+  - "Advanced tuning wizards" is hidden; "Basic tuning wizards" stays.
+- Either way it ends with `SetFilterMode()` (hex columns and default filters).
+- So a fresh T5Suite starts with the symbol list collapsed to the edge.
+
+### Projects (compare T7 "Projects", "Transaction log", "Project logbook")
+
+**Same as T7:**
+- the same CommonSuite `TrionicTransactionLog`, `TrionicProjectLog` and `frmTransactionLog`, plus the T5 copies of frmProjectProperties / frmProjectSelection / frmProjectLogbook / frmProjectTransactionPurge / frmRebuildFileParameters / frmChangeNote, with identical captions and defaults ("Trionic project properties", Car make "SAAB", Version "1.00.000", "Select a project to open", "Rebuild a project file", "Rebuild upto", "Store result as current project file" checked, "Remark for change", "Transaction log size warning...", "Project logbook");
+- the same disk layout: `projectproperties.xml` (DataTable "T5PROJECT"), `TransActionLogV2.ttl`, `ProjectLogbook.log`, `Backups\<bin>-backup-MMddyyyyHHmmss.BIN`, `<P>\<N>rebuild.bin`;
+- the same `MakeDirName`, the >2000 purge, the logbook format and the rebuild algorithm;
+- the same Edit (rename via Directory.Move with the raw name, then reopen), Add note and Produce latest binary;
+- the same "Remark for change" prompt on map save (1827);
+- the ribbon group "Projects" on the File page, with the same buttons and the same disabled-at-start set.
+
+The open dialog's grid has no column definitions, so its headers are the raw names Projectname, NumberBackups, NumberTransactions, DateTimeModified, Version.
+
+**Differences:**
+
+| | T5Suite 2.0 |
+|---|---|
+| Project folder default | `<StartupPath>\Projects` |
+| Titles | "T5Suite Professional 2.0 [Project: name]" / "T5Suite Professional 2.0" |
+| Create prefill (7115) | binary = current file; car model = `props.Carmodel.Trim()`; project name = `"<Enginetype> <Partnumber> <SoftwareID>"` (each trimmed, from `GetTrionicProperties`) |
+| OpenProject (7157) | Sets LastOpenedType=1 and the current project **before** loading. Loading is `OpenWorkingFile(BINFILE)`: no CloseProject, no S19. If that fails, the project name and LastOpenedType stay set but no button is enabled. On success, the AFR maps are created for the project when AlwaysCreateAFRMaps (`LoadAFRMapsForProject`, 7222), then the transaction log, purge, buttons, backup, Lastprojectname, title. "Show transaction log" is enabled by `UpdateRollbackForwardControls`, only when entries exist |
+| Close (8161) | Also stops online mode, saves the AFR maps, sets ECU type/speed/lock to "--", sets "No file", disables the online and wizard buttons, clears Lastfilename. The Close button does **not** clear Lastprojectname, and LastOpenedType stays 1, so with AutoLoadLastFile a project closed before exit reopens at next start (T7's Close cleared it). T7's stale transaction-log bug doesn't exist: the log is attached to the `Trionic5File`, which is rebuilt on every open |
+| Roll back / forward (10168, 10196) | `WriteDataNoLog` corrects the checksum **silently** when AutoChecksum was on at open (like T8, not T7's VerifyChecksum prompt). Open viewers aren't refreshed |
+| Rebuild (10297) | Same as T7. Logbook text "Reconstruct upto dd/MM/yyyy selected file <path>". The result's checksum is not corrected (a new `Trionic5File` has auto-checksum off). Save dialog "Save rebuild file as...", `Binary files|*.bin` |
+| File → "Create a backupfile" (8269) | No checksum check and no message. Project: `Backups\<bin>-backup-MMddyyyyHHmmss.BIN` **without** a logbook entry. No project: `<dir>\<base>-backup-MMddyyyyHHmmss.BIN` (T7: `<base>yyyyMMddHHmmss.binarybackup` + "Backup created"). With no file open it throws (swallowed) |
+| Extra logbook entries | LogfileStarted "A realtime log file was started" (info: log file) when realtime logging starts in a project (10458). SynchronizationStarted "Synchronization with the ECU was started" (info: direction) at map sync (6950). The E85 wizard copies the bin to `Backups` first (6911), with no logbook entry |
+| Snapshots | `<P>\<N>\Snapshots\Snapshot<MMddyyyyHHmmss>.RAM` (SRAM, 3343) and `Knockmap<MMddyyyyHHmmss>.KNK` (knock counters, 2453). Without a project: `<bin dir>\Snapshots`. Snapshot open dialogs start there (10881) |
+| Open dialog | `GetNumberOfBackups` creates a missing `Backups` folder as a side effect |
+
+### My Maps
+
+Same as T7 (`LoadMyMaps` 12892, `frmDefineMyMaps`):
+- a page "My Maps" inserted at index 3;
+- a group "myMaps settings" with "Define myMaps";
+- one group per `<category title>`, one button per `<map symbol title>`;
+- the file is `<settings folder>\mymaps.xml` (`categories/category/map@symbol,@title`);
+- Define rewrites the file grouped by category and rebuilds the page on OK. A malformed file shows only the settings group.
+
+**Differences:**
+- Default file when none exists (frmDefineMyMaps `CreateDefaultFile`): category "Idle" with `Idle_rpm_tab!` "Idle RPM"; category "Boost" with `Tryck_mat!` "Boost Map" and `Reg_kon_mat!` "Reg Kon Mat".
+- Special symbols (case-insensitive): `targetafr`, `feedbackafr` and **`feedbackvstargetafr`** open the AFR target, feedback and error viewers. All three work; T7 has the third commented out.
+- There is no "Add to MyMaps" in T5's symbol-list menu.
+
+### Help page
+
+**Groups.** "General": Enter license code, Check for updates, About T5Suite 2.0. "Help files": T5Suite 2.0 user manual, Trionic 5 documentation, Release notes. "Skins".
+
+**Licence (not active).**
+- `frmLicense`, titled "License code entry": "Hardware ID:" (the HWID, plus a "Copy" button), "License code:", Ok / Cancel. When the licence is valid, the title is "License code status: VALID" and the code field is masked and disabled.
+- `Trionic5Immo` checks that `HKCU\Software\T5SuitePro\ImmoID`, decrypted with the passphrase `"Trionic5Tools.Trionic5Immo"` (its type name), equals the HWID.
+- What it gated, had it been false (3607):
+  - Shown hides the pages File, Actions, Tuning wizards, Manual tuning, Online tuning, Logfiles and ECU programming;
+  - Help is selected and the mode switch is disabled;
+  - SetModeAndFilters and the auto-load are skipped.
+- But `_immoValid` is hard-coded `true` (311) and `btnLicense.Enabled = false` in the designer, so nothing is gated.
+
+**Update check (`msiupdater.cs`).**
+- Runs on every start (Shown, after the auto-load) and on "Check for updates" (hint "Checks for updates on the Trionic Suites website"), on a background thread.
+- It downloads `http://develop.trionictuning.com/T5Suite2/version.xml` (one retry) and `.../Notes.xml` into `UserAppDataPath\input.xml` / `Notes.xml`.
+- Every `<t5suite2 version="a.b.c.d">` is compared with ProductVersion.
+- Status texts: "Available version: <v>", "A newer version is available: <v>", "Versionnumber is too high: <v>", "No new version(s) found...", or the exception text. Every message lands in the status field ("Idle" slot).
+- When an update exists:
+  1. A "Release notes: <version>" panel docks right, 500 px wide (ctrlReleaseNotes on Notes.xml, `StartReleaseNotesViewer` 1156).
+  2. `frmUpdateAvailable` opens: title "New T5Suite 2.0 version available...", text "T5Suite 2.0 detected a newer version.", "Available version: <v>", buttons "Show change log" (`IEXPLORE.EXE` with the Notes.xml URL), "OK" and "Ignore".
+  3. OK runs `http://develop.trionictuning.com/T5Suite2/<ver>/T5SuiteII.msi` and exits.
+- Both branches set `Blockauto_updates = false`. The "don't bother again" comment is not implemented.
+- The server is gone.
+
+**Release notes** (12786): `StartReleaseNotesViewer(m_msiUpdater.GetReleaseNotes(), ProductVersion)`. It downloads Notes.xml synchronously and throws (swallowed) when the updater failed to construct.
+
+**About** (`frmAbout`, 9813):
+- Window title "About..."; heading "T5Suite 2.0 [<ProductVersion>]" (`SetVersion`).
+- Texts: "T5Suite 2.0 was created with the help of lots of people on ecuproject.com." / "Special thanks go out to:" / "Steve Hayes, Hook, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Danibjor, Johnc, tomas0student, Janus0070 and..." / "You can send an email for support to t5suite@home.nl" / "Just4pLeisure ;-)" / Ok.
+
+**Manuals** (3872, 3892):
+
+| Item | Opens | Message when the file is missing |
+|---|---|---|
+| "T5Suite 2.0 user manual" (hint "Opens the user manual (PDF)") | `<StartupPath>//T5Suite2 User Manual.pdf` | "User manual could not be found or opened!" |
+| "Trionic 5 documentation" (hint "Opens the Trionic 5 bible (PDF)") | `<StartupPath>//Trionic 5.pdf` | "Trionic 5 documentation could not be found or opened!" |
+
+The installer ships both from `reference files/`.
+
+**Skins** (`InitSkins` 10681):
+- One button per registered DevExpress skin (standard, Bonus and Office), sorted by name, with a new column every 3.
+- A click applies the skin and stores Skinname, which is reapplied at startup.
+
+### Logfiles page
+
+Group "Export logfiles". Every file dialog filters `Trionic 5 logfiles|*.t5l`.
+
+| Caption | Handler | Behaviour |
+|---|---|---|
+| Export T5Suite logfile to LogWorks | `btnExportToLogWorks_ItemClick` 3378 | Without LogWorks: "Logworks is not installed on this computer, download from http://www.innovatemotorsports.com/". Otherwise a dialog titled "Open CAN bus logfile", then `ConvertFileToDif` (wideband from the settings, colours from the T5SuitePro key) |
+| View log in T5Suite | `btnViewLogFile_ItemClick` 9197 | "Open CAN bus logfile", then `OpenAndDisplayLogFile` |
+| View matrix from logfile | 9219 | x/y/z selection, remembered in LastX/Y/ZAxisFromMatrix |
+| Setup log filters | 11638 | `frmLogFilters` over the open file's symbols without '!' (SRAM). The filters go to MattiasC\T5Suite2\LogFilters. With no file open it throws (swallowed) |
+
+These match T7's logging items apart from the extension. Behaviour belongs to the logging area.
+
+### Keyboard shortcuts
+
+| Key | Item | Notes |
+|---|---|---|
+| Shift+F1 | "Switch mode [ SHIFT + F1 ]" (Online tuning → Basic actions) | Toggles online/offline (`StartOnlineMode` / `StopOnlineMode`). Enabled once a file is open. In T7, Shift+F1 toggles the realtime panel |
+| Shift+F5 | "Toggle Autotune [ SHIFT + F5 ]" | |
+| F6 | "Write log marker [F6]" | as T7 |
+| Ctrl+Z | Roll back/undo | project only; T5 only |
+| Ctrl+Shift+Z | Roll forward/redo | project only; T5 only |
+| Enter in the symbol list | opens the focused symbol | An SRAM symbol (no '!') offline without an SRAM file gives "Symbol resides in SRAM and you are in offline mode. T5Suite is unable to fetch this symboldata in offline mode" (4730) |
+
+T7's F3 (fullscreen panel), F9 (screenshot) and Ctrl+F do not exist. The mouse gestures are disabled (`mouseGestures1.Enabled = false`) and their handler is commented out.
+
+### Dead, or don't port
+
+- The licence: frmLicense and Trionic5Immo.
+- The splash.
+- msiupdater, the old server and the release-notes panel.
+- DevExpress skins.
+- The P&E batch-file settings.
+- These settings do nothing: DebugMode, ViewInHex, TemperaturesInFahrenheit, HideSymbolTable, StandardFill, RealtimeLength, RealtimeFont, AllowAskForPartnumber, AutoExtractSymbols, AlwaysRecreateRepositoryItems, ShowViewerInWindows, ShowTablesUpsideDown, PreventThreeBarRescaling, AutoGenerateLogWorks and DirectSRAMWriteOnSymbolChange (the last two are disabled in the dialog).
+- The unused `symbolColors` field.
+- The mouse gestures.
+- `Form1_DoubleClick` (a commented-out developer path).
+
+## Realtime, logging and autotune (T5)
+
+Old code: `T5Suite2.0/frmMain.cs` (FM), `T5Suite2.0/ECUConnection.cs` (EC), `Trionic5Controls/ctrlRealtime.cs` (RT, **UTF-16**; line numbers are of the decoded text), `Trionic5Tools/Trionic5SymbolConverter.cs` (CONV), `Trionic5Tools/AFRMaps.cs` / `IgnitionMaps.cs` (already copied verbatim into `T5Core/`), `T5Suite2.0/DifGenerator.cs` (DIF5).
+
+**The model differs from T7.** T5 has no realtime table.
+- EC polls a *watch list* that is rebuilt whenever the user switches a tab of the realtime panel.
+- Every value is pushed by symbol name into the panel (`ctrlRealtime.SetValue(name, value)`, RT:540), which keeps a "last value" per quantity.
+- The log is written by a separate 83 ms timer from those last values, under T5's own column names.
+- There are no Delay/Reload columns, no FPS counter and no status-text tables. Pgm_status is a bit field shown as LEDs.
+
+### Polling and conversion
+
+- **Polling.** The ECU section covers it: a 10 ms `System.Timers.Timer`, a `readRAM(Start_address, Length)` per watched symbol, and `Knock_count_cyl*` forced to 2 bytes (EC:553-660). Each result goes through `CONV.ConvertSymbol` (EC:724) and is raised as `onSymbolDataReceived`. After the pass come the Combi ADC/thermo channels, then `onCycleCompleted`, which feeds the AFR/ignition maps (FM:704, 737).
+- **No error path.** A timeout gives zeros (the ECU section has the details), so a failed read shows as 0, not as the old value.
+- **Raw decode** (CONV:283):
+  - Big-endian unsigned for 1, 2 and 4-8 bytes. **3 bytes gives 0.**
+  - `Pgm_status` is decoded **little-endian** for 4-8 bytes (byte 0 lowest). Lengths 1-3 give 0.
+- **Map sensor factor `f`** (from `GetMapSensorType(AutoDetectMapsensorType)`): 2.5 bar 1, 3.0 bar 1.2, 3.5 bar 1.4, 4.0 bar 1.6, 5.0 bar 2.0.
+
+| Symbol (getter in Trionic5FileInformation) | Value |
+|---|---|
+| P_medel (pressure), P_Manifold(10), Max_tryck (boost request), Regl_tryck (boost target) | raw × f × 0.01 − 1 [bar] |
+| Lufttemp (IAT), Kyl_temp (coolant) | raw, > 128 → raw − 256 [°C] |
+| Rpm | raw × 10 |
+| Insptid_ms10 (injection time) | raw / 10 [ms] |
+| Ign_angle, Knock_offset1..4, Knock_offset1234 | 16-bit, > 32000 → −(65536 − raw), / 10 [°] |
+| Medeltrot (TPS) | raw − 34 |
+| Apc_decrese (boost reduction) | raw × f × 0.01 [bar] |
+| P_fak, I_fak, D_fak | > 32000 → −(**65535** − raw): off by one |
+| TQ | raw × f [Nm] |
+| AD_sond (narrowband) | \|raw − 125\| / 100 × 14.7 |
+| AD_EGR (wideband, pin 69) | V = raw/255 × (HighV − LowV), clamped to LowV..HighV, AFR = LowAFR + (HighAFR − LowAFR)/(HighV − LowV) × (V − LowV). Settings are ×1000; defaults 0 / 5000 mV, 7390 / 22300. T7's AdcToAfr divides by 1023, T5 by 255 |
+| Lacc/Acc/Lret/Ret_mangd, PWM_ut10, Knock_count_cyl*, Knock_average, Bil_hast (speed), everything else | raw |
+
+- **User symbols.** A user symbol carries `UseUserCorrection = true`, so it is **always** raw × factor + offset. The built-in conversion is skipped even for the names above.
+- **Wideband symbol choices** (Settings, "Use wideband lambda through symbol"): "AD_sond (pin 23)", "AD_cat (pin 70)", "AD_EGR (pin 69)". The default symbol is "".
+  - Only AD_EGR gets the wideband formula.
+  - AD_sond gets the narrowband formula.
+  - AD_cat stays raw.
+  - The panel's AFR display only listens to AD_sond/AD_EGR (RT:713), so AD_cat shows nothing.
+- **Combi ADC / thermo.** These run only when the adapter setting is "Multiadapter"/"CombiAdapter" (EC:582).
+  - ADC1-5 (`Useadc*`, `Adc*channelname`, default "Channel1".."Channel5"): `GetADCValue` is taken as **volts** (no /255). Clamped to LowV..HighV, then mapped linearly to LowValue..HighValue. Settings ×1000; defaults 0-5000 mV → 0-100000 (0-100).
+  - Thermo (`Usethermo`, name "EGT"): °C as read.
+  - ctrlRealtime has its own `ConvertADCValue` with /255 (RT:1609). It is dead code.
+
+### Watch list (`FillRealtimePool(type, start)`, FM:3127)
+
+Polling is stalled, the list is cleared and rebuilt, then polling restarts. The rows below are added in order:
+
+| Part | Symbols |
+|---|---|
+| Base, all tabs but the two autotune tabs | P_medel, Lufttemp, Kyl_temp, Rpm, Medeltrot, Regl_tryck |
+| Autotune (fuel) tab | P_medel, Kyl_temp, Rpm, Medeltrot |
+| Autotune ignition tab | P_medel, Rpm, Knock_offset1234 |
+| Always | Pgm_status; then the wideband symbol when "Use wideband lambda through symbol", else AD_sond |
+| Fuel autotune running and tab ≠ Fuel | Lacc_mangd, Acc_mangd, Lret_mangd, Ret_mangd |
+| Autologging enabled | its start and stop trigger symbols |
+| Fuel | Insptid_ms10, Lacc_mangd, Acc_mangd, Lret_mangd, Ret_mangd |
+| Ignition | Ign_angle, Knock_offset1..4 |
+| Boost | Max_tryck, Apc_decrese, P_fak, I_fak, D_fak, PWM_ut10 |
+| Knock | Knock_count_cyl1..4, Knock_offset1..4, Knock_offset1234 (not in T5.2), Apc_decrese, Knock_diag_level |
+| Dashboard | Bil_hast, TQ, Insptid_ms10, Apc_decrese, Ign_angle |
+| User defined | the user symbols |
+| Graph | TQ, Insptid_ms10, Ign_angle, PWM_ut10 |
+| Settings, Engine status | base only. Switching to "User maps" doesn't refill. |
+| Going online (`start` = true) | Fuel, plus the user symbols. They drop off at the next tab switch unless that tab is User defined. |
+
+- **Missing symbols.** A missing symbol gets SRAM address 0 and length 0 and is still read.
+- **Duplicates.** A name is never added twice (`CollectionContains`).
+- **Injector size** for the panel's maths comes from `props.InjectorType`: Stock 365, GreenGiants 413, Siemens630Dekas 630, Siemens875Dekas 875, Siemens1000cc 1000 cc/min (field default 875).
+
+### Opening the panel
+
+- **"Go online" / "Switch mode [ SHIFT + F1 ]"** (FM:4706 / 2512) → `StartOnlineMode`. It connects when needed, then (FM:2230):
+  - pushes the autotune/autolog settings and the fuel/ignition axes into the panel;
+  - auto-hides the symbol dock, minimizes the ribbon, shows "Realtime panel" at form width − 20;
+  - reads `Pgm_mod!` for the Settings toggles;
+  - calls `FillRealtimePool(Fuel, true)`;
+  - runs the sync-date dialog (ECU section).
+- **Leaving online.** `StopOnlineMode` switches both autotunes off and hides the panel. Polling is stalled, not stopped.
+- **"Configure realtime panel"** (FM:11423): shows the panel while offline so it can be arranged. Nothing is read.
+- **Panel tabs, in order:** Fuel, Ignition, Boost, Knock, Dashboard, Settings¹, User defined¹, Autotune¹, Autotune ignition¹, Engine status, Graph, User maps.
+  - ¹ Only with Settings → "Advanced mode enabled" (`EnableAdvancedMode`, default **false**). The same flag shows the "Autotune fuel" / "Autotune ignition" buttons and the map edit button (RT:3614).
+  - The map edit button offers the tab's maps: Fuel → Insp_mat!, Adapt_korr!, FuelAdjustmentMap, Fuel_knock_mat!, Inj_konst!; Ignition → Ign_map_0!, Ign_map_4!, Ign_map_2!; Boost → Tryck_mat!, Reg_kon_mat!, P_fors!, I_fors!, D_fors!; Knock → Knock_ref_matrix!, Knock_count_map, Ign_map_2!, Fuel_knock_mat!.
+- **Switching a tab** (RT:2101) resets the generic displays to "---" and refills the watch list. If a log session is running, a **new log file** is started (below).
+
+**Top strip** (all tabs).
+- **Digital displays:** RPM (F0), Water ˚C, Air ˚C (F0), AFR (F1, or λ = AFR/14.7 with F2), Boost (F2), Peak boost (F2; values > 3 or < −1 ignored), EGT ˚C (thermo), and the target AFR (Autotune tab only).
+  - Clicking an AFR display toggles AFR/λ; the label becomes "λ".
+- **LEDs from Pgm_status:**
+  - "Idle" = 0x40000000.
+  - "Closed loop" = 0x02000000.
+  - "Knock map" = 0x200. When it turns on, the panel goes OrangeRed and plays `knock.wav` if "Play sound when entering knock condition" is set. On the Autotune ignition tab this LED follows `Knock_offset1234 > 0` instead.
+  - "Warmup" is lit while 0x10 (engine warm) is **clear**.
+- **Buttons:**
+  - "Start session" / "Stop session" (logging).
+  - "Night Panel" / "Day Panel": switches the DevExpress skin to Dark Style and back.
+  - "Autotune fuel" and "Autotune ignition".
+
+**Tabs.**
+- **Fuel:**
+  - An enrichment grid. "Enrich load accel cyl #1..4" comes from Lacc_mangd, a u32 whose MSB is cyl 1. Likewise "Enrich TPS accel" ← Acc_mangd, "Enlean load accel" ← Lret_mangd, "Enlean TPS accel" ← Ret_mangd.
+  - Injector DC gauge = rpm × Insptid_ms / 1200.
+  - "Lambda" and "Lambda (idle)" toggles.
+- **Ignition:** "˚ btdc" (Ign_angle) and "K offset #1..4", 1 decimal; gauge −10..40. "˚ trim", "˚ adapt" and "˚ knock" are never updated.
+- **Boost:**
+  - Measurements: "Boost request", "Target boost", "Boost error" (= Regl_tryck − P_medel), "Boost reduction", "P/I/D factor", "PWM output", "TPS"; gauge −1..2.
+  - "Boost bias" is never updated.
+  - "APC control" toggle.
+- **Knock:**
+  - Per cylinder: "Knocks cyl #n" (#2 is captioned "Knock cyl #2"), "Delta cyl #n", "Ign offset cyl #n", "Peak offset cyl #n" (max hold).
+  - "Delta cyl #n" is the increase since the previous change. It starts red and fades 1 R step per 10 ms.
+  - Also "Boost reduction" and the "Knock control" toggle.
+  - "Global ign retard" and the 0..900 knock-average gauge are never fed (Knock_average isn't watched).
+- **Dashboard:**
+  - Measurements: "km/h", "Nm", "Peak Nm", "Peak torque RPM", "bhp", "Peak bhp", "˚ BTDC", "Boost reduction" (never updated here).
+  - bhp = TQ × rpm / 7121.
+  - **Consumption:** injections/min = rpm/2 × 4; cc/inj = InjectorCC/60000 × **injector DC %** (bug: a percentage used as a time); l/h = cc/min × 60 / 1000.
+  - It shows "l/h" when speed is 0, else "km/l" = speed / l/h.
+- **Settings:** `Pgm_mod!` toggles (RT:3682, writes FM:10946).
+  - A click reads Pgm_mod!, sets or clears the bit, writes the **whole** symbol with `WriteSymbolDataForced`, then re-reads it to refresh the buttons.
+
+  | Caption | Byte, mask |
+  |---|---|
+  | Afterstart enrichment / WOT enrichment / Lambda control / Spot adaption / Idle control / Cranking enrichment | 0: 0x01 / 0x02 / 0x10 / 0x20 / 0x40 / 0x80 |
+  | Fuel cut in engine braking / Acceleration enrichment / Deceleration enleanment | 1: 0x04 / 0x10 / 0x20 |
+  | Purge control / Adaption of idle control / Lambda during idle | 2: 0x20 / 0x40 / 0x80 |
+  | APC control / Global adaption | 3: 0x10 / 0x40 |
+  | Knock control | 4: 0x20, **inverted** (set = off). Hidden when Pgm_mod! has ≤ 4 bytes. "Autotune ignition" is enabled only while knock control is on |
+
+- **Engine status:** 40 LEDs from Pgm_status bits 0-39 (RT:1189):
+  - 0x1 Ignition, 0x2 Afterstart 2 ok, 0x4 Engine stopped, 0x8 Engine started, 0x10 Engine is warm, 0x20 Fuel cut, 0x40 Temp. compensation, 0x80 RPM limiter
+  - 0x100 Appl. sync ok, 0x200 Fuel knock map, 0x400 Throttle closed, 0x800 Room temp. start
+  - 0x1000-0x8000 Fuel cut cyl 4/3/2/1
+  - 0x10000 Fuel not off (during sync. off ign.), 0x20000 Dec.enleanment completed throttledec., 0x40000 Acc.enrichment completed throttleinc., 0x80000 Decrease of retard enrichment allowed
+  - 0x100000 Start of retard enrichment in progress, 0x200000 Adaption allowed, 0x400000 Limp-home mode, 0x800000 Always active temp.compensation
+  - 0x1000000 Restart, 0x2000000 Active lambda control, 0x4000000 Afterstart enrichment completed, 0x8000000 Init during start completed
+  - 0x10000000 Cooling water enrichment finished, 0x20000000 Purge control active, 0x40000000 Idle fuel map, 0x80000000 Ignition synchronized
+  - bits 32-39: Sond heating second sond, Sond heating first sond, ETS error, Ordinary idle control disable, Fuel cut allowed (Dashpot), Enrichment after fuelcut, Fulload enrichment, Fuel syncronized (sic)
+  - A separate "Knock map" LED on this tab is never set.
+- **User defined:** a grid with SYMBOLNAME, MINVALUE, MAXVALUE, VALUE, PEAK; min and max are autosensed.
+  - **Every** value pushed to the panel lands here, with its row added on first sight. That includes base symbols, TARGETAFR and ADC names, not just user symbols.
+  - Context menu: "Add symbol", "Remove symbol", "Edit symbol properties", "Reset symbol peak".
+  - Buttons "Save layout" / "Load layout".
+- **Graph:** a scrolling online graph. Rpm 0..8000 Crimson, Boost −1..2.5 Red, AFR 7..24 AntiqueWhite, IAT −40..100, CT −40..120, Inj.dur 0..30, Ign −10..45 Pink, PWM 0..100, TQ 0..800, EGT 0..999.
+- **User maps:** maps (Mapname, Description) kept in `UserMaps.xml` in the app data folder.
+  - Rows are added from the symbol list's context menu "Add to realtime user maps" (FM:11587).
+  - Enter or double-click opens the viewer; Del removes the row.
+
+### User symbols and layouts
+
+- **"Add symbol"** opens `frmRealtimeSymbolSelect`, titled "Realtime symbol selection".
+  - Group "Select a symbol to add": a lookup of symbols with SRAM address > 0 and length 1-4 (FM:1015).
+  - "Correction factor" (default 1), "Correction offset" (default 0); buttons "Ok" / "Cancel".
+  - The row is added to the grid at once with range 0..255 (1 byte) or 0..65535. frmMain adds it to `m_RealtimeUserSymbols` and the watch list (FM:10585).
+  - A failed offset parse returns **1**, not 0 (frmRealtimeSymbolSelect).
+- **"Edit symbol properties":** the same dialog with the symbol locked; it removes and re-adds the symbol.
+- **"Remove symbol"** (FM:10613): **bug.** `EC.RemoveSymbolFromWatchlist` returns from inside its loop without clearing `_stallReading` (EC:175). All polling freezes until the next tab switch.
+- **There is no "Add to realtime list" in the symbol list** (T7 has one).
+- **`rtsymbols.txt`** in the parent of UserAppDataPath, one `name;factor;offset;` per line (current culture).
+  - Loaded on file open, keeping names the bin has; address and length come from the bin (FM:4205).
+  - Saved on exit (FM:4243).
+  - T7's format is `|`-separated with 9-10 fields.
+- **Layouts:** "Layout files|*.rt2", in the same `;` format (RT:3996-4080).
+  - **Bug:** Load layout only refills the grid. The loaded symbols never reach the watch list, so they never get values. Save writes the current user list.
+
+### Logging (`.t5l`)
+
+- **Start.** Only "Start session" (RT:403) or autologging starts a log. Being online alone doesn't log, unlike T7.
+- **Stop.** "Stop session" raises `onOpenLogFileRequest`. With "Automatically open logfile" (`AutoOpenLogFile`, default false), a floating "CANBus logfile: <file>" viewer opens. That path doesn't apply the log filters (FM:11107).
+- **Project.** With a project open, a logbook entry `LogfileStarted` names the file (FM:10454).
+- **File name** (`DetermineNewLogFileName`, RT:421):
+  ```
+  ts   = Now.ToString(OneLogPerTypePerDay ? "yyyyMMdd" : "yyyyMMddHHmmss")
+  type = OneLogForAllTypes ? "" : <RealtimeMonitoringType enum name> + "-"     // Fuel, Ignition, Boost, Knock, Dashboard, Settings,
+                                                                                // Userdefined, OnlineGraph, EngineStatus, UserMaps, AutotuneFuel, AutotuneIgnition
+  bin open & exists → <bin dir>\Logs\<bin base>-<type><ts>.t5l    (Logs created)
+  bin set, missing  → "" (nothing is written)
+  no bin            → <exe dir>\Realtimelog-<type><ts>.t5l
+  ```
+  Settings: "One log per type per day" and "One log for all types", both default false. Lines are appended. **A tab switch while logging starts a new file.**
+- **Writer** (`timer1_Tick`, RT:1800):
+  - Every **83 ms** on the GUI thread, independent of the ECU pass: the same values repeat until new ones arrive. One `StreamWriter` is opened per line.
+  - Timestamp: `Now.ToString("dd/MM/yyyy HH:mm:ss") + "." + ms:D3 + "|"`. Date and time separators come from the culture, as in T7.
+  - Values are formatted `F2` in the current culture. `AddToLine` omits a value not updated in the last 3 s.
+  - Column names are T5's own display names, not symbols:
+
+  | Tab | Columns, in order |
+  |---|---|
+  | all but User defined | Rpm, Speed, Coolant, IAT, AFR, Boost, TPS |
+  | Dashboard, Fuel | InjectorDC, Injection duration |
+  | Ignition, Dashboard | Ignition angle |
+  | Boost | Target boost, Boost request, Boost error, P gain, I gain, D gain, PWM APC |
+  | Boost, Knock, Dashboard | Boost reduction |
+  | Knock | Knock average (never fed) |
+  | Dashboard | Torque, Power |
+  | Fuel | TPSAccCyl1-4, LoadAccCyl1-4, TPSRetCyl1-4, LoadRetCyl1-4 (ints, always written) |
+  | User defined | every grid row except Pgm_status, `value.ToString()` (no F2) |
+  | all but User defined (end) | KnockInfo=0/1, Idle=0/1, ClosedLoop=0/1, Warmup=0/1 (the four LEDs), **ImportantLine**=0/1, then each enabled ADC channel `<name>=F2`. Thermo isn't written (commented out) |
+
+  - "AFR" is the last AD_sond/AD_EGR value.
+  - The marker is `ImportantLine` (T7: `IMPORTANTLINE`). It isn't written on User defined, and a pending marker then waits for the next other tab.
+- **"Write log marker [F6]"** (FM:10628, RT:3672): sets the marker only while a session is logging. It is enabled only online.
+- **Autologging** (Settings → "Autologging settings", `frmAutoLoggingSettings` "Auto logging settings": "Enable auto logging", "Start logging trigger", "Stop logging trigger"; symbol, sign 0 = / 1 > / 2 <, value; all default off/""/0).
+  - It works in T5, unlike T7 (RT:1121). The trigger symbols are watched.
+  - While not logging, the start condition starts a session with a new file.
+  - While logging, the stop condition stops it and raises the open-log request.
+- **Notifications** (Settings → "Notifications", `frmNotifications`: 3 slots of symbol, condition, value, sound, "Selected"; slot 1 defaults to `Exhaust.T_Calc` > 950 `knock.wav`, a T7 symbol): **dead in T5.** `CheckSoundsToPlay` (RT:1528) is never called.
+- **Dead settings:** "Auto generate LogWorks file after session" (`AutoGenerateLogWorks`) is stored, but no caller passes `AutoExport = true`.
+- **Sounds that do play:**
+  - `autotune.wav` each time the Autotune button becomes enabled (coolant > 70 with a wideband symbol set).
+  - `knock.wav` on the knock LED (option above).
+  - `ping.wav` per processed autotune cell ("Play 'ping' sound when cell processed").
+
+### Reading logs
+
+- **Open dialogs:** "Trionic 5 logfiles|*.t5l", title "Open CAN bus logfile". Parsing is T7's: split on `|` and `=`, fixed-position timestamp; numbers through `ConvertToDouble` (group separator → decimal separator, then TryParse).
+- **"View log in T5Suite"** (FM:9197 → 9180): dock (left) "CANBus logfile: <file>", log filters applied, `RealtimeGraphControl.ImportT5Logfile`. This is the shared T7 viewer, with these T5 parts:
+  - `KnockInfo` > 0 stretches are painted as translucent LightBlue background bands (RealtimeGraphControl:677).
+  - The KnockInfo, Idle, ClosedLoop and Warmup lines are hidden by default (201).
+  - `GetGraphName` maps T5 symbols, for user-defined columns (1062): BIL_HAST Speed, P_MANIFOLD(10) Boost, LUFTTEMP IAT, KYL_TEMP Coolant, AD_SOND "Lambda A/D", RPM Rpm, INSPTID_MS10 Inj.dur, APC_DECRESE APCD, IGN_ANGLE Ign.angle, P/I/D_FAK "P/I/D factor", REGL_TRYCK Target boost, MAX_TRYCK Max boost, PWM_UT10 APC PWM, MEDELTROT TPS, KNOCK_OFFSET1234 Offset1234, and so on.
+- **"Export T5Suite logfile to LogWorks"** (FM:3378):
+  - Without LogWorks: "Logworks is not installed on this computer, download from http://www.innovatemotorsports.com/".
+  - Plot selection offers every column except Pgm_status, all selected. Log filters apply. `<base>.dif` is written and LogWorks started; nothing to write gives "No data was found to export!".
+  - DIF5 is T7's generator with these differences:
+    - The descriptor "equiv(Sample)" rows are `0,4096` (T7 `0,1024`).
+    - The interpolation step is 83.33 ms (T7 82).
+    - Values: Rpm/Lufttemp/Bil_hast/EGT raw `ToString()`, Ign_angle/TQ/InjectorDC/Power/Torque F1, else F2; `.` forced.
+    - The wideband column (`WidebandSymbol`, default "AD_EGR") is converted with the /255 formula only when the value is ≥ 25, i.e. still raw.
+    - AD_sond gets the narrowband formula. P/I/D (also "P/I/D gain") > 32000 → −(65535 − v).
+  - Ranges and units are keyed to T5 names (DIF5:701/869/1020), for example:
+    - Rpm 0-8000 "rpm"
+    - Boost / P_medel −1..2.5 "bar"; AFR / "WB Lambda" 7-23 "AFR"
+    - IAT / Coolant −40..120 "C"; TPS / Medeltrot 0-155
+    - InjectorDC 0-120 "%"; Injection duration / Insptid_ms10 0-35 "ms"
+    - Ignition angle / Ign_angle −10..45 "d BTDC"; Boost reduction 0-0.5; P/I/D gain 0-2000
+    - Torque / TQ 0-800 "Nm"; Power 0-700
+    - KnockInfo / Idle / Warmup / ClosedLoop 0-2 ("Knock condition", "Idle condition", "Warmup condition", "Closed loop")
+    - ImportantLine 0-2 "NOTE THIS [F6]"
+    - TPSAccCyl*/LoadAccCyl*/TPSRetCyl*/LoadRetCyl* 0-100, with units "TPS accel enrichment #n" and so on
+    - Speed 0-300; the wideband symbol 0-24; default 0-1000 with the name as unit
+- **There is no CSV export** in T5Suite.
+- **"View matrix from logfile"** (FM:9219): T7's algorithm (16 even breakpoints, nearest cell, Mean/Minimum/Maximum, last X/Y/Z remembered). T5 differences:
+  - Values > 65535 or < −65535 count as 0 for the axis range.
+  - Equal min and max on X or Y → "No data to display ... x or y axis contains no differentiated values".
+  - The title is "Matrix [x : y : z] (Mean values)" / "(Minimum values)". Maximum also says "(Mean values)": the check tests type 1 twice (same bug as T8).
+  - Modal. It uses the new viewer when the map viewer setting is Fancy.
+- **"Setup log filters"** (FM:11619): T7's dialog and registry storage.
+  - **Bug:** the symbol list is the bin's symbols without `!` (P_medel, Kyl_temp, ...), but the log columns are T5 display names (Boost, Coolant, ...). Only names that coincide (Rpm, and user-defined columns) can ever match.
+
+### Live cell tracking
+
+T5 has no per-map rule table.
+- Every SetValue updates rpm, TPS (9999 while TPS is "overruled", see autotune, which skips the update), boost and boost target on every open viewer (`UpdateMapViewers`, FM:823).
+- `MapViewerEx.UpdateLiveView` (MapViewerEx:3255) picks the axis by its **caption**:
+
+  | Axis caption | Input | Breakpoint compared |
+  |---|---|---|
+  | "MAP" | boost [bar] | (axis × f − 100) / 100, with f from the viewer type (3/3.5/4/5 bar view: 1.2/1.4/1.6/2.0) |
+  | "Pressure error (bar)" (X only) | \|boost − target\| | axis × f / 100 |
+  | "RPM" | rpm | the axis value |
+  | "TPS", "Throttle position", "Relative throttle position" | TPS | the axis value |
+
+- **2D maps.** A 2D map gets index 0 on its missing axis.
+- **Bug.** The Y test for the throttle captions checks the **X** caption.
+
+### Knock counter snapshots
+
+- **Taking.** "Knock counter snapshot after disconnect" (`KnockCounterSnapshot`, default false; T5.5 only). See StopOnlineMode in the ECU section: 576 bytes of `Knock_count_map` saved as 1152 hex characters to `Snapshots\Knockmap<MMddyyyyHHmmss>.KNK`.
+- **"Knock map snapshots"** (FM:11878). It is enabled only when that folder holds a `.KNK`, re-checked on file open and after each snapshot.
+  - Dialog "Select a knock count map file...", group "Select a knock counter file", columns "Filename", "Snapshot timestamp" (file write time), "Total #knocks" (sum of the u16 cells). Only files of exactly 1152 characters are listed.
+  - Buttons "Ok" (or double-click) and "Compare", enabled with exactly 2 rows selected.
+  - The viewer shows "Knock_count_map" with the ignition map's axes, "Knock counter snapshot". Compare shows \|a − b\| per cell.
+
+### Wideband and AFR maps
+
+- **AFRMaps.** Created on file open when "Always generate AFR maps" (`AlwaysCreateAFRMaps`, default **true**), and otherwise on first use.
+- **Files** in `<bin dir>\AFRMaps\`: `<bin>-targetafr.afr`, `-AFRFeedbackmap.afr`, `-AFRFeedbackCountermap.afr`, `-AFRLockedmap.afr`, and for idle `-idletargetafr.afr`, `-idleAFRFeedbackmap.afr`, `-idleAFRFeedbackCountermap.afr`, `-idleAFRLockedmap.afr`. The format is T7's: rows of `v;` with F2 in the current culture, ints for counters and locks.
+- **Main map.** The fuel map is `Insp_mat!` (16 × 16, index rpm × 16 + load).
+  - Rows: nearest `Fuel_map_yaxis!` × 10 to rpm.
+  - Columns: nearest `Fuel_map_xaxis!` × (file sensor factor relative to 2.5 bar) to load = (P_medel + 1) / 0.01.
+- **Idle map.** `Idle_fuel_korr!` (12 × 8, index rpm × 12 + load) on `Idle_st_rpm!` × 10 / `Idle_st_last!`.
+- **Feedback accumulation** (`LogWidebandAFR`, AFRMaps:1354): runs on every wideband value when autotune is off, or when autotune is running and allowed (FM:683).
+  - Condition: rpm > 600 and 0 < afr < 25. There is **no fuel-cut check** (T7 required FCut.CutStatus == 0).
+  - The idle map is used when Pgm_status 0x40000000 is set and "Allow idle map autotune" is on.
+  - Running mean, as T7.
+- **Default target** (`CreateDefaultTargetAFRMap`, AFRMaps:1591; written when the file is missing):
+  ```
+  afr = 14.7
+  if load axis > 100 (boost): afr -= 3.5·col/16; rpm folded at 4000; afr += |4000 − rpm|/4000
+  else if load axis < 30: afr = 15.0
+  if rpm < 1000: afr = 13.0
+  ```
+  The idle target is 14.7 everywhere.
+- **"Generate AFR target"** (FM:10497 → AFRMaps:1643) overwrites the target file **without asking**, then shows it.
+  - The injector type argument is unused (commented out).
+  - Rule:
+    ```
+    afr = 14.7 − 3.0·col/16, rpm folded at 4000, + |4000 − rpm|/4000     (for every load now)
+    load axis < 30 → 15.0
+    no lambda control (props.Lambdacontrol false): load < 70 && rpm < 1750 → 13.5; rpm < 1000 → 13.5
+    no lambda control in idle: rpm < 1000 → 13.5
+    lambda control and the cell is closed loop (load axis ≤ Open_loop![row]) → 14.7, except rpm < 1000 without idle lambda
+    ```
+- **Viewers** ("AFR target", "AFR feedback", "AFR error"; the idle ones are "Idle AFR target", "Idle AFR feedback", "Idle AFR error"):
+  - Titled "Symbol: TargetAFR / FeedbackAFR / FeedbackvsTargetAFR [bin]" (idle: IdleTargetAFR / ...), on the fuel map's axes.
+  - Stored as `ceil(v × 10)` u16; the viewer is ×0.1.
+  - Descriptions: "Target AFR map for use with wideband lambda sensor", "Feedback AFR map from wideband lambda sensor", "Feedback AFR minus target AFR map from wideband lambda sensor".
+  - The error map is feedback − target where feedback ≠ 0; an exact 0 becomes 0.06 so it shows.
+  - Saving TargetAFR / IdleTargetAFR writes the target file (FM:8057/8102).
+  - Feedback viewers refresh live.
+- **Locks.** Fuel and AFR viewers (Insp_mat!, Inj_map_0!, TargetAFR, FeedbackAFR, FeedbackvsTargetAFR) can lock and unlock cells into `-AFRLockedmap.afr`; idle viewers into the idle lock map (FM:12747/12771). A locked cell is skipped by fuel autotune.
+- **No "Import AFR feedback data" and no "Clear AFR feedback map".** InitAutoTuneVars clears the feedback when autotune starts (see below).
+
+### Autotune fuel ("Autotune fuel" button, "Toggle Autotune [ SHIFT + F5 ]")
+
+- **Availability.** The button is enabled while coolant > 70 °C **and** a wideband symbol is set (RT:786). Each time it becomes enabled, autotune.wav plays and the ribbon toggle is enabled (FM:11614).
+- **Pressing it** switches to the Autotune tab (minimal watch list) and calls frmMain (`onSwitchClosedLoopOnOff`, FM:8586). The caption is "Wait..." meanwhile, then "Tuning..." / "Autotune fuel".
+- **Start:**
+  ```
+  remember Pgm_mod![0] & 0x10 (lambda control); clear it in SRAM (1 byte) when "Disable closed loop on starting autotune" (default on)
+  InitAutoTuneVars(false): cell state reset, AFR feedback + counter maps cleared and saved
+  T5.2: fuel map = SRAM Adapt_korr                                   (autotune works on the adaption map)
+  T5.5: fuel map = SRAM Insp_mat!; if any Adapt_korr byte ≠ 0x80: Insp_mat[i] = clamp(Insp_mat[i]·Adapt_korr[i]/128, 1, 254)
+        written to SRAM, Adapt_korr reset to 128 in SRAM            ("Updating fuelmaps...")
+  "Reset fuel trims on starting autotune" (default off): Adapt_injfaktor! = 128 (T5.5 + idle: Adapt_inj_imat! = 128)
+  original = current = that map; idle map from SRAM Idle_fuel_korr!; status "Autotune fuel running..."
+  ```
+- **When a sample counts** (`_autoTuneAllowed`, from Pgm_status, FM:457). It is false when any of these holds:
+  - purge active;
+  - cooling water enrichment not finished;
+  - afterstart not completed;
+  - lambda control active;
+  - fuel cut on any cylinder or 0x20 (only with "Discard AFR measurements with fuelcut", default on);
+  - throttle closed (only with "Discard closed throttle measurements", default on);
+  - engine not warm;
+  - fuel knock map active;
+  - enrichment after fuel cut;
+  - idle map active without "Allow idle map autotune" (default off);
+  - any Lacc/Acc/Lret/Ret_mangd cylinder byte > "Enrichment filter" (default 3 pts, RT:3134).
+- **Fast TPS drop.** Medeltrot falling by more than 10 sets TPS to 9999 for 500 ms (tmrOverruleTPS), and those samples are skipped.
+- **Per sample** (`HandleRealtimeData`, AFRMaps:453): T7's cell-stability logic (default `CellStableTime_ms` 1000, `AcceptableTargetErrorPercentage` 2, `CorrectionPercentage` 50, `MaximumAdjustmentPerCyclePercentage` 10). Differences:
+  - Locked cells are skipped.
+  - The main map uses float maths: `v = round(v·(100 ± corr)/100)`, clamped 1..254. The idle map uses T7's integer `(int)(100 ± corr)`.
+  - **"Auto update fuel map"** (default off): each changed byte is written to SRAM at once, to Adapt_korr on T5.2 or Insp_mat on T5.5 (FM:1071). Ping.wav plays on every processed cell.
+  - Otherwise the proposals go to FuelMapInformation (T7's averaging, 255 max).
+  - "Target AFR" is shown on the Autotune tab.
+- **Stop:**
+  1. Restore lambda control, if remembered, when "Disable closed loop on starting autotune".
+  2. **With auto update:** "Keep adjusted fuel map?" ("Question", Yes/No).
+     - No writes the originals back to SRAM: T5.2 to **"Adapt_korr"** (missing `!`), T5.5 to Insp_mat, plus the idle map.
+     - Yes copies SRAM Insp_mat (and idle) into the bin; when the ECU and file dates were equal, both are stamped now.
+  3. **Without auto update:** `frmFuelMapAccept` "Select mutations to accept".
+     - A 16 × 16 grid of % differences, row 15 on top, F2, orange when ≠ 0. Positive values are capped at MaximumAdjustmentPerCycle; negatives aren't. NaN from a 0 original isn't caught: the `== Double.NaN` test is always false.
+     - "Accept selected" / "Accept all" / "Cancel". Each accepted non-zero cell does `orig·(100 + %)/100`. That value goes to SRAM (T5.2 at Adapt_korr) **and** to the bin's Insp_mat with `WriteData`: one transaction and date stamp per cell.
+     - Then, when the ECU and file dates differ, both are stamped now.
+     - T5.2 bug: the value comes from the Adapt_korr map but is written into the file's Insp_mat.
+     - The idle map is always written to SRAM after the dialog when idle autotune is allowed.
+
+**Autotune settings** (Settings → "Autotune settings", `frmAutotuneSettings` "Autotune settings...").
+- **Fuel group ("Autotune fuel settings"):**
+  - "Cell stable time" 1000 ms, "Correction percentage" 50, "Area correction percentage" 0, "Acceptable target error" 2 %, "Maximum adjustment per cycle" 10 %
+  - "Enrichment filter" 3 pts, "Fuelcut decay time" 100 ms, "Minimum AFR measurements" 25, "Maximum AFR deviance" 2
+  - "Auto update fuel map", "Discard AFR measurements with fuelcut", "Discard closed throttle measurements", "Disable closed loop on starting autotune", "Reset fuel trims on starting autotune", "Allow idle map autotune"
+- **General:** "Play 'ping' sound when cell processed".
+- **Ignition group ("Autotune ignition settings"):**
+  - "Cell stable time" 500 ms, "Minimal engine speed for tuning" 1200 rpm, "Ignition increase per cycle" 0.1°, "Ignition retard on first knock" 1.0°, "Ignition retard on further knocks" 0.5°
+  - "Global maximum ignition advance" 35°, "Max ignition increase per session" 2°
+  - "Adjust ignition map to global maximum ignition advance before starting a session" (`CapIgnitionMap`, default on)
+- **Unused:** Area correction, Fuelcut decay, Minimum measurements and Maximum deviance are stored but not used.
+
+### Autotune ignition (T5-only; "Autotune ignition" button)
+
+- **Gate.** T5.2 → "T5.2 is currently not supported for Autotuning Ignition" (FM:12211). The tab watches only P_medel, Rpm, Knock_offset1234 and Pgm_status. "Knocking" = Knock_offset1234 > 0.
+- **Start:**
+  - Feedback and counter maps are cleared.
+  - `Ign_map_0!` is read from SRAM (18 × 16 u16, 0.1°). With CapIgnitionMap, cells above max × 10 are capped and written to SRAM.
+  - Knock pressure limit per rpm row: `Knock_press_tab!` from SRAM (the T5.2 branch, 16 × `Knock_press!`, is unreachable).
+- **Per sample** (`IgnitionMaps.HandleRealtimeData`, IgnitionMaps:240). Only when rpm > minimum and no knock hold is active (and not in idle).
+  - Cell: nearest `Ign_map_0_y_axis!` row to rpm and `Ign_map_0_x_axis!` column to load.
+  - Skipped when the row's knock limit × f > load, or when the column ≤ the limit's column + 1.
+  - After `CellStableTime` in one cell:
+    ```
+    knocking: hold until knock clears; locked cell → v −= retardFurther·10, else v −= retardFirst·10 and lock the cell;  v ≥ 0
+    no knock, cell not locked: if (v − original)/10 ≥ maxPerSession → only cap at globalMax·10
+                               else v = min(v + advancePerCycle·10, globalMax·10)
+    ```
+  - Every change is written to SRAM at once (2 bytes at Ign_map_0! + idx·2, FM:12389). The counter increments.
+  - The average advance in the cell is computed but unused.
+  - A locked cell never advances again.
+- **Stop:** "Keep adjusted ignition map?".
+  - No writes the original back to SRAM.
+  - Yes writes the mutated map into the bin with `WriteDataNoCounterIncrease`: no transaction, no date stamp.
+- **Files** in `<bin dir>\IgnitionMaps\`: `<bin>-IgnitionFeedbackmap.ign`, `-IgnitionFeedbackCountermap.ign`, `-IgnitionLockedmap.ign` (18 × 16).
+- **"Ignition lock map"** (FM:12438) opens `Ign_map_0!`, whose viewer overlays the lock map. Cells can be locked or unlocked there.
+- **"Release locked ignition cells"** (FM:12414) clears and saves the lock map. There is no confirmation and no message.
+
+### Unused controls
+
+- `ctrlGraphicalDashboard` (an empty stub), `ctrlMetalPlate` and `RealtimeMonitoringType.GraphDashboard` are never instantiated or used.
+- `RealtimeValue` is a value plus its update time.
+- `LedToggler` is an LED with a `Description` caption and `Checked`.
+- `Measurement` is a seven-segment value with `MeasurementText`, `NumberOfDecimals` and `SetColor`.
+
+## Tools: disassembler, vectors, Idc, hex view, SRAM snapshot tools, adaption merge, dyno graph, compressor map, injection timing
+
+Paths: `frmMain` = `T5Suite2.0/frmMain.cs`, `Controls` = `Trionic5Controls/`, `T5File` = `Trionic5Tools/Trionic5File.cs`. `ctrlDisassembler.cs`, `ctrlCompressorMap*.cs` and `frmMain.Designer.cs` are Windows-1252. T5Suite has **no airmass result viewer**. Its dyno graph and compressor map are separate tools, and both start from the boost request map (`Tryck_mat!`), not from airmass.
+
+| Ribbon page → group | Caption | Handler |
+|---|---|---|
+| File → File actions | "Open SRAM snapshot", "Show vector information", "Disassemble file", "Generate Idc file" | 4641, 9671, 9704, 12987 |
+| Actions → Basic actions | "Show dyno graph", "Show compressor map" | 10485, 11709 |
+| Actions → Binary tools | "Binary compare files", "Show file in hex", "Compare SRAM snapshots", then after a separator "Import SRAM snapshot into binary", "Compare SRAM snapshot to binary", "Binary compare SRAM snapshots" | 5774, 4608, 5797, 6137, 6319, 6618 |
+| Actions → Advanced tools | "Injection timing viewer" | 10814 |
+| Symbol list context menu | "Show axis information" | 10049 |
+
+"Binary compare files" and "Change boost adaption ranges" (`frmBoostAdaptionWizard`) are described under offline tuning.
+
+### Show vector information (frmMain 9671, `T5Suite2.0/frmVectorlist.cs`)
+
+- Modal "Interrupt vector list": a grid with "Vector" and "Address" (format `X8`), plus an "Ok" button. It has **256 rows**, as in T7.
+- Each address is the big-endian u32 at file offset `n × 4` (`GetStartVectorAddress`, T5File 4824; `GetVectorAddresses` 6575 returns 256).
+- The addresses are **flash addresses**, not file offsets. On T5.5, vector 1 = 0x000690E6 = file offset 0x290E6. Vector 0 (the initial SP) is 0xFFFFF7FC in the stock bins.
+- Names: the `VectorType` enum (frmMain 143) for 0-63 with `_` → space, then "User defined vector 0" … "191".
+  - The enum is identical to T7's except `Trap_instruction_vectors_N` (T7: `Trap_instruction_vector_N`), so the rows read "Trap instruction vectors 0".
+
+### Disassemble file (frmMain 9704, `Controls/ctrlDisassembler.cs`, `Controls/Disassembler.cs`)
+
+Each click docks a **new** right panel "T5Suite 2.0 Disassembler" (width = client width − symbol list width) and calls `ctrlDisassembler.DisassembleFile(<bin>.asm)` (541). The T5.2 branch with `AsmViewer` is commented out, so T5.2 takes the same path.
+
+Same as T7:
+- "Assemblerfile already exists, do you want to redo the disassembly?" ("Question", Yes/No).
+- The listing format (`0x%08X\t<mnemonic>`, a blank line before every non-`LBL_` label), which ctrlDisassembler writes (DisassembleFile 557-581); `Disassembler.DisassembleFile` itself writes nothing.
+- The CPU32 decoder and the 93 SIM/QSM/TPU register names of the 68332.
+- `LBL_` labels and JSR recursion below 0xF00000 (1783, 2364).
+- Find/replace, and the hex view of a `<bin><ticks>` copy that is never deleted (588).
+
+**No "Show full disassembly":** T5Suite has no button for it. The linear sweep `DisassembleFile(bool AddOffset, …)` (2580) is reachable only from the commented-out code.
+
+**Memory map: the one real difference.** Flash sits at the top of the 512 KB space. The code calls the flash base `offset`:
+```
+offset = file length; if offset == 0x20000 → 0x60000      (= 0x80000 − length: T5.5 0x40000, T5.2 0x60000)
+file position = addr − offset  when addr > offset, else addr   (DisassembleFunction 2287, LoadLabels)
+```
+- Listing addresses are flash addresses (0x40000-0x7FFFF on T5.5).
+- Text caret → hex selects `address − offset` (ctrlDisassembler 47-75).
+- Hex selection → text searches `"0x" + (offset + fileoffset).ToString("X8")` (501).
+
+**Vectors followed (1855, 1923):** only **1 … 127**. T7 follows all 256, from 0 in DisassembleFile and from 1 in findLabels.
+- The progress is `vec × 100 / 127`.
+- A vector is accepted when `vector != 0 && vector < len × 2`, with len = file length (0x60000 for T5.2). T5.2 therefore accepts up to 0xBFFFF, which is harmless.
+- 0xFFFFFFFF entries are skipped.
+
+**Vector labels (1954-2092):** a fixed table instead of T7's enum names:
+
+| Vector | Label |
+|---|---|
+| 1 | `INIT_PROGRAM:` |
+| 2-5 | `BUS_ERROR:`, `ADDRESS_ERROR:`, `ILLEGAL_INSTRUCTION:`, `DIVIDE_BY_ZERO:` |
+| 6-9 | `CHK12_INSTR:`, `TRAPx_INSTR:`, `PRIV_VIOLATION:`, `TRACE:` |
+| 10-14 | `L1010_EMUL:`, `L1111_EMUL:`, `HW_BREAKPOINT:`, `RESERVED:`, `FMT_ERR1:` |
+| 15-22 | `UNASSIGNED:` |
+| 23 | `FFFFFFFF:` |
+| 24 | `SPURIOUS_INTERRUPT:` |
+| 25-31 | `LEVEL1_INTERUPT_AUTOVECTOR:` … `LEVEL7_…` (sic) |
+| 32-47 | `TAP0_INSTRUCTION_VECTOR:` … `TAP15_…` (sic) |
+| 48-127 | `VECTOR_<n>:` |
+
+**Function names (T5 only; 2380-2423 and the same block in LoadLabels 2525-2567).** After a function is disassembled, its label is renamed by what its instructions contain, first match wins:
+
+| Function contains | Name |
+|---|---|
+| `ROM_Ign_map_0!` and `RAM_Ign_map_0!` | `CopyIgnitionRomToRam:` |
+| `ROM_Insp_mat!` and `RAM_Insp_mat!` | `CopyFuelRomToRam:` |
+| `RAM_Ign_map_0!` | `CalculateIgnitionAngle:` |
+| `RAM_Insp_mat!` only | `CalculateInjectionDuration:` |
+| `#ABCD` | `CheckSRAMIntegrity:` |
+| `Da_insp` | `CalcInjectionForCylinder:` |
+| `#EB` and `Tq` | `CalculateTorque:` |
+| `Idle_rpm_offNeutral` | `DetermineIdleStatus:` |
+
+Otherwise the label stays `Function_<X8>:`.
+
+**Symbol operands (`find_symbol`, 509):**
+- Each symbol is tested in turn, with no `caddr != 0` guard and no break, so the **last** match wins.
+- `Flash_start_address == caddr` → `ROM_<Varname>`; else `Start_address == caddr` → `RAM_<Varname>`.
+- These are **Varname with the "!"** (`ROM_Insp_mat!`), unlike T7's `SmartVarname` and its < 0x80000 split. The function-name heuristic depends on the "!".
+
+### Generate Idc file (frmMain 12987, `T5Suite2.0/IdaProIdcFile.cs`; already lifted to `T5Core/IdaProIdcFile.cs`)
+
+Runs only when `File.Exists(m_appSettings.Lastfilename)`. It writes `<Lastfilename dir>\<name>-autogen.idc` with no message. The generator is T5's own (Christian Ivarsson, 2018), not T7's:
+
+- **Header and analysis:** `SetPrcsr("68330")`; analysis flags cleared (`AF_FINAL`, `AF_UNK`) and `AF2_VERSP` set.
+- **Segments:**
+
+  | Segment | Range |
+  |---|---|
+  | ROM | `romStart = 0x80000 − length` … 0x80000 |
+  | RAM | 0 … 0x8000 |
+  | CAN | 0xF007F0 … 0xF00810 |
+  | TPURAM | 0xFFF000 … 0xFFF800 |
+  | Internal | 0xFFFA00 … 0xFFFEFF |
+  | TPUPRAM | 0xFFFF00 … 0xFFFFFF |
+
+  `LowVoids(0)`, `HighVoids(0x80000)`.
+- **`GenTable`:** `INIT_SP` at romStart and `INIT_Entry` at `Dword(romStart+4)`. It then turns the next 255 dwords into functions, stopping at the first that fails.
+- **`PrintFooter`:** walks the footer down from `0x80000 − 6` and names the strings by type: 01 `Partnumber_1`, 02 `Partnumber_2`, 03 `Software_ID`, 04 `Eng_type`, 05 `VSS_Code`, 06 `Type`, FC `Flash_End`, FD `Flash_Start`, FE `Binary_End`.
+- **Symbols:**
+  - name = SmartVarname with `' '`→`_` and `!` removed.
+  - address = `Flash < 0x8000 ? Start_address : Flash`.
+  - Prefix `r` below 0x8000, `f` otherwise: `namevar("fInsp_mat", 0x…, len)`. A map that lives in both flash and SRAM is named only once.
+  - `Data_namn` → `MakeStr`.
+  - Length > 4 → `MakeArray`:
+    - words when the length and address are even and the table is 16-bit;
+    - row width from `<name>_x_size!` (with Ign_map_4 → Ign_map_0, Mis200/Mis1000_map → Misfire_map), else 16;
+    - Ign_map_0 and Ign_map_4 marked signed; SRAM arrays compacted with `dup`.
+- **Registers:** 97 register names: CAN_LONGACC / CMDPORT / DATAPORT (0xF007FE-0xF00800), 51 `SIM_`, 20 `QSM_`, 23 `TPU_`.
+
+### Show file in hex (frmMain 4608, `Controls/HexViewer.cs`)
+
+The control is the same as T7's ("Hexviewer: <bin>", width 580). Differences:
+- **Needs a selected row** in the symbol list; with none it does nothing.
+- It opens (or activates) the bin viewer **and** an SRAM viewer, then selects the first selected symbol in both. The bin selection is at `Flash_start_address` reduced by the file length (`while (o > len) o -= len`); the SRAM selection is at `Start_address`.
+- **Bin viewer:** first asks "Opening a hexviewer will require full access to the binary file. No other data can be read from or written to the file while the hexviewer is open! Do you wish to continue?" ("Warning!", Yes/No). Answering No still opens the SRAM viewer.
+  - The bin viewer obeys `NewPanelsFloating`.
+  - It edits the bin itself: save makes a `-backup<ticks>` copy, no checksum, as T7.
+- **SRAM viewer** (only with a snapshot loaded): "SRAM Hexviewer: <ram>", docked right, on a copy `<ram>.hexview` that is deleted first and **left behind** afterwards (4475). Its symbol lookup goes by `Start_address`.
+- Message boxes are titled "T5Suite 2.0"; the default file size is 0x40000 until a file loads.
+
+### Axis browser (frmMain 10049, `Controls/AxisBrowser.cs`)
+
+Reached only from the symbol list menu ("Show axis information"); docking is described in the symbol list section. Differences from T7:
+- One row per symbol (by `Varname`, duplicates kept) that has an x or y axis in **`SymbolAxesTranslator`**.
+- "Description" and both axis descriptions are `SymbolTranslator.TranslateSymbolToHelpText`'s **return value**, the short description (e.g. "Volumetric Efficiencey table (RPM x MAP)"), not the long help text.
+- The filter is `[SYMBOLNAME] = '<name>'`.
+- Double-clicking a symbol or axis cell runs `StartTableViewer(value)`.
+
+### SRAM snapshot tools
+
+A snapshot is a raw 32 KB SRAM image with file offset = SRAM address (`DumpSRAMContent`, ECU section). Reads go through `ReadDataFromFile` (T5File 2536): the address wraps at the file length, and short reads come back zero-filled.
+
+**Open SRAM snapshot (4641):**
+- Dialog "Select a SRAM snapshot", filter "SRAM snapshots|*.RAM".
+- Sets `SRAMfilename` and the status bar text "Snapshot: <name.ext>" (the default text is "SRAM file: none"; T7 shows "SRAM: <name>").
+- Switches the symbol list filter off.
+- Opening another bin creates a new file info, so the snapshot is forgotten, but the status bar text is never reset.
+- How viewers then read from the snapshot is described under map viewers.
+
+**Compare SRAM snapshots (5797):**
+- One open dialog used twice: "First SRAM dump..." then "Second SRAM dump...", filter "SRAM dumps|*.ram".
+- Every symbol is compared, **SRAM-only runtime symbols included** (T7 compares calibration symbols only). Each side is `Length` bytes at `Start_address`. Flash-only symbols read offset 0 on both sides, so they never differ.
+- Differences are counted per value, 16-bit aware.
+  - `perc = (diffabs × 100) / lengthvalues` (integer division).
+  - **avg is always 0**.
+- "Sram data structure invalid... <Varname>" (on unequal lengths) can't happen.
+- Progress goes to the status bar, ending with "SRAM compare done".
+- Panel "SRAM compare results: <f1> <f2>", tabbed onto a visible one, else docked left at width 700.
+- Grid `SRAMCompareResults`:
+  - visible: Description (384), "Symbol " (with a trailing space), Length (bytes), Percentage of values different (F1), Number of values different, Average difference (F1);
+  - hidden: SRAM address, Flash address, Length (values) (all `{0:X4}`), Category, Subcategory;
+  - sorted Category ascending, Subcategory descending; AutoFilterRow; not editable.
+  - The category colouring of Description reads a column `XDFCATEGORY` that doesn't exist, so it is dead.
+- Double-click or Enter opens three viewers: the bin's map plus each snapshot's (`StartTableViewerSRAMFile`).
+- Context menu "Show differences map" → "SRAM symbol difference: <sym> [<f1> vs <f2>]":
+  - |a − b| per value (16-bit pairs or bytes), read-only;
+  - factor **and offset** applied (the offset shifts a difference, a bug); always upside down;
+  - width 30 + (columns + 1) × 35, minimum 400;
+  - a symbol with SRAM address 0 opens nothing.
+
+**Compare SRAM snapshot to binary (6319 → `StartCompareToSRAMFile` 6337):**
+- Dialog "Select SRAM file to compare...", "SRAM dumps|*.ram".
+- Every symbol with flash > 0 **and** SRAM > 0 whose flash bytes (flash address wrapped at the file length) differ from the snapshot bytes at `Start_address`.
+- Rows have **all statistics 0** (as T7).
+- Shown in the ordinary `CompareResults` grid (see compare), panel "SRAM <> BIN Compare results: <ram>", docked left at 700, never tabbed.
+- Selecting a row:
+  - `Pgm_mod!` → `frmEasyFirmwareInfo` with the bin's bytes ("<bin>") against the snapshot's ("SRAM <ram>");
+  - otherwise the bin's viewer plus the snapshot's.
+- "Show differences map" → "SRAM-Flash symbol difference: <sym> [<ram> vs <bin>]": |sram − flash|, same rules as above, plus the open-loop overlay.
+
+**Binary compare SRAM snapshots (6618):** two plain open dialogs ("SRAM dumps|*.ram", no titles), then `frmBinCompare` on the two files. It works without a bin open.
+
+**Import SRAM snapshot into binary (6137, `T5Suite2.0/frmMergeAdaptionData.cs`).** Steps:
+1. Open dialog "Select SRAM file...", "SRAM dumps|*.ram".
+2. Dialog "Select merge options", group "Select items to merge from adaption data", buttons Ok / Cancel:
+
+   | Option | Default |
+   |---|---|
+   | "Fuel adaption (spot adaption)" | **on** |
+   | "Long term fuel trim" | **on** |
+   | "Idle fuel trim" | **on** |
+   | "Knock information (used to retard ignition)" | off |
+   | "Cylinder fuel correction from knock information" | off |
+
+3. Ok → a backup `<dir>\<bin><yyyyMMddHHmmss>beforemergingadaptiondata.bin`, then:
+```
+read from the snapshot at each symbol's SRAM address: Adapt_korr!, Adapt_ggr, Knock_count_map, Knock_count_cyl1..4 (2 bytes BE)
+cylinder:  avg = (k1+k2+k3+k4)/4; Cyl_komp! (read from the SNAPSHOT) [n] += 5 (byte, wraps) for each cylinder with kn > 3·avg;
+           written to flash Cyl_komp!                       (avg 0 → every cylinder with any knock gets +5)
+spot:      for each cell of Adapt_korr!'s size (= fuel map size):
+           insp = Convert.ToByte(insp × (adapt/512 + 0.75))    (128 = ×1.0; Adapt_ggr is ignored; > 255.5 throws)
+           Insp_mat! written back
+ltft:      Adapt_injfaktor! snapshot bytes → flash
+idle:      Adapt_inj_imat! snapshot bytes → flash
+knock ign: cols = rows = 0, never set → the loop never runs; Ign_map_0! is rewritten unchanged (dead feature)
+```
+4. Every write goes through `IECUFile.WriteData`: a transaction entry, the checksum only with auto checksum, the sync date stamped. No viewer refresh. Ends with "Data was imported".
+
+- **T5.2:** `Adapt_korr!`, `Adapt_inj_imat!` and the knock counters don't exist (T5.2 has `Adapt_korr` with no "!"). A missing symbol reads as 0 bytes, so the default spot adaption throws `IndexOutOfRangeException` after the backup was made.
+
+### Show dyno graph (frmMain 10485, `T5Suite2.0/frmDynoChart.cs`)
+
+A non-modal form "Estimated dyno results" (Nevron chart) with buttons "Close", "Export" ("PNG images|*.png") and "Refresh" (re-reads the file). `BuildGraph` (695), `BoostRpmToInjectorDuration` (566), `FillGraph` (125):
+```
+rpm[i]  = y axis of Tryck_mat!  (always the manual map's axis)
+raw     = Tryck_mat_a! if automatic else Tryck_mat!; WOT = raw[i·8 + 7], i = 0..15      (assumes 8×16, unchecked)
+p[i]    = WOT × {3.0 bar: 1.2, 3.5: 1.4, 4.0: 1.6, 5.0: 2.0, else 1}   kPa      (sensor: GetMapSensorType(AutoDetectMapsensorType))
+boost   = (p − 100) / 100  bar
+torque  = PressureToTorque.CalculateTorqueFromPressure(boost, footer TurboType)    (SuiteCore/Common: linear over 0.2..2.0 bar,
+          extrapolated below 0.2, held above 2.0; tables Stock 160..460, TD04-15T 170..560, TD04-19T/GT28BB/GT28RS 210..620,
+          GT3071R/HX35w 250..650, HX40w/S400 270..670, others 197.5..640 Nm)
+power   = torque × rpm / 7121  bhp (as T7)
+injDC   = T5 injection model (below) at p, rpm, IAT AD 163 (≈20 °C), 13 V
+```
+- Three smooth lines over rpm: torque (data labels "0"), power, injector DC (labels "0.0"). The legend is cleared.
+- `Init2dGraph` (188) runs after the data is filled and renames the series wrongly ("Surface", "Torque (Nm)", "Injector DC" on torque, power, DC). It also appends 16 extra X values to the torque series.
+- No colours are set (the Nevron default stylesheet). Unlike T7 there are no lambda, EGT or fuel-flow lines and no compare file.
+
+**T5 injection model** (frmDynoChart and frmInjectionTiming, same code):
+```
+LTF   = Handle_temp_tables(iatAD, Luft_kompfak, Lufttemp_steg)       (linear between steg points, steg ends at 255)
+Last  = min(255, (LTF + 384) · p / 512)
+cell  = Handle_tables(rpm, (byte)Last, map, yaxis = rpm, xaxis = load)  "Trionic style": (x-interp + y-interp)/2 at the
+        lower-left cell, interpolate2 casts to byte (wraps on negatives)
+t     = inj_konst · ((LTF + 384) · p) / 512                          (integer; inj_konst = first byte of the injector constant symbol)
+t     = t · (cell + 128)/256 + Batt_korr_tab[14 − clamp(V, 4..14)];  t = min(t, 32500); t = max(t, Min_tid!)
+ms    = t / 250;   DC % = rpm · ms / 1200
+```
+
+### Show compressor map (frmMain 11709, `Controls/ctrlCompressorMapEx.cs`)
+
+Returns silently unless the boost request map (`Tryck_mat_a!` if automatic) has 16 rows. Otherwise it docks a panel "Compressor map plotter" on the left, width 600.
+
+**Inputs:** WOT boost `raw[i·8+7] × sensor factor / 100 − 1` bar for i = 0..15, using `GetMapSensorType(true)`. "Refresh" re-reads the file but uses `props.MapSensorType` instead. The rpm points are the map's y axis.
+
+**Formula** (`DrawLineonImage` 294, `CalculateIntakeLoss` 172; one curve, while T7 plots three ambient pressures from airmass):
+```
+pr  = boost + intakeLoss(rpm)/14.7      intakeLoss psi: <880 .08, <1260 .10, <1640 .17, <2020 .28, <2400 .42, <2780 .50, <3160 .58,
+                                        <3540 .65, <3920 .74, <4300 .82, <4680 .92, <5060 1.03, <5440 1.07, <5820 1.10, <6000 1.08, else 1.43
+EVF = cid/1728 × rpm/2                  cid 140 (2.3 l: PartNumberConverter.Is2point3liter) else 122
+T   = °C × 1.8 + 32 + 460  (Rankine)
+lb/min = (14.5 + pr × 14.5) × EVF × 29 / (10.73 × T) × VE        VE = that rpm's box / 100 (all "90"), else 1 − rpm/100000 × 4
+x = xoff + lb/min × xmul;   y = yoff − pr × ymul                 (gauge bar on the PR axis)
+```
+- Drawing: a red 3 px polyline, OrangeRed 8 px dots, each labelled `(rpm/10).ToString("D3")`.
+- The image is saved to `%TEMP%\T5CMImage.bmp` and reloaded.
+- **Toolbar:**
+  - "Select your turbo" combo; "Refresh";
+  - "Temp (C)" (default 20; Enter redraws);
+  - "VE" (its text box is hidden; the label shows);
+  - "Specific efficiency per RPM range" with 16 boxes, default "90", tooltip "VE at <rpm> rpm".
+  - Hidden: "Save image" (JPG), "Select compressor map".
+- **Turbos** (combo order = enum order; calibration in image pixels: x offset, y offset, px per lb/min, px per bar). Same images and calibrations as T7, except two T5-only entries:
+
+  | # | Caption | Image | Calibration |
+  |---|---|---|---|
+  | 0 | Garrett T25 trim 55 | t25_55_saab | 64/865/20/396 |
+  | 1 | Garrett T25 trim 60 | t25-60trim | 60/867/17.28/398 |
+  | 2 | Mitsubishi TD04-15G | | 66/576/10.45/234.5 |
+  | 3-5 | TD04-16T / -18T / -19T | | 64/573/8.27/233, 65/576/8.27/234 ×2 |
+  | 6 | TD06-20G | | 58/577/8.30/235 |
+  | 7 | GT2871R | | 50/595/9.56/276.5 |
+  | 8 | GT28RS | | 55/460/8/211 |
+  | 9 | GT3071R | | 42/556/6.67/171 |
+  | 10 | GT3076R | | 50/463/6.4/158 |
+  | 11 | GT40R | | 54/482/5.31/171 |
+  | 12 | Holset HX40w | | 35/762/5.03/167 |
+  | 13 | **S400SX3-71** | S400SX3-71.jpg 800×539 | **45/484/6.713/102** |
+  | 14 | GT17 | | 42/539/10.67/166 |
+  | 15 | **Garrett T25 54mm trim 60 (NG900, 9-3)** | T25_54mm_60trim_Map.jpg 630×772 | **45/622/17.25/258.5** |
+
+  The `.JPG` copies T5 loads have the same pixel sizes as SuiteApp's `.gif`s.
+- **Default** from the footer turbo type (len − 0x1FD) and `PartNumberConverter.GetECUInfo(partnumber, enginetype)`:
+
+  | Footer turbo type | Default |
+  |---|---|
+  | GT28BB, GT28RS | GT28RS |
+  | Stock | Aero → TD04-15G; Saab 900 / 900SE / 9-3 → T25 NG900; else T25 trim 60 |
+  | TD04-15T | TD04-15G |
+  | GT3071R | GT3071R |
+  | HX40w | HX40w |
+  | TD04-19T | TD04-19T |
+  | S400SX371 | S400 |
+  | other (GT17, HX35w) | car-model rule as for Stock, without the Aero case |
+
+  An unknown part number gives 2.0 l and T25 trim 60.
+
+### Injection timing viewer (frmMain 10814, `Controls/frmInjectionTiming.cs`)
+
+Modal "Fuel injection timing" (`CalculateInjectionTiming` 322, parameter handlers 790-845, cell drawing 848). It reads `Insp_mat!`, `Fuel_knock_mat!`, `Idle_fuel_korr!` with their axes, the battery correction table, `Min_tid!`, the temperature tables, and the first byte of the injector constant. The MAP sensor comes from `GetMapSensorType(AutoDetectMapsensorType)`.
+
+**Grid:**
+- Rows: the chosen map's rpm axis, **highest at the top**; the row headers show rpm.
+- Columns: its load axis. Headers show `x × sensor factor × 0.01 − 1` as `F2` bar.
+- Each cell holds "ms/DC" from the injection model, at the selected IAT and voltage.
+- Cell drawing: shows ms or DC; red background with alpha `min(255, |(int)ms| × 8)`; a 3 px green→red bar at the bottom, DC % of the cell width wide.
+
+**Parameters** (each recalculates):
+
+| Parameter | Choices | Default |
+|---|---|---|
+| "Intake Air Temperature" (C) | −30 / −10 / 20 / 40 / 60 / 80 → AD 230 / 199 / 163 / 77 / 46 / 36 | 60 (AD 46) |
+| "Condition" | Normal (Insp_mat!) / Idle (Idle_fuel_korr!) / Knocking (Fuel_knock_mat!) | Normal |
+| "Battery voltage" (V) | 4 … 15 | 13 |
+| "Injector constant" | spin, edits only the view (never saved) | the file's |
+| "Show value for" | "Injection duration" / "Injection duty cycle" | Injection duration |
+
+Button "Close".
+
+### Not ported / covered elsewhere
+
+- **Dead code:** `frmBoostAdaption` (never instantiated), `AsmViewer` (only in the commented T5.2 branch), `ctrlCompressorMap` and `ctrlCompressorMapGraph` (unused), `FunctionCompiler` (only `Surface3DRenderer.SetFunction`, which nothing calls), the linear-sweep `Disassembler.DisassembleFile(bool, …)`.
+- **Covered elsewhere:** `frmMapName` belongs to the map viewer's "Export map → As preferred setting in T5Dashboard" (map viewers). `frmMapSelect` is the realtime panel's map button: a list of `Helptext`s plus "Close" that closes itself after 5 s without redraw (realtime).
