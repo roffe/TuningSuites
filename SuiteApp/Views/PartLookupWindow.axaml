@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SuiteApp.ViewModels"
+        xmlns:cs="using:CommonSuite"
         x:Class="SuiteApp.Views.PartLookupWindow"
         x:DataType="vm:PartLookupViewModel"
         Title="Partnumber lookup" MinWidth="480" SizeToContent="WidthAndHeight" CanResize="False" WindowStartupLocation="CenterOwner">
@@ -27,6 +28,16 @@
                 <CheckBox Content="Full pressure turbo" IsChecked="{Binding Info.FullPressureTurbo, FallbackValue=False}" IsHitTestVisible="False" />
             </StackPanel>
         </Grid>
+        <ItemsControl ItemsSource="{Binding Info.Extra, FallbackValue={x:Null}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="cs:PartDetail">
+                    <Grid ColumnDefinitions="110,*" Margin="0,0,0,4">
+                        <TextBlock Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Value}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="Open this file" Click="OnOpenFile" IsEnabled="{Binding HasBinary}" />
             <Button Content="Compare to this file" Click="OnCompare" IsEnabled="{Binding HasBinary}" />

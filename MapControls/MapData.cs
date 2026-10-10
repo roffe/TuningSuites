@@ -37,9 +37,21 @@ public sealed class MapData
     /// <summary>Open-loop load limit per data row in X-axis units; a cell is open loop when the limit is above its X value.</summary>
     public double[]? OpenLoop { get; set; }
 
-    // 16-bit cells read 0xF001..0xFFFF as negative, so only -0xFFF..0xF000 survive a save and reload unchanged
-    public int MinRaw => SixteenBit ? -0xFFF : 0;
-    public int MaxRaw => SixteenBit ? 0xF000 : 0xFF;
+    /// <summary>
+    /// Raw values above it read as negative (two's complement). 16-bit cells: 0xF000 (T7 / T8), so only -0xFFF..0xF000 survive a
+    /// save and reload unchanged; T5Suite used 32000. 8-bit cells: 0xFF (never negative), 128 for T5's signed ones.
+    /// </summary>
+    public int SignAbove { get; }
+
+    private int Span => SixteenBit ? 0x10000 : 0x100;
+
+    public int MinRaw => SignAbove - Span + 1;
+    public int MaxRaw => SignAbove;
+
+    /// <summary>T5Suite's 3.0 to 5.0 bar sensor views: the Decimal and Easy values are raw × percent / 100 (100 shows them raw).</summary>
+    public int ScalePercent { get; set; } = 100;
+
+    private int Scaled(int raw) => ScalePercent == 100 ? raw : raw * ScalePercent / 100;
 
     /// <summary>True once anything changed since load or <see cref="MarkSaved"/>.</summary>
     public bool Mutated { get; private set; }
@@ -51,18 +63,19 @@ public sealed class MapData
 
     private readonly record struct Edit(int Index, int Before, int After);
 
-    public MapData(string name, byte[] content, int cols, bool sixteenBit)
+    public MapData(string name, byte[] content, int cols, bool sixteenBit, int? signAbove = null)
     {
         Name = name;
         SixteenBit = sixteenBit;
+        SignAbove = signAbove ?? (sixteenBit ? 0xF000 : 0xFF);
         Cols = Math.Max(1, cols);
-        m_raw = Decode(content, sixteenBit);
+        m_raw = Decode(content, sixteenBit, SignAbove);
         Rows = Math.Max(1, (m_raw.Length + Cols - 1) / Cols);
     }
 
     public int this[int index] => m_raw[index];
 
-    public double Physical(int index) => m_raw[index] * Factor + Offset;
+    public double Physical(int index) => Scaled(m_raw[index]) * Factor + Offset;
 
     public int[] RawValues() => (int[])m_raw.Clone();
 
@@ -107,14 +120,15 @@ public sealed class MapData
         return row < OpenLoop.Length && col < XAxis.Length && OpenLoop[row] > XAxis[col];
     }
 
-    public static int[] Decode(byte[] content, bool sixteenBit)
+    public static int[] Decode(byte[] content, bool sixteenBit, int? signAbove = null)
     {
-        if (!sixteenBit) return Array.ConvertAll(content, b => (int)b);
+        int above = signAbove ?? (sixteenBit ? 0xF000 : 0xFF);
+        if (!sixteenBit) return Array.ConvertAll(content, b => b > above ? b - 0x100 : b);
         var raw = new int[content.Length / 2];
         for (int i = 0; i < raw.Length; i++)
         {
             int b = content[i * 2] << 8 | content[i * 2 + 1];
-            raw[i] = b > 0xF000 ? b - 0x10000 : b;
+            raw[i] = b > above ? b - 0x10000 : b;
         }
         return raw;
     }
@@ -171,7 +185,7 @@ public sealed class MapData
     /// <summary>Replaces all values (read from file or ECU), dropping the undo history.</summary>
     public void Load(byte[] content)
     {
-        int[] raw = Decode(content, SixteenBit);
+        int[] raw = Decode(content, SixteenBit, SignAbove);
         if (raw.Length != m_raw.Length) throw new ArgumentException($"{Name}: got {raw.Length} values, have {m_raw.Length}");
         m_raw = raw;
         m_undo.Clear();
@@ -196,6 +210,7 @@ public sealed class MapData
             case MapViewType.Ascii:
                 return raw < 0 ? " " : ((char)raw).ToString();
             case MapViewType.Easy:
+                raw = Scaled(raw);
                 if (Factor != 1 || Offset != 0)
                 {
                     float v = (float)raw * (float)Factor + (float)Offset;
@@ -206,7 +221,7 @@ public sealed class MapData
                 if (Name.StartsWith("Reg_kon_mat")) return raw.ToString("F0", CultureInfo.CurrentCulture) + "%";
                 return raw.ToString(CultureInfo.CurrentCulture);
             default:
-                return raw.ToString(CultureInfo.CurrentCulture);
+                return Scaled(raw).ToString(CultureInfo.CurrentCulture);
         }
     }
 
@@ -223,15 +238,18 @@ public sealed class MapData
         {
             case MapViewType.Hex:
                 if (!int.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out raw)) { error = "Not a hex value"; return false; }
-                if (SixteenBit && raw > 0xF000 && raw <= 0xFFFF) raw -= 0x10000; // as the bytes read back
+                if (raw > SignAbove && raw < Span) raw -= Span; // as the bytes read back
                 break;
             case MapViewType.Easy:
                 if (!double.TryParse(text.TrimEnd('°', '%'), NumberStyles.Float, CultureInfo.CurrentCulture, out double d)
                     && !double.TryParse(text.TrimEnd('°', '%'), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) { error = "Not a number"; return false; }
-                raw = (int)Math.Round(Factor == 0 ? d - Offset : (d - Offset) / Factor, MidpointRounding.ToEven);
+                double unscaled = Factor == 0 ? d - Offset : (d - Offset) / Factor;
+                // a scaled view rounds up, as T5Suite's 3 bar views did
+                raw = ScalePercent == 100 ? (int)Math.Round(unscaled, MidpointRounding.ToEven) : Unscale(unscaled);
                 break;
             case MapViewType.Decimal:
                 if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.CurrentCulture, out raw)) { error = "Not an integer"; return false; }
+                if (ScalePercent != 100) raw = Unscale(raw);
                 break;
             default:
                 error = "ASCII view is read-only";
@@ -240,4 +258,6 @@ public sealed class MapData
         if (raw < MinRaw || raw > MaxRaw) { error = $"Value not valid, {MinRaw}..{MaxRaw}"; return false; }
         return true;
     }
+
+    private int Unscale(double v) => (int)Math.Ceiling(Math.Round(v * 100 / ScalePercent, 6));
 }

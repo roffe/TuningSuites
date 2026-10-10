@@ -48,14 +48,18 @@ public partial class SuiteMainWindow
         await Dialogs.Text(this, "Binary compare", text.ToString());
     }
 
+    /// <summary>The transfer wizard's caption and welcome text (T7Suite's / T8Suite's).</summary>
+    protected virtual (string caption, string text) TransferWizard =>
+        ("Transfer maps to different binary wizard", "This wizard assists you in transferring map contents from the current file to another binary.\n\n"
+            + "Make sure engine types and such are equal for both binaries!\n\n"
+            + "The author does not take responsibility for any damage done to your car or other objects in any form!\n\n"
+            + "Select the target binary now?");
+
     protected async void OnTransferMaps(object? sender, RoutedEventArgs e)
     {
         if (Vm.Binary is not { } bin) return;
-        const string text = "This wizard assists you in transferring map contents from the current file to another binary.\n\n"
-            + "Make sure engine types and such are equal for both binaries!\n\n"
-            + "The author does not take responsibility for any damage done to your car or other objects in any form!\n\n"
-            + "Select the target binary now?";
-        if (!await Dialogs.YesNo(this, text, "Transfer maps to different binary wizard")) return;
+        var (caption, text) = TransferWizard;
+        if (!await Dialogs.YesNo(this, text, caption)) return;
         if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } target) return;
         var selection = new TransferSelectionViewModel(SuiteCompare.TransferCandidates(bin), Vm.LastTransferSelection());
         if (!await new TransferSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) return;
@@ -137,6 +141,24 @@ public partial class SuiteMainWindow
         }
         string name = Path.GetFileName(bin.FileName) + "~" + sh.SmartVarname + ".csv";
         if (await Dialogs.SaveFile(this, "CSV files", "csv", name) is { } target) SymbolFiles.ExportMapCsv(bin, sh, target);
+    }
+
+    /// <summary>T5Suite's Import map from Excel: the map from the name after the last '~', else the selected symbol.</summary>
+    protected async void OnImportMapCsv(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, "CSV files", "*.csv") is not { } file) return;
+        string stem = Path.GetFileNameWithoutExtension(file);
+        if (stem.Contains('~') && bin.Find(stem[(stem.LastIndexOf('~') + 1)..]) is { } named)
+        {
+            if (await Dialogs.YesNo(this, $"Found valid symbol for import: {named.SmartVarname}. Are you sure you want to overwrite the map in the binary?", "Confirmation"))
+                Vm.ImportMapCsv(named, file);
+        }
+        else if (Vm.SelectedSymbol is { } sh)
+        {
+            if (await Dialogs.YesNo(this, $"Import the file into {sh.SmartVarname}? Are you sure you want to overwrite the map in the binary?", "Confirmation"))
+                Vm.ImportMapCsv(sh, file);
+        }
+        else await Dialogs.Info(this, "No symbol selected in the primary symbol list", Vm.Caption);
     }
 
     protected async void OnGenerateIdc(object? sender, RoutedEventArgs e)

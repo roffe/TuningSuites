@@ -503,6 +503,57 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Not tested yet: WiX only runs on Windows, so SetupT8 is first built by CI. The first release needs a `T8suite_v` tag above the old 0.1.57 (e.g. `T8suite_v2.0.0`): an untagged build is 0.0.0, which the MSI treats as a downgrade.
 - Known gap (T7 has it too): the old T8Extras stays installed. It owns the same `Binaries\*.BIN` paths, so uninstalling it afterwards removes the stock bins; uninstall T8Extras first, or repair T8Suite afterwards.
 
+## Chunks: T5Suite
+
+### Starting point (2026-10-10)
+
+- The old T5Suite 2.0: T5Suite2.0/ (frmMain.cs 13.3k lines, 23k LOC non-designer), Trionic5Tools/ (32k: the file logic, firmware properties, tuner, autotune maps, translators), Trionic5Controls/ (49k: viewers, realtime panel, wizards, disassembler), T5CANLib/ (9.5k, replaced by TrionicCANLib's `Trionic5`).
+- How it behaves, where it differs from T7Suite, goes into `docs/T5SUITE-BEHAVIOUR.md`.
+- **Modernize while porting:** T5Suite is the oldest code; T5 gets the shared window (SuiteCore / SuiteApp) and the T7 / T8 improvements (Recent files, multi-step undo, docking, the shared map viewer, realtime panel and logs, tools), and shared code grows where T5 needs a feature T7 / T8 already have.
+- **Stock bins:** `T5Binaries/` (85 bins: 81 T5.5 of 256 KB, 4 T5.2 of 128 KB), all with a valid checksum, are the golden corpus.
+- **Settings:** T5Suite kept them in `HKCU\Software\T5Suite2` (outside MattiasC), in its own `T5AppSettings`.
+
+### 0. Scaffold
+- [x] `docs/T5SUITE-BEHAVIOUR.md`, this plan, branch `net10-t5`
+- [x] T5App (AssemblyName T5Suite, `T5suite_` tags, T5Suite 2.0's icon), T5Core, T5CoreTest, T5AppTest in the solution; CI builds and tests them
+
+### 1. T5Core
+- [x] Lifted from Trionic5Tools (namespace `Trionic5Tools` kept): Trionic5File, the file information and properties, translators, tuner, anomalies, AFR / ignition / fuel maps; from Trionic5Controls the disassembler; from T5Suite2.0 the Idc file and SrecordT5. `symbolindex.xml` ships with T5Core (it names masked symbols). Not lifted: Trionic5Immo (a disabled software licence check, not the car immobiliser) and the empty Trionic5Bootloader
+- [x] `T5Binary : SuiteBinary`; T5CoreTest: golden test over T5Binaries/ (taken from the lifted code before refactoring)
+- Settings: `T5AppSettings` on the shared JSON settings (`<AppData>/MattiasC/T5Suite2/settings.json`); the legacy import reads `HKCU\Software\T5Suite2` (`SettingsKey.RegistryPaths`).
+- Deliberate differences: footer strings shorter than the old value are padded with spaces (T5Suite left the old tail); the firmware writers' transaction entries use the file offset; backups and the symbol index are found with Path.Combine (the old backslash joins made odd file names on Linux)
+
+### 2. MapControls
+- Nothing T5-specific expected; T5's viewer differences go with chunk 3.
+
+### 3. Read-only app
+- [x] T5App on the shared window: open bin / S19, the symbol list with T5Suite's columns (Description, Symbol; addresses and length in the column chooser), map viewers with T5's factors, offsets, axes and units, projects, Recent, the status bar's "T5.5 | 16 Mhz | RAM locked"
+- [x] Map viewers follow MapViewerEx: 16-bit values above 32000 read negative, `I_kyl_st!` / `I_luft_st!` / `Last_temp_st!` signed 8-bit, the injection maps unsigned (`SuiteBinary.SignAbove`); with a 3.0 / 3.5 / 4.0 / 5.0 bar sensor the pressure maps (MapIsScalableFor3Bar) and the "MAP" / "Pressure error (bar)" axes show × 1.2 / 1.4 / 1.6 / 2.0, edits round up (`ScalePercent`); the open-loop mark on the injection, ignition and knock fuel maps from `Open_loop!` / `Open_loop_knock!` when lambda control is on
+- [ ] The symbol list's two-level groups (category, subcategory) and the description cell coloured by category; `Pgm_mod!` opening the firmware view; SRAM-only symbols offline ("Symbol resides in SRAM...")
+- [x] Settings: the shared ones, plus "Advanced mode enabled" (the advanced tuning wizards are hidden without it, as in T5Suite)
+- Deliberate differences: the map sensor view follows the file (T5Suite had 12 view types, Decimal / Easy per sensor, in one combo); the 3D graph's axis labels stay in the axis units (T5Suite showed MAP in bar there); negative values in signed 8-bit maps are saved (T5Suite saved them as 0); the viewer title is the shared `Symbol: <name> [<file>]` (T5Suite: `<file> [<name>]`)
+
+### 4. Offline tuning
+- [x] Manual tuning menu (T5Suite's map buttons by group, T5.2 without the gear limiters and the ignition retard limit), My Maps
+- [x] Trionic options (firmware): one window with T5Suite's flags, the turbo / injector / sensor / stage markers, the footer fields and the grid-only fields; Ok writes them with transaction entries and the checksum
+- [x] Tuning wizards (`T5Tuning` over the lifted Trionic5Tuner): Tune me up ® (stage 1-3 and stage 4 and higher with the free tune settings), Convert to a 2.5 / 3.0 / 3.5 / 4.0 / 5.0 bar MAP sensor, larger injectors (the proposed constant, crank factor and battery correction), E85, boost adaption ranges, boost bias range, RPM limit; the reports in a list window with Save (.txt)
+- [x] Compare with another binary, Compare to original file, Binary compare files, Move data to another binary (T5Suite's wizard texts, the shared symbol selection), Search map content, Export / Import map to CSV, Examine binary, Check for anomalies, Open a saved report (.txt), Merge binary files, Split binary file, Lookup partnumber (with T5Suite's boosts, model years, region, Aero, high altitude), VIN decoder
+- [ ] The multi-file compare list ("Compare list"), the partnumber list with the library colours (16 / 20 MHz), the user library
+- Deliberate differences: the MAP sensor wizard converts to the sensor chosen (T5Suite always converted to 3.0 bar); the free tune updates the checksum after its last writes; the injector wizard and RPM limit write transaction entries in a project; boost adaption / bias say when the code pattern isn't found (T5Suite stayed silent); the wizards refresh open viewers; Compare to original file finds `Binaries/<partnumber>-<software id>.bin` or `Binaries/<partnumber>.bin` (T5Suite looked for the first and compared the second, so the item never lit up); compare skips SRAM-only symbols (T5Suite compared file offset 0 for them), lists flash symbols only one file has as "Missing in", and counts values as the shared compare does; transfer skips SRAM-only symbols; the CSV import scales values back (T5Suite's Excel import took them raw, so a round trip changed scaled maps) and the CSV export writes enough decimals for maps with factors below 0.01; reports are text (T5Suite's were DevExpress .prnx); Split asks nothing and overwrites chip1.bin / chip2.bin as before
+
+### 5. ECU
+- [ ] `T5Ecu` over TrionicCANLib's `Trionic5` (CAN): connect, SRAM maps (online tuning), synchronize, download / upload flash, SRAM snapshots, DTC codes, knock counters. P&E Micro and DIY USB BDM have no driver on .NET 10 and stay out
+
+### 6. Realtime
+- [ ] T5's realtime panel on the shared one (`T5Realtime` rules), logs, log viewer, LogWorks / CSV exports, matrix, filters, autotune (fuel and ignition), AFR maps, knock map snapshots
+
+### 7. Tools
+- [ ] Disassembler / vectors / Idc, hex view, axis browser, dyno graph and compressor map, injection timing viewer, boost adaption, merge adaption data
+
+### 8. Release
+- [ ] SetupT5 replacing the old T5Suite 2.0, packages, CI, updater on `T5suite_v`, README
+- [ ] The old code (T5Suite2.0/, Trionic5Tools/, Trionic5Controls/, T5CANLib/, T7Suite/, T8Suite/, CommonSuite/, the old controls and setups) moves to `OldSuites/`, still in the tree for reference
+
 ## After T7
 
 - **T8Suite:** ported on branch `net10-t8`, see Chunks: T8Suite above; waiting for its first CI run on Windows and a `T8suite_v` tag.
@@ -515,6 +566,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
+
+- 2026-10-10: T5 chunks 0-4 implemented on branch `net10-t5`: T5Core (the lifted Trionic5Tools with `T5Binary`, golden test over the 85 stock bins), T5App on the shared window with the symbol list, map viewers (T5's signs, MAP sensor scaling, open loop), firmware options, the tuning wizards, compare / transfer, reports, merge / split and the part number lookup.
 
 - 2026-10-10: T8 chunk 8 implemented: SetupT8 replacing the old T8SuitePro, T8's publish folder (stock bins, NLog.config, Kvaser), CI packaging and nightlies for both suites, Linux packaging per suite, README. Waiting for a first CI run on Windows.
 

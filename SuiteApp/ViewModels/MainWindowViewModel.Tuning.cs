@@ -92,6 +92,24 @@ public abstract partial class MainWindowViewModel
         return report;
     }
 
+    /// <summary>Import map from CSV: the map written (a transaction entry in a project), the checksum updated, open viewers refreshed.</summary>
+    public void ImportMapCsv(SymbolHelper sh, string file)
+    {
+        if (Binary is not { } bin || bin.FileAddress(sh) is not (var address and >= 0)) return;
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        try
+        {
+            bin.WriteData(address, SymbolFiles.ImportMapCsv(bin, sh, file), TransactionLog, "Import map from CSV");
+            bin.UpdateChecksum();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowInfo(e is InvalidDataException ? e.Message : "Failed to import: " + e.Message);
+        }
+        TransactionsAdded(before);
+        RefreshViewers(bin.FileName);
+    }
+
     /// <summary>Search map content: "No results found..." or a results tab.</summary>
     public void SearchMaps(MapSearchOptions options)
     {

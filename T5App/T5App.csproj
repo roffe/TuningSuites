@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>T5App</RootNamespace>
+    <AssemblyName>T5Suite</AssemblyName>
+    <!-- the version comes from the nearest T5suite_vX.Y.Z tag (Directory.Build.props), upstream's release tags -->
+    <VersionTagPrefix>T5suite_</VersionTagPrefix>
+    <ApplicationIcon>T5Suite.ico</ApplicationIcon>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!-- ponytail: Windows stays 32-bit as T7App (x86-only J2534 and Lawicel CANUSB drivers); only the launcher, the dll stays AnyCPU -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT'">
+    <DefaultAppHostRuntimeIdentifier>win-x86</DefaultAppHostRuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="T5Suite.ico" />
+    <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Help → T5Suite 2.0 user manual / Trionic 5 documentation, under the names T5Suite looked for -->
+    <None Include="..\reference files\T5Suite2 User Manual.pdf" Link="T5Suite2 User Manual.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\reference files\Trionic 5.pdf" Link="Trionic 5.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the stock bins the setup installed into Binaries (Compare to original file, Lookup partnumber); only published -->
+    <None Include="..\T5Binaries\*" Link="Binaries\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <!-- Kvaser's CANlib for TrionicCANLib on Windows, as the flasher ships it -->
+    <None Include="$(TrionicDir)\Libs\canlib32.dll" Link="canlib32.dll" CopyToOutputDirectory="PreserveNewest"
+          Condition="$(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\T5Core\T5Core.csproj" />
+    <ProjectReference Include="..\SuiteApp\SuiteApp.csproj" />
+  </ItemGroup>
+
+</Project>

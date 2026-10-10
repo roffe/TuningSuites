@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -66,6 +67,62 @@ namespace SuiteApp.Services
             body.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, FontFamily = new Avalonia.Media.FontFamily("monospace") });
             dlg.Content = body;
             return dlg.ShowDialog(owner);
+        }
+
+        /// <summary>A report (T5Suite's TuningReport): the lines, with Save to a text file (T5Suite saved DevExpress .prnx documents).</summary>
+        public static Task Report(Window owner, string caption, IEnumerable<string> lines)
+        {
+            string text = string.Join(Environment.NewLine, lines);
+            var dlg = new Window { Title = caption, Width = 900, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var ok = new Button { Content = "Ok", MinWidth = 80, IsDefault = true, IsCancel = true };
+            ok.Click += (_, _) => dlg.Close();
+            var save = new Button { Content = "Save...", MinWidth = 80 };
+            save.Click += async (_, _) =>
+            {
+                if (await SaveFile(dlg, "Reports", "txt", caption) is { } file) System.IO.File.WriteAllText(file, text);
+            };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
+            buttons.Children.Add(save);
+            buttons.Children.Add(ok);
+            var body = new DockPanel { Margin = new Thickness(12) };
+            DockPanel.SetDock(buttons, Avalonia.Controls.Dock.Bottom);
+            body.Children.Add(buttons);
+            body.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            dlg.Content = body;
+            return dlg.ShowDialog(owner);
+        }
+
+        /// <summary>A wizard page of numbers (label, value, minimum, maximum, step) under an introduction; the values on OK, null on Cancel.</summary>
+        public static async Task<decimal[]?> Numbers(Window owner, string caption, string intro, params (string label, decimal value, decimal min, decimal max, decimal step)[] fields)
+        {
+            var dlg = new Window { Title = caption, Width = 560, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var boxes = fields.Select(f => new NumericUpDown { Value = f.value, Minimum = f.min, Maximum = f.max, Increment = f.step, FormatString = f.step < 1 ? "0.00" : "0", Width = 160 }).ToArray();
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), RowSpacing = 6, Margin = new Thickness(0, 12, 0, 0) };
+            for (int i = 0; i < fields.Length; i++)
+            {
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                var label = new TextBlock { Text = fields[i].label, VerticalAlignment = VerticalAlignment.Center };
+                Grid.SetRow(label, i);
+                Grid.SetRow(boxes[i], i);
+                Grid.SetColumn(boxes[i], 1);
+                grid.Children.Add(label);
+                grid.Children.Add(boxes[i]);
+            }
+            bool ok = false;
+            var okButton = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
+            okButton.Click += (_, _) => { ok = true; dlg.Close(); };
+            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            cancel.Click += (_, _) => dlg.Close();
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+            buttons.Children.Add(okButton);
+            buttons.Children.Add(cancel);
+            var body = new StackPanel { Margin = new Thickness(16) };
+            body.Children.Add(new TextBlock { Text = intro, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            body.Children.Add(grid);
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            await dlg.ShowDialog(owner);
+            return ok ? boxes.Select(b => b.Value ?? 0).ToArray() : null;
         }
 
         /// <summary>One line of text (frmChangeNote "Remark for change"); null when cancelled.</summary>

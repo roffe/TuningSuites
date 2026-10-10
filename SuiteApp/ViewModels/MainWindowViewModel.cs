@@ -34,6 +34,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>"T7Suite": message captions.</summary>
     public string Caption { get; }
 
+    /// <summary>The window title's name; the settings name unless the suite says otherwise (T5: settings "T5Suite2", title "T5Suite").</summary>
+    protected virtual string TitleName => Suite;
+
     // the app's own version, not this library's
     protected string Version =>
         GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
@@ -126,7 +129,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Caption = caption;
         Registry = registry;
         Settings = new AppSettings(registry);
-        Title = $"{Suite} v{Version}";
+        Title = $"{TitleName} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(c => new ColumnFilter(c.Header, c.Path)));
         foreach (ColumnFilter f in ColumnFilters) f.PropertyChanged += (_, _) => Symbols?.Refresh();
         LoadRecent();
@@ -138,6 +141,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     /// <summary>The binary's size, for converting S19 files.</summary>
     protected abstract uint FileLength { get; }
+
+    /// <summary>Open file with an S19: the binary it converts to next to it, null when it didn't (T5Suite has its own converter).</summary>
+    protected virtual string? ConvertS19(string path) => new Srecord().ConvertSrecToBin(path, FileLength, out string bin, true) ? bin : null;
 
     /// <summary>The file is one of this suite's binaries.</summary>
     protected abstract bool IsValidFile(string path);
@@ -223,9 +229,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             if (path.EndsWith(".s19", StringComparison.OrdinalIgnoreCase))
             {
                 string source = path;
-                uint length = FileLength;
-                var (ok, converted) = await Task.Run(() => (new Srecord().ConvertSrecToBin(source, length, out string bin, true), bin));
-                if (ok) path = converted;
+                if (await Task.Run(() => ConvertS19(source)) is { } converted) path = converted;
                 else Info?.Invoke("Failed to convert S19 file to binary");
             }
             Settings.Lastfilename = path;
@@ -233,7 +237,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             {
                 Binary = null;
                 Symbols = null;
-                Title = $"{Suite} v{Version} [ none ]";
+                Title = $"{TitleName} v{Version} [ none ]";
                 if (showMessage && InvalidFileMessage is { } message) Info?.Invoke(message);
                 return false;
             }
@@ -248,7 +252,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             view.GroupDescriptions.Add(new DataGridPathGroupDescription(nameof(SymbolHelper.Category)));
             Binary = bin;
             Symbols = view;
-            Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
+            Title = $"{TitleName} v{Version} [ {Path.GetFileName(path)} ]";
             FileNameText = Path.GetFileNameWithoutExtension(path);
             OpenClosedText = bin.IsSoftwareOpen ? "Open/dev binary" : "Normal binary";
             await OnOpenedAsync(bin);
@@ -513,7 +517,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         project.CreateBackup();
         Project = project;
         Settings.Lastprojectname = name;
-        Title = $"{Suite} [Project: {name}]";
+        Title = $"{TitleName} [Project: {name}]";
         UpdateRollControls();
         return true;
     }
@@ -527,7 +531,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Symbols = null;
         FileNameText = "No file";
         Settings.Lastfilename = "";
-        Title = Suite;
+        Title = TitleName;
         UpdateRollControls();
     }
 

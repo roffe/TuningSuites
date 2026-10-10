@@ -50,6 +50,10 @@ jobs:
     - name: Test
       run: dotnet test T7CoreTest -c Release --no-build
 
+    # golden parse of every bin in T5Binaries and the T5 logic
+    - name: Test T5
+      run: dotnet test T5CoreTest -c Release --no-build
+
     # golden parse of every bin in T8Binaries and the T8 logic
     - name: Test T8
       run: dotnet test T8CoreTest -c Release --no-build
@@ -65,6 +69,10 @@ jobs:
     # T8Suite on the shared window, headless on a stock bin
     - name: Test T8 app
       run: dotnet test T8AppTest -c Release --no-build
+
+    # T5Suite on the shared window, headless on a stock bin: open, firmware options, tuning wizards
+    - name: Test T5 app
+      run: dotnet test T5AppTest -c Release --no-build
 
   # each suite for each platform, packaged as roffe/Trionic packages the flasher: <suite>App, Setup<suite>, out/<suite>Suite
   package:
