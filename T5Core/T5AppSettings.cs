@@ -661,52 +661,6 @@ namespace Trionic5Tools
             }
         }
 
-        private string m_autoLogTriggerStartSymbol = string.Empty;
-
-        public string AutoLogTriggerStartSymbol
-        {
-            get { return m_autoLogTriggerStartSymbol; }
-            set
-            {
-                m_autoLogTriggerStartSymbol = value;
-                SaveRegistrySetting("autoLogTriggerStartSymbol", m_autoLogTriggerStartSymbol);
-            }
-        }
-        private string m_autoLogTriggerStopSymbol = string.Empty;
-
-        public string AutoLogTriggerStopSymbol
-        {
-            get { return m_autoLogTriggerStopSymbol; }
-            set
-            {
-                m_autoLogTriggerStopSymbol = value;
-                SaveRegistrySetting("autoLogTriggerStopSymbol", m_autoLogTriggerStopSymbol);
-            }
-        }
-
-        private int m_autoLogStartSign = 0;
-
-        public int AutoLogStartSign
-        {
-            get { return m_autoLogStartSign; }
-            set
-            {
-                m_autoLogStartSign = value;
-                SaveRegistrySetting("autoLogStartSign", m_autoLogStartSign);
-            }
-        }
-        private int m_autoLogStopSign = 0;
-
-        public int AutoLogStopSign
-        {
-            get { return m_autoLogStopSign; }
-            set
-            {
-                m_autoLogStopSign = value;
-                SaveRegistrySetting("autoLogStopSign", m_autoLogStopSign);
-            }
-        }
-
         private bool m_KnockCounterSnapshot = false;
 
         public bool KnockCounterSnapshot
@@ -728,41 +682,6 @@ namespace Trionic5Tools
             {
                 m_AlwaysCreateAFRMaps = value;
                 SaveRegistrySetting("AlwaysCreateAFRMaps", m_AlwaysCreateAFRMaps);
-            }
-        }
-
-        private double m_autoLogStartValue = 0;
-
-        public double AutoLogStartValue
-        {
-            get { return m_autoLogStartValue; }
-            set
-            {
-                m_autoLogStartValue = value;
-                SaveRegistrySetting("autoLogStartValue", m_autoLogStartValue.ToString());
-            }
-        }
-        private double m_autoLogStopValue = 0;
-
-        public double AutoLogStopValue
-        {
-            get { return m_autoLogStopValue; }
-            set
-            {
-                m_autoLogStopValue = value;
-                SaveRegistrySetting("autoLogStopValue", m_autoLogStopValue.ToString());
-            }
-        }
-
-        private bool m_autoLoggingEnabled = false;
-
-        public bool AutoLoggingEnabled
-        {
-            get { return m_autoLoggingEnabled; }
-            set
-            {
-                m_autoLoggingEnabled = value;
-                SaveRegistrySetting("autoLoggingEnabled", m_autoLoggingEnabled);
             }
         }
 
@@ -1986,13 +1905,6 @@ namespace Trionic5Tools
 
                 saveSettings.SetValue("AlwaysCreateAFRMaps", m_AlwaysCreateAFRMaps);
                 saveSettings.SetValue("KnockCounterSnapshot", m_KnockCounterSnapshot);
-                saveSettings.SetValue("autoLoggingEnabled", m_autoLoggingEnabled);
-                saveSettings.SetValue("autoLogStartSign", m_autoLogStartSign);
-                saveSettings.SetValue("autoLogStartValue", m_autoLogStartValue.ToString());
-                saveSettings.SetValue("autoLogStopSign", m_autoLogStopSign);
-                saveSettings.SetValue("autoLogStopValue", m_autoLogStopValue.ToString());
-                saveSettings.SetValue("autoLogTriggerStartSymbol", m_autoLogTriggerStartSymbol);
-                saveSettings.SetValue("autoLogTriggerStopSymbol", m_autoLogTriggerStopSymbol);
                 saveSettings.SetValue("ProjectFolder", m_ProjectFolder);
             }
         }
@@ -2554,37 +2466,9 @@ namespace Trionic5Tools
                             {
                                 m_KnockCounterSnapshot = Convert.ToBoolean(Settings.GetValue(a).ToString());
                             }
-                            else if (a == "autoLoggingEnabled")
-                            {
-                                m_autoLoggingEnabled = Convert.ToBoolean(Settings.GetValue(a).ToString());
-                            }
-                            else if (a == "autoLogStartSign")
-                            {
-                                m_autoLogStartSign = Convert.ToInt32(Settings.GetValue(a).ToString());
-                            }
-                            else if (a == "autoLogStopSign")
-                            {
-                                m_autoLogStopSign = Convert.ToInt32(Settings.GetValue(a).ToString());
-                            }
-                            else if (a == "autoLogStartValue")
-                            {
-                                m_autoLogStartValue = ConvertToDouble(Settings.GetValue(a).ToString());
-                            }
-                            else if (a == "autoLogStopValue")
-                            {
-                                m_autoLogStopValue = ConvertToDouble(Settings.GetValue(a).ToString());
-                            }
                             else if (a == "ProjectFolder")
                             {
                                 m_ProjectFolder = Settings.GetValue(a).ToString();
-                            }
-                            else if (a == "autoLogTriggerStartSymbol")
-                            {
-                                m_autoLogTriggerStartSymbol = Settings.GetValue(a).ToString();
-                            }
-                            else if (a == "autoLogTriggerStopSymbol")
-                            {
-                                m_autoLogTriggerStopSymbol = Settings.GetValue(a).ToString();
                             }
                             else if (a == "UseWidebandLambdaThroughSymbol")
                             {
