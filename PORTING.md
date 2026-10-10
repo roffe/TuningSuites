@@ -580,6 +580,20 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
+**T5Suite (branch `net10-t5`), each with the default taken:**
+- The old code went into an `OldSuites/` folder (one commit at the end of the branch), not a branch: it stays searchable next to the new code. A branch instead? Then drop that commit.
+- Advanced mode (Settings, off by default as in T5Suite) hides the advanced tuning wizards and the autotune, as T5Suite did, but no longer auto-hides the symbol list. Keep the setting, or show everything always?
+- Realtime: one table polls every symbol T5Suite's panel tabs used (about 30 per pass, the slow ones every 2nd to 5th pass) instead of a watch list per tab. Fast enough on the P-bus? Needs a bench test.
+- Logs use the shared writer (symbol names, one `<bin>-<date>-CanTraceExt.t5l` per day next to the bin) instead of T5Suite's per-session files in `Logs\` with display names; old .t5l files still open.
+- Upload flash to ECU flashes the open file after the checksum check (T5Suite let you pick any .bin and needed a realtime connection first).
+- The sync date stays (SRAM 0x7FC0, file length − 0x1E0) with the dialog on connect; an ECU without a date proposes binary → ECU (T5Suite stamped it "now" and proposed ECU → binary).
+- An ECU running another software version than the open file gets a warning on connect; SRAM access is still allowed (T5Suite said nothing). Block writes instead?
+- Projects use the shared folder (`<Documents>/TxSuite/Projects`), so T5, T7 and T8 projects list each other's there.
+- Reports (examine, anomalies, tuning wizards) are text with Save (.txt); "Open a saved report" opens those (T5Suite's .prnx were DevExpress documents).
+- Not ported yet: autotune ignition (T5.5, with the ignition lock map), knock map snapshots, the Pgm_mod! toggles and engine status LEDs as panel tabs, the multi-file "Compare list", the partnumber list with its library colours, the user library (folder scan), T5Suite's LogWorks range tables, Ctrl+Z for project roll back. Which matter?
+- Not ported on purpose: "Browse tunes in internet repository" (the host is gone), the BDM groups (P&E / DIY USB BDM, no .NET 10 drivers), the DIY CAN adapter (mct_can.dll), the licence check.
+- First release: SetupT5 replaces the old T5SuiteII only from a tag above 2.0.30, e.g. `T5suite_v2.1.0`.
+
 ## Log
 
 - 2026-10-10: The old suites moved to `OldSuites/`; the root holds the .NET 10 suites, their data and docs.
