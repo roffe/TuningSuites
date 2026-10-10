@@ -616,6 +616,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: A double click on an inner window's title bar maximizes it again (it only restored): Dock's press started a drag that captured the pointer, so the double tap missed its header handler.
 - 2026-10-10: Settings opens on the saved CAN adapter, an unset one as an empty "Select an adapter" (it showed the first adapter found, which wasn't saved, while Connect said none was selected); choosing an adapter type still picks its first adapter, as T7Suite did.
 - 2026-10-10: Autologging removed in all three suites (its settings too), the user's call.
 - 2026-10-10: The settings dialogs of T5, T7 and T8 laid out as their originals; T7's autotune options in their own dialog behind "Autotune settings" (and File → Autotune settings), T5's autotune dialog as T5Suite's.

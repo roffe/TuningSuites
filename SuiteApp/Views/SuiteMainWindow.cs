@@ -378,7 +378,19 @@ public partial class SuiteMainWindow : Window
         m_titleDrag = null;
         if (e.Source is not Visual source) return;
         bool header = source.GetSelfAndVisualAncestors().OfType<Control>().Any(c => c.Name == "PART_Header");
-        if (header && source.FindAncestorOfType<Dock.Avalonia.Controls.MdiDocumentWindow>()?.DataContext is Dock.Model.Core.IDockable { Context: DocumentViewModel doc })
+        var window = source.FindAncestorOfType<Dock.Avalonia.Controls.MdiDocumentWindow>();
+        // a double click on the title bar maximizes. Dock's own double tap handler sits on the header, but in the normal state its
+        // press starts a window drag that captures the pointer, so the double tap went to the window and never reached it (a
+        // maximized window has no drag, which is why restoring worked). Its maximize button does it here, before the drag starts.
+        if (header && e.ClickCount == 2 && window?.DataContext is Dock.Model.Controls.IMdiDocument { MdiState: Dock.Model.Core.MdiWindowState.Normal }
+            && source.FindAncestorOfType<Button>() == null
+            && window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "PART_MaximizeRestoreButton") is { } maximize)
+        {
+            maximize.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            e.Handled = true;
+            return;
+        }
+        if (header && window?.DataContext is Dock.Model.Core.IDockable { Context: DocumentViewModel doc })
             m_titleDrag = doc;
     }
 
