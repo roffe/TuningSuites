@@ -22,11 +22,17 @@
 
   <ItemGroup>
     <AvaloniaResource Include="T8Suite.ico" />
+    <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
     <!-- Help → T8Suite user manual / Trionic 8 technical documentation -->
     <None Include="..\T8_manual.pdf" Link="T8_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Trionic 8.pdf" Link="Trionic 8.pdf" CopyToOutputDirectory="PreserveNewest" />
     <!-- the Tuning Wizard's packs (T8Suite's installer put them into TuningPacks next to the program) -->
     <None Include="..\TuningPacks\*.t8x" Link="TuningPacks\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the stock bins T8Extras installed (Lookup partnumber, Create binary from TIS file); only published, a build doesn't copy the 73 MB -->
+    <None Include="..\T8Binaries\*" Link="Binaries\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+    <!-- Kvaser's CANlib for TrionicCANLib on Windows, as the flasher ships it -->
+    <None Include="$(TrionicDir)\Libs\canlib32.dll" Link="canlib32.dll" CopyToOutputDirectory="PreserveNewest"
+          Condition="$(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')" />
   </ItemGroup>
 
   <ItemGroup>

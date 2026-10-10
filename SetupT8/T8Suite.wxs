@@ -1,0 +1,65 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+	<!-- the old T8Suite setup's (SetupT8SuitePro.vdproj) upgrade code and folder: installing this replaces the old T8SuitePro -->
+	<?define UpgradeCode="{D1B8E08D-7E0E-4F1D-89D4-7AA63766CCF6}"?>
+	<?define Manufacturer="MattiasC"?>
+
+	<!-- Version is the exe's FileVersion, from the T8suite_v git tag (Directory.Build.props); MSI uses its first three fields.
+	     The old T8SuitePro was 0.1.57, so a build without a tag (0.0.0) can't replace it -->
+	<Package Name="T8Suite" Language="1033" Version="!(bind.FileVersion.T8SuiteExe)" Codepage="1252" Manufacturer="$(var.Manufacturer)" UpgradeCode="$(var.UpgradeCode)" InstallerVersion="300" ProductCode="*">
+		<SummaryInformation Manufacturer="$(var.Manufacturer)" />
+		<MediaTemplate EmbedCab="yes" />
+
+
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		<ui:WixUI Id="WixUI_InstallDir" />
+		<WixVariable Id="WixUILicenseRtf" Value="disclaimer.rtf" />
+
+
+		<!-- Lawicel canusbdrv.dll needs the VC++ 2010 runtime -->
+		<Feature Id="VCRedist" Title="Visual C++ 10.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+			<MergeRef Id="VCRedist" />
+		</Feature>
+
+		<DirectoryRef Id="INSTALLFOLDER">
+			<Component Id="T8SuiteExeComponent">
+				<File Id="T8SuiteExe" Name="T8Suite.exe" KeyPath="yes" DiskId="1" Source="$(var.PublishDir)\T8Suite.exe" />
+				<Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="T8Suite" Icon="T8Suite.ico" IconIndex="0" Show="normal" WorkingDirectory="TARGETDIR" Advertise="yes" />
+				<Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="T8Suite" Icon="T8Suite.ico" IconIndex="0" Show="normal" WorkingDirectory="TARGETDIR" Advertise="yes" />
+			</Component>
+			<!-- .bin files list T8Suite under Open with; their default program stays as it is (T8Suite's setup registered none) -->
+			<Component Id="BinOpenWith">
+				<RegistryValue Root="HKLM" Key="Software\Classes\.bin\OpenWithProgids" Name="T8Suite.bin" Type="string" Value="T8Suite" KeyPath="yes" />
+				<RegistryValue Root="HKLM" Key="Software\Classes\T8Suite.bin" Type="string" Value="Trionic 8 binary" />
+				<RegistryValue Root="HKLM" Key="Software\Classes\T8Suite.bin\DefaultIcon" Type="string" Value="[INSTALLFOLDER]T8Suite.exe,0" />
+				<RegistryValue Root="HKLM" Key="Software\Classes\T8Suite.bin\shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]T8Suite.exe&quot; &quot;%1&quot;" />
+			</Component>
+			<Merge Id="VCRedist" SourceFile="$(var.TrionicDir)\SetupCANFlasher\Microsoft_VC100_CRT_x86.msm" DiskId="1" Language="0"/>
+		</DirectoryRef>
+
+
+		<Feature Id="DefaultFeature" ConfigurableDirectory="INSTALLFOLDER" Level="1">
+			<ComponentRef Id="T8SuiteExeComponent" Primary="yes" />
+			<ComponentRef Id="BinOpenWith" />
+			<!-- the rest of the self-contained publish folder (runtime, Avalonia, manuals, Binaries, TuningPacks, NLog.config, libusb-1.0.dll) -->
+			<Files Directory="INSTALLFOLDER" Include="$(var.PublishDir)\**">
+				<Exclude Files="$(var.PublishDir)\T8Suite.exe" />
+				<!-- native SkiaSharp/HarfBuzz symbols, ~100 MB -->
+				<Exclude Files="$(var.PublishDir)\lib*.pdb" />
+			</Files>
+		</Feature>
+
+		<Icon Id="T8Suite.ico" SourceFile="$(sys.SOURCEFILEDIR)..\T8App\T8Suite.ico" />
+		<Property Id="ARPPRODUCTICON" Value="T8Suite.ico" />
+		<MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+		<!-- the old setup's folder: Program Files (x86)\MattiasC\T8SuitePro -->
+		<StandardDirectory Id="ProgramFilesFolder">
+			<Directory Id="ManufacturerFolder" Name="!(bind.property.Manufacturer)">
+				<Directory Id="INSTALLFOLDER" Name="T8SuitePro" />
+			</Directory>
+		</StandardDirectory>
+		<StandardDirectory Id="DesktopFolder" />
+		<StandardDirectory Id="ProgramMenuFolder" />
+	</Package>
+</Wix>

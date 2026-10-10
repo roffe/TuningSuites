@@ -1,0 +1,18 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+  <PropertyGroup>
+    <OutputName>T8Suite</OutputName>
+    <!-- self-contained `dotnet publish T8App -r win-x86` folder with libusb-1.0.dll added, see .github/workflows/build.yml -->
+    <PublishDir Condition="'$(PublishDir)' == ''">..\T8App\bin\Release\net10.0\win-x86\publish</PublishDir>
+    <_PublishDirFull>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(PublishDir)'))</_PublishDirFull>
+    <!-- the VC++ 2010 merge module comes from the flasher's setup in the Trionic submodule -->
+    <TrionicDir Condition="'$(TrionicDir)' == ''">..\Trionic</TrionicDir>
+    <_TrionicDirFull>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(TrionicDir)'))</_TrionicDirFull>
+    <DefineConstants>$(DefineConstants);PublishDir=$(_PublishDirFull.TrimEnd('\/'));TrionicDir=$(_TrionicDirFull.TrimEnd('\/'))</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="disclaimer.rtf" />
+  </ItemGroup>
+</Project>

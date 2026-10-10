@@ -39,6 +39,8 @@ namespace T8AppTest
         {
             s_dir = Directory.CreateTempSubdirectory("t8app").FullName;
             SettingsKey.BaseFolder = Path.Combine(s_dir, "settings");
+            // T8App's NLog.config comes along; its log files would go to the real AppData
+            NLog.LogManager.SuspendLogging();
             s_session = HeadlessUnitTestSession.StartNew(typeof(AppTest));
         }
 
