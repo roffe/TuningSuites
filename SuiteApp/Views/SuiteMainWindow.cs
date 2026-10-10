@@ -24,7 +24,13 @@ namespace SuiteApp.Views;
 /// </summary>
 public partial class SuiteMainWindow : Window
 {
-    private const string SymbolListKey = "SymbolListProportion";
+    private const string SymbolListKey = "SymbolListWidth";
+    // the share of the window the port saved before it kept a width
+    private const string SymbolListProportionKey = "SymbolListProportion";
+
+    // the symbol list's width in pixels, kept when the window resizes (the old suites' dock panels did); a splitter drag sets a new one
+    private double m_symbolWidth = double.NaN;
+    private bool m_fittingSymbolPane;
     private const string SkinKey = "Skin";
 
     private SuiteWorkspace? m_workspace;
@@ -49,6 +55,30 @@ public partial class SuiteMainWindow : Window
         if (m_workspaceReady) return;
         m_workspaceReady = true;
         InitWorkspace();
+        Space.Workspace.SizeChanged += (_, e) =>
+        {
+            if (!e.WidthChanged || e.NewSize.Width <= 0) return;
+            // the first size: the width the saved or default share gives
+            if (double.IsNaN(m_symbolWidth)) m_symbolWidth = Space.SymbolPane.Proportion * e.NewSize.Width;
+            FitSymbolPane(e.NewSize.Width);
+        };
+        Space.SymbolPane.PropertyChanged += (_, e) =>
+        {
+            // a splitter drag (not the fitting below, not while the list is pinned away)
+            if (e.Property == Dock.Model.Avalonia.Core.DockableBase.ProportionProperty && !m_fittingSymbolPane && Space.Workspace.Bounds.Width > 0
+                && !double.IsNaN(Space.SymbolPane.Proportion) && DockFactory?.IsDockablePinned(Space.SymbolTool) != true)
+                m_symbolWidth = Space.SymbolPane.Proportion * Space.Workspace.Bounds.Width;
+        };
+    }
+
+    // the share of the new width that keeps the symbol list as wide as it was; the documents take the rest
+    private void FitSymbolPane(double total)
+    {
+        double share = Math.Clamp(m_symbolWidth / total, 0.05, 0.95);
+        m_fittingSymbolPane = true;
+        Space.SymbolPane.Proportion = share;
+        Space.Documents.Proportion = 1 - share;
+        m_fittingSymbolPane = false;
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -60,9 +90,11 @@ public partial class SuiteMainWindow : Window
         {
             ApplySkin(settings.GetValue(SkinKey) as string);
             // the symbol list's width from the last session, as the suites' saved dock layout kept it
-            if (double.TryParse(settings.GetValue(SymbolListKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double width)
-                && width is > 0.05 and < 0.95)
-                Space.SymbolPane.Proportion = width;
+            if (double.TryParse(settings.GetValue(SymbolListKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double width) && width > 50)
+                m_symbolWidth = width;
+            else if (double.TryParse(settings.GetValue(SymbolListProportionKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double share)
+                && share is > 0.05 and < 0.95)
+                Space.SymbolPane.Proportion = share;
         }
         Space.Documents.ItemsSource = vm.DockedViewers;
         vm.Viewers.CollectionChanged += (_, e) =>
@@ -260,8 +292,8 @@ public partial class SuiteMainWindow : Window
     {
         base.OnClosed(e);
         if (DataContext is not MainWindowViewModel vm) return;
-        if (!double.IsNaN(Space.SymbolPane.Proportion))
-            using (var settings = SettingsKey.Open(vm.Suite)) settings.SetValue(SymbolListKey, Space.SymbolPane.Proportion);
+        if (!double.IsNaN(m_symbolWidth))
+            using (var settings = SettingsKey.Open(vm.Suite)) settings.SetValue(SymbolListKey, Math.Round(m_symbolWidth));
         vm.Shutdown();
     }
 

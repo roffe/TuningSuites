@@ -98,6 +98,27 @@ namespace T7AppTest
                 Assert.AreEqual("IgnNorm", vm.ColumnFilters[0].Text);
                 vm.ColumnFilters[0].Text = "";
                 vm.SetFilterColumns(grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => c.SortMemberPath));
+                // no "No documents open" behind an empty workspace
+                Assert.IsFalse(Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<TextBlock>().Any(t => t.Text == "No documents open"));
+                // the symbol list keeps its width when the window is resized
+                double SymbolListWidth() => Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<SuiteApp.Views.SymbolListView>().First().Bounds.Width;
+                double before = SymbolListWidth();
+                window.Width = 1100;
+                window.CaptureRenderedFrame();
+                Assert.AreEqual(before, SymbolListWidth(), 2);
+                window.Width = 1500;
+                window.CaptureRenderedFrame();
+                Assert.AreEqual(before, SymbolListWidth(), 2);
+                // a splitter drag gives it a new width, which resizing keeps
+                WorkspacePart<Dock.Model.Avalonia.Controls.ToolDock>(window, "SymbolPane")!.Proportion = 0.4;
+                window.CaptureRenderedFrame();
+                double dragged = SymbolListWidth();
+                Assert.IsGreaterThan(before + 50, dragged);
+                window.Width = 1100;
+                window.CaptureRenderedFrame();
+                Assert.AreEqual(dragged, SymbolListWidth(), 2);
+                window.Width = 1500;
+                window.CaptureRenderedFrame();
                 // grouping, sorting and refreshing while a user description is being edited (Group by category crashed)
                 grid.CurrentColumn = grid.Columns.First(c => c.SortMemberPath == "Userdescription");
                 Assert.IsTrue(grid.BeginEdit());
