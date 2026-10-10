@@ -14,10 +14,21 @@ namespace Trionic5Tools
     public class T5AppSettings
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-        /// <summary>T5Suite 2.0's settings key, HKCU\\Software\\T5Suite2 (outside MattiasC); settings.json in &lt;AppData&gt;/MattiasC/T5Suite2.</summary>
-        public const string Suite = "T5Suite2";
+        /// <summary>The settings name, like T7SuitePro / T8SuitePro: settings.json in &lt;AppData&gt;/MattiasC/T5SuitePro.</summary>
+        public const string Suite = "T5SuitePro";
 
-        static T5AppSettings() => SettingsKey.RegistryPaths[Suite] = @"Software\T5Suite2";
+        static T5AppSettings() => Register();
+
+        /// <summary>
+        /// Where the settings came from before: T5Suite 2.0's registry keys, imported once on Windows (CommonSuite's
+        /// HKCU\Software\MattiasC\T5Suite2 with the log filters, channels and symbol colours, then its own HKCU\Software\T5Suite2,
+        /// which wins), and the settings folder's name before the rename, T5Suite2.
+        /// </summary>
+        internal static void Register()
+        {
+            SettingsKey.RegistryPaths[Suite] = [@"Software\MattiasC\T5Suite2", @"Software\T5Suite2"];
+            SettingsKey.FormerFolders[Suite] = "T5Suite2";
+        }
 
 
         private string _LastXAxisFromMatrix = string.Empty;

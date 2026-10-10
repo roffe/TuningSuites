@@ -37,9 +37,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>The open file's VIN for Actions → VIN decoder; "" where the files carry none (T5).</summary>
     public virtual string BinaryVin => "";
 
-    /// <summary>The window title's name; the settings name unless the suite says otherwise (T5: settings "T5Suite2", title "T5Suite").</summary>
-    protected virtual string TitleName => Suite;
-
     // the app's own version, not this library's
     protected string Version =>
         GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
@@ -139,7 +136,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Registry = registry;
         Settings = new AppSettings(registry);
         ApplyColorBlindMode();
-        Title = $"{TitleName} v{Version}";
+        Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
         WatchFloating();
@@ -259,7 +256,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             {
                 Binary = null;
                 Symbols = null;
-                Title = $"{TitleName} v{Version} [ none ]";
+                Title = $"{Suite} v{Version} [ none ]";
                 if (showMessage && InvalidFileMessage is { } message) Info?.Invoke(message);
                 return false;
             }
@@ -276,7 +273,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
             Binary = bin;
             Symbols = view;
-            Title = $"{TitleName} v{Version} [ {Path.GetFileName(path)} ]";
+            Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
             FileNameText = Path.GetFileNameWithoutExtension(path);
             OpenClosedText = bin.IsSoftwareOpen ? "Open/dev binary" : "Normal binary";
             await OnOpenedAsync(bin);
@@ -609,7 +606,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         project.CreateBackup();
         Project = project;
         Settings.Lastprojectname = name;
-        Title = $"{TitleName} [Project: {name}]";
+        Title = $"{Suite} [Project: {name}]";
         UpdateRollControls();
         return true;
     }
@@ -623,7 +620,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Symbols = null;
         FileNameText = "No file";
         Settings.Lastfilename = "";
-        Title = TitleName;
+        Title = Suite;
         UpdateRollControls();
     }
 

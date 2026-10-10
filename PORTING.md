@@ -520,7 +520,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 ### 1. T5Core
 - [x] Lifted from Trionic5Tools (namespace `Trionic5Tools` kept): Trionic5File, the file information and properties, translators, tuner, anomalies, AFR / ignition / fuel maps; from Trionic5Controls the disassembler; from T5Suite2.0 the Idc file and SrecordT5. `symbolindex.xml` ships with T5Core (it names masked symbols). Not lifted: Trionic5Immo (a disabled software licence check, not the car immobiliser) and the empty Trionic5Bootloader
 - [x] `T5Binary : SuiteBinary`; T5CoreTest: golden test over T5Binaries/ (taken from the lifted code before refactoring)
-- Settings: `T5AppSettings` on the shared JSON settings (`<AppData>/MattiasC/T5Suite2/settings.json`); the legacy import reads `HKCU\Software\T5Suite2` (`SettingsKey.RegistryPaths`).
+- Settings: `T5AppSettings` on the shared JSON settings (`<AppData>/MattiasC/T5SuitePro/settings.json`; the folder was `T5Suite2` until the rename and is moved over once, `SettingsKey.FormerFolders`); the legacy import reads T5Suite 2.0's `HKCU\Software\MattiasC\T5Suite2` and `HKCU\Software\T5Suite2` (`SettingsKey.RegistryPaths`).
 - Deliberate differences: footer strings shorter than the old value are padded with spaces (T5Suite left the old tail); the firmware writers' transaction entries use the file offset; backups and the symbol index are found with Path.Combine (the old backslash joins made odd file names on Linux)
 
 ### 2. MapControls
@@ -614,6 +614,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: T5's name is T5SuitePro like T7SuitePro / T8SuitePro: the window title ("T5SuitePro v<version> [ file ]"), the settings folder (`MattiasC/T5SuitePro`, the `T5Suite2` folder moved over once; the first-run import still reads T5Suite 2.0's registry keys) and the shipped user manual. The program, setup and About stay T5Suite like T7Suite / T8Suite; references to the old T5Suite 2.0 (its keys, `OldSuites/T5Suite2.0/`, its captions in the behaviour doc) keep its name.
 - 2026-10-10: txlogger's colour blind modes for the map viewers of all three suites (grid, 3D surface in both renderers, 2D graph, airmass table), live in open viewers; Normal renders unchanged.
 - 2026-10-10: The airmass result viewer (T7 / T8) laid out as ctrlAirmassResult: the Options group across the bottom (checkboxes, firmware limit / ambient pressure / display / gear / units, the legend in its two columns, names cut short in a narrow window as there), Compare / Refresh / Close under it. The dyno graph (also T5's) labels every point with its value and boxes its legend at the top right, as the old Nevron charts; about a dozen value axis steps (20 / 30).
 - 2026-10-10: T5's firmware settings (titled "Trionic 5 firmware settings" like T7 / T8's "Trionic N firmware information"; T5Suite: "Trionic firmware settings") laid out as T5Suite's (group boxes in its places, its flag order and captions, the partnumber's lookup button); the extra fields behind "Advanced".

@@ -78,7 +78,7 @@ namespace T5AppTest
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                StringAssert.StartsWith(vm.Title, "T5Suite v");
+                StringAssert.StartsWith(vm.Title, "T5SuitePro v");
                 var about = window.NewAboutWindow("2.5.0");
                 about.Show();
                 about.CaptureRenderedFrame();

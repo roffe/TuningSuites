@@ -171,7 +171,7 @@
                 <MenuItem Header="Dock all floating windows" Command="{Binding DockAllCommand}" />
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5Suite2 User Manual.pdf" />
+                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5SuitePro User Manual.pdf" />
                 <MenuItem Header="Trionic 5 documentation" Click="OnHelpFile" Tag="Trionic 5.pdf" />
                 <MenuItem Header="Release notes" Click="OnReleaseNotes" />
                 <Separator />
