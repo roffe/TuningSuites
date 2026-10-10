@@ -613,6 +613,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: Lookup partnumber's window is titled as its menu item in all three suites; T7 and T8 get the "..." partnumber list back (T7Suite / T8Suite had it): the stock bins in Binaries that the suite's lookup recognizes, grouped by car model and engine, with power and torque (T7Suite / T8Suite listed every bin by its file name: car type, engine, tuner, stage).
 - 2026-10-10: One symbol list column order for T5, T7 and T8 (user's order); T5 symbols get numbers and user descriptions (notes, matched back by number, saved with a message instead of a crash in a read-only folder). The header menu ticks the sort and grouping in use; grouping, sorting or filtering while a user description is being edited no longer crashes (the grid's edit is committed first); the auto filter row follows the shown columns.
 - 2026-10-10: The symbol list opens sorted by category ascending and grouped by it in all three suites (each suite's order inside a category: T7 longest first, T8 longest first then name, T5 by subcategory then description); a right click in the empty header space right of the last column opens the header menu (without the column's own items).
 - 2026-10-10: The symbol list keeps its width in pixels when the main window is resized (a splitter drag sets a new one, saved as SymbolListWidth; the old SymbolListProportion is read once); the empty workspace shows nothing instead of Dock's "No documents open".

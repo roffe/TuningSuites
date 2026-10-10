@@ -21,7 +21,7 @@ public static class PartNumberListWindow
         string binDir = Path.Combine(AppContext.BaseDirectory, "Binaries");
         if (!Directory.Exists(binDir)) return rows;
 
-        foreach (var file in Directory.GetFiles(binDir, "*.bin", SearchOption.TopDirectoryOnly))
+        foreach (var file in Directory.GetFiles(binDir, "*.bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }))
         {
             var name = Path.GetFileNameWithoutExtension(file);
             if (string.IsNullOrEmpty(name)) continue;
