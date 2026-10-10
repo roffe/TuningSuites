@@ -4,7 +4,7 @@
         xmlns:cs="using:CommonSuite"
         x:Class="SuiteApp.Views.PartLookupWindow"
         x:DataType="vm:PartLookupViewModel"
-        Title="Partnumber lookup" MinWidth="480" SizeToContent="WidthAndHeight" CanResize="False" WindowStartupLocation="CenterOwner">
+        Title="Lookup partnumber" MinWidth="480" SizeToContent="WidthAndHeight" CanResize="False" WindowStartupLocation="CenterOwner">
     <StackPanel Margin="12" Spacing="8">
         <Grid ColumnDefinitions="110,*,Auto,Auto" ColumnSpacing="8">
             <TextBlock Text="Partnumber" VerticalAlignment="Center" />

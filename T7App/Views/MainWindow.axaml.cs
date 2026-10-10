@@ -17,6 +17,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 7 binary or Motorola S19";
 
+    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
+
     protected override void OnDataContextChanged(System.EventArgs e)
     {
         base.OnDataContextChanged(e);

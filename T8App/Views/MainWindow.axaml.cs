@@ -17,6 +17,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string CompareFilesName => "Trionic 8 binaries";
 
+    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
+
     // T8Suite's frmAbout list
     protected override string AboutThanks =>
         "Actitis H., Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, G-ice, General Failure, Mattias Claesson, Roffe and...";
