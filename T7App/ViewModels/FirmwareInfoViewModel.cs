@@ -24,9 +24,7 @@ public partial class FirmwareInfoViewModel : ObservableObject
     [ObservableProperty] private string _carDescription;
     [ObservableProperty] private string _softwareVersion;
     [ObservableProperty] private string _immobilizerID;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Decoded))]
-    private string _chassisID;
+    [ObservableProperty] private string _chassisID;
     [ObservableProperty] private string _sIDDate;
     [ObservableProperty] private string _programmingDate;
 
@@ -93,9 +91,6 @@ public partial class FirmwareInfoViewModel : ObservableObject
     {
         if (value) Hint?.Invoke("You can edit the SID parameters in T7Suite by starting the SID editor via Actions -> SID information");
     }
-
-    /// <summary>The VIN decoder below the fields.</summary>
-    public SuiteApp.ViewModels.VinDecoding Decoded => new(ChassisID);
 
     /// <summary>"Import": the VIN and immobilizer code of another bin.</summary>
     public void Import(string file)

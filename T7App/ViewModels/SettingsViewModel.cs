@@ -17,20 +17,8 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
     // realtime settings beyond the connection
     [ObservableProperty] private bool _enableCanLog;
 
-    // wideband and AFR maps (frmSettings' wideband options, frmWidebandConfig)
+    // AFR maps (the wideband options are shared)
     [ObservableProperty] private bool _autoCreateAFRMaps;
-    [ObservableProperty] private bool _measureAFRInLambda;
-    [ObservableProperty] private bool _useWidebandLambda;
-    [ObservableProperty] private string _wideBandSymbol;
-    [ObservableProperty] private decimal? _widebandLowVoltage;
-    [ObservableProperty] private decimal? _widebandHighVoltage;
-    [ObservableProperty] private decimal? _widebandLowAFR;
-    [ObservableProperty] private decimal? _widebandHighAFR;
-
-    // the two wideband sources exclude each other
-    partial void OnUseWidebandLambdaChanged(bool value) { if (value) UseDigitalWidebandLambda = false; }
-
-    public string[] WidebandSymbols { get; } = ["DisplProt.AD_Scanner", "DisplProt.LambdaScanner"];
 
     // frmAutotuneSettings, the options T7Suite used
     [ObservableProperty] private string _autoTuneFuelMap;
@@ -47,20 +35,11 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
 
     public SettingsViewModel(AppSettings s) : base(s)
     {
-        if (s.UseWidebandLambda) UseDigitalWidebandLambda = false;
-        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(UseDigitalWidebandLambda) && UseDigitalWidebandLambda) UseWidebandLambda = false; };
         _standardFill = System.Math.Clamp(s.StandardFill, 0, 2);
         _writeTimestampInBinary = s.WriteTimestampInBinary;
         _autoFixFooter = s.AutoFixFooter;
         _enableCanLog = s.EnableCanLog;
         _autoCreateAFRMaps = s.AutoCreateAFRMaps;
-        _measureAFRInLambda = s.MeasureAFRInLambda;
-        _useWidebandLambda = s.UseWidebandLambda;
-        _wideBandSymbol = System.Array.Exists(WidebandSymbols, w => w == s.WideBandSymbol) ? s.WideBandSymbol : WidebandSymbols[0];
-        _widebandLowVoltage = (decimal)s.WidebandLowVoltage / 1000;
-        _widebandHighVoltage = (decimal)s.WidebandHighVoltage / 1000;
-        _widebandLowAFR = (decimal)s.WidebandLowAFR / 1000;
-        _widebandHighAFR = (decimal)s.WidebandHighAFR / 1000;
         _autoTuneFuelMap = System.Array.Exists(FuelMaps, m => m == s.AutoTuneFuelMap) ? s.AutoTuneFuelMap : FuelMaps[0];
         _cellStableTime = System.Math.Clamp(s.CellStableTime_ms, 100, 10000);
         _correctionPercentage = System.Math.Clamp(s.CorrectionPercentage, 1, 100);
@@ -78,13 +57,6 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
         s.AutoFixFooter = AutoFixFooter;
         s.EnableCanLog = EnableCanLog;
         s.AutoCreateAFRMaps = AutoCreateAFRMaps;
-        s.MeasureAFRInLambda = MeasureAFRInLambda;
-        s.UseWidebandLambda = UseWidebandLambda;
-        s.WideBandSymbol = WideBandSymbol;
-        s.WidebandLowVoltage = (double)(WidebandLowVoltage ?? 0) * 1000;
-        s.WidebandHighVoltage = (double)(WidebandHighVoltage ?? 5) * 1000;
-        s.WidebandLowAFR = (double)(WidebandLowAFR ?? 7.39m) * 1000;
-        s.WidebandHighAFR = (double)(WidebandHighAFR ?? 22.3m) * 1000;
         s.AutoTuneFuelMap = AutoTuneFuelMap;
         s.CellStableTime_ms = (int)(CellStableTime ?? 1000);
         s.CorrectionPercentage = (int)(CorrectionPercentage ?? 50);

@@ -34,6 +34,12 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>"T7Suite": message captions.</summary>
     public string Caption { get; }
 
+    /// <summary>The open file's VIN for Actions → VIN decoder; "" where the files carry none (T5).</summary>
+    public virtual string BinaryVin => "";
+
+    /// <summary>The window title's name; the settings name unless the suite says otherwise (T5: settings "T5Suite2", title "T5Suite").</summary>
+    protected virtual string TitleName => Suite;
+
     // the app's own version, not this library's
     protected string Version =>
         GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
@@ -120,15 +126,20 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Yes / No / Cancel question (null = Cancel), answered by the view.</summary>
     public Func<string, Task<bool?>>? AskYesNoCancel { get; set; }
 
+    /// <summary>Autotune without auto update: the cells (data indices) to take from the proposed percentages, null to cancel.</summary>
+    public Func<double[], Task<IReadOnlyCollection<int>?>>? AcceptAutotune { get; set; }
+
+    /// <summary>Text, caption and button labels: the index clicked, null when closed.</summary>
+    public Func<string, string, string[], Task<int?>>? AskButtons { get; set; }
+
     protected MainWindowViewModel(string suite, string caption, SuiteRegistry registry)
     {
         Suite = suite;
         Caption = caption;
         Registry = registry;
         Settings = new AppSettings(registry);
-        Title = $"{Suite} v{Version}";
-        ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(c => new ColumnFilter(c.Header, c.Path)));
-        foreach (ColumnFilter f in ColumnFilters) f.PropertyChanged += (_, _) => Symbols?.Refresh();
+        Title = $"{TitleName} v{Version}";
+        ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
         WatchFloating();
         RestartSramTimer();
@@ -138,6 +149,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     /// <summary>The binary's size, for converting S19 files.</summary>
     protected abstract uint FileLength { get; }
+
+    /// <summary>Open file with an S19: the binary it converts to next to it, null when it didn't (T5Suite has its own converter).</summary>
+    protected virtual string? ConvertS19(string path) => new Srecord().ConvertSrecToBin(path, FileLength, out string bin, true) ? bin : null;
 
     /// <summary>The file is one of this suite's binaries.</summary>
     protected abstract bool IsValidFile(string path);
@@ -151,20 +165,33 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>After a file opened and shows (T8Suite checks the checksum then).</summary>
     protected virtual Task OnOpenedAsync(SuiteBinary bin) => Task.CompletedTask;
 
-    /// <summary>The symbol list's columns in order (T7Suite's by default).</summary>
-    public virtual IReadOnlyList<SymbolColumn> SymbolColumns { get; } =
+    /// <summary>
+    /// The symbol list's columns in order, the same for every suite (each old suite had its own); the ones a suite has
+    /// (HasSymbolColumn). The hidden ones stay in the column chooser.
+    /// </summary>
+    public IReadOnlyList<SymbolColumn> SymbolColumns =>
     [
-        new("Symbol name", nameof(SymbolHelper.Varname)), new("Address", nameof(SymbolHelper.Flash_start_address)),
-        new("Length", nameof(SymbolHelper.Length)), new("Description", nameof(SymbolHelper.Description)),
-        new("User description", nameof(SymbolHelper.Userdescription)), new("Number", nameof(SymbolHelper.Symbol_number)),
-        new("SRAM address", nameof(SymbolHelper.Start_address), false), new("Category", nameof(SymbolHelper.Category), false),
+        .. new SymbolColumn[]
+        {
+            new("Symbol name", nameof(SymbolHelper.Varname)), new("Number", nameof(SymbolHelper.Symbol_number), false),
+            new("Address", nameof(SymbolHelper.Flash_start_address)), new("SRAM address", nameof(SymbolHelper.Start_address), false),
+            new("Length", nameof(SymbolHelper.Length)), new("Type", nameof(SymbolHelper.Symbol_type), false),
+            new("Bitmask", nameof(SymbolHelper.BitMask), false), new("Description", nameof(SymbolHelper.Description)),
+            new("User description", nameof(SymbolHelper.Userdescription)), new("Category", nameof(SymbolHelper.Category), false),
+        }.Where(c => HasSymbolColumn(c.Path)),
     ];
+
+    /// <summary>A symbol list column the suite fills (Type: T7 / T8, Bitmask: T8).</summary>
+    protected virtual bool HasSymbolColumn(string path) => true;
 
     /// <summary>The symbol list's order inside its category groups (T7Suite: largest first).</summary>
     protected virtual IEnumerable<SymbolHelper> OrderSymbols(IEnumerable<SymbolHelper> symbols) => symbols.OrderByDescending(s => s.Length);
 
     /// <summary>Symbol names coloured by their prefix (T7Suite did, T8Suite didn't).</summary>
     public virtual bool ColorSymbolNames => true;
+
+    /// <summary>T5Suite coloured the description cell by the symbol's category instead.</summary>
+    public virtual bool ColorDescriptionsByCategory => false;
 
     /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
     public virtual bool ShowsMapPreview => false;
@@ -223,9 +250,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             if (path.EndsWith(".s19", StringComparison.OrdinalIgnoreCase))
             {
                 string source = path;
-                uint length = FileLength;
-                var (ok, converted) = await Task.Run(() => (new Srecord().ConvertSrecToBin(source, length, out string bin, true), bin));
-                if (ok) path = converted;
+                if (await Task.Run(() => ConvertS19(source)) is { } converted) path = converted;
                 else Info?.Invoke("Failed to convert S19 file to binary");
             }
             Settings.Lastfilename = path;
@@ -233,7 +258,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             {
                 Binary = null;
                 Symbols = null;
-                Title = $"{Suite} v{Version} [ none ]";
+                Title = $"{TitleName} v{Version} [ none ]";
                 if (showMessage && InvalidFileMessage is { } message) Info?.Invoke(message);
                 return false;
             }
@@ -241,14 +266,16 @@ public abstract partial class MainWindowViewModel : ObservableObject
             ReadOnlyText = new FileInfo(path).IsReadOnly ? "File is READ ONLY" : "File access OK";
             SuiteBinary bin = await Task.Run(() => OpenBinary(path));
 
-            // grouped by category like the old grid; the view filters as it's made, so the suite's filter first
+            // grouped by category and sorted by it ascending in every suite (the suite's order inside a category); the view filters
+            // as it's made, so the suite's filter first
             SymbolFilter = DefaultSymbolFilter;
             var rows = OrderSymbols(bin.Symbols.Cast<SymbolHelper>()).ToList();
             var view = new DataGridCollectionView(rows) { Filter = MatchesSearch };
-            view.GroupDescriptions.Add(new DataGridPathGroupDescription(nameof(SymbolHelper.Category)));
+            foreach (string group in SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
+            view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
             Binary = bin;
             Symbols = view;
-            Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
+            Title = $"{TitleName} v{Version} [ {Path.GetFileName(path)} ]";
             FileNameText = Path.GetFileNameWithoutExtension(path);
             OpenClosedText = bin.IsSoftwareOpen ? "Open/dev binary" : "Normal binary";
             await OnOpenedAsync(bin);
@@ -263,10 +290,45 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     // ---- symbol list ----
 
-    partial void OnSearchTextChanged(string value) => Symbols?.Refresh();
+    partial void OnSearchTextChanged(string value) => RefreshSymbols();
+
+    /// <summary>Set by the symbol list: ends a cell edit in its grid (which then saves the user descriptions).</summary>
+    public Action? EndSymbolEdit { get; set; }
+
+    /// <summary>The symbol view with a user description edit committed: an open edit forbids its refresh, sorting and grouping.</summary>
+    private DataGridCollectionView? CommittedSymbols()
+    {
+        EndSymbolEdit?.Invoke();
+        if (Symbols is not { } view) return null;
+        if (view.IsAddingNew) view.CommitNew();
+        if (view.IsEditingItem) view.CommitEdit();
+        return view;
+    }
+
+    /// <summary>The symbol list again (search, filters, colours).</summary>
+    public void RefreshSymbols() => CommittedSymbols()?.Refresh();
 
     /// <summary>The symbol list's auto filter row: per column text the cell has to contain.</summary>
     public ObservableCollection<ColumnFilter> ColumnFilters { get; }
+
+    private ColumnFilter NewFilter(SymbolColumn c)
+    {
+        var f = new ColumnFilter(c.Header, c.Path);
+        f.PropertyChanged += (_, _) => RefreshSymbols();
+        return f;
+    }
+
+    /// <summary>The filter row follows the grid's shown columns in their order; a box keeps its text while its column shows.</summary>
+    public void SetFilterColumns(IEnumerable<string?> paths)
+    {
+        List<SymbolColumn> wanted = [.. paths.Select(p => SymbolColumns.FirstOrDefault(c => c.Path == p)).OfType<SymbolColumn>()];
+        if (ColumnFilters.Select(f => f.Path).SequenceEqual(wanted.Select(c => c.Path))) return;
+        Dictionary<string, ColumnFilter> old = ColumnFilters.ToDictionary(f => f.Path);
+        ColumnFilters.Clear();
+        foreach (SymbolColumn c in wanted) ColumnFilters.Add(old.Remove(c.Path, out ColumnFilter? f) ? f : NewFilter(c));
+        // a hidden column's text no longer filters
+        if (old.Values.Any(f => !string.IsNullOrWhiteSpace(f.Text))) RefreshSymbols();
+    }
 
     [ObservableProperty]
     private bool _showFilterRow;
@@ -279,7 +341,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private SymbolFilter? _symbolFilter;
 
-    partial void OnSymbolFilterChanged(SymbolFilter? value) => Symbols?.Refresh();
+    partial void OnSymbolFilterChanged(SymbolFilter? value) => RefreshSymbols();
 
     private string? CellText(SymbolHelper sh, string path) => path switch
     {
@@ -298,19 +360,33 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>The header menu's sorting: by one column, or none (the grid's own order).</summary>
     public void SortSymbols(string? path, bool descending = false, bool add = false)
     {
-        if (Symbols is not { } view) return;
+        if (CommittedSymbols() is not { } view) return;
         if (!add) view.SortDescriptions.Clear();
         if (path != null)
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(path, descending ? System.ComponentModel.ListSortDirection.Descending : System.ComponentModel.ListSortDirection.Ascending));
     }
 
+    /// <summary>The symbol list's groups on open and for "Group by category": the category (T5Suite: then the subcategory).</summary>
+    protected virtual string[] SymbolGroupPaths => [nameof(SymbolHelper.Category)];
+
     /// <summary>Group by this column / by category (the suites' default) / not at all.</summary>
     public void GroupSymbols(string? path)
     {
-        if (Symbols is not { } view) return;
+        if (CommittedSymbols() is not { } view) return;
         view.GroupDescriptions.Clear();
-        if (path != null) view.GroupDescriptions.Add(new DataGridPathGroupDescription(path));
+        foreach (string group in GroupPaths(path)) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
     }
+
+    private string[] GroupPaths(string? path) => path == nameof(SymbolHelper.Category) ? SymbolGroupPaths : path != null ? [path] : [];
+
+    /// <summary>The header menu's ticks: sorted by this column only, this way.</summary>
+    public bool IsSortedBy(string? path, bool descending) =>
+        Symbols is { SortDescriptions: [var sort] } && sort.PropertyPath == path
+        && sort.Direction == (descending ? System.ComponentModel.ListSortDirection.Descending : System.ComponentModel.ListSortDirection.Ascending);
+
+    /// <summary>The header menu's ticks: grouped as GroupSymbols(path) groups (null: not grouped).</summary>
+    public bool IsGroupedBy(string? path) =>
+        Symbols is { } view && view.GroupDescriptions.OfType<DataGridPathGroupDescription>().Select(g => g.PropertyName).SequenceEqual(GroupPaths(path));
 
     // the find panel: any shown column containing the text, and every filter row text in its column
     private bool MatchesSearch(object o)
@@ -344,12 +420,13 @@ public abstract partial class MainWindowViewModel : ObservableObject
         if (MapViewerViewModel.Create(this, bin, sh) is not { } viewer)
         {
             // only in SRAM (not in the file): read it from the ECU
-            _ = OpenSramSymbolAsync(bin, sh);
+            _ = OpenSramOnlyAsync(bin, sh);
             return;
         }
         viewer.OnlineMode = EcuConnected;
         Viewers.Add(viewer);
         SelectedViewer = viewer;
+        if (OnlineMapsFromEcu && EcuConnected && sh.Start_address > 0) _ = ReadMapFromEcuAsync(viewer);
     }
 
     /// <summary>Shows a document, or the open one with the same title (the suites reused dock panels by title).</summary>
@@ -469,10 +546,18 @@ public abstract partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private Task VerifyChecksum() => VerifyChecksumAsync();
 
-    /// <summary>gridViewSymbols_CellValueChanged: an edited user description is saved to &lt;bin&gt;.xml.</summary>
+    /// <summary>gridViewSymbols_CellValueChanged: an edited user description is saved to &lt;bin&gt;.xml (not into a read-only folder).</summary>
     public void SaveUserDescriptions()
     {
-        if (Binary is { } bin) SymbolXMLFile.SaveAdditionalSymbols(bin.FileName, bin.Symbols);
+        if (Binary is not { } bin) return;
+        try
+        {
+            SymbolXMLFile.SaveAdditionalSymbols(bin.FileName, bin.Symbols);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("The user descriptions could not be saved: " + e.Message);
+        }
     }
 
     [RelayCommand]
@@ -492,7 +577,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     public virtual void SettingsChanged()
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
-        Symbols?.Refresh();
+        RefreshSymbols();
         RestartSramTimer();
     }
 
@@ -513,7 +598,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         project.CreateBackup();
         Project = project;
         Settings.Lastprojectname = name;
-        Title = $"{Suite} [Project: {name}]";
+        Title = $"{TitleName} [Project: {name}]";
         UpdateRollControls();
         return true;
     }
@@ -527,7 +612,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Symbols = null;
         FileNameText = "No file";
         Settings.Lastfilename = "";
-        Title = Suite;
+        Title = TitleName;
         UpdateRollControls();
     }
 

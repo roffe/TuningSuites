@@ -76,7 +76,7 @@ namespace CommonSuite
             foreach (SymbolHelper sh in bin.Symbols)
             {
                 sb.Append(CultureInfo.InvariantCulture, $"{sh.Varname.Replace(',', '.')},{sh.Flash_start_address},{sh.Start_address},{sh.Length},{sh.Symbol_number},{sh.Symbol_type}");
-                if (userDescription) sb.Append(',').Append(sh.Userdescription);
+                if (userDescription) sb.Append(',').Append(sh.Userdescription.Replace(',', '.'));
                 sb.Append("\r\n");
             }
             File.WriteAllText(file, sb.ToString());
@@ -151,6 +151,9 @@ namespace CommonSuite
             int[] x = bin.GetXaxisValues(name), y = bin.GetYaxisValues(name);
             double xfactor = bin.AxisFactor(bin.AxisSymbols(name).xAxis);
             string F(double d) => Math.Round(d, 2).ToString(CultureInfo.InvariantCulture);
+            // two decimals lose raw steps below a factor of 0.01 (T5's Insp_mat! is 1/256): enough for the import to read them back
+            int decimals = factor is > 0 and < 0.01 ? (int)Math.Ceiling(-Math.Log10(factor)) + 1 : 2;
+            string Cell(double d) => Math.Round(d, decimals).ToString(CultureInfo.InvariantCulture);
             var sb = new StringBuilder().Append("Data for ").Append(name).Append('\n');
             sb.Append(';').AppendJoin(';', Enumerable.Range(0, cols).Select(c => c < x.Length ? F(x[c] * xfactor) : c.ToString(CultureInfo.InvariantCulture))).Append('\n');
             for (int r = rows - 1; r >= 0; r--)
@@ -162,11 +165,43 @@ namespace CommonSuite
                     if (i >= values) break;
                     // the sheet's own sign rule: negative only when the high byte is 0xFF
                     int v = sixteen ? (data[i * 2] == 0xFF ? -(0x100 - data[i * 2 + 1]) : data[i * 2] << 8 | data[i * 2 + 1]) : data[i];
-                    sb.Append(';').Append(F(v * factor + offset));
+                    sb.Append(';').Append(Cell(v * factor + offset));
                 }
                 sb.Append('\n');
             }
             File.WriteAllText(target, sb.ToString());
+        }
+
+        /// <summary>
+        /// T5Suite's "Import map from Excel", for the layout ExportMapCsv writes: rows bottom-up after the two header lines, the values
+        /// scaled back (T5Suite took them raw, so an export / import round trip changed scaled maps). Cells that don't parse keep
+        /// the map's value; more rows than the map has throw "Too much information in file, abort".
+        /// </summary>
+        public static byte[] ImportMapCsv(SuiteBinary bin, SymbolHelper sh, string file)
+        {
+            string name = sh.SmartVarname;
+            byte[] data = bin.ReadSymbol(sh) ?? [];
+            int cols = Math.Max(bin.TableWidth(name), 1), size = bin.IsSixteenBitTable(name) ? 2 : 1, values = data.Length / size, rows = (values + cols - 1) / cols;
+            double factor = bin.GetMapCorrectionFactor(name) is var f && f != 0 ? f : 1, offset = bin.GetMapCorrectionOffset(name);
+            List<string> lines = File.ReadAllLines(file).Skip(2).Where(l => l.Trim().Length > 0).ToList();
+            if (lines.Count > rows) throw new InvalidDataException("Too much information in file, abort");
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string[] cells = lines[i].Split(';');
+                for (int c = 0; c < cols && c + 1 < cells.Length; c++)
+                {
+                    int v = (rows - 1 - i) * cols + c;
+                    if (v >= values || !double.TryParse(cells[c + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out double d)) continue;
+                    int raw = (int)Math.Round((d - offset) / factor);
+                    if (size == 2)
+                    {
+                        data[v * 2] = (byte)(raw >> 8);
+                        data[v * 2 + 1] = (byte)raw;
+                    }
+                    else data[v] = (byte)Math.Clamp(raw, 0, 255);
+                }
+            }
+            return data;
         }
     }
 }

@@ -94,6 +94,13 @@ namespace CommonSuite
         }
 
         string _userdescription = string.Empty;
+
+        /// <summary>
+        /// The user description names the symbol (T7Suite / T8Suite: the name typed for a "Symbolnumber n", read back from &lt;bin&gt;.xml);
+        /// false where it is only a note (T5).
+        /// </summary>
+        public bool UserdescriptionIsName { get; set; } = true;
+
         public string Userdescription
         {
             get { return _userdescription; }
@@ -125,7 +132,7 @@ namespace CommonSuite
         {
             get
             {
-                if (_userdescription != "" && !_userdescription.StartsWith("Symbolnumber "))
+                if (UserdescriptionIsName && _userdescription != "" && !_userdescription.StartsWith("Symbolnumber "))
                 {
                     return _userdescription;
                 }

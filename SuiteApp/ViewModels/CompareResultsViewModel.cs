@@ -94,7 +94,7 @@ public partial class CompareResultsViewModel : DocumentViewModel
         foreach (CompareRow r in Rows.SourceCollection.Cast<CompareRow>())
         {
             sb.AppendJoin(';', r.SymbolName, r.Description.Replace(';', ','), r.LengthBytes, r.Percentage.ToString("F1", CultureInfo.InvariantCulture),
-                r.Differences, r.AverageDifference.ToString("F1", CultureInfo.InvariantCulture), r.SymbolNumber1, r.SymbolNumber2, r.Userdescription,
+                r.Differences, r.AverageDifference.ToString("F1", CultureInfo.InvariantCulture), r.SymbolNumber1, r.SymbolNumber2, r.Userdescription.Replace(';', ','),
                 r.MissingInOriFile, r.MissingInCompareFile, r.Category).Append('\n');
         }
         File.WriteAllText(file, sb.ToString());

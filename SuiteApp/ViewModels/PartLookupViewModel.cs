@@ -16,6 +16,20 @@ public partial class PartLookupViewModel(Func<string, PartInfo?> lookup, bool de
 
     public bool HasBinary => Info?.Binary != null;
 
+    /// <summary>T5Suite's partnumber list (the box button); null hides the button.</summary>
+    public Func<System.Threading.Tasks.Task<string?>>? Browse { get; init; }
+
+    public bool CanBrowse => Browse != null;
+
+    public async System.Threading.Tasks.Task BrowseAsync()
+    {
+        if (Browse != null && await Browse() is { } partNumber)
+        {
+            PartNumber = partNumber;
+            Lookup();
+        }
+    }
+
     partial void OnInfoChanged(PartInfo? value) => OnPropertyChanged(nameof(HasBinary));
 
     // T8Suite said T7Suite too

@@ -83,19 +83,40 @@ namespace T8AppTest
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
                 Assert.IsInstanceOfType<T8Binary>(vm.Binary);
 
+                var about = window.NewAboutWindow("2.5.0");
+                about.Show();
+                about.CaptureRenderedFrame();
+                // About in the same words for every suite; Roffe among the thanks
+                var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
+                CollectionAssert.Contains(aboutTexts, "T8Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
+                CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
+                Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
+                about.Close();
+                // the menus the three suites share
+                CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
+                    window.GetVisualDescendants().OfType<Menu>().First().Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
+                // Actions starts the same in every suite, VIN decoder right under Firmware information
+                CollectionAssert.AreEqual(new[] { "_Verify checksum", "_Firmware information", "VIN decoder", "Browse axis information" },
+                    ((MenuItem)window.GetVisualDescendants().OfType<Menu>().First().Items[1]!).Items.OfType<MenuItem>().Take(4).Select(m => m.Header as string).ToArray());
                 // T8Suite's list: only the symbols in the file at first, its own columns, numbered from 1
                 Assert.AreEqual("Only symbols within binary", vm.SymbolFilter!.Name);
                 var shown = vm.Symbols!.Cast<SymbolHelper>().ToList();
                 Assert.IsTrue(shown.All(sh => sh.Length != 0 && sh.Flash_start_address < 0x100000));
-                // the categories alphabetically, then the longest first
-                Assert.AreEqual(shown.Select(sh => sh.Category).Min(System.StringComparer.Ordinal), shown[0].Category);
-                Assert.AreEqual(shown.Where(sh => sh.Category == shown[0].Category).Max(sh => sh.Length), shown[0].Length);
+                // sorted by category ascending and grouped by it, in every suite; inside a category the suite's order (the longest first)
+                var byCategory = vm.Symbols!.Cast<SymbolHelper>().ToList();
+                Assert.IsTrue(vm.IsSortedBy("Category", false) && vm.IsGroupedBy("Category"));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => string.Compare(byCategory[i - 1].Category, byCategory[i].Category, System.StringComparison.CurrentCulture) <= 0));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => byCategory[i - 1].Category != byCategory[i].Category || byCategory[i - 1].Length >= byCategory[i].Length));
                 vm.SymbolFilter = vm.SymbolFilters[0];
                 Assert.IsGreaterThan(shown.Count, vm.Symbols!.Cast<SymbolHelper>().Count());
                 vm.SymbolFilter = vm.SymbolFilters[1];
                 var grid = window.GetVisualDescendants().OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
-                CollectionAssert.AreEqual(new[] { "Symbol name", "Length", "User description", "Number", "Type" },
+                // the symbol list's columns as in every suite
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Address", "Length", "Description", "User description" },
                     grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Number", "Address", "SRAM address", "Length", "Type", "Bitmask", "Description", "User description", "Category" },
+                    grid.Columns.OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
 
                 // Enter opens the selected map
                 vm.SelectedSymbol = vm.Binary!.Find("IgnAbsCal.fi_NormalMAP");

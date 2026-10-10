@@ -17,6 +17,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 7 binary or Motorola S19";
 
+    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
+
     protected override void OnDataContextChanged(System.EventArgs e)
     {
         base.OnDataContextChanged(e);
@@ -59,17 +61,6 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnGeneratePackage(object? sender, RoutedEventArgs e)
     {
         if (await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } file) await Vm.GeneratePackageAsync(file);
-    }
-
-    private async void OnCompareToSram(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "SRAM dumps", "*.ram") is { } file) await Vm.CompareToSramAsync(file);
-    }
-
-    private async void OnCompareSram(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "First SRAM dump", "*.ram") is { } first && await Dialogs.OpenFile(this, "Second SRAM dump", "*.ram") is { } second)
-            await Vm.CompareSramAsync(first, second);
     }
 
     private async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)

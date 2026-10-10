@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T7App.ViewModels"
-        xmlns:sv="using:SuiteApp.Views"
         x:Class="T7App.Views.FirmwareInfoWindow"
         x:DataType="vm:FirmwareInfoViewModel"
         Title="Trionic 7 firmware information"
@@ -71,10 +70,6 @@
                 <CheckBox Grid.Row="5" Grid.Column="1" Content="Disable adaption messages" IsEnabled="{Binding Info.DisableAdaptionMessages.Available}" IsChecked="{Binding DisableAdaptionMessages}" />
             </Grid>
         </HeaderedContentControl>
-
-        <Expander Header="VIN decoder">
-            <sv:VinDecoderView DataContext="{Binding Decoded}" />
-        </Expander>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
             <Button Content="Ok" MinWidth="80" Click="OnOk" />

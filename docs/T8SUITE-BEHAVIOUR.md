@@ -2,6 +2,8 @@
 
 How the old T8Suite (WinForms/DevExpress, `T8Suite/`) behaves, read from its code, as the reference for the port. It only lists what differs from T7Suite: read the matching section of [T7SUITE-BEHAVIOUR.md](T7SUITE-BEHAVIOUR.md) first. Line numbers are `T8Suite/Form1.cs` unless another file is named; "the library" is TrionicCANLib in the `Trionic` submodule. Where the port deliberately differs, PORTING.md says so.
 
+The old code is in [OldSuites/](../OldSuites); the paths below are relative to it.
+
 T8 shares CommonSuite with T7 (AppSettings, SymbolHelper, SymbolXMLFile, Srecord, the project / transaction log classes and their forms), so those behave the same; the differences are in Form1 and the T8-only files. Non-UTF-8 sources: `Form1.Designer.cs` (UTF-16), `SymbolDictionary.cs`, `ctrlAirmassResult.cs`, `ctrlCompressorMap.cs`, `ctrlDisassembler.cs` (Windows-1252).
 
 ## Opening a binary

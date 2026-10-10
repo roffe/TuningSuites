@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T5App.ViewModels"
+        x:Class="T5App.Views.InjectorWizardWindow"
+        x:DataType="vm:InjectorWizardViewModel"
+        Title="Injector wizard" Width="560" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <!-- frmInjectorWizard: the injector type, then what changes: constant, crank factor, battery correction -->
+    <StackPanel Margin="16" Spacing="10">
+        <TextBlock Text="Choose your injector type" />
+        <ComboBox ItemsSource="{x:Static vm:InjectorWizardViewModel.Types}" SelectedItem="{Binding Type}" HorizontalAlignment="Stretch" />
+        <HeaderedContentControl Header="Current → proposed">
+            <ItemsControl ItemsSource="{Binding Rows}" />
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

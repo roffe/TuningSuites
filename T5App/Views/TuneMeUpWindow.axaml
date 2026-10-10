@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T5App.ViewModels"
+        x:Class="T5App.Views.TuneMeUpWindow"
+        x:DataType="vm:TuneMeUpViewModel"
+        Title="Tuning wizard" Width="620" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <!-- frmTuningWizard: "Staged tuning options", the free tuning settings only for stage 4 -->
+    <StackPanel Margin="16" Spacing="10">
+        <TextBlock Text="Welcome to the tuning wizard" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="Choose the desired tuning stage" />
+        <ListBox ItemsSource="{x:Static vm:TuneMeUpViewModel.Stages}" SelectedIndex="{Binding StageIndex}" />
+        <HeaderedContentControl Header="Free tuning settings" IsEnabled="{Binding IsFreeTune}">
+            <Grid ColumnDefinitions="180,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
+                <TextBlock Text="Mapsensor type" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:TuneMeUpViewModel.MapSensors}" SelectedItem="{Binding MapSensor}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Injector type" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{x:Static vm:TuneMeUpViewModel.InjectorTypes}" SelectedItem="{Binding Injectors}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="2" Text="Turbo type" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{x:Static vm:TuneMeUpViewModel.Turbos}" SelectedItem="{Binding Turbo}" HorizontalAlignment="Stretch" />
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="16">
+                    <RadioButton Content="Tune on torque" IsChecked="{Binding ByTorque}" GroupName="by" />
+                    <RadioButton Content="Tune on boost" IsChecked="{Binding !ByTorque}" GroupName="by" />
+                </StackPanel>
+                <TextBlock Grid.Row="4" Text="Peak torque (Nm)" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding PeakTorque}" Minimum="100" Maximum="650" Increment="10" FormatString="0" IsEnabled="{Binding ByTorque}" />
+                <TextBlock Grid.Row="5" Text="Peak boost (bar)" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding PeakBoost}" Minimum="0.3" Maximum="2.2" Increment="0.05" FormatString="0.00" IsEnabled="{Binding !ByTorque}" />
+                <TextBlock Grid.Row="6" Text="BCV type" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{x:Static vm:TuneMeUpViewModel.Valves}" SelectedItem="{Binding Valve}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="7" Text="RPM limiter" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="7" Grid.Column="1" Value="{Binding RpmLimit}" Minimum="6000" Maximum="8500" Increment="100" FormatString="0" />
+                <TextBlock Grid.Row="8" Text="Knock time (ms)" VerticalAlignment="Center" />
+                <NumericUpDown Grid.Row="8" Grid.Column="1" Value="{Binding KnockTime}" Minimum="1000" Maximum="20000" Increment="100" FormatString="0" />
+            </Grid>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+        </StackPanel>
+    </StackPanel>
+</Window>

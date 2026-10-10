@@ -19,7 +19,7 @@ namespace CommonSuite
     {
         private static string CategoryOf(SymbolHelper sh)
         {
-            foreach (string n in new[] { sh.Varname, sh.Userdescription })
+            foreach (string n in sh.UserdescriptionIsName ? [sh.Varname, sh.Userdescription] : new[] { sh.Varname })
                 if (n.Contains('.')) return n[..n.IndexOf('.')];
             return "";
         }
@@ -110,7 +110,7 @@ namespace CommonSuite
             foreach (SymbolHelper sh in bin.Symbols)
             {
                 string name = bin.CompareName(sh);
-                if (sh.Start_address <= 0 || !bin.IsCalibration(name) || first(sh) is not { } a) continue;
+                if (sh.Start_address <= 0 || !bin.InSramCompare(sh) || first(sh) is not { } a) continue;
                 byte[] b = ReadSram(ram, sh.Start_address, sh.Length);
                 if (a.AsSpan().SequenceEqual(b)) continue;
                 var (differences, percentage, average) = Differences(a, b, bin.IsSixteenBitTable(name));

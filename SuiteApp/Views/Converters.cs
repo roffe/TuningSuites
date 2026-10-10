@@ -73,6 +73,33 @@ public class SymbolShadeConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
+/// <summary>T5Suite's description cell by XDF category (gridViewSymbols_CustomDrawCell); the suite's view model switches it on.</summary>
+public class CategoryColorConverter : IValueConverter
+{
+    public static readonly CategoryColorConverter Instance = new();
+
+    public static bool Enabled { get; set; }
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        IBrush? brush = !Enabled ? null : (value as string) switch
+        {
+            "Fuel" => Brushes.LightSteelBlue,
+            "Ignition" => Brushes.LightGreen,
+            "Boost_control" => Brushes.OrangeRed,
+            "Misc" => Brushes.LightGray,
+            "Sensor" => Brushes.Yellow,
+            "Correction" => Brushes.LightPink,
+            "Idle" => Brushes.BurlyWood,
+            _ => null,
+        };
+        // "light": a coloured cell, which takes dark text
+        return parameter as string == "light" ? brush != null : brush;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
 /// <summary>CompareResults rows: Salmon when missing in the original file, CornflowerBlue when missing in the compare file.</summary>
 public class CompareRowColorConverter : IValueConverter
 {
@@ -147,12 +174,3 @@ public class NotEqualConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
-/// <summary>The AutoTune button turns red while tuning.</summary>
-public class AutotuneBrushConverter : IValueConverter
-{
-    public static readonly AutotuneBrushConverter Instance = new();
-
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true ? Brushes.Red : null;
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
-}

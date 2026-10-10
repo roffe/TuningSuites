@@ -40,6 +40,26 @@ public abstract partial class MainWindowViewModel
 
     // ---- compare ----
 
+    /// <summary>Compare with several binaries (T5Suite): one goes straight to its results, more to a compare list.</summary>
+    public async Task CompareToFilesAsync(IReadOnlyList<string> files)
+    {
+        if (Binary is not { } bin || files.Count == 0) return;
+        if (files.Count == 1)
+        {
+            await CompareToFileAsync(files[0]);
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            ShowDocument(new CompareListViewModel(this, bin.FileName, await Task.Run(() => CompareListViewModel.Count(bin, files, OpenCompareBinary))));
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     /// <summary>"Compare symbols with other binary": the results open as a tab.</summary>
     public async Task CompareToFileAsync(string otherFile)
     {
@@ -92,6 +112,24 @@ public abstract partial class MainWindowViewModel
         return report;
     }
 
+    /// <summary>Import map from CSV: the map written (a transaction entry in a project), the checksum updated, open viewers refreshed.</summary>
+    public void ImportMapCsv(SymbolHelper sh, string file)
+    {
+        if (Binary is not { } bin || bin.FileAddress(sh) is not (var address and >= 0)) return;
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        try
+        {
+            bin.WriteData(address, SymbolFiles.ImportMapCsv(bin, sh, file), TransactionLog, "Import map from CSV");
+            bin.UpdateChecksum();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowInfo(e is InvalidDataException ? e.Message : "Failed to import: " + e.Message);
+        }
+        TransactionsAdded(before);
+        RefreshViewers(bin.FileName);
+    }
+
     /// <summary>Search map content: "No results found..." or a results tab.</summary>
     public void SearchMaps(MapSearchOptions options)
     {
@@ -113,7 +151,7 @@ public abstract partial class MainWindowViewModel
         {
             ShowInfo("Failed to import: " + e.Message);
         }
-        Symbols?.Refresh();
+        RefreshSymbols();
     }
 
     // ---- tuning packages ----

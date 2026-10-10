@@ -8,6 +8,10 @@
   <Project Path="SuiteApp/SuiteApp.csproj" />
   <Project Path="SuiteCore/SuiteCore.csproj" />
   <Project Path="SuiteCoreTest/SuiteCoreTest.csproj" />
+  <Project Path="T5App/T5App.csproj" />
+  <Project Path="T5AppTest/T5AppTest.csproj" />
+  <Project Path="T5Core/T5Core.csproj" />
+  <Project Path="T5CoreTest/T5CoreTest.csproj" />
   <Project Path="T7App/T7App.csproj" />
   <Project Path="T7AppTest/T7AppTest.csproj" />
   <Project Path="T7Core/T7Core.csproj" />

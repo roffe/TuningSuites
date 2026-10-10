@@ -80,11 +80,75 @@ namespace T7AppTest
                 string? info = null;
                 vm.Info += t => info = t;
                 Assert.IsTrue(await vm.OpenFileAsync(file, true));
+                // sorted by category ascending and grouped by it, in every suite; inside a category the suite's order (the longest first)
+                var byCategory = vm.Symbols!.Cast<CommonSuite.SymbolHelper>().ToList();
+                Assert.IsTrue(vm.IsSortedBy("Category", false) && vm.IsGroupedBy("Category"));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => string.Compare(byCategory[i - 1].Category, byCategory[i].Category, System.StringComparison.CurrentCulture) <= 0));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => byCategory[i - 1].Category != byCategory[i].Category || byCategory[i - 1].Length >= byCategory[i].Length));
 
                 // Enter in the symbol list opens the selected map
                 vm.SelectedSymbol = vm.Binary!.Find("IgnNormCal.Map");
                 window.CaptureRenderedFrame();
                 var grid = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
+                // the symbol list's columns as in every suite (no bit mask on T7)
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Number", "Address", "SRAM address", "Length", "Type", "Description", "User description", "Category" },
+                    grid.Columns.OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Address", "Length", "Description", "User description" },
+                    grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                // the auto filter row follows the shown columns: Number hidden by default, its box back when the column shows
+                CollectionAssert.AreEqual(new[] { "Varname", "Flash_start_address", "Length", "Description", "Userdescription" }, vm.ColumnFilters.Select(f => f.Path).ToArray());
+                vm.ColumnFilters[0].Text = "IgnNorm";
+                vm.SetFilterColumns(["Varname", "Symbol_number", "Flash_start_address"]);
+                CollectionAssert.AreEqual(new[] { "Varname", "Symbol_number", "Flash_start_address" }, vm.ColumnFilters.Select(f => f.Path).ToArray());
+                Assert.AreEqual("IgnNorm", vm.ColumnFilters[0].Text);
+                vm.ColumnFilters[0].Text = "";
+                vm.SetFilterColumns(grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => c.SortMemberPath));
+                // no "No documents open" behind an empty workspace
+                Assert.IsFalse(Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<TextBlock>().Any(t => t.Text == "No documents open"));
+                // the symbol list keeps its width to the pixel when the window is resized (it jumped a pixel back and forth)
+                double SymbolListWidth() => Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<SuiteApp.Views.SymbolListView>().First().Bounds.Width;
+                void SameWidthWhileResizing(double width)
+                {
+                    foreach (int w in Enumerable.Range(0, 40).Select(i => 1000 + i * 37).Append(1500))
+                    {
+                        window.Width = w;
+                        window.CaptureRenderedFrame();
+                        Assert.AreEqual(width, SymbolListWidth(), $"window {w}");
+                    }
+                }
+                double before = SymbolListWidth();
+                SameWidthWhileResizing(before);
+                // a splitter drag gives it a new width, which resizing keeps
+                WorkspacePart<Dock.Model.Avalonia.Controls.ToolDock>(window, "SymbolPane")!.Proportion = 0.4;
+                window.CaptureRenderedFrame();
+                double dragged = SymbolListWidth();
+                Assert.IsGreaterThan(before + 50, dragged);
+                SameWidthWhileResizing(dragged);
+                // a right click in the empty header space right of the last column opens the header menu, not the rows' menu
+                WorkspacePart<Dock.Model.Avalonia.Controls.ToolDock>(window, "SymbolPane")!.Proportion = 0.9;
+                window.CaptureRenderedFrame();
+                var headers = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(grid).OfType<Avalonia.Controls.Primitives.DataGridColumnHeadersPresenter>().First();
+                var lastHeader = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(headers).OfType<Avalonia.Controls.DataGridColumnHeader>()
+                    .Where(h => h.IsVisible && h.Content != null).MaxBy(h => h.Bounds.Right)!;
+                Assert.IsLessThan(headers.Bounds.Width - 10, lastHeader.Bounds.Right);
+                var empty = headers.InputHitTest(new Avalonia.Point(headers.Bounds.Width - 5, headers.Bounds.Height / 2)) as Avalonia.Interactivity.Interactive;
+                var request = new ContextRequestedEventArgs { RoutedEvent = Control.ContextRequestedEvent, Source = empty };
+                (empty ?? headers).RaiseEvent(request);
+                Assert.IsTrue(request.Handled);
+                Assert.IsNotNull(grid.ContextMenu);
+                Assert.IsFalse(grid.ContextMenu.IsOpen);
+                WorkspacePart<Dock.Model.Avalonia.Controls.ToolDock>(window, "SymbolPane")!.Proportion = 0.3;
+                window.CaptureRenderedFrame();
+                // grouping, sorting and refreshing while a user description is being edited (Group by category crashed)
+                grid.CurrentColumn = grid.Columns.First(c => c.SortMemberPath == "Userdescription");
+                Assert.IsTrue(grid.BeginEdit());
+                vm.GroupSymbols("Category");
+                vm.SortSymbols("Varname", true);
+                vm.SearchText = "IgnNormCal";
+                vm.SearchText = "";
+                vm.SortSymbols(null);
+                vm.SelectedSymbol = vm.Binary!.Find("IgnNormCal.Map");
+                window.CaptureRenderedFrame();
                 grid.Focus();
                 window.KeyPress(Avalonia.Input.Key.Enter, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Enter, null);
                 Assert.HasCount(1, vm.Viewers);
@@ -489,6 +553,12 @@ namespace T7AppTest
                 var menu = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<Menu>().First();
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
                     menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
+                // Actions starts the same in every suite, VIN decoder right under Firmware information
+                CollectionAssert.AreEqual(new[] { "_Verify checksum", "_Firmware information", "VIN decoder", "Browse axis information" },
+                    ((MenuItem)menu.Items[1]!).Items.OfType<MenuItem>().Take(4).Select(m => m.Header as string).ToArray());
+                // the decoder opens with the file's VIN (it was an expander in the firmware dialog)
+                Assert.AreEqual(vm.FirmwareInfo()!.ChassisID, vm.BinaryVin);
+                Assert.AreEqual(17, vm.BinaryVin.Trim().Length);
 
                 // dark theme: the coloured symbol names get black text, the others keep the theme's light text
                 Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
@@ -496,9 +566,9 @@ namespace T7AppTest
                 Save(window, "symbols-dark");
                 var grid = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
                 var names = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(grid).OfType<TextBlock>().Where(t => t.Classes.Contains("onLight") || t.Text?.StartsWith("MAF") == true).ToList();
-                Assert.IsTrue(names.Any(t => t.Text!.StartsWith("MAFCal.")) && names.Any(t => !t.Text!.StartsWith("MAFCal.")));
+                Assert.IsTrue(names.Any(t => t.Text!.StartsWith("MAFCal.") && t.Classes.Contains("onLight")) && names.Any(t => !t.Classes.Contains("onLight")));
                 foreach (TextBlock t in names)
-                    Assert.AreEqual(t.Text!.StartsWith("MAFCal.") ? Avalonia.Media.Colors.Black : Avalonia.Media.Colors.White,
+                    Assert.AreEqual(t.Classes.Contains("onLight") ? Avalonia.Media.Colors.Black : Avalonia.Media.Colors.White,
                         ((Avalonia.Media.ISolidColorBrush)t.Foreground!).Color, t.Text);
                 Avalonia.Application.Current.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
                 vm.SearchText = "";
@@ -748,6 +818,12 @@ namespace T7AppTest
                 var about = window.NewAboutWindow("2.5.0");
                 about.Show();
                 Save(about, "about");
+                // About in the same words for every suite; Roffe among the thanks
+                var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
+                CollectionAssert.Contains(aboutTexts, "T7Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
+                CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
+                Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
                 about.Close();
 
                 var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "5168646" };

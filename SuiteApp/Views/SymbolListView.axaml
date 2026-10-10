@@ -68,13 +68,20 @@
                                     Binding="{Binding Flash_start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Length" SortMemberPath="Length"
                                     Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Description" SortMemberPath="Description" Binding="{Binding Description}" Width="300" IsReadOnly="True" />
+                <DataGridTemplateColumn Header="Description" SortMemberPath="Description" Width="300" IsReadOnly="True">
+                    <DataTemplate x:DataType="cs:SymbolHelper">
+                        <Border Background="{Binding Category, Converter={x:Static v:CategoryColorConverter.Instance}}" Padding="6,2">
+                            <TextBlock Text="{Binding Description}" VerticalAlignment="Center"
+                                       Classes.onLight="{Binding Category, Converter={x:Static v:CategoryColorConverter.Instance}, ConverterParameter=light}" />
+                        </Border>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="User description" SortMemberPath="Userdescription" Binding="{Binding Userdescription}" />
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Number" SortMemberPath="Symbol_number" Binding="{Binding Symbol_number, Mode=OneWay}" IsReadOnly="True" />
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Type" SortMemberPath="Symbol_type" Binding="{Binding Symbol_type, Mode=OneWay}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="SRAM Address" SortMemberPath="Start_address"
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="SRAM address" SortMemberPath="Start_address"
                                     Binding="{Binding Start_address, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
-                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Bit mask" SortMemberPath="BitMask"
+                <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Bitmask" SortMemberPath="BitMask"
                                     Binding="{Binding BitMask, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Category" SortMemberPath="Category" Binding="{Binding Category}" IsReadOnly="True" />
             </DataGrid.Columns>

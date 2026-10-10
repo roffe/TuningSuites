@@ -36,7 +36,7 @@ namespace CommonSuite
 
         /// <summary>By name or user description, as the feature checks and tuning packages matched symbols.</summary>
         public SymbolHelper FindAny(string symbolname) =>
-            Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.Userdescription == symbolname);
+            Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.UserdescriptionIsName && sh.Userdescription == symbolname);
 
         /// <summary>The name compare and transfer match symbols by, "" leaves one out. T8Suite matched by SmartVarname.</summary>
         public virtual string CompareName(SymbolHelper sh) => sh.SmartVarname;
@@ -45,6 +45,9 @@ namespace CommonSuite
         public virtual bool IsCalibration(string name) =>
             name.Contains("Cal.") || name.Contains("Cal1.") || name.Contains("Cal2.") || name.Contains("Cal3.") || name.Contains("Cal4.")
             || name.StartsWith("X_Acc");
+
+        /// <summary>The symbols an SRAM compare covers: the calibration ones (T7Suite); T5Suite took every symbol in SRAM, the adaption tables included.</summary>
+        public virtual bool InSramCompare(SymbolHelper sh) => IsCalibration(CompareName(sh));
 
         /// <summary>The help text shown for a symbol name.</summary>
         public abstract string Describe(string symbolname);
@@ -82,6 +85,12 @@ namespace CommonSuite
                 fs.Write(data, 0, data.Length);
             }
             log?.AddToTransactionLog(new TransactionEntry(DateTime.Now, address, data.Length, before, data, 0, 0, note));
+            Written(address, data.Length);
+        }
+
+        /// <summary>After WriteData (T5: the file's sync date is stamped "now", for the ECU synchronization).</summary>
+        protected virtual void Written(int address, int length)
+        {
         }
 
         /// <summary>A map save (tabdet_onSymbolSave): the data, then the checksum.</summary>
@@ -136,6 +145,9 @@ namespace CommonSuite
         /// <summary>Show disassembly (the functions reached from the interrupt vectors) or the full one (a linear sweep) into output.</summary>
         public abstract void Disassemble(string output, bool full);
 
+        /// <summary>The file's first byte in the ECU's address space (T5: 0x80000 - length); the disassembly lists those addresses.</summary>
+        public virtual long FlashBase => 0;
+
         /// <summary>Show interrupt vectors: the vector table at the start of the flash, named.</summary>
         public abstract List<(string Name, long Address)> InterruptVectors();
 
@@ -148,15 +160,46 @@ namespace CommonSuite
                 if (only != null && name != only) continue;
                 var (x, y, xd, yd, _) = AxisSymbols(name);
                 if (x == "" && y == "") continue;
-                rows.Add(new AxisInfo(name, Describe(name), x, xd, y, yd));
+                rows.Add(AxisRow(name, x, xd, y, yd));
             }
             return rows;
         }
+
+        /// <summary>A row of the axis browser: the map's description and the axes' captions (T5Suite showed each symbol's short text).</summary>
+        protected virtual AxisInfo AxisRow(string name, string x, string xDescription, string y, string yDescription) =>
+            new(name, Describe(name), x, xDescription, y, yDescription);
 
         /// <summary>The quick maps menu (the Tuning page's map buttons) for this binary.</summary>
         public virtual List<MapShortcut> QuickMaps() => [];
 
         /// <summary>The open-loop limits drawn on the map's load × rpm cells, null when the suite has none.</summary>
         public virtual byte[] OpenLoopTable(string mapname) => null;
+
+        /// <summary>
+        /// The open-loop limit per data row in X-axis units, for the viewer's open-loop mark; null for none. T7Suite marked only
+        /// (mg/c) × rpm maps, from the 16-bit OpenLoopTable.
+        /// </summary>
+        public virtual double[] OpenLoopLimits(string mapname)
+        {
+            var (_, _, x, y, _) = AxisSymbols(mapname);
+            if (!x.Equals("mg/c", StringComparison.OrdinalIgnoreCase) || !y.Equals("rpm", StringComparison.OrdinalIgnoreCase) || OpenLoopTable(mapname) is not { Length: > 1 } ol)
+                return null;
+            var limits = new double[ol.Length / 2];
+            for (int i = 0; i < limits.Length; i++)
+            {
+                int b = ol[i * 2] << 8 | ol[i * 2 + 1];
+                limits[i] = b > 0xF000 ? b - 0x10000 : b;
+            }
+            return limits;
+        }
+
+        /// <summary>The map viewer's sign rule: raw values above it read as negative; null for the viewer's default (0xF000 / none).</summary>
+        public virtual int? SignAbove(string symbolname) => null;
+
+        /// <summary>The MAP sensor scale in percent on a map's values (T5's 3.0 to 5.0 bar sensors); 100 shows them raw.</summary>
+        public virtual int ScalePercent(string symbolname) => 100;
+
+        /// <summary>The same scale on an axis, by its caption.</summary>
+        public virtual int AxisScalePercent(string caption) => 100;
     }
 }

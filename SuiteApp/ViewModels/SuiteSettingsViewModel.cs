@@ -44,6 +44,21 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private string _widebandDevice;
     [ObservableProperty] private string _wbPort;
 
+    // the wideband input through an ECU symbol (frmSettings' wideband options, frmWidebandConfig); not shown by T8
+    [ObservableProperty] private bool _measureAFRInLambda;
+    [ObservableProperty] private bool _useWidebandLambda;
+    [ObservableProperty] private string _wideBandSymbol;
+    [ObservableProperty] private decimal? _widebandLowVoltage;
+    [ObservableProperty] private decimal? _widebandHighVoltage;
+    [ObservableProperty] private decimal? _widebandLowAFR;
+    [ObservableProperty] private decimal? _widebandHighAFR;
+
+    // the two wideband sources exclude each other
+    partial void OnUseWidebandLambdaChanged(bool value) { if (value) UseDigitalWidebandLambda = false; }
+
+    /// <summary>The symbols the wideband can come through (T7: the scanner inputs; T5: AD_EGR pin 69, AD_cat pin 70).</summary>
+    public virtual string[] WidebandSymbols => ["DisplProt.AD_Scanner", "DisplProt.LambdaScanner"];
+
     public string[] WidebandDevices { get; } = ["PLX", "LM1", "LC1", "LM2", "ZT2", "AEM", "STAG", "LambdaShield"];
     public string[] SerialPorts { get; } = System.IO.Ports.SerialPort.GetPortNames();
 
@@ -82,6 +97,15 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _useDigitalWidebandLambda = s.UseDigitalWidebandLambda;
         _widebandDevice = Array.Exists(WidebandDevices, d => d == s.WidebandDevice) ? s.WidebandDevice : "LC1";
         _wbPort = s.WbPort;
+        _measureAFRInLambda = s.MeasureAFRInLambda;
+        _useWidebandLambda = s.UseWidebandLambda;
+        if (s.UseWidebandLambda) _useDigitalWidebandLambda = false;
+        _wideBandSymbol = Array.Exists(WidebandSymbols, w => w == s.WideBandSymbol) ? s.WideBandSymbol : WidebandSymbols[0];
+        _widebandLowVoltage = (decimal)s.WidebandLowVoltage / 1000;
+        _widebandHighVoltage = (decimal)s.WidebandHighVoltage / 1000;
+        _widebandLowAFR = (decimal)s.WidebandLowAFR / 1000;
+        _widebandHighAFR = (decimal)s.WidebandHighAFR / 1000;
+        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(UseDigitalWidebandLambda) && UseDigitalWidebandLambda) UseWidebandLambda = false; };
         // not the field: the setter fills the adapter list
         AdapterType = Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
     }
@@ -108,6 +132,13 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.UseDigitalWidebandLambda = UseDigitalWidebandLambda;
         s.WidebandDevice = WidebandDevice;
         s.WbPort = WbPort ?? "";
+        s.MeasureAFRInLambda = MeasureAFRInLambda;
+        s.UseWidebandLambda = UseWidebandLambda;
+        s.WideBandSymbol = WideBandSymbol;
+        s.WidebandLowVoltage = (double)(WidebandLowVoltage ?? 0) * 1000;
+        s.WidebandHighVoltage = (double)(WidebandHighVoltage ?? 5) * 1000;
+        s.WidebandLowAFR = (double)(WidebandLowAFR ?? 7.39m) * 1000;
+        s.WidebandHighAFR = (double)(WidebandHighAFR ?? 22.3m) * 1000;
         // an empty folder fell back to <program>\Projects; the program folder isn't writable on Linux, so the default instead
         s.ProjectFolder = string.IsNullOrWhiteSpace(ProjectFolder)
             ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments), "TxSuite", "Projects")

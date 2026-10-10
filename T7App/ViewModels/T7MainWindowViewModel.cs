@@ -21,6 +21,9 @@ namespace T7App.ViewModels;
 /// </summary>
 public partial class T7MainWindowViewModel : MainWindowViewModel
 {
+    // T7 symbols have no bit mask (T8's)
+    protected override bool HasSymbolColumn(string path) => path != nameof(SymbolHelper.BitMask);
+
     public T7MainWindowViewModel() : base("T7SuitePro", "T7Suite", new T7SuiteRegistry())
     {
         Trionic7File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Percentage >= 55 ? "" : e.Info);
@@ -130,6 +133,9 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
     private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
 
     // ---- firmware information ----
+
+    /// <summary>The file's VIN, from its header (the firmware information's chassis ID).</summary>
+    public override string BinaryVin => FirmwareInfo()?.ChassisID ?? "";
 
     public FirmwareInfoViewModel? FirmwareInfo() =>
         Binary is T7Binary bin && File.Exists(bin.FileName) ? new FirmwareInfoViewModel(T7.FirmwareInfo.Read(bin), Settings.WriteTimestampInBinary) : null;

@@ -15,7 +15,7 @@
                     </Tool>
                 </ToolDock>
                 <ProportionalDockSplitter />
-                <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" LayoutMode="Mdi" IsCollapsable="False" CanDrop="False" CanFloat="False">
+                <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="False" EmptyContent="" LayoutMode="Mdi" IsCollapsable="False" CanDrop="False" CanFloat="False">
                     <DocumentDock.DocumentTemplate>
                         <DocumentTemplate>
                             <ContentControl x:DataType="Document" Content="{Binding Context}" />

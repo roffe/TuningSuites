@@ -2,6 +2,8 @@
 
 How the old T7Suite (WinForms/DevExpress, `T7Suite/`) behaves, read from its code, as the reference for the port. Line numbers are `T7Suite/frmMain.cs` unless another file is named. Where the port deliberately differs, PORTING.md says so.
 
+The old code is in [OldSuites/](../OldSuites); the paths below are relative to it.
+
 ## Opening a binary
 
 **Entry points.** Every entry point ends in `OpenFile(path, showmessage)` (5815).

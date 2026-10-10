@@ -1,0 +1,5 @@
+# CombiAdapter (libusb): give the logged-in desktop user access, and keep ModemManager
+# from probing its CDC interface. The same rule as the flasher's 70-trioniccanflasher.rules.
+# Install: sudo cp 70-t5suite.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+# uaccess only works from a file sorted before 73-seat-late.rules, keep the 70- prefix.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="ffff", ATTRS{idProduct}=="0005", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"

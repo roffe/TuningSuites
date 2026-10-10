@@ -57,9 +57,6 @@ public partial class T7MainWindowViewModel
     /// <summary>The open bin's AFR target / feedback / counter maps (AFRMaps folder next to it).</summary>
     public AfrFeedback? AfrMaps => Binary is not T7Binary bin ? null : m_afr?.Binary == bin ? m_afr : m_afr = new AfrFeedback(bin);
 
-    /// <summary>Autotune without auto update: the cells (data indices) to take from the proposed percentages, null to cancel.</summary>
-    public Func<double[], Task<IReadOnlyCollection<int>?>>? AcceptAutotune { get; set; }
-
     /// <summary>SetupMeasureAFRorLambda's captions.</summary>
     public string FeedbackMapCaption => Settings.MeasureAFRInLambda ? "Show lambda feedback map" : "Show AFR feedback map";
     public string ClearFeedbackCaption => Settings.MeasureAFRInLambda ? "Clear lambda feedback map" : "Clear AFR feedback map";
@@ -338,37 +335,6 @@ public partial class T7MainWindowViewModel
             exporter.ExportMap(file, sh.Varname, sh.Userdescription, sh.Length, await Ecu.ReadMapAsync(sh));
         }
         ProgressText = "";
-    }
-
-    // ---- SRAM compares ----
-
-    /// <summary>An SRAM snapshot, laid out by the open bin's symbols: "SRAM Symbol" viewers.</summary>
-    private CompareSide SramSide(T7Binary bin, string file)
-    {
-        byte[] ram = File.ReadAllBytes(file);
-        return new(file, name => bin.FindAny(name) is { } sh ? SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length) : null,
-            name => { if (bin.FindAny(name) is { } sh) OpenFromSramFile(sh, file); });
-    }
-
-    /// <summary>Compare to SRAM snapshot: "SRAM &lt;&gt; BIN Compare results", the bin's map and the snapshot's per symbol.</summary>
-    public async Task CompareToSramAsync(string file)
-    {
-        if (Binary is not T7Binary bin) return;
-        List<CompareRow> rows = await Task.Run(() => SuiteCompare.CompareToSram(bin, File.ReadAllBytes(file)));
-        string name = Path.GetFileName(file);
-        ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), SramSide(bin, file), rows,
-            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]"));
-    }
-
-    /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
-    public async Task CompareSramAsync(string file1, string file2)
-    {
-        if (Binary is not T7Binary bin) return;
-        List<CompareRow> rows = await Task.Run(() =>
-            SuiteCompare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2)));
-        string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
-        ShowDocument(new CompareResultsViewModel(this, bin, SramSide(bin, file1), SramSide(bin, file2), rows,
-            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]"));
     }
 
     private static IEnumerable<SymbolHelper> SyncSymbols(T7Binary bin) =>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -54,6 +55,34 @@ namespace SuiteApp.Services
             return await dlg.ShowDialog<bool?>(owner);
         }
 
+        /// <summary>A question with the suite's own buttons (T5Suite's Accept / Decline / Reverse): the index clicked, null when closed.</summary>
+        public static async Task<int?> Buttons(Window owner, string text, string caption, params string[] labels)
+        {
+            var dlg = new Window
+            {
+                Title = caption,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                MinWidth = 320,
+                MaxWidth = 640,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false,
+            };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+            for (int i = 0; i < labels.Length; i++)
+            {
+                int index = i;
+                var b = new Button { Content = labels[i], MinWidth = 80, IsDefault = i == 0 };
+                b.Click += (_, _) => dlg.Close(index);
+                buttons.Children.Add(b);
+            }
+            var body = new StackPanel { Margin = new Thickness(16), Spacing = 16 };
+            body.Children.Add(new SelectableTextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            return await dlg.ShowDialog<int?>(owner);
+        }
+
         /// <summary>A long read-only text in a scrolling, resizable window (reports, binary diffs).</summary>
         public static Task Text(Window owner, string caption, string text)
         {
@@ -66,6 +95,86 @@ namespace SuiteApp.Services
             body.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, FontFamily = new Avalonia.Media.FontFamily("monospace") });
             dlg.Content = body;
             return dlg.ShowDialog(owner);
+        }
+
+        /// <summary>A report (T5Suite's TuningReport): the lines, with Save to a text file (T5Suite saved DevExpress .prnx documents).</summary>
+        public static Task Report(Window owner, string caption, IEnumerable<string> lines)
+        {
+            string text = string.Join(Environment.NewLine, lines);
+            var dlg = new Window { Title = caption, Width = 900, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var ok = new Button { Content = "Ok", MinWidth = 80, IsDefault = true, IsCancel = true };
+            ok.Click += (_, _) => dlg.Close();
+            var save = new Button { Content = "Save...", MinWidth = 80 };
+            save.Click += async (_, _) =>
+            {
+                if (await SaveFile(dlg, "Reports", "txt", caption) is { } file) System.IO.File.WriteAllText(file, text);
+            };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
+            buttons.Children.Add(save);
+            buttons.Children.Add(ok);
+            var body = new DockPanel { Margin = new Thickness(12) };
+            DockPanel.SetDock(buttons, Avalonia.Controls.Dock.Bottom);
+            body.Children.Add(buttons);
+            body.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            dlg.Content = body;
+            return dlg.ShowDialog(owner);
+        }
+
+        /// <summary>A wizard page of numbers (label, value, minimum, maximum, step) under an introduction; the values on OK, null on Cancel.</summary>
+        public static async Task<decimal[]?> Numbers(Window owner, string caption, string intro, params (string label, decimal value, decimal min, decimal max, decimal step)[] fields)
+        {
+            var dlg = new Window { Title = caption, Width = 560, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var boxes = fields.Select(f => new NumericUpDown { Value = f.value, Minimum = f.min, Maximum = f.max, Increment = f.step, FormatString = f.step < 1 ? "0.00" : "0", Width = 160 }).ToArray();
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), RowSpacing = 6, Margin = new Thickness(0, 12, 0, 0) };
+            for (int i = 0; i < fields.Length; i++)
+            {
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                var label = new TextBlock { Text = fields[i].label, VerticalAlignment = VerticalAlignment.Center };
+                Grid.SetRow(label, i);
+                Grid.SetRow(boxes[i], i);
+                Grid.SetColumn(boxes[i], 1);
+                grid.Children.Add(label);
+                grid.Children.Add(boxes[i]);
+            }
+            bool ok = false;
+            var okButton = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
+            okButton.Click += (_, _) => { ok = true; dlg.Close(); };
+            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            cancel.Click += (_, _) => dlg.Close();
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+            buttons.Children.Add(okButton);
+            buttons.Children.Add(cancel);
+            var body = new StackPanel { Margin = new Thickness(16) };
+            body.Children.Add(new TextBlock { Text = intro, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            body.Children.Add(grid);
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            await dlg.ShowDialog(owner);
+            return ok ? boxes.Select(b => b.Value ?? 0).ToArray() : null;
+        }
+
+        /// <summary>A group of check boxes with Ok / Cancel (T5Suite's "Select merge options"); the states, or null when cancelled.</summary>
+        public static async Task<bool[]?> Checks(Window owner, string caption, string group, params (string label, bool value)[] fields)
+        {
+            var dlg = new Window { Title = caption, SizeToContent = SizeToContent.WidthAndHeight, MinWidth = 360, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var boxes = fields.Select(f => new CheckBox { Content = f.label, IsChecked = f.value }).ToArray();
+            var list = new StackPanel { Spacing = 2, Margin = new Thickness(0, 8, 0, 0) };
+            foreach (CheckBox box in boxes) list.Children.Add(box);
+            bool ok = false;
+            var okButton = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
+            okButton.Click += (_, _) => { ok = true; dlg.Close(); };
+            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            cancel.Click += (_, _) => dlg.Close();
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+            buttons.Children.Add(okButton);
+            buttons.Children.Add(cancel);
+            var body = new StackPanel { Margin = new Thickness(16) };
+            body.Children.Add(new TextBlock { Text = group, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+            body.Children.Add(list);
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            await dlg.ShowDialog(owner);
+            return ok ? boxes.Select(b => b.IsChecked == true).ToArray() : null;
         }
 
         /// <summary>One line of text (frmChangeNote "Remark for change"); null when cancelled.</summary>
@@ -127,7 +236,13 @@ namespace SuiteApp.Services
         public static Task<string?> OpenFile(Window owner, string filterName, params string[] patterns) => OpenFileIn(owner, null, null, filterName, patterns);
 
         /// <summary>OpenFile with the picker's title and first folder, where the suite's dialog had them.</summary>
-        public static async Task<string?> OpenFileIn(Window owner, string? title, string? folder, string filterName, params string[] patterns)
+        public static async Task<string?> OpenFileIn(Window owner, string? title, string? folder, string filterName, params string[] patterns) =>
+            (await OpenFiles(owner, title, folder, false, filterName, patterns)).FirstOrDefault();
+
+        /// <summary>Several files at once (T5Suite's Compare with another binary); empty when cancelled.</summary>
+        public static Task<string[]> OpenFiles(Window owner, string filterName, params string[] patterns) => OpenFiles(owner, null, null, true, filterName, patterns);
+
+        private static async Task<string[]> OpenFiles(Window owner, string? title, string? folder, bool multiple, string filterName, string[] patterns)
         {
             // GTK / portal globs are case-sensitive (Windows' aren't): *.bin must also list FOO.BIN
             // ponytail: mixed case like *.Bin still hidden
@@ -140,10 +255,10 @@ namespace SuiteApp.Services
                 {
                     Title = title,
                     SuggestedStartLocation = folder != null && Directory.Exists(folder) ? await owner.StorageProvider.TryGetFolderFromPathAsync(folder) : null,
-                    AllowMultiple = false,
+                    AllowMultiple = multiple,
                     FileTypeFilter = new[] { new FilePickerFileType(filterName) { Patterns = patterns.Concat(patterns.Select(p => p.ToUpperInvariant())).Distinct().ToArray() } },
                 });
-                return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+                return files.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray();
             }
             finally
             {

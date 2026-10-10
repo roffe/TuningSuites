@@ -19,10 +19,10 @@
             <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
             <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
-            <MenuItem Header="Browse axis info" Click="OnBrowseAxes" />
+            <MenuItem Header="Browse axis information" Click="OnBrowseAxes" />
             <MenuItem Header="Export as tuning package" Click="OnExportPackage" />
             <MenuItem Header="Export fixed tuning package" Click="OnExportFixedPackage" />
-            <MenuItem Header="Edit an existing tuning package" Command="{Binding EditTuningPackageCommand}" />
+            <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" />
             <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
         </ContextMenu>
     </Window.Resources>
@@ -46,15 +46,13 @@
                 <MenuItem Header="Save as..." Click="OnSaveAs" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export to S19" Click="OnExportS19" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Create backup file" Command="{Binding CreateBackupFileCommand}" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Import..." IsEnabled="{Binding HasFile}">
-                    <MenuItem Header="Import XML descriptor file" Click="OnImportXml" />
-                    <MenuItem Header="Import CSV descriptor file" Click="OnImportCsv" />
-                    <MenuItem Header="Import AS2 descriptor file" Click="OnImportAs2" />
-                </MenuItem>
+                <MenuItem Header="Import XML descriptor" Click="OnImportXml" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import AS2 descriptor" Click="OnImportAs2" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import CSV descriptor" Click="OnImportCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import tuning package" Click="OnImportTuningPackage" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Setup log filters" Click="OnLogFilters" />
                 <MenuItem Header="Create binary from TIS file" Click="OnCreateFromTis" />
+                <MenuItem Header="Setup log filters" Click="OnLogFilters" />
                 <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Settings" Click="OnSettings" />
@@ -82,8 +80,8 @@
                 <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Browse axis information" Command="{Binding BrowseAxesCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="VIN decoder" Click="OnVinDecoder" />
+                <MenuItem Header="Browse axis information" Command="{Binding BrowseAxesCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Show interrupt vectors" Click="OnVectors" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Show disassembly" Click="OnDisassembly" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Show full disassembly" Click="OnFullDisassembly" IsEnabled="{Binding HasFile}" />
@@ -92,13 +90,14 @@
                 <MenuItem Header="Compare binary outside symbolrange" Click="OnBinaryCompareOutsideSymbols" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare binary with other binary" Click="OnBinaryCompare" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Transfer maps to another binary" Click="OnTransferMaps" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Copy address table to another binary" Click="OnCopyAddressTable" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Import SRAM file" Click="OnImportSram" />
                 <MenuItem Header="View file in hex" Command="{Binding ViewHexCommand}" IsEnabled="{Binding HasFile}" />
-                <MenuItem Header="Airmass result viewer" Command="{Binding ShowAirmassResultCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
+                <MenuItem Header="Import SRAM snapshot" Click="OnImportSram" />
+                <Separator />
+                <MenuItem Header="Airmass result viewer" Command="{Binding ShowAirmassResultCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="TEM editor" Click="OnPidEditor" Tag="tem" IsEnabled="{Binding HasTemTable}" />
                 <MenuItem Header="PID editor" Click="OnPidEditor" Tag="pid" IsEnabled="{Binding HasFile}" />
             </MenuItem>
@@ -113,11 +112,11 @@
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
                 <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export logfile to LogWorks" Click="OnExportLogDif" />
-                <MenuItem Header="Load trionic 8 logfile" Click="OnOpenLog" />
+                <MenuItem Header="Load logfile" Click="OnOpenLog" />
                 <MenuItem Header="View matrix from logfile" Click="OnLogMatrix" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Set symbol colors" Click="OnSymbolColors" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Get ECU information" Click="OnEcuInformation" />
-                <MenuItem Header="Get fault codes (OBDII)" Click="OnFaultCodes" />
+                <MenuItem Header="Get fault codes" Click="OnFaultCodes" />
                 <MenuItem Header="Clear DTC and knock counters" Command="{Binding ClearDtcAndKnockCountersCommand}" />
                 <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
                 <MenuItem Header="Export logfile to CSV" Click="OnExportLogCsv" />
@@ -142,12 +141,12 @@
                 <MenuItem Header="Dock all floating windows" Command="{Binding DockAllCommand}" />
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="T8Suite user manual" Click="OnHelpFile" Tag="T8_manual.pdf" />
-                <MenuItem Header="Trionic 8 technical documentation" Click="OnHelpFile" Tag="Trionic 8.pdf" />
-                <Separator />
-                <MenuItem Header="About T8Suite" Click="OnAbout" />
-                <MenuItem Header="Check for updates" Click="OnCheckForUpdates" />
+                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T8_manual.pdf" />
+                <MenuItem Header="Trionic 8 documentation" Click="OnHelpFile" Tag="Trionic 8.pdf" />
                 <MenuItem Header="Release notes" Click="OnReleaseNotes" />
+                <Separator />
+                <MenuItem Header="Check for updates" Click="OnCheckForUpdates" />
+                <MenuItem Header="About T8Suite" Click="OnAbout" />
             </MenuItem>
         </Menu>
         <sv:StatusBar DockPanel.Dock="Bottom" />

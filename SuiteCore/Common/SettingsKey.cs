@@ -31,17 +31,25 @@ namespace CommonSuite
 
         public static string Folder(string suite) => Path.Combine(BaseFolder, suite);
 
-        public static SettingsKey Open(string suite, string subkey = null) =>
-            new SettingsKey(Path.Combine(Folder(suite), "settings.json"), @"Software\MattiasC\" + suite, subkey);
+        /// <summary>
+        /// The registry key a suite kept its own settings under besides HKCU\Software\MattiasC\&lt;suite&gt; (T5Suite: Software\T5Suite2;
+        /// its log filters, channels and symbol colours went through CommonSuite to the MattiasC key). Its values win.
+        /// </summary>
+        public static Dictionary<string, string> RegistryPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        internal SettingsKey(string file, string registryPath, string subkey = null)
+        public static SettingsKey Open(string suite, string subkey = null) =>
+            new SettingsKey(Path.Combine(Folder(suite), "settings.json"), [@"Software\MattiasC\" + suite, RegistryPaths.GetValueOrDefault(suite)], subkey);
+
+        internal SettingsKey(string file, string[] registryPaths, string subkey = null)
         {
             m_file = file;
             m_prefix = string.IsNullOrEmpty(subkey) ? "" : subkey.TrimEnd('\\') + "\\";
             m_values = Load(file);
             if (m_values == null)
             {
-                m_values = ImportRegistry(registryPath);
+                m_values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string path in registryPaths ?? [])
+                    foreach (var (name, value) in ImportRegistry(path)) m_values[name] = value;
                 m_dirty = m_values.Count > 0;
             }
         }

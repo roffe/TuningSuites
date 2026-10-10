@@ -1,14 +1,16 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:SuiteApp.ViewModels"
+        xmlns:cs="using:CommonSuite"
         x:Class="SuiteApp.Views.PartLookupWindow"
         x:DataType="vm:PartLookupViewModel"
-        Title="Partnumber lookup" MinWidth="480" SizeToContent="WidthAndHeight" CanResize="False" WindowStartupLocation="CenterOwner">
+        Title="Lookup partnumber" MinWidth="480" SizeToContent="WidthAndHeight" CanResize="False" WindowStartupLocation="CenterOwner">
     <StackPanel Margin="12" Spacing="8">
-        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8">
+        <Grid ColumnDefinitions="110,*,Auto,Auto" ColumnSpacing="8">
             <TextBlock Text="Partnumber" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" Text="{Binding PartNumber}" KeyDown="OnKeyDown" />
-            <Button Grid.Column="2" Content="Lookup" Click="OnLookup" />
+            <Button Grid.Column="2" Content="..." Click="OnBrowse" IsVisible="{Binding CanBrowse}" ToolTip.Tip="Partnumber list" />
+            <Button Grid.Column="3" Content="Lookup" Click="OnLookup" />
         </Grid>
         <TextBlock Text="{Binding Message}" Foreground="IndianRed" IsVisible="{Binding Info, Converter={x:Static ObjectConverters.IsNull}}" />
         <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4" IsVisible="{Binding Info, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -27,6 +29,16 @@
                 <CheckBox Content="Full pressure turbo" IsChecked="{Binding Info.FullPressureTurbo, FallbackValue=False}" IsHitTestVisible="False" />
             </StackPanel>
         </Grid>
+        <ItemsControl ItemsSource="{Binding Info.Extra, FallbackValue={x:Null}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="cs:PartDetail">
+                    <Grid ColumnDefinitions="110,*" Margin="0,0,0,4">
+                        <TextBlock Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Value}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="Open this file" Click="OnOpenFile" IsEnabled="{Binding HasBinary}" />
             <Button Content="Compare to this file" Click="OnCompare" IsEnabled="{Binding HasBinary}" />

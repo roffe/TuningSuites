@@ -17,10 +17,11 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string CompareFilesName => "Trionic 8 binaries";
 
-    // T8Suite's frmAbout
-    protected override (string thanks, string support, string closing) AboutTexts =>
-        ("Actitis H., Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, G-ice, General Failure and Mattias Claesson",
-         "Currently no e-mail support, check out www.trionictuning.com and www.ecuproject.com", "Special thanks to Just4pLeisure.");
+    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
+
+    // T8Suite's frmAbout list
+    protected override string AboutThanks =>
+        "Actitis H., Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, G-ice, General Failure, Mattias Claesson, Roffe and...";
 
     protected override void OnDataContextChanged(System.EventArgs e)
     {
@@ -37,10 +38,6 @@ public partial class MainWindow : SuiteMainWindow
     {
         if (await Vm.ReadEcuInfoAsync() is { } rows) new EcuInfoWindow(rows).Show(this);
     }
-
-    // the file's VIN, from the last valid flash block
-    private async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
-        await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.FirmwareInfo()?.ChassisId ?? "") }.ShowDialog(this);
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {

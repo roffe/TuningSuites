@@ -118,6 +118,11 @@ public partial class RealtimeViewModel : DocumentViewModel
 
     public bool HasEgt { get; }
 
+    /// <summary>The airmass displays (requested, actual, air demand, limiter) and the consumption: greyed when the suite has no such symbols (T5).</summary>
+    public bool HasAirmass => m_rules.Symbols.Airmass != "";
+
+    public bool HasConsumption => m_rules.Symbols.FuelConsumption != "";
+
     [ObservableProperty]
     private bool _isNight;
 
@@ -129,13 +134,14 @@ public partial class RealtimeViewModel : DocumentViewModel
         m_bin = bin;
         m_rules = rules;
         m_engine = engine;
-        m_tracker = new CellTracker(bin, rules.CellRules);
         m_engine.Sample += OnSample;
         HasEgt = Realtime.HasEgtCalculation(bin);
         _isNight = owner.Settings.Panelmode == PanelMode.Night;
         _lambdaMode = owner.Settings.MeasureAFRInLambda;
         foreach (RealtimeSymbol s in Realtime.Merge(rules.Dashboard(bin, owner.Settings), Realtime.LoadLayout(LayoutFile, bin)))
-            Rows.Add(new RealtimeRow(s));
+            Rows.Add(new RealtimeRow(s) { Peak = s.Minimum });
+        // after Dashboard: T5's rules follow the bin's MAP sensor
+        m_tracker = new CellTracker(bin, rules.CellRules);
         PushRows();
     }
 
@@ -145,7 +151,14 @@ public partial class RealtimeViewModel : DocumentViewModel
     /// <summary>"t7rtl": Save / Load layout's files.</summary>
     public string LayoutExtension => m_rules.LayoutExtension;
 
-    private void PushRows() => m_engine.Rows = Rows.Select(r => r.Symbol).ToList();
+    /// <summary>The table to the engine: the rows Polled picks, in table order.</summary>
+    protected void PushRows() => m_engine.Rows = Polled(Rows.Select(r => r.Symbol)).ToList();
+
+    /// <summary>
+    /// The rows the engine reads: every row (T7Suite, T8Suite); T5Suite read only the panel tab's watch list. Called from this
+    /// constructor too, so an override may only use field initialisers.
+    /// </summary>
+    protected virtual IEnumerable<RealtimeSymbol> Polled(IEnumerable<RealtimeSymbol> rows) => rows;
 
     private void SaveUserRows()
     {
@@ -154,8 +167,12 @@ public partial class RealtimeViewModel : DocumentViewModel
     }
 
     /// <summary>ToggleRealtimePanel (show): connect, let the engine take the session and poll.</summary>
+    /// <summary>StartAsync was called: false for a panel opened only to configure it (T5Suite's Configure realtime panel).</summary>
+    public bool HasStarted { get; private set; }
+
     public async Task StartAsync()
     {
+        HasStarted = true;
         if (IsRunning || !await m_owner.EnsureConnectedAsync()) return;
         await m_engine.BeginAsync();
         StartWideband();
@@ -278,36 +295,38 @@ public partial class RealtimeViewModel : DocumentViewModel
             row.Value = value;
             if (row.Peak < value) row.Peak = value;
         }
-        double V(string name) => sample[name] ?? 0;
+        double V(string name) => sample[name] ?? Unpolled(name);
         DashboardSymbols names = m_rules.Symbols;
-        Speed = V("In.v_Vehicle");
+        Speed = V(names.Speed);
         Torque = V(names.Torque);
         IgnitionOffset = V(names.IgnitionOffset);
         AirmassRequest = V(names.AirmassRequest);
-        Boost = V("In.p_AirInlet");
-        DutyCycle = V("Out.PWM_BoostCntrl");
-        IgnitionAdvance = V("Out.fi_Ignition");
+        Boost = V(names.Boost);
+        DutyCycle = V(names.DutyCycle);
+        IgnitionAdvance = V(names.IgnitionAdvance);
         Tps = V(names.Tps);
-        Airmass = V("MAF.m_AirInlet");
-        Rpm = V("ActualIn.n_Engine");
-        Coolant = V("ActualIn.T_Engine");
-        IntakeAir = V("ActualIn.T_AirInlet");
-        Egt = V("Exhaust.T_Calc");
-        ActiveAirDemand = V("ECMStat.ST_ActiveAirDem");
-        FuelConsumption = V("BFuelProt.CurrentFuelCon");
-        Power = sample["ECMStat.P_Engine"] ?? Realtime.Power(Rpm, Torque);
+        Airmass = V(names.Airmass);
+        Rpm = V(names.Rpm);
+        Coolant = V(names.Coolant);
+        IntakeAir = V(names.IntakeAir);
+        Egt = V(names.Egt);
+        ActiveAirDemand = V(names.ActiveAirDemand);
+        FuelConsumption = V(names.FuelConsumption);
+        Power = sample[names.Power] ?? Realtime.Power(Rpm, Torque);
         AppSettings s = m_owner.Settings;
         double? afr = s.UseWidebandLambda ? WidebandAfr.SymbolAfr(sample, s)
             : s.UseDigitalWidebandLambda && sample["Wideband"] is { } wb ? (s.MeasureAFRInLambda ? wb * WidebandAfr.Stoich : wb) : null;
         if (afr is { } a)
         {
             Lambda = a / WidebandAfr.Stoich;
-            OnAfr(a, V("FCut.CutStatus"));
+            OnAfr(a, V(names.Fuelcut));
         }
-        else if (sample["Lambda.LambdaInt"] is { } lambda) Lambda = lambda;
+        else if (sample[names.LambdaInt] is { } lambda) Lambda = lambda;
+        // the low 32 bits: T5's Pgm_status is a 48-bit field
+        int Status(string name) => unchecked((int)(long)V(name));
         AirmassLimiter = m_rules.AirDemand((int)ActiveAirDemand);
-        LambdaStatus = m_rules.Lambda((int)V("Lambda.Status"));
-        FuelcutStatus = m_rules.Fuelcut((int)V("FCut.CutStatus"));
+        LambdaStatus = m_rules.Lambda(Status(names.LambdaStatus));
+        FuelcutStatus = m_rules.Fuelcut(Status(names.Fuelcut));
         if (sample.PerformanceMode is { } mode) PerformanceMode = mode;
         FpsText = $"{sample.Fps:F1} fps";
 
@@ -317,10 +336,20 @@ public partial class RealtimeViewModel : DocumentViewModel
             CellInput.Airmass => Airmass,
             CellInput.Tps => Tps,
             CellInput.Torque => Torque,
+            CellInput.Boost => Boost,
             _ => IgnitionOffset,
         };
         foreach (MapViewerViewModel v in m_owner.Viewers.OfType<MapViewerViewModel>().Where(v => v.FileName == m_bin.FileName))
             v.LiveCell = m_tracker.Cell(v.MapName, Input) is var (col, row) ? new Avalonia.PixelPoint(col, row) : null;
+        OnApplied(sample);
+    }
+
+    /// <summary>A dashboard value the pass didn't read: 0 (T7 / T8 read every row, so the bin lacks it); T5 keeps the row's last value.</summary>
+    protected virtual double Unpolled(string name) => 0;
+
+    /// <summary>After a pass is on screen (T5: the AFR maps and the autotune, which need the pass's other values).</summary>
+    protected virtual void OnApplied(RealtimeSample sample)
+    {
     }
 
     /// <summary>A pass's wideband AFR (T7Suite: into the AFR maps and the autotune).</summary>
@@ -380,6 +409,7 @@ public partial class RealtimeViewModel : DocumentViewModel
         row.Symbol.UserDefined = true;
         row.Peak = row.Symbol.Minimum;
         row.Refresh();
+        PushRows();
         SaveUserRows();
     }
 
@@ -411,17 +441,24 @@ public partial class RealtimeViewModel : DocumentViewModel
     /// <summary>Load layout: the dashboard rows and the layout's.</summary>
     public void LoadLayout(string file)
     {
-        Rows.Clear();
-        foreach (RealtimeSymbol s in Realtime.Merge(m_rules.Dashboard(m_bin, m_owner.Settings), Realtime.LoadLayout(file, m_bin)))
-            Rows.Add(new RealtimeRow(s));
-        PushRows();
+        Rebuild(Realtime.LoadLayout(file, m_bin));
         SaveUserRows();
     }
 
-    /// <summary>The symbol names offered by the add / edit dialog.</summary>
-    public IEnumerable<string> SymbolNames => m_bin.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Distinct().OrderBy(n => n);
+    /// <summary>The suite's rows again (from the settings as they are now) with these user rows.</summary>
+    protected void Rebuild(IEnumerable<RealtimeSymbol> user)
+    {
+        List<RealtimeSymbol> keep = [.. user];
+        Rows.Clear();
+        foreach (RealtimeSymbol s in Realtime.Merge(m_rules.Dashboard(m_bin, m_owner.Settings), keep))
+            Rows.Add(new RealtimeRow(s) { Peak = s.Minimum });
+        PushRows();
+    }
 
-    public RealtimeSymbol? Lookup(string name) => m_bin.FindAny(name) is { } sh ? m_rules.FromSymbol(sh) : null;
+    /// <summary>The symbol names offered by the add / edit dialog.</summary>
+    public IEnumerable<string> SymbolNames => m_bin.Symbols.Cast<SymbolHelper>().Where(m_rules.CanPoll).Select(s => s.SmartVarname).Distinct().OrderBy(n => n);
+
+    public RealtimeSymbol? Lookup(string name) => m_bin.FindAny(name) is { } sh && m_rules.CanPoll(sh) ? m_rules.FromSymbol(sh) : null;
 }
 
 /// <summary>frmEditRealtimeSymbol: the symbol (only when adding), description, range, offset and correction.</summary>

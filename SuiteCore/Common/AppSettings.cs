@@ -1037,6 +1037,17 @@ namespace CommonSuite
             }
         }
 
+        /// <summary>
+        /// An imported folder, unless it sits in Program Files: the old suites defaulted to &lt;StartupPath&gt;\Projects (T5Suite even
+        /// wrote that back on every Settings OK), which isn't writable there.
+        /// </summary>
+        private static string WritableFolder(string value, string fallback)
+        {
+            foreach (var root in new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 })
+                if (Environment.GetFolderPath(root) is { Length: > 0 } dir && value.StartsWith(dir, StringComparison.OrdinalIgnoreCase)) return fallback;
+            return value;
+        }
+
         private string m_ProjectFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "TxSuite", "Projects");
 
         public string ProjectFolder
@@ -2050,7 +2061,7 @@ namespace CommonSuite
                             }
                             else if (a == "ProjectFolder")
                             {
-                                m_ProjectFolder = Settings.GetValue(a).ToString();
+                                m_ProjectFolder = WritableFolder(Settings.GetValue(a).ToString(), m_ProjectFolder);
                             }
                             else if (a == "TargetECUReadFile")
                             {
@@ -2175,7 +2186,7 @@ namespace CommonSuite
                             }
                             else if (a == "ProjectFolder")
                             {
-                                m_ProjectFolder = Settings.GetValue(a).ToString();
+                                m_ProjectFolder = WritableFolder(Settings.GetValue(a).ToString(), m_ProjectFolder);
                             }
                             else if (a == "LastProjectname")
                             {

@@ -97,6 +97,7 @@ public partial class MapViewerViewModel : DocumentViewModel
             Binary.WriteSymbol(Address, Map.ToBytes(), projectFile ? Owner.TransactionLog : null, note);
             Map.MarkSaved();
             if (projectFile) Owner.TransactionsAdded(before);
+            if (Owner.SaveWritesEcu && OnlineMode && Symbol.Start_address > 0) await Owner.WriteMapToEcuAsync(this);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
@@ -137,25 +138,24 @@ public partial class MapViewerViewModel : DocumentViewModel
         if ((address < 0 && !sram) || content == null || content.Length == 0) return null;
 
         var (xAxis, yAxis, xDescr, yDescr, zDescr) = bin.AxisSymbols(name);
-        double[] x = bin.GetXaxisValues(name).Select(v => (double)v).ToArray();
-        double[] y = bin.GetYaxisValues(name).Select(v => (double)v).ToArray();
-        var map = new MapData(name, content, bin.TableWidth(name), bin.IsSixteenBitTable(name))
+        // T5's MAP axes follow the sensor (integer math, as T5Suite)
+        int xScale = bin.AxisScalePercent(xDescr), yScale = bin.AxisScalePercent(yDescr);
+        double[] x = bin.GetXaxisValues(name).Select(v => (double)(v * xScale / 100)).ToArray();
+        double[] y = bin.GetYaxisValues(name).Select(v => (double)(v * yScale / 100)).ToArray();
+        var map = new MapData(name, content, bin.TableWidth(name), bin.IsSixteenBitTable(name), bin.SignAbove(name))
         {
             Factor = bin.GetMapCorrectionFactor(name),
             Offset = bin.GetMapCorrectionOffset(name),
+            ScalePercent = bin.ScalePercent(name),
             UpsideDown = true,
             XAxis = x,
             YAxis = y,
             XName = xDescr,
             YName = yDescr,
             ZName = zDescr,
+            // TryToAddOpenLoopTables, drawn only on load
+            OpenLoop = bin.OpenLoopLimits(name)?.Select(v => (double)((int)v * xScale / 100)).ToArray(),
         };
-        // TryToAddOpenLoopTables, drawn by MapViewerEx only on load (mg/c) x rpm maps
-        if (xDescr.Equals("mg/c", StringComparison.OrdinalIgnoreCase) && yDescr.Equals("rpm", StringComparison.OrdinalIgnoreCase)
-            && bin.OpenLoopTable(name) is { Length: > 0 } ol)
-        {
-            map.OpenLoop = MapData.Decode(ol, true).Select(v => (double)v).ToArray();
-        }
 
         int viewType = (int)settings.DefaultViewType;
         return new MapViewerViewModel

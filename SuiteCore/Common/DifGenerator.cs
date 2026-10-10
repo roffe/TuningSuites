@@ -667,6 +667,7 @@ namespace CommonSuite
             return retval;
         }
 
+        // T5's symbol names as the port logs them (T5Suite logged display names): P_medel, Apc_decrese, TQ, AD_EGR / AD_cat, Knock_offset1234
         private string COnvertToRangeUpto(string symbolname)
         {
             string retval = "1000";
@@ -681,6 +682,8 @@ namespace CommonSuite
                 case "DisplProt.LambdaScanner": // AFR through wideband?
                     retval = "1.52";
                     break;
+                case "AD_EGR":
+                case "AD_cat":
                 case "Wideband":
                     retval = "22";
                     break;
@@ -693,6 +696,7 @@ namespace CommonSuite
                 case "Rpm":
                     retval = "8500";
                     break;
+                case "TQ":
                 case "TORQUE":
                 case "Out.M_Engine":
                 case "Out.M_EngTrqAct":
@@ -707,6 +711,7 @@ namespace CommonSuite
                 case "IGNADV":
                     retval = "40";
                     break;
+                case "Knock_offset1234":
                 case "Ign_angle":
                 case "Ign_angle_byte":
                 case "Out.fi_Ignition":
@@ -777,6 +782,8 @@ namespace CommonSuite
                 case "Knock_map_lim":
                     retval = "120";
                     break;
+                case "P_medel":
+                case "Apc_decrese":
                 case "Regl_tryck":
                     retval = "2.0";
                     break;
@@ -882,6 +889,8 @@ namespace CommonSuite
                 case "DisplProt.LambdaScanner": // AFR through wideband?
                     retval = "0.50";
                     break;
+                case "AD_EGR":
+                case "AD_cat":
                 case "Wideband":
                     retval = "7";
                     break;
@@ -894,12 +903,14 @@ namespace CommonSuite
                 case "Rpm":
                     retval = "0";
                     break;
+                case "TQ":
                 case "TORQUE":
                     retval = "0";
                     break;
                 case "POWER":
                     retval = "0";
                     break;
+                case "Knock_offset1234":
                 case "Ign_angle":
                 case "Out.fi_Ignition":
                 case "Ign_angle_byte":
@@ -966,6 +977,8 @@ namespace CommonSuite
                 case "Knock_map_lim":
                     retval = "0";
                     break;
+                case "P_medel":
+                case "Apc_decrese":
                 case "Regl_tryck":
                     retval = "-1";
                     break;
@@ -1079,6 +1092,8 @@ namespace CommonSuite
                     retval = "Volt";
                     break;
                 case "DisplProt.LambdaScanner": // AFR through wideband?
+                case "AD_EGR":
+                case "AD_cat":
                 case "Wideband":
                     retval = "WBLambda";
                     break;
@@ -1092,6 +1107,7 @@ namespace CommonSuite
                 case "Rpm":
                     retval = "rpm";
                     break;
+                case "TQ":
                 case "TORQUE":
                 case "Out.M_Engine":
                 case "Out.M_EngTrqAct":
@@ -1109,6 +1125,7 @@ namespace CommonSuite
                 case "In.p_AirAmbient":
                     retval = "kPa";
                     break;
+                case "Knock_offset1234":
                 case "Ign_angle":
                 case "Ign_angle_byte":
                 case "Out.fi_Ignition":
@@ -1176,6 +1193,8 @@ namespace CommonSuite
                 case "Knock_map_lim":
                     retval = "Knock limit";
                     break;
+                case "P_medel":
+                case "Apc_decrese":
                 case "Regl_tryck":
                     retval = "bar";
                     break;

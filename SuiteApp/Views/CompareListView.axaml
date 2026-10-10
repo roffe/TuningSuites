@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             x:Class="SuiteApp.Views.CompareListView"
+             x:DataType="vm:CompareListViewModel">
+    <DataGrid x:Name="Grid" ItemsSource="{Binding Rows}" IsReadOnly="True" SelectionMode="Single" GridLinesVisibility="Horizontal"
+              DoubleTapped="OnDoubleTapped" KeyDown="OnKeyDown">
+        <DataGrid.Columns>
+            <DataGridTextColumn x:DataType="vm:CompareListRow" Header="Filename" Binding="{Binding Name, Mode=OneWay}" Width="*" />
+            <DataGridTextColumn x:DataType="vm:CompareListRow" Header="Number of symbols" Binding="{Binding Differences, Mode=OneWay}" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

@@ -108,16 +108,6 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
         return (header.CarDescription, header.PartNumber.Trim() + " " + header.SoftwareVersion.Trim());
     }
 
-    /// <summary>gridViewSymbols' columns: name, length, user description, number, type; the addresses, bit mask and description hidden.</summary>
-    public override IReadOnlyList<SymbolColumn> SymbolColumns { get; } =
-    [
-        new("Symbol name", nameof(SymbolHelper.Varname)), new("Length", nameof(SymbolHelper.Length)),
-        new("User description", nameof(SymbolHelper.Userdescription)), new("Number", nameof(SymbolHelper.Symbol_number)),
-        new("Type", nameof(SymbolHelper.Symbol_type)), new("Address", nameof(SymbolHelper.Flash_start_address), false),
-        new("SRAM Address", nameof(SymbolHelper.Start_address), false), new("Bit mask", nameof(SymbolHelper.BitMask), false),
-        new("Description", nameof(SymbolHelper.Description), false), new("Category", nameof(SymbolHelper.Category), false),
-    ];
-
     /// <summary>gridViewSymbols' sort: the categories alphabetically, inside one length descending, then name.</summary>
     protected override IEnumerable<SymbolHelper> OrderSymbols(IEnumerable<SymbolHelper> symbols) =>
         symbols.OrderBy(s => s.Category, StringComparer.Ordinal).ThenByDescending(s => s.Length).ThenBy(s => s.Varname, StringComparer.Ordinal);
@@ -194,6 +184,9 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     }
 
     /// <summary>Actions → Firmware information.</summary>
+    /// <summary>The file's VIN, from the last valid flash block.</summary>
+    public override string BinaryVin => FirmwareInfo()?.ChassisId ?? "";
+
     public FirmwareInfo? FirmwareInfo() => Binary is { } bin && System.IO.File.Exists(bin.FileName) ? T8SuitePro.FirmwareInfo.Read(bin.FileName) : null;
 
     /// <summary>The firmware dialog's OK: the edits (transactions in a project), then the checksum as on open (Form1 3608).</summary>

@@ -1,0 +1,86 @@
+<sv:SuiteSettingsWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T5App.ViewModels"
+        xmlns:sv="using:SuiteApp.Views"
+        x:Class="T5App.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <!-- the shared settings that do something here; T5Suite's own groups come with their features -->
+    <StackPanel Margin="16" Spacing="12">
+        <HeaderedContentControl Header="User interface settings">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
+                    <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
+                    <CheckBox Grid.Row="1" Grid.Column="0" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}" />
+                    <CheckBox Grid.Row="2" Grid.Column="0" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}" />
+                    <CheckBox Grid.Row="0" Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}" />
+                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}" />
+                    <CheckBox Grid.Row="0" Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}" />
+                    <CheckBox Grid.Row="1" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" />
+                    <CheckBox Grid.Row="2" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" />
+                    <CheckBox Grid.Row="3" Grid.Column="0" Content="Auto detect mapsensor type" IsChecked="{Binding AutoDetectMapsensorType}" />
+                    <CheckBox Grid.Row="2" Grid.Column="1" Content="Advanced mode enabled" IsChecked="{Binding EnableAdvancedMode}"
+                              ToolTip.Tip="If checked, all advanced topics will be visible. If you are not sure whether you need this, leave it unchecked." />
+                </Grid>
+                <TextBlock Text="Default view type for maps" Margin="0,8,0,0" />
+                <ComboBox ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" MinWidth="220" />
+            </StackPanel>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Realtime settings">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <TextBlock Grid.Row="0" Text="CANBus adapter type" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Adapter" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding HasAdapters}" />
+                <TextBlock Grid.Row="2" Text="Serial speed" VerticalAlignment="Center" IsVisible="{Binding AdapterNeedsBaudrate}" />
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Baudrates}" SelectedItem="{Binding Baudrate}" HorizontalAlignment="Stretch"
+                          IsVisible="{Binding AdapterNeedsBaudrate}" />
+                <CheckBox Grid.Row="3" Grid.ColumnSpan="2" Content="Knock counter snapshot after disconnect (T5.5)" IsChecked="{Binding KnockCounterSnapshot}" />
+                <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}" />
+                    <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="110" />
+                    <TextBlock Text="seconds" VerticalAlignment="Center" />
+                </StackPanel>
+                <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Measure AFR in lambda" IsChecked="{Binding MeasureAFRInLambda}" />
+                <CheckBox Grid.Row="6" Grid.ColumnSpan="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}" />
+                <TextBlock Grid.Row="7" Text="Wideband device" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                <TextBlock Grid.Row="8" Text="Wideband port" VerticalAlignment="Center" />
+                <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch"
+                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Wideband through a symbol">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <CheckBox Content="Use wideband lambda through symbol" IsChecked="{Binding UseWidebandLambda}" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding WidebandSymbols}" SelectedItem="{Binding WideBandSymbol}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Low voltage (Volt) equals AFR" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding WidebandLowVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" Width="140" />
+                    <NumericUpDown Value="{Binding WidebandLowAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" Width="140" />
+                </StackPanel>
+                <TextBlock Grid.Row="2" Text="High voltage (Volt) equals AFR" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding WidebandHighVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" Width="140" />
+                    <NumericUpDown Value="{Binding WidebandHighAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" Width="140" />
+                </StackPanel>
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Project settings">
+            <StackPanel Spacing="2">
+                <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}" />
+                <TextBlock Text="Project folder" Margin="0,8,0,0" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="..." Margin="4,0,0,0" Click="OnBrowse" />
+                    <TextBox Text="{Binding ProjectFolder}" MinWidth="420" />
+                </DockPanel>
+            </StackPanel>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+        </StackPanel>
+    </StackPanel>
+</sv:SuiteSettingsWindow>

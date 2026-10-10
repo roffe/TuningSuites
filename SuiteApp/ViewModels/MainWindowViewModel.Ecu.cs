@@ -117,7 +117,46 @@ public abstract partial class MainWindowViewModel
         CanStatus = "";
     }
 
+    // ---- SRAM compares ----
+
+    /// <summary>An SRAM snapshot, laid out by the open bin's symbols: "SRAM Symbol" viewers.</summary>
+    private CompareSide SramSide(SuiteBinary bin, string file)
+    {
+        byte[] ram = File.ReadAllBytes(file);
+        return new(file, name => bin.FindAny(name) is { } sh ? SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length) : null,
+            name => { if (bin.FindAny(name) is { } sh) OpenFromSramFile(sh, file); });
+    }
+
+    /// <summary>Compare to SRAM snapshot: "SRAM &lt;&gt; BIN Compare results", the bin's map and the snapshot's per symbol.</summary>
+    public async Task CompareToSramAsync(string file)
+    {
+        if (Binary is not { } bin) return;
+        List<CompareRow> rows = await Task.Run(() => SuiteCompare.CompareToSram(bin, File.ReadAllBytes(file)));
+        string name = Path.GetFileName(file);
+        ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), SramSide(bin, file), rows,
+            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]"));
+    }
+
+    /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
+    public async Task CompareSramAsync(string file1, string file2)
+    {
+        if (Binary is not { } bin) return;
+        List<CompareRow> rows = await Task.Run(() =>
+            SuiteCompare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2)));
+        string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
+        ShowDocument(new CompareResultsViewModel(this, bin, SramSide(bin, file1), SramSide(bin, file2), rows,
+            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]"));
+    }
+
     // ---- SRAM maps ----
+
+    /// <summary>T5Suite: while connected every map shows the ECU's SRAM, and a viewer's Save writes SRAM and the file in one go.</summary>
+    protected virtual bool OnlineMapsFromEcu => false;
+
+    public bool SaveWritesEcu => OnlineMapsFromEcu && EcuConnected;
+
+    /// <summary>A map that only lives in SRAM; T7Suite / T8Suite connected and read it.</summary>
+    protected virtual Task OpenSramOnlyAsync(SuiteBinary bin, SymbolHelper sh) => OpenSramSymbolAsync(bin, sh);
 
     /// <summary>A map that only lives in SRAM: read it from the ECU (connecting first) and show it.</summary>
     protected async Task OpenSramSymbolAsync(SuiteBinary bin, SymbolHelper sh)
@@ -152,7 +191,9 @@ public abstract partial class MainWindowViewModel
             ProgressText = "Could not read SRAM";
             return;
         }
-        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(v => v.MapName == viewer.MapName && !v.IsReadOnly))
+        // the same file's viewers of the map; another one with unsaved edits keeps them
+        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>()
+                     .Where(v => v.MapName == viewer.MapName && !v.IsReadOnly && v.FileName == viewer.FileName && (v == viewer || !v.Map.Mutated)))
         {
             if (data.Length == v.Map.Count * (v.Map.SixteenBit ? 2 : 1)) v.Map.Load(data);
             v.OnlineMode = true;
@@ -232,7 +273,16 @@ public abstract partial class MainWindowViewModel
         {
             if (!Settings.AutoChecksum && !await askYesNo("Checksums did not verify ok, do you want to recalculate and update the checksums?"))
                 return null;
-            bin.UpdateChecksum();
+            try
+            {
+                bin.UpdateChecksum();
+            }
+            catch (InvalidOperationException e)
+            {
+                // a file without the footer the checksum needs: nothing to flash
+                ShowInfo("The checksum could not be updated, nothing was flashed: " + e.Message);
+                return null;
+            }
         }
         return bin;
     }

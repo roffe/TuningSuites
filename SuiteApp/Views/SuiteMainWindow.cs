@@ -24,7 +24,13 @@ namespace SuiteApp.Views;
 /// </summary>
 public partial class SuiteMainWindow : Window
 {
-    private const string SymbolListKey = "SymbolListProportion";
+    private const string SymbolListKey = "SymbolListWidth";
+    // the share of the window the port saved before it kept a width
+    private const string SymbolListProportionKey = "SymbolListProportion";
+
+    // the symbol list's width in pixels, kept when the window resizes (the old suites' dock panels did); a splitter drag sets a new one
+    private double m_symbolWidth = double.NaN;
+    private bool m_fittingSymbolPane;
     private const string SkinKey = "Skin";
 
     private SuiteWorkspace? m_workspace;
@@ -37,9 +43,9 @@ public partial class SuiteMainWindow : Window
     protected virtual string BinaryFilesName => "Binary or Motorola S19";
 
     /// <summary>About...: the thanks, support and closing lines of the suite's frmAbout (T7Suite's by default).</summary>
-    protected virtual (string thanks, string support, string closing) AboutTexts =>
-        ("Dilemma, Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Mattias Claesson, Roffe and...",
-         "No e-mail support currently, check out www.trionictuning.com", "Just4pLeisure ;-)");
+    /// <summary>About's special thanks, the suite's own list (Roffe in every suite's); the rest of About is the same for all.</summary>
+    protected virtual string AboutThanks =>
+        "Dilemma, Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Mattias Claesson, Roffe and...";
 
     private bool m_workspaceReady;
 
@@ -49,6 +55,61 @@ public partial class SuiteMainWindow : Window
         if (m_workspaceReady) return;
         m_workspaceReady = true;
         InitWorkspace();
+        Space.Workspace.SizeChanged += (_, e) =>
+        {
+            if (!e.WidthChanged || e.NewSize.Width <= 0) return;
+            // the first size: the width the saved or default share gives
+            if (double.IsNaN(m_symbolWidth)) m_symbolWidth = Shown(Space.SymbolPane.Proportion, e.NewSize.Width);
+            FitSymbolPane(e.NewSize.Width);
+        };
+        // the splitter's width is known once the symbol list is laid out: fit again then (the first fits counted it as 0)
+        EventHandler? settle = null;
+        settle = (_, _) =>
+        {
+            if (Space.Workspace.Bounds.Width <= 0 || Available(Space.Workspace.Bounds.Width) == Space.Workspace.Bounds.Width) return;
+            Space.Workspace.LayoutUpdated -= settle;
+            FitSymbolPane(Space.Workspace.Bounds.Width);
+        };
+        Space.Workspace.LayoutUpdated += settle;
+        Space.SymbolPane.PropertyChanged += (_, e) =>
+        {
+            // a splitter drag (not the fitting below, not while the list is pinned away)
+            if (e.Property == Dock.Model.Avalonia.Core.DockableBase.ProportionProperty && !m_fittingSymbolPane && Space.Workspace.Bounds.Width > 0
+                && !double.IsNaN(Space.SymbolPane.Proportion) && DockFactory?.IsDockablePinned(Space.SymbolTool) != true)
+                m_symbolWidth = Shown(Space.SymbolPane.Proportion, Space.Workspace.Bounds.Width);
+        };
+    }
+
+    // Dock's panel gives a share of the width its splitters leave, rounded down to whole pixels
+    private Dock.Controls.ProportionalStackPanel.ProportionalStackPanel? m_mainPanel;
+    private double m_splitters;
+
+    private double Available(double total)
+    {
+        if (m_mainPanel == null || TopLevel.GetTopLevel(m_mainPanel) == null)
+        {
+            m_mainPanel = Space.GetVisualDescendants().OfType<SymbolListView>().FirstOrDefault()?.GetVisualAncestors()
+                .OfType<Dock.Controls.ProportionalStackPanel.ProportionalStackPanel>().FirstOrDefault();
+            m_splitters = 0;
+        }
+        if (m_splitters == 0 && m_mainPanel != null)
+            m_splitters = m_mainPanel.Children.Where(c => c.GetVisualDescendants().OfType<Dock.Controls.ProportionalStackPanel.ProportionalStackPanelSplitter>().Any())
+                .Sum(c => c.Bounds.Width);
+        return Math.Max(1, total - m_splitters);
+    }
+
+    // the width a share shows at this total width
+    private double Shown(double share, double total) => Math.Floor(share * Available(total));
+
+    // the share of the new width that keeps the symbol list exactly as wide as it was (0.3 px over the whole pixel, so the rounding
+    // down lands on it whatever the width, also at 125 / 150 / 200 % scaling); the documents take the rest
+    private void FitSymbolPane(double total)
+    {
+        double share = Math.Clamp((m_symbolWidth + 0.3) / Available(total), 0.05, 0.95);
+        m_fittingSymbolPane = true;
+        Space.SymbolPane.Proportion = share;
+        Space.Documents.Proportion = 1 - share;
+        m_fittingSymbolPane = false;
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -60,9 +121,11 @@ public partial class SuiteMainWindow : Window
         {
             ApplySkin(settings.GetValue(SkinKey) as string);
             // the symbol list's width from the last session, as the suites' saved dock layout kept it
-            if (double.TryParse(settings.GetValue(SymbolListKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double width)
-                && width is > 0.05 and < 0.95)
-                Space.SymbolPane.Proportion = width;
+            if (double.TryParse(settings.GetValue(SymbolListKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double width) && width > 50)
+                m_symbolWidth = width;
+            else if (double.TryParse(settings.GetValue(SymbolListProportionKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double share)
+                && share is > 0.05 and < 0.95)
+                Space.SymbolPane.Proportion = share;
         }
         Space.Documents.ItemsSource = vm.DockedViewers;
         vm.Viewers.CollectionChanged += (_, e) =>
@@ -79,6 +142,7 @@ public partial class SuiteMainWindow : Window
         WatchMapMenus(vm);
         vm.Info += text => _ = Dialogs.Info(this, text, vm.Caption);
         vm.AskYesNoCancel = text => Dialogs.YesNoCancel(this, text, "Question");
+        vm.AskButtons = (text, caption, labels) => Dialogs.Buttons(this, text, caption, labels);
         vm.AskText = caption => Dialogs.Prompt(this, caption);
         vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
     }
@@ -167,6 +231,10 @@ public partial class SuiteMainWindow : Window
     // the old release notes viewer showed the updater's notes; they're the GitHub releases' now
     protected void OnReleaseNotes(object? sender, RoutedEventArgs e) => Dialogs.OpenWithShell(UpdateCheck.ReleasesPage);
 
+    // Actions → VIN decoder: the open file's VIN decoded, or one typed in
+    protected async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
+        await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.BinaryVin) }.ShowDialog(this);
+
     protected async void OnAbout(object? sender, RoutedEventArgs e)
     {
         string version = Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
@@ -176,11 +244,7 @@ public partial class SuiteMainWindow : Window
     }
 
     /// <summary>The suite's About... for a version.</summary>
-    public AboutWindow NewAboutWindow(string version)
-    {
-        var (thanks, support, closing) = AboutTexts;
-        return new AboutWindow(Vm.Caption, version, thanks, support, closing);
-    }
+    public AboutWindow NewAboutWindow(string version) => new(Vm.Caption, version, AboutThanks);
 
     // ---- projects ----
 
@@ -259,8 +323,8 @@ public partial class SuiteMainWindow : Window
     {
         base.OnClosed(e);
         if (DataContext is not MainWindowViewModel vm) return;
-        if (!double.IsNaN(Space.SymbolPane.Proportion))
-            using (var settings = SettingsKey.Open(vm.Suite)) settings.SetValue(SymbolListKey, Space.SymbolPane.Proportion);
+        if (!double.IsNaN(m_symbolWidth))
+            using (var settings = SettingsKey.Open(vm.Suite)) settings.SetValue(SymbolListKey, Math.Round(m_symbolWidth));
         vm.Shutdown();
     }
 
