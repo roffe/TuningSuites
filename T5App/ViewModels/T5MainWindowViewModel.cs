@@ -136,6 +136,28 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         };
     }
 
+    // T5Suite's grid grouped by XDF category, then subcategory
+    protected override string[] SymbolGroupPaths => [nameof(SymbolHelper.Category), nameof(SymbolHelper.Subcategory)];
+
+    /// <summary>The firmware options dialog (the window sets it); true for Ok.</summary>
+    public Func<FirmwareOptionsViewModel, Task<bool>>? ShowFirmwareOptions { get; set; }
+
+    /// <summary>
+    /// Pgm_mod! opens the firmware options instead of a map (StartTableViewer). T5Suite showed a read-only view of the file's or the
+    /// ECU's bits there; here they can be changed, as from Actions → Trionic options.
+    /// </summary>
+    protected override bool OpenOther(SuiteBinary bin, SymbolHelper sh)
+    {
+        if (sh.SmartVarname != "Pgm_mod!" || ShowFirmwareOptions == null) return false;
+        _ = EditFirmwareAsync();
+        return true;
+    }
+
+    public async Task EditFirmwareAsync()
+    {
+        if (FirmwareOptions() is { } options && ShowFirmwareOptions != null && await ShowFirmwareOptions(options)) await ApplyFirmwareAsync(options.Properties);
+    }
+
     /// <summary>The options window's Ok: the changed fields written (transactions in a project), the checksum updated, the status bar refreshed.</summary>
     public async Task ApplyFirmwareAsync(Trionic5Properties props)
     {

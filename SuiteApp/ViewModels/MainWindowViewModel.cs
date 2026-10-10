@@ -255,7 +255,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             SymbolFilter = DefaultSymbolFilter;
             var rows = OrderSymbols(bin.Symbols.Cast<SymbolHelper>()).ToList();
             var view = new DataGridCollectionView(rows) { Filter = MatchesSearch };
-            view.GroupDescriptions.Add(new DataGridPathGroupDescription(nameof(SymbolHelper.Category)));
+            foreach (string group in SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
             Binary = bin;
             Symbols = view;
             Title = $"{TitleName} v{Version} [ {Path.GetFileName(path)} ]";
@@ -314,12 +314,16 @@ public abstract partial class MainWindowViewModel : ObservableObject
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(path, descending ? System.ComponentModel.ListSortDirection.Descending : System.ComponentModel.ListSortDirection.Ascending));
     }
 
+    /// <summary>The symbol list's groups on open and for "Group by category": the category (T5Suite: then the subcategory).</summary>
+    protected virtual string[] SymbolGroupPaths => [nameof(SymbolHelper.Category)];
+
     /// <summary>Group by this column / by category (the suites' default) / not at all.</summary>
     public void GroupSymbols(string? path)
     {
         if (Symbols is not { } view) return;
         view.GroupDescriptions.Clear();
-        if (path != null) view.GroupDescriptions.Add(new DataGridPathGroupDescription(path));
+        foreach (string group in path == nameof(SymbolHelper.Category) ? SymbolGroupPaths : path != null ? [path] : [])
+            view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
     }
 
     // the find panel: any shown column containing the text, and every filter row text in its column

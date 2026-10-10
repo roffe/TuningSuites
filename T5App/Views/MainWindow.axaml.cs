@@ -27,6 +27,7 @@ public partial class MainWindow : SuiteMainWindow
     {
         base.OnDataContextChanged(e);
         if (DataContext is not T5MainWindowViewModel vm) return;
+        vm.ShowFirmwareOptions = options => new FirmwareOptionsWindow { DataContext = options }.ShowDialog<bool>(this);
         // "Select mutations to accept" on Insp_mat!'s axes
         vm.AcceptAutotune = percent =>
         {
@@ -39,11 +40,7 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
         await new VinDecoderWindow { DataContext = new VinDecoderViewModel("") }.ShowDialog(this);
 
-    private async void OnFirmwareOptions(object? sender, RoutedEventArgs e)
-    {
-        if (Vm.FirmwareOptions() is not { } options) return;
-        if (await new FirmwareOptionsWindow { DataContext = options }.ShowDialog<bool>(this)) await Vm.ApplyFirmwareAsync(options.Properties);
-    }
+    private async void OnFirmwareOptions(object? sender, RoutedEventArgs e) => await Vm.EditFirmwareAsync();
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
