@@ -10,7 +10,11 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
     public SettingsViewModel(AppSettings s, T5AppSettings t5) : base(s)
     {
         EnableAdvancedMode = t5.EnableAdvancedMode;
+        AutoDetectMapsensorType = t5.AutoDetectMapsensorType;
     }
+
+    /// <summary>"Auto detect mapsensor type": a file whose marker says stock gets its sensor from the maps.</summary>
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _autoDetectMapsensorType;
 
     /// <summary>"Advanced mode enabled": shows the advanced tuning wizards.</summary>
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _enableAdvancedMode;
@@ -19,5 +23,6 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
     {
         base.Apply(s);
         t5.EnableAdvancedMode = EnableAdvancedMode;
+        t5.AutoDetectMapsensorType = AutoDetectMapsensorType;
     }
 }

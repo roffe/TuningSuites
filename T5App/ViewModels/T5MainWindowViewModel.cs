@@ -15,10 +15,30 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
     public T5MainWindowViewModel() : base(T5AppSettings.Suite, "T5Suite", new T5SuiteRegistry())
     {
         T5Settings = new T5AppSettings();
+        MigrateCanDevice();
         InitEcu();
     }
 
-    /// <summary>T5Suite's own settings (realtime, autotune, notifications, ...), in the same settings.json as the shared ones.</summary>
+    /// <summary>T5Suite's CanDevice ("Lawicel", "CombiAdapter" / "Multiadapter", "Just4Trionic", "Kvaser") as the shared adapter type, once.</summary>
+    private void MigrateCanDevice()
+    {
+        using (var key = SettingsKey.Open(T5AppSettings.Suite))
+            if (key.GetValue("AdapterType") != null) return;
+        string? adapter = T5Settings.CanDevice switch
+        {
+            "Lawicel" => "Lawicel CANUSB",
+            "CombiAdapter" or "Multiadapter" => "CombiAdapter",
+            "Just4Trionic" => "Just4Trionic",
+            "Kvaser" => "Kvaser HS",
+            _ => null, // the DIY adapter (mct_can.dll) has no driver here: the shared default stays
+        };
+        if (adapter != null) Settings.AdapterType = adapter;
+    }
+
+    /// <summary>
+    /// T5Suite's own settings (realtime, autotune, notifications, ...), in the same settings.json as the shared ones. Read only the
+    /// T5-only names through it: each object caches its values, the shared Settings own the names both have.
+    /// </summary>
     public T5AppSettings T5Settings { get; }
 
     // T5Suite's title was "T5Suite Professional 2.0 [file]"; the settings keep T5Suite 2.0's name
@@ -68,9 +88,10 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         };
     }
 
+    // frmDefineMyMaps.CreateDefaultFile
     public override IReadOnlyList<MapShortcut> MyMapsDefaults { get; } =
     [
-        new("Fuel", "Main fuel map", "Insp_mat!"), new("Ignition", "Main ignition map", "Ign_map_0!"), new("Boost", "Boost request map", "Tryck_mat!"),
+        new("Idle", "Idle RPM", "Idle_rpm_tab!"), new("Boost", "Boost Map", "Tryck_mat!"), new("Boost", "Reg Kon Mat", "Reg_kon_mat!"),
     ];
 
     /// <summary>On open the checksum is checked, and the status bar shows the ECU type, CPU speed and RAM lock (frmMain 929).</summary>

@@ -97,6 +97,7 @@ public partial class MapViewerViewModel : DocumentViewModel
             Binary.WriteSymbol(Address, Map.ToBytes(), projectFile ? Owner.TransactionLog : null, note);
             Map.MarkSaved();
             if (projectFile) Owner.TransactionsAdded(before);
+            if (Owner.SaveWritesEcu && OnlineMode && Symbol.Start_address > 0) await Owner.WriteMapToEcuAsync(this);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {

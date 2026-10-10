@@ -37,7 +37,7 @@ public partial class MainWindow : SuiteMainWindow
         if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
         settings.Apply(Vm.Settings, Vm.T5Settings);
         Vm.SettingsChanged();
-        Vm.AdvancedModeChanged();
+        Vm.T5SettingsChanged();
         ApplyHideSymbolTable();
     }
 
@@ -146,5 +146,37 @@ public partial class MainWindow : SuiteMainWindow
         await System.IO.File.WriteAllBytesAsync(System.IO.Path.Combine(dir, "chip1.bin"), chip1);
         await System.IO.File.WriteAllBytesAsync(System.IO.Path.Combine(dir, "chip2.bin"), chip2);
         await Dialogs.Info(this, "File split to chip1.bin and chip2.bin");
+    }
+
+    // ---- Online tuning: SRAM ----
+
+    private async void OnDownloadSram(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is null) return;
+        if (!Vm.IsConnected)
+        {
+            await Dialogs.Info(this, "A canbus connection is needed to create a SRAM snapshot");
+            return;
+        }
+        if ((Vm.ProjectSnapshotFile() ?? await Dialogs.SaveFile(this, "SRAM snapshots", "RAM", Vm.SnapshotName)) is { } file) await Vm.DownloadSramAsync(file);
+    }
+
+    private async void OnUploadSram(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is null || !Vm.IsConnected || await Dialogs.OpenFile(this, "SRAM snapshots", "*.ram") is not { } file) return;
+        bool toFile = await Dialogs.YesNo(this, "Do you want to write to the current binary file as well?", "Question");
+        await Vm.UploadSramAsync(file, toFile);
+    }
+
+    private async void OnCompareEcu(object? sender, RoutedEventArgs e) => await Vm.CompareEcuWithBinaryAsync();
+
+    /// <summary>Import SRAM snapshot into binary: the snapshot, then "Select merge options" (frmMergeAdaptionData).</summary>
+    private async void OnMergeAdaption(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary is null || await Dialogs.OpenFileIn(this, "Select SRAM file...", null, "SRAM dumps", "*.ram") is not { } file) return;
+        if (await Dialogs.Checks(this, "Select merge options", "Select items to merge from adaption data",
+                ("Fuel adaption (spot adaption)", true), ("Long term fuel trim", true), ("Idle fuel trim", true),
+                ("Cylinder fuel correction from knock information", false)) is { } o)
+            await Vm.MergeAdaptionAsync(file, new Trionic5Tools.T5Tuning.AdaptionMerge(o[0], o[1], o[2], o[3]));
     }
 }

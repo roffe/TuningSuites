@@ -79,6 +79,7 @@ public partial class SuiteMainWindow : Window
         WatchMapMenus(vm);
         vm.Info += text => _ = Dialogs.Info(this, text, vm.Caption);
         vm.AskYesNoCancel = text => Dialogs.YesNoCancel(this, text, "Question");
+        vm.AskButtons = (text, caption, labels) => Dialogs.Buttons(this, text, caption, labels);
         vm.AskText = caption => Dialogs.Prompt(this, caption);
         vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
     }

@@ -26,7 +26,12 @@ public partial class T5MainWindowViewModel
     /// <summary>Settings "Advanced mode enabled": the advanced tuning wizards are shown (SetModeAndFilters).</summary>
     public bool AdvancedMode => T5Settings.EnableAdvancedMode;
 
-    public void AdvancedModeChanged() => OnPropertyChanged(nameof(AdvancedMode));
+    /// <summary>After Settings Ok: the advanced wizards and the open file's sensor detection follow T5Suite's settings.</summary>
+    public void T5SettingsChanged()
+    {
+        OnPropertyChanged(nameof(AdvancedMode));
+        if (T5 is { } bin) bin.AutoDetectMapSensor = T5Settings.AutoDetectMapsensorType;
+    }
 
     /// <summary>Tune me up ®: the wizard's presets; null (with T5Suite's message) when the file is tuned beyond stage 3.</summary>
     public TuneMeUpViewModel? TuneMeUp()
@@ -161,6 +166,24 @@ public partial class T5MainWindowViewModel
 
     [RelayCommand]
     private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
+
+    /// <summary>Import SRAM snapshot into binary (merge adaption data); "Data was imported".</summary>
+    public async Task MergeAdaptionAsync(string ramFile, T5Tuning.AdaptionMerge options)
+    {
+        if (T5 is not { } bin) return;
+        int before = TransactionLog?.TransCollection.Count ?? 0;
+        try
+        {
+            T5Tuning.MergeAdaption(bin, await File.ReadAllBytesAsync(ramFile), options, TransactionLog, Settings.AutoChecksum);
+            ShowInfo("Data was imported");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
+        }
+        TransactionsAdded(before);
+        await AfterTuningAsync();
+    }
 
     public List<string> Examine() => T5 is { } bin ? T5Reports.Examine(bin) : [];
 

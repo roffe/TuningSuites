@@ -145,6 +145,45 @@ namespace Trionic5Tools
             return Lines(t);
         }
 
+        // ---- adaption data (frmMergeAdaptionData) ----
+
+        /// <summary>"Select merge options": T5Suite's defaults. Its "Knock information (used to retard ignition)" never changed anything and is left out.</summary>
+        public sealed record AdaptionMerge(bool Spot = true, bool LongTerm = true, bool Idle = true, bool CylinderKnock = false);
+
+        /// <summary>
+        /// Import SRAM snapshot into binary: a backup (&lt;bin&gt;&lt;yyyyMMddHHmmss&gt;beforemergingadaptiondata.bin), then from the snapshot:
+        /// Cyl_komp! + 5 for a cylinder that knocked over three times the average, Insp_mat! × (Adapt_korr! / 512 + 0.75), and
+        /// Adapt_injfaktor! / Adapt_inj_imat! copied. Maps the file or snapshot lacks are skipped (T5Suite threw on T5.2 files, after
+        /// the backup); a corrected cell is capped at 255 (T5Suite threw). The checksum follows auto checksum.
+        /// </summary>
+        public static void MergeAdaption(T5Binary bin, byte[] ram, AdaptionMerge o, TrionicTransactionLog log, bool autoChecksum)
+        {
+            string dir = Path.GetDirectoryName(bin.FileName) ?? "";
+            File.Copy(bin.FileName, Path.Combine(dir, Path.GetFileNameWithoutExtension(bin.FileName) + DateTime.Now.ToString("yyyyMMddHHmmss") + "beforemergingadaptiondata.bin"), true);
+            byte[] Ram(string name) => bin.Find(name) is { Start_address: > 0, Length: > 0 } sh ? SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length) : null;
+            void Write(string name, byte[] data)
+            {
+                if (bin.Find(name) is { } sh && bin.FileAddress(sh) is var a and >= 0 && data.Length == sh.Length) bin.WriteData(a, data, log, "Merge adaption data");
+            }
+            if (o.CylinderKnock && Ram("Cyl_komp!") is { } komp)
+            {
+                int[] knock = Enumerable.Range(1, 4).Select(c => Ram("Knock_count_cyl" + c) is { Length: >= 2 } b ? b[0] << 8 | b[1] : 0).ToArray();
+                int average = knock.Sum() / 4;
+                for (int c = 0; c < 4 && c < komp.Length; c++)
+                    if (knock[c] > 3 * average) komp[c] = (byte)(komp[c] + 5);
+                Write("Cyl_komp!", komp);
+            }
+            if (o.Spot && Ram("Adapt_korr!") is { } adapt && bin.Find("Insp_mat!") is { } fuel && bin.ReadSymbol(fuel) is { } insp)
+            {
+                for (int i = 0; i < Math.Min(adapt.Length, insp.Length); i++)
+                    insp[i] = (byte)Math.Min(255, Math.Round(insp[i] * (adapt[i] / 512.0 + 0.75)));
+                Write("Insp_mat!", insp);
+            }
+            if (o.LongTerm && Ram("Adapt_injfaktor!") is { } ltft) Write("Adapt_injfaktor!", ltft);
+            if (o.Idle && Ram("Adapt_inj_imat!") is { } idle) Write("Adapt_inj_imat!", idle);
+            if (autoChecksum) bin.UpdateChecksum();
+        }
+
         // ---- code patches ----
 
         public sealed record BoostAdaption(int ManualLow, int ManualHigh, int AutomaticLow, int AutomaticHigh, int BoostError);

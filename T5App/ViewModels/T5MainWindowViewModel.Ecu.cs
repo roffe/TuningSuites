@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommonSuite;
+using CommunityToolkit.Mvvm.Input;
 using SuiteApp.ViewModels;
 using Trionic5Tools;
 using TrionicCANLib.API;
@@ -35,10 +36,97 @@ public partial class T5MainWindowViewModel
         if (await Ecu.ConnectAsync(Settings, IsT52) is not { } sw) return null;
         if (Binary is T5Binary bin && bin.File.GetSoftwareVersion().Trim() is var fileSw && fileSw != "" && !sw.EndsWith(fileSw) && !fileSw.EndsWith(sw))
             ShowInfo($"The ECU runs software {sw}, the open file is {fileSw}. Maps are read and written at the file's SRAM addresses.");
+        _ = OfferSyncAsync();
         return "Connected: " + sw;
     }
 
+    // ---- synchronization (frmSyncFileECU, SyncMaps) ----
+
+    private static string SyncText(DateTime d) => d == DateTime.MinValue ? "none" : d.ToString("dd/MM/yyyy HH:mm:ss");
+
+    /// <summary>
+    /// The file's date (length - 0x1E0; an unstamped file gets "now", as T5Suite did) and the ECU's (SRAM 0x7FC0). An unstamped ECU
+    /// reads as the oldest, so binary to ECU is proposed (T5Suite stamped it "now" and proposed ECU to binary).
+    /// </summary>
+    private async Task<(DateTime file, DateTime ecu)?> SyncDatesAsync()
+    {
+        if (T5 is not { } bin || !EcuConnected) return null;
+        DateTime file = bin.SyncDate;
+        if (file == T5Ecu.NoDate)
+        {
+            file = DateTime.Now;
+            bin.File.SetMemorySyncDate(file);
+        }
+        DateTime ecu = await Ecu.ReadSyncDateAsync();
+        return (file, ecu == T5Ecu.NoDate ? DateTime.MinValue : ecu);
+    }
+
+    /// <summary>On connect: "Data synchronization", the proposal from the newer date; Accept, Decline or Reverse.</summary>
+    private async Task OfferSyncAsync()
+    {
+        if (await SyncDatesAsync() is not { } dates || dates.file == dates.ecu || AskButtons == null) return;
+        var (file, ecu) = dates;
+        bool toFile = ecu > file;
+        int? choice = await AskButtons($"Timestamp binary: {SyncText(file)}\nTimestamp ECU: {SyncText(ecu)}\n\nProposed sync: {(toFile ? "ECU to binary" : "binary to ECU")}",
+            "Data synchronization", ["Accept", "Decline", "Reverse"]);
+        if (choice is 0 or 2) await SyncMapsAsync(choice == 0 ? toFile : !toFile, file, ecu);
+    }
+
+    /// <summary>Online tuning → Synchronize maps: the direction from the dates, no question.</summary>
+    [RelayCommand]
+    private async Task SynchronizeMaps()
+    {
+        if (await SyncDatesAsync() is not { } dates)
+        {
+            ShowInfo("No connection to ECU available");
+            return;
+        }
+        var (file, ecu) = dates;
+        if (file == ecu) ShowInfo("Synchronization not needed");
+        else await SyncMapsAsync(ecu > file, file, ecu);
+    }
+
+    /// <summary>
+    /// SyncMaps: every map in flash and SRAM read from the ECU and copied one way where it differs ("Sync: N%"); then the target's
+    /// date is the source's. File writes get no transaction entries, as in T5Suite; the checksum follows Auto update checksum.
+    /// </summary>
+    private async Task SyncMapsAsync(bool toFile, DateTime file, DateTime ecu)
+    {
+        if (T5 is not { } bin) return;
+        Project?.Logbook.WriteLogbookEntry(LogbookEntryType.SynchronizationStarted, toFile ? "ECU to binary" : "binary to ECU");
+        var maps = bin.Symbols.Cast<SymbolHelper>().Where(sh => sh.Start_address > 0 && sh.Length > 0 && bin.FileAddress(sh) >= 0).ToList();
+        for (int i = 0; i < maps.Count && EcuConnected; i++)
+        {
+            ProgressText = $"Sync: {i * 100 / maps.Count}%";
+            SymbolHelper sh = maps[i];
+            byte[] inFile = bin.ReadSymbol(sh);
+            if (await Ecu.ReadMapAsync(sh) is not { } inEcu || inEcu.Length != inFile.Length || inEcu.AsSpan().SequenceEqual(inFile)) continue;
+            if (toFile) bin.WriteData(bin.FileAddress(sh), inEcu);
+            else await Ecu.WriteForcedAsync((int)sh.Start_address, inFile);
+        }
+        if (toFile)
+        {
+            bin.File.SetMemorySyncDate(ecu == DateTime.MinValue ? DateTime.Now : ecu);
+            if (Settings.AutoChecksum) bin.UpdateChecksum();
+            RefreshViewers(bin.FileName);
+            await CheckChecksumAsync();
+        }
+        else await Ecu.WriteSyncDateAsync(file);
+        ProgressText = "Synchronized";
+    }
+
     protected override string ConnectFailedText => "Not connected";
+
+    protected override bool OnlineMapsFromEcu => true;
+
+    /// <summary>StartTableViewer for a map only in SRAM: from the ECU when connected, else from the loaded snapshot, else T5Suite's message.</summary>
+    protected override Task OpenSramOnlyAsync(SuiteBinary bin, SymbolHelper sh)
+    {
+        if (EcuConnected) return OpenSramSymbolAsync(bin, sh);
+        if (HasSramFile) OpenFromSramFile(sh);
+        else ShowInfo("Symbol resides in SRAM and you are in offline mode. T5Suite is unable to fetch this symboldata in offline mode");
+        return Task.CompletedTask;
+    }
 
     protected override Task DisconnectEcuAsync() => Ecu.DisconnectAsync();
 
@@ -76,6 +164,72 @@ public partial class T5MainWindowViewModel
             });
         });
     }
+
+    // ---- SRAM snapshots ----
+
+    /// <summary>Download SRAM in a project: &lt;project&gt;/Snapshots/Snapshot&lt;MMddyyyyHHmmss&gt;.RAM without asking; null without a project.</summary>
+    public string? ProjectSnapshotFile()
+    {
+        if (Project is not { } project) return null;
+        string dir = System.IO.Path.Combine(project.Dir, "Snapshots");
+        System.IO.Directory.CreateDirectory(dir);
+        return System.IO.Path.Combine(dir, $"Snapshot{DateTime.Now:MMddyyyyHHmmss}.RAM");
+    }
+
+    /// <summary>The name T5Suite proposed: Snapshot-&lt;bin&gt;-&lt;MMddyyyyHHmmss&gt;.RAM.</summary>
+    public string SnapshotName => $"Snapshot-{System.IO.Path.GetFileNameWithoutExtension(Binary?.FileName ?? "")}-{DateTime.Now:MMddyyyyHHmmss}.RAM";
+
+    /// <summary>Download SRAM from ECU: the 32 KB image.</summary>
+    public async Task<bool> DownloadSramAsync(string file)
+    {
+        if (!EcuConnected)
+        {
+            ShowInfo("A canbus connection is needed to create a SRAM snapshot");
+            return false;
+        }
+        ProgressText = "Downloading adaption data...";
+        bool ok = await Ecu.SnapshotAsync(file);
+        ProgressText = ok ? "Adaption data saved..." : "Could not read SRAM";
+        return ok;
+    }
+
+    /// <summary>Compare ECU with binary: a snapshot next to the bin (T5Suite wrote it into the working directory), then the SRAM compare.</summary>
+    public async Task CompareEcuWithBinaryAsync()
+    {
+        if (Binary is not { } bin || !EcuConnected) return;
+        string file = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(bin.FileName) ?? "", SnapshotName);
+        if (await DownloadSramAsync(file)) await CompareToSramAsync(file);
+    }
+
+    /// <summary>
+    /// Upload SRAM to ECU: each map in flash and SRAM from the snapshot into the ECU (forced writes), and into the file too when asked
+    /// (no transaction entries, as T5Suite); both dates are "now".
+    /// </summary>
+    public async Task UploadSramAsync(string file, bool toFileToo)
+    {
+        if (T5 is not { } bin || !EcuConnected) return;
+        byte[] ram = await System.IO.File.ReadAllBytesAsync(file);
+        ProgressText = "Restoring ECU state...";
+        foreach (SymbolHelper sh in bin.Symbols.Cast<SymbolHelper>().Where(sh => sh.Start_address > 0 && sh.Length > 0 && bin.FileAddress(sh) >= 0).ToList())
+        {
+            byte[] data = SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length);
+            await Ecu.WriteForcedAsync((int)sh.Start_address, data);
+            if (toFileToo) bin.WriteData(bin.FileAddress(sh), data);
+        }
+        await Ecu.WriteSyncDateAsync(DateTime.Now);
+        if (toFileToo)
+        {
+            bin.File.SetMemorySyncDate(DateTime.Now);
+            if (Settings.AutoChecksum) bin.UpdateChecksum();
+            RefreshViewers(bin.FileName);
+            await CheckChecksumAsync();
+        }
+        ProgressText = "Idle";
+    }
+
+    /// <summary>Clear knock counters: online only, no question and no message (T5Suite).</summary>
+    [RelayCommand]
+    private Task ClearKnockCounters() => EcuConnected && Binary is { } bin ? Ecu.ClearKnockCountersAsync(bin.Find) : Task.CompletedTask;
 
     // ---- error counters: T5's "DTC codes" ----
 

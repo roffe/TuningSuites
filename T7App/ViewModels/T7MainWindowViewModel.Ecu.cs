@@ -340,37 +340,6 @@ public partial class T7MainWindowViewModel
         ProgressText = "";
     }
 
-    // ---- SRAM compares ----
-
-    /// <summary>An SRAM snapshot, laid out by the open bin's symbols: "SRAM Symbol" viewers.</summary>
-    private CompareSide SramSide(T7Binary bin, string file)
-    {
-        byte[] ram = File.ReadAllBytes(file);
-        return new(file, name => bin.FindAny(name) is { } sh ? SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length) : null,
-            name => { if (bin.FindAny(name) is { } sh) OpenFromSramFile(sh, file); });
-    }
-
-    /// <summary>Compare to SRAM snapshot: "SRAM &lt;&gt; BIN Compare results", the bin's map and the snapshot's per symbol.</summary>
-    public async Task CompareToSramAsync(string file)
-    {
-        if (Binary is not T7Binary bin) return;
-        List<CompareRow> rows = await Task.Run(() => SuiteCompare.CompareToSram(bin, File.ReadAllBytes(file)));
-        string name = Path.GetFileName(file);
-        ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), SramSide(bin, file), rows,
-            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]"));
-    }
-
-    /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
-    public async Task CompareSramAsync(string file1, string file2)
-    {
-        if (Binary is not T7Binary bin) return;
-        List<CompareRow> rows = await Task.Run(() =>
-            SuiteCompare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2)));
-        string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
-        ShowDocument(new CompareResultsViewModel(this, bin, SramSide(bin, file1), SramSide(bin, file2), rows,
-            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]"));
-    }
-
     private static IEnumerable<SymbolHelper> SyncSymbols(T7Binary bin) =>
         bin.Symbols.Cast<SymbolHelper>().Where(sh => sh.Start_address > 0x80000 && bin.IsCalibration(sh.SmartVarname)
             && bin.AddressOf(sh) is > 0 and < 0x80000).ToList();

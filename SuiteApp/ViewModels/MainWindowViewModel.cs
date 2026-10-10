@@ -123,6 +123,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Yes / No / Cancel question (null = Cancel), answered by the view.</summary>
     public Func<string, Task<bool?>>? AskYesNoCancel { get; set; }
 
+    /// <summary>Text, caption and button labels: the index clicked, null when closed.</summary>
+    public Func<string, string, string[], Task<int?>>? AskButtons { get; set; }
+
     protected MainWindowViewModel(string suite, string caption, SuiteRegistry registry)
     {
         Suite = suite;
@@ -348,12 +351,13 @@ public abstract partial class MainWindowViewModel : ObservableObject
         if (MapViewerViewModel.Create(this, bin, sh) is not { } viewer)
         {
             // only in SRAM (not in the file): read it from the ECU
-            _ = OpenSramSymbolAsync(bin, sh);
+            _ = OpenSramOnlyAsync(bin, sh);
             return;
         }
         viewer.OnlineMode = EcuConnected;
         Viewers.Add(viewer);
         SelectedViewer = viewer;
+        if (OnlineMapsFromEcu && EcuConnected && sh.Start_address > 0) _ = ReadMapFromEcuAsync(viewer);
     }
 
     /// <summary>Shows a document, or the open one with the same title (the suites reused dock panels by title).</summary>

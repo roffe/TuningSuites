@@ -61,17 +61,6 @@ public partial class MainWindow : SuiteMainWindow
         if (await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } file) await Vm.GeneratePackageAsync(file);
     }
 
-    private async void OnCompareToSram(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "SRAM dumps", "*.ram") is { } file) await Vm.CompareToSramAsync(file);
-    }
-
-    private async void OnCompareSram(object? sender, RoutedEventArgs e)
-    {
-        if (await Dialogs.OpenFile(this, "First SRAM dump", "*.ram") is { } first && await Dialogs.OpenFile(this, "Second SRAM dump", "*.ram") is { } second)
-            await Vm.CompareSramAsync(first, second);
-    }
-
     private async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)
     {
         if (Vm.SelectedSymbol is not { } sh || Vm.Binary is not T7.T7Binary bin) return;

@@ -18,6 +18,7 @@
                     <CheckBox Grid.Row="0" Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}" />
                     <CheckBox Grid.Row="1" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" />
                     <CheckBox Grid.Row="2" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" />
+                    <CheckBox Grid.Row="3" Grid.Column="0" Content="Auto detect mapsensor type" IsChecked="{Binding AutoDetectMapsensorType}" />
                     <CheckBox Grid.Row="2" Grid.Column="1" Content="Advanced mode enabled" IsChecked="{Binding EnableAdvancedMode}"
                               ToolTip.Tip="If checked, all advanced topics will be visible. If you are not sure whether you need this, leave it unchecked." />
                 </Grid>

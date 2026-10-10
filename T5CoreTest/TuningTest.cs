@@ -125,5 +125,25 @@ namespace T5CoreTest
                 CollectionAssert.AreEqual(bin.ReadSymbol(sh), SymbolFiles.ImportMapCsv(bin, sh, csv), name);
             }
         });
+
+        [TestMethod]
+        public void MergeAdaptionData() => InTemp(dir =>
+        {
+            T5Binary bin = OpenCopy(dir);
+            SymbolHelper adapt = bin.Find("Adapt_korr!"), fuel = bin.Find("Insp_mat!");
+            byte[] before = bin.ReadSymbol(fuel), ram = new byte[0x8000];
+            // 128 is "× 1.0"; the first cell gets 0 ("× 0.75")
+            for (int i = 0; i < adapt.Length; i++) ram[(adapt.Start_address + i) % ram.Length] = (byte)(i == 0 ? 0 : 128);
+            T5Tuning.MergeAdaption(bin, ram, new T5Tuning.AdaptionMerge(Spot: true, LongTerm: false, Idle: false), null, true);
+            byte[] after = bin.ReadSymbol(fuel);
+            Assert.AreEqual((byte)Math.Round(before[0] * 0.75), after[0]);
+            CollectionAssert.AreEqual(before[1..], after[1..]);
+            Assert.AreEqual(1, Directory.GetFiles(dir, "*beforemergingadaptiondata.bin").Length);
+            Assert.AreEqual(ChecksumResult.Ok, bin.VerifyChecksum());
+
+            // a T5.2 file lacks the adaption maps: nothing to do, no exception
+            T5Binary t52 = OpenCopy(dir, "4300810.BIN");
+            T5Tuning.MergeAdaption(t52, ram, new T5Tuning.AdaptionMerge(), null, true);
+        });
 }
 }

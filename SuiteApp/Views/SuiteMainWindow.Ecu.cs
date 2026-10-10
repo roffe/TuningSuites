@@ -19,6 +19,17 @@ public partial class SuiteMainWindow
         if (await Vm.ReadFaultCodesAsync() is { } codes) new FaultCodesWindow(Vm, codes).Show(this);
     }
 
+    protected async void OnCompareToSram(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "SRAM dumps", "*.ram") is { } file) await Vm.CompareToSramAsync(file);
+    }
+
+    protected async void OnCompareSram(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "First SRAM dump", "*.ram") is { } first && await Dialogs.OpenFile(this, "Second SRAM dump", "*.ram") is { } second)
+            await Vm.CompareSramAsync(first, second);
+    }
+
     protected async void OnImportSram(object? sender, RoutedEventArgs e)
     {
         if (await Dialogs.OpenFile(this, "SRAM dump files", "*.RAM") is { } file) Vm.ImportSramSnapshot(file);

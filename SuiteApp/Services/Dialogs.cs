@@ -55,6 +55,34 @@ namespace SuiteApp.Services
             return await dlg.ShowDialog<bool?>(owner);
         }
 
+        /// <summary>A question with the suite's own buttons (T5Suite's Accept / Decline / Reverse): the index clicked, null when closed.</summary>
+        public static async Task<int?> Buttons(Window owner, string text, string caption, params string[] labels)
+        {
+            var dlg = new Window
+            {
+                Title = caption,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                MinWidth = 320,
+                MaxWidth = 640,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false,
+            };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+            for (int i = 0; i < labels.Length; i++)
+            {
+                int index = i;
+                var b = new Button { Content = labels[i], MinWidth = 80, IsDefault = i == 0 };
+                b.Click += (_, _) => dlg.Close(index);
+                buttons.Children.Add(b);
+            }
+            var body = new StackPanel { Margin = new Thickness(16), Spacing = 16 };
+            body.Children.Add(new SelectableTextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            return await dlg.ShowDialog<int?>(owner);
+        }
+
         /// <summary>A long read-only text in a scrolling, resizable window (reports, binary diffs).</summary>
         public static Task Text(Window owner, string caption, string text)
         {
@@ -123,6 +151,30 @@ namespace SuiteApp.Services
             dlg.Content = body;
             await dlg.ShowDialog(owner);
             return ok ? boxes.Select(b => b.Value ?? 0).ToArray() : null;
+        }
+
+        /// <summary>A group of check boxes with Ok / Cancel (T5Suite's "Select merge options"); the states, or null when cancelled.</summary>
+        public static async Task<bool[]?> Checks(Window owner, string caption, string group, params (string label, bool value)[] fields)
+        {
+            var dlg = new Window { Title = caption, SizeToContent = SizeToContent.WidthAndHeight, MinWidth = 360, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var boxes = fields.Select(f => new CheckBox { Content = f.label, IsChecked = f.value }).ToArray();
+            var list = new StackPanel { Spacing = 2, Margin = new Thickness(0, 8, 0, 0) };
+            foreach (CheckBox box in boxes) list.Children.Add(box);
+            bool ok = false;
+            var okButton = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
+            okButton.Click += (_, _) => { ok = true; dlg.Close(); };
+            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            cancel.Click += (_, _) => dlg.Close();
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+            buttons.Children.Add(okButton);
+            buttons.Children.Add(cancel);
+            var body = new StackPanel { Margin = new Thickness(16) };
+            body.Children.Add(new TextBlock { Text = group, FontWeight = Avalonia.Media.FontWeight.SemiBold });
+            body.Children.Add(list);
+            body.Children.Add(buttons);
+            dlg.Content = body;
+            await dlg.ShowDialog(owner);
+            return ok ? boxes.Select(b => b.IsChecked == true).ToArray() : null;
         }
 
         /// <summary>One line of text (frmChangeNote "Remark for change"); null when cancelled.</summary>

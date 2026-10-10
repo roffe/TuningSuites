@@ -81,6 +81,9 @@
                 <MenuItem Header="Merge binary files" Click="OnMergeFiles" />
                 <MenuItem Header="Split binary file" Click="OnSplitFile" IsEnabled="{Binding HasFile}" />
                 <Separator />
+                <MenuItem Header="Compare SRAM snapshot to binary" Click="OnCompareToSram" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare SRAM snapshots" Click="OnCompareSram" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Import SRAM snapshot into binary" Click="OnMergeAdaption" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Check for anomalies" Click="OnAnomalies" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Open a saved report" Click="OnOpenReport" />
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
@@ -111,7 +114,12 @@
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
                 <MenuItem Header="Switch mode" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
+                <MenuItem Header="Synchronize maps" Command="{Binding SynchronizeMapsCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
+                <MenuItem Header="Clear knock counters" Command="{Binding ClearKnockCountersCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Download SRAM from ECU" Click="OnDownloadSram" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Upload SRAM to ECU" Click="OnUploadSram" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Compare ECU with binary" Click="OnCompareEcu" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Read DTC codes" Click="OnFaultCodes" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Set symbol colors" Click="OnSymbolColors" IsEnabled="{Binding HasFile}" />
             </MenuItem>
