@@ -1,0 +1,69 @@
+<!-- the realtime panels' look (the 7-segment displays, captions, night mode), shared by the suites' panel views -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:SuiteApp.Controls">
+    <Style Selector="Border.display">
+        <Setter Property="Background" Value="#1A1A1A" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="8,2" />
+        <Setter Property="Margin" Value="4" />
+    </Style>
+    <Style Selector="TextBlock.digits">
+        <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,DejaVu Sans Mono,monospace" />
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="#7CFC00" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+    </Style>
+    <Style Selector="TextBlock.small">
+        <Setter Property="FontSize" Value="20" />
+    </Style>
+    <Style Selector="TextBlock.big">
+        <Setter Property="FontSize" Value="44" />
+    </Style>
+    <Style Selector="TextBlock.status">
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="TextBlock.limiter">
+        <Setter Property="Foreground" Value="ForestGreen" />
+    </Style>
+    <Style Selector="TextBlock.lambda">
+        <Setter Property="Foreground" Value="SteelBlue" />
+    </Style>
+    <Style Selector="TextBlock.fuelcut">
+        <Setter Property="Foreground" Value="IndianRed" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+    <!-- displays the suite has no symbol for -->
+    <Style Selector="StackPanel:disabled, c|LinearGauge:disabled, TextBlock.caption:disabled">
+        <Setter Property="Opacity" Value="0.3" />
+    </Style>
+    <!-- text without its own colour (captions, the Free logging grid) inherits the night green -->
+    <Style Selector="Border.night">
+        <Setter Property="Background" Value="Black" />
+        <Setter Property="TextElement.Foreground" Value="#00C000" />
+    </Style>
+    <Style Selector="Border.night DataGrid">
+        <Setter Property="Foreground" Value="#00C000" />
+    </Style>
+    <Style Selector="Border.night TextBlock.digits">
+        <Setter Property="Foreground" Value="#EA4D00" />
+    </Style>
+    <Style Selector="Border.night TextBlock.caption, Border.night TextBlock.status">
+        <Setter Property="Foreground" Value="#00C000" />
+    </Style>
+    <Style Selector="Border.night TabItem">
+        <Setter Property="Foreground" Value="#00C000" />
+    </Style>
+    <Style Selector="Border.night Button, Border.night ToggleButton">
+        <Setter Property="Background" Value="#202020" />
+        <Setter Property="Foreground" Value="#00C000" />
+    </Style>
+    <Style Selector="Border.night ToggleButton:checked">
+        <Setter Property="Background" Value="#EA4D00" />
+        <Setter Property="Foreground" Value="Black" />
+    </Style>
+</Styles>

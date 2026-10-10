@@ -19,6 +19,7 @@
         <ContextMenu x:Key="SymbolListMenu" x:DataType="vm:T5MainWindowViewModel">
             <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
             <MenuItem Header="Add to MyMaps" Click="OnAddToMyMaps" />
+            <MenuItem Header="Add to realtime user maps" Click="OnAddToRealtimeUserMaps" />
             <MenuItem Header="Read from SRAM file" Click="OnReadFromSramFile" IsEnabled="{Binding HasSramFile}" />
             <MenuItem Header="Browse axis info" Click="OnBrowseAxes" />
             <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />

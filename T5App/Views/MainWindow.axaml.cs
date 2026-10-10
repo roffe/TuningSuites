@@ -215,6 +215,11 @@ public partial class MainWindow : SuiteMainWindow
 
     // ---- Actions page: T5Suite's tools ----
 
+    private void OnAddToRealtimeUserMaps(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.SelectedSymbol is { } sh) Vm.AddRealtimeUserMap(sh);
+    }
+
     private async void OnUserLibrary(object? sender, RoutedEventArgs e) => await T5ToolWindows.UserLibrary(this, Vm);
 
     private void OnDyno(object? sender, RoutedEventArgs e)

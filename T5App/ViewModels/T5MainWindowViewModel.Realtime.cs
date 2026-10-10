@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CommonSuite;
@@ -79,6 +80,58 @@ public partial class T5MainWindowViewModel
     }
 
     protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) => new T5RealtimeViewModel(this, (T5Binary)bin);
+
+    // ---- realtime user maps ----
+
+    private ObservableCollection<UserMap>? m_userMaps;
+
+    private string UserMapsFile => System.IO.Path.Combine(SettingsKey.Folder(Suite), "UserMaps.json");
+
+    /// <summary>The realtime panel's User maps (T5Suite: UserMaps.xml in its app data folder), kept in the settings folder.</summary>
+    public ObservableCollection<UserMap> RealtimeUserMaps
+    {
+        get
+        {
+            if (m_userMaps != null) return m_userMaps;
+            List<UserMap> maps = [];
+            try
+            {
+                if (System.IO.File.Exists(UserMapsFile))
+                    maps = [.. (System.Text.Json.JsonSerializer.Deserialize<List<UserMap?>>(System.IO.File.ReadAllText(UserMapsFile)) ?? []).OfType<UserMap>().Where(m => m.Mapname != null)];
+            }
+            catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            {
+            }
+            return m_userMaps = new ObservableCollection<UserMap>(maps);
+        }
+    }
+
+    private void SaveUserMaps()
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(SettingsKey.Folder(Suite));
+            System.IO.File.WriteAllText(UserMapsFile, System.Text.Json.JsonSerializer.Serialize(RealtimeUserMaps.ToList()));
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Could not save the user maps: " + e.Message);
+        }
+    }
+
+    /// <summary>"Add to realtime user maps" (AddToRealtimeUserMaps): once per map name, with its description.</summary>
+    public void AddRealtimeUserMap(SymbolHelper sh)
+    {
+        if (RealtimeUserMaps.Any(m => m.Mapname == sh.SmartVarname)) return;
+        RealtimeUserMaps.Add(new UserMap(sh.SmartVarname, sh.Description ?? ""));
+        SaveUserMaps();
+    }
+
+    public void RemoveRealtimeUserMap(UserMap map)
+    {
+        RealtimeUserMaps.Remove(map);
+        SaveUserMaps();
+    }
 
     // ---- knock map snapshots ----
 

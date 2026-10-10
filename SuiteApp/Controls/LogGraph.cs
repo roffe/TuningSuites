@@ -21,12 +21,13 @@ public sealed class LogChannel
     public double Min { get; }
     public double Max { get; }
 
-    public LogChannel(string symbol, string name, Color color, double[] time, double[] value)
+    /// <param name="min">a fixed range (T5Suite's online graph), else the log viewer's from the values</param>
+    public LogChannel(string symbol, string name, Color color, double[] time, double[] value, double? min = null, double? max = null)
     {
         (Symbol, Name, Color, Time, Value) = (symbol, name, color, time, value);
         // DetermineRange: 1.05 × the extremes, the minimum never above 0, never an empty range
-        Max = value.DefaultIfEmpty(0).Max() * 1.05;
-        Min = Math.Min(value.DefaultIfEmpty(0).Min(), 0) * 1.05;
+        Max = max ?? value.DefaultIfEmpty(0).Max() * 1.05;
+        Min = min ?? Math.Min(value.DefaultIfEmpty(0).Min(), 0) * 1.05;
         if (Max <= Min) Max = Min + 1;
     }
 }

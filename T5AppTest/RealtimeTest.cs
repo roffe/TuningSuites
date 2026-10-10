@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
+using Trionic5Tools;
 
 namespace T5AppTest
 {
@@ -30,9 +31,24 @@ namespace T5AppTest
                 // the panel opens; without an adapter it doesn't poll
                 vm.Settings.Adapter = "";
                 await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
-                RealtimeViewModel rt = vm.Realtime!;
+                var rt = (T5RealtimeViewModel)vm.Realtime!;
                 Assert.IsFalse(rt.IsRunning);
                 Assert.AreEqual("Rpm", rt.Rows[0].Name);
+
+                // FillRealtimePool: going online reads the Fuel list (plus the user rows); each tab its own list
+                CollectionAssert.AreEquivalent(new[] { "P_medel", "Lufttemp", "Kyl_temp", "Rpm", "Medeltrot", "Regl_tryck", "Pgm_status", "AD_sond",
+                    "Insptid_ms10", "Lacc_mangd", "Acc_mangd", "Lret_mangd", "Ret_mangd" }, rt.PolledNames.ToArray());
+                rt.SelectedTab = (int)T5RealtimeTab.Boost;
+                CollectionAssert.AreEquivalent(new[] { "P_medel", "Lufttemp", "Kyl_temp", "Rpm", "Medeltrot", "Regl_tryck", "Pgm_status", "AD_sond",
+                    "Max_tryck", "Apc_decrese", "P_fak", "I_fak", "D_fak", "PWM_ut10" }, rt.PolledNames.ToArray());
+                rt.SelectedTab = (int)T5RealtimeTab.AutotuneIgnition;
+                CollectionAssert.AreEquivalent(new[] { "P_medel", "Rpm", "Knock_offset1234", "Pgm_status", "AD_sond" }, rt.PolledNames.ToArray());
+                rt.SelectedTab = (int)T5RealtimeTab.UserMaps;   // keeps the previous list
+                CollectionAssert.AreEquivalent(new[] { "P_medel", "Rpm", "Knock_offset1234", "Pgm_status", "AD_sond" }, rt.PolledNames.ToArray());
+                rt.SelectedTab = (int)T5RealtimeTab.Dashboard;
+                // a row removed from the table is still read where a tab's list has it
+                rt.Remove([rt.Rows.Single(r => r.Name == "Regl_tryck")]);
+                CollectionAssert.Contains(rt.PolledNames.ToList(), "Regl_tryck");
 
                 // a pass on screen: T5's names on the dashboard, the Pgm_status texts
                 rt.Apply(new RealtimeSample(DateTime.Now,
@@ -48,8 +64,38 @@ namespace T5AppTest
                 Assert.AreEqual("Closed loop", rt.LambdaStatus);
                 Assert.AreEqual("No fuelcut", rt.FuelcutStatus);
                 Assert.AreEqual(0.98, rt.Lambda);
+                Assert.AreEqual(250, rt.PeakTorque);
+                Assert.AreEqual(3000, rt.PeakTorqueRpm);
+                Assert.AreEqual(0.8, rt.PeakBoost);
+                Assert.IsTrue(rt.IsClosedLoopLed && rt.IsWarmupLed && !rt.IsIdleLed);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "realtime");
+
+                // a pass without the dashboard symbols (another tab): the displays keep their last values
+                rt.Apply(new RealtimeSample(DateTime.Now, [("Rpm", 3100), ("Pgm_status", 0x02000000)], 20, null));
+                Assert.AreEqual(250, rt.Torque);
+                Assert.AreEqual(90, rt.Speed);
+                Assert.AreEqual(3100, rt.Rpm);
+
+                // the knock tab: counts, the increase since the last change, offsets and their peaks
+                rt.SelectedTab = (int)T5RealtimeTab.Knock;
+                rt.Apply(new RealtimeSample(DateTime.Now, [("Knock_count_cyl1", 5), ("Knock_offset1", 1.5)], 20, null));
+                rt.Apply(new RealtimeSample(DateTime.Now, [("Knock_count_cyl1", 8), ("Knock_offset1", 0.5)], 20, null));
+                Assert.AreEqual(8, rt.Cylinders[0].Count);
+                Assert.AreEqual(3, rt.Cylinders[0].Delta);
+                Assert.IsTrue(rt.Cylinders[0].HasDelta);
+                Assert.AreEqual(1.5, rt.Cylinders[0].PeakOffset);
+                Assert.AreEqual(0, rt.Cylinders[1].PeakOffset);
+                foreach (var tab in new[] { T5RealtimeTab.Fuel, T5RealtimeTab.Ignition, T5RealtimeTab.Boost, T5RealtimeTab.Knock, T5RealtimeTab.Dashboard })
+                {
+                    rt.SelectedTab = (int)tab;
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                    Save(window, "rt-" + tab);
+                    rt.IsNight = true;
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                    Save(window, "night-" + tab);
+                    rt.IsNight = false;
+                }
 
                 // the Engine status LEDs follow Pgm_status, bit 37 included; the Settings switches wait for the ECU
                 rt.Apply(new RealtimeSample(DateTime.Now, [("Pgm_status", 0x2000000010L | 0x02000000)], 20, null));
@@ -60,9 +106,18 @@ namespace T5AppTest
                 Assert.IsFalse(rt.StatusLeds.Single(l => l.Caption == "Fuel cut").IsOn);
                 Assert.AreEqual(15, rt.Toggles.Count);
                 var tabs = window.GetVisualDescendants().OfType<Avalonia.Controls.TabControl>().First(t => t.Name == "Tabs");
-                tabs.SelectedIndex = 4;
+                tabs.SelectedIndex = (int)T5RealtimeTab.EngineStatus;
+                Assert.AreEqual((int)T5RealtimeTab.EngineStatus, rt.SelectedTab);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "enginestatus");
+                tabs.SelectedIndex = (int)T5RealtimeTab.OnlineGraph;
+                var g0 = DateTime.Now;
+                for (int i = 0; i < 20; i++) rt.Apply(new RealtimeSample(g0.AddMilliseconds(i * 50), [("Rpm", 1000 + i * 200), ("P_medel", i * 0.05 - 0.5), ("Pgm_status", 0)], 20, null));
+                var (channels, start) = rt.GraphChannels();
+                Assert.AreEqual(g0, start);
+                Assert.AreEqual(0.95, channels[0].Time[^1], 1e-9);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "rt-graph");
                 tabs.SelectedIndex = 0;
 
                 // the wideband through AD_EGR fills the AFR feedback map at 3000 rpm / 0.8 bar; the AFR viewers

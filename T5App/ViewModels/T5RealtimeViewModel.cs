@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,15 +22,37 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     private double m_lastTps = double.NaN;
     private DateTime m_tpsHold;
     private AFRMaps? m_tuning;
+    private readonly int m_injectorCc;
 
     public T5RealtimeViewModel(T5MainWindowViewModel owner, T5Binary bin) : base(owner, bin, T5Realtime.Rules, new T5RealtimeEngine(owner.Ecu))
     {
         m_t5 = owner;
         m_bin = bin;
+        m_watchable.AddRange(Rows.Select(r => r.Symbol).Where(s => !s.UserDefined));
+        m_injectorCc = Cc(bin.File.GetTrionicProperties().InjectorType);
         AutotuneCaption = "Autotune fuel";
         foreach (string caption in PgmStatusBits) StatusLeds.Add(new StatusLed(caption));
         foreach (var (caption, _, _, _) in PgmModBits) Toggles.Add(new EcuToggle(caption, ToggleAsync) { IsAvailable = false });
+        StatusColumns = [.. StatusColumnBits.Select(bits => (IReadOnlyList<StatusLed>)[.. bits.Select(b => StatusLeds[b])])];
     }
+
+    /// <summary>The Engine status tab's LEDs, Pgm_status bit 0 first.</summary>
+    public ObservableCollection<StatusLed> StatusLeds { get; } = [];
+
+    /// <summary>The Settings tab's switches, in T5Suite's 3 × 5 layout (row by row).</summary>
+    public ObservableCollection<EcuToggle> Toggles { get; } = [];
+
+    private EcuToggle ToggleFor(string caption) => Toggles.First(t => t.Caption == caption);
+
+    /// <summary>The Engine status tab's three columns as T5Suite laid them out (its never-lit "Knock map" LED left out).</summary>
+    public IReadOnlyList<IReadOnlyList<StatusLed>> StatusColumns { get; }
+
+    private static readonly int[][] StatusColumnBits =
+    [
+        [0, 1, 2, 3, 4, 5, 7, 24, 29, 30, 15, 14, 13, 12],
+        [8, 9, 10, 11, 31, 32, 33, 34, 35, 36, 37, 38, 39, 6],
+        [16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 25],
+    ];
 
     // ---- Engine status (Pgm_status) and Settings (Pgm_mod!) tabs ----
 
@@ -41,18 +65,18 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         "Start of retard enrichment in progress", "Adaption allowed", "Limp-home mode", "Always active temp.compensation",
         "Restart", "Active lambda control", "Afterstart enrichment completed", "Init during start completed",
         "Cooling water enrichment finished", "Purge control active", "Idle fuel map", "Ignition synchronized",
-        "Sond heating second sond", "Sond heating first sond", "ETS error", "Ordinary idle control disable",
+        "Sond heating, second sond", "Sond heating, first sond", "ETS error", "Ordinary idle control disable",
         "Fuel cut allowed (Dashpot)", "Enrichment after fuelcut", "Fulload enrichment", "Fuel syncronized",
     ];
 
-    /// <summary>ctrlRealtime's Settings switches: Pgm_mod! byte and mask; Knock control is on while its bit is clear.</summary>
+    /// <summary>ctrlRealtime's Settings switches row by row as its 3 × 5 grid had them: Pgm_mod! byte and mask; Knock control is on while its bit is clear.</summary>
     private static readonly (string Caption, int Byte, int Mask, bool Inverted)[] PgmModBits =
     [
-        ("Afterstart enrichment", 0, 0x01, false), ("WOT enrichment", 0, 0x02, false), ("Lambda control", 0, 0x10, false), ("Spot adaption", 0, 0x20, false),
-        ("Idle control", 0, 0x40, false), ("Cranking enrichment", 0, 0x80, false), ("Fuel cut in engine braking", 1, 0x04, false),
-        ("Acceleration enrichment", 1, 0x10, false), ("Deceleration enleanment", 1, 0x20, false), ("Purge control", 2, 0x20, false),
-        ("Adaption of idle control", 2, 0x40, false), ("Lambda during idle", 2, 0x80, false), ("APC control", 3, 0x10, false),
-        ("Global adaption", 3, 0x40, false), ("Knock control", 4, 0x20, true),
+        ("Lambda control", 0, 0x10, false), ("Afterstart enrichment", 0, 0x01, false), ("Global adaption", 3, 0x40, false),
+        ("Purge control", 2, 0x20, false), ("Cranking enrichment", 0, 0x80, false), ("Spot adaption", 0, 0x20, false),
+        ("Idle control", 0, 0x40, false), ("WOT enrichment", 0, 0x02, false), ("Adaption of idle control", 2, 0x40, false),
+        ("Lambda during idle", 2, 0x80, false), ("Acceleration enrichment", 1, 0x10, false), ("Fuel cut in engine braking", 1, 0x04, false),
+        ("APC control", 3, 0x10, false), ("Deceleration enleanment", 1, 0x20, false), ("Knock control", 4, 0x20, true),
     ];
 
     private bool m_pgmModRead;
@@ -69,10 +93,16 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         }
     }
 
-    // the switches as the ECU's Pgm_mod! has them; a byte the symbol lacks hides its switch's use (Knock control on short tables)
+    // the switches as the ECU's Pgm_mod! has them; a byte the symbol lacks hides its switch's use (Knock control on short tables).
+    // A read that failed is tried again on the next pass.
     private async Task RefreshTogglesAsync()
     {
-        if (m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm || !Plausible(pgm)) return;
+        if (m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod) return;
+        if (await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm || !Plausible(pgm))
+        {
+            m_pgmModRead = false;
+            return;
+        }
         for (int i = 0; i < PgmModBits.Length; i++)
         {
             var (_, index, mask, inverted) = PgmModBits[i];
@@ -119,8 +149,14 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         m_lastTps = Tps;
         // the ignition autotune sees every pass except in the idle map (FeedInfoToAFRMaps)
         if (m_ignition is { } ignition && ((long)(sample["Pgm_status"] ?? 0) & 0x40000000) == 0)
-            ignition.HandleRealtimeData(Rpm, Tps, Boost, IgnitionAdvance, (sample["Knock_offset1234"] ?? 0) > 0);
-        if (m_afr is not { } afr || m_t5.AfrMaps is not { } maps) return;
+            ignition.HandleRealtimeData(Rpm, Tps, Boost, IgnitionAdvance, (sample["Knock_offset1234"] ?? Unpolled("Knock_offset1234")) > 0);
+        ShowTabValues(sample);
+        if (m_afr is not { } afr || m_t5.AfrMaps is not { } maps)
+        {
+            if (m_t5.AfrMaps is { } target) TargetAfr = target.GetCurrentTargetAFR(Rpm, Boost);
+            ShowAutotuneGrids();
+            return;
+        }
         m_afr = null;
         AppSettings s = m_t5.Settings;
         bool allowed = T5Autotune.Allowed((long)(sample["Pgm_status"] ?? 0), s, out bool idle)
@@ -129,9 +165,12 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         else if (allowed)
         {
             maps.LogWidebandAFR(afr, Rpm, Boost, idle);
-            maps.HandleRealtimeData(Rpm, Tps, Boost, afr, idle);
+            TargetAfr = maps.HandleRealtimeData(Rpm, Tps, Boost, afr, idle);
         }
+        // TARGETAFR: the autotune's target where it ran, else the target map's at rpm and boost (FeedInfoToAFRMaps)
+        if (m_tuning == null || !allowed) TargetAfr = maps.GetCurrentTargetAFR(Rpm, Boost);
         m_t5.RefreshAfrViewers();
+        ShowAutotuneGrids();
     }
 
     protected override async Task OnStoppedAsync()
@@ -158,12 +197,20 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             await StopIgnitionAutotuneAsync();
             return;
         }
+        if (!CanAutotune) return;
         if (!m_bin.IsTrionic55)
         {
             m_t5.ShowInfo("T5.2 is currently not supported for Autotuning Ignition");
             return;
         }
         if (!IsRunning || m_t5.IgnitionMaps is not { } maps || m_bin.Find("Ign_map_0!") is not { Start_address: > 0 } ign) return;
+        // T5Suite enabled the button only once Pgm_mod! showed knock control on
+        if (!KnockToggle.IsOn)
+        {
+            m_t5.ShowInfo("Autotune ignition needs knock control on (Settings tab).");
+            return;
+        }
+        SelectedTab = (int)T5RealtimeTab.AutotuneIgnition;
         T5AppSettings t5 = m_t5.T5Settings;
         T5Ecu ecu = m_t5.Ecu;
         m_t5.ProgressText = "Starting ignition autotune...";
@@ -201,7 +248,9 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         maps.onIgnitionmapCellChanged += OnIgnitionCellChanged;
         maps.IsAutoMappingActive = true;
         m_ignition = maps;
+        PushRows();
         OnPropertyChanged(nameof(IsIgnitionAutotuning));
+        OnPropertyChanged(nameof(IgnitionAutotuneCaption));
         m_t5.ProgressText = "Autotune ignition running...";
     }
 
@@ -231,9 +280,11 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     {
         if (m_ignition is not { } maps) return;
         m_ignition = null;
+        PushRows();
         maps.IsAutoMappingActive = false;
         maps.onIgnitionmapCellChanged -= OnIgnitionCellChanged;
         OnPropertyChanged(nameof(IsIgnitionAutotuning));
+        OnPropertyChanged(nameof(IgnitionAutotuneCaption));
         try
         {
             if (m_bin.Find("Ign_map_0!") is not { } ign) return;
@@ -270,13 +321,14 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             return;
         }
         AppSettings s = m_t5.Settings;
-        if (!IsRunning) return;
+        if (!IsRunning || !CanAutotune) return;
         if (Coolant <= 70 || !s.UseWidebandLambda)
         {
             m_t5.ShowInfo("Autotune fuel needs a warm engine (coolant above 70 °C) and the wideband lambda through a symbol (Settings).");
             return;
         }
         if (m_t5.AfrMaps is not { } maps || FuelMap is not { Start_address: > 0 } fuel) return;
+        SelectedTab = (int)T5RealtimeTab.AutotuneFuel;
         AutotuneCaption = "Wait...";
         T5Ecu ecu = m_t5.Ecu;
         try
@@ -325,6 +377,8 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             maps.onIdleFuelmapCellChanged += OnIdleCellChanged;
             maps.IsAutoMappingActive = true;
             m_tuning = maps;
+            // the enrichment filter needs them (T5Suite's list missed them on the Autotune tab: it refilled before tuning was on)
+            PushRows();
         }
         finally
         {
@@ -380,6 +434,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     {
         if (m_tuning is not { } maps || FuelMap is not { } fuel) return;
         m_tuning = null;
+        PushRows();
         maps.IsAutoMappingActive = false;
         maps.onFuelmapCellChanged -= OnCellChanged;
         maps.onIdleFuelmapCellChanged -= OnIdleCellChanged;

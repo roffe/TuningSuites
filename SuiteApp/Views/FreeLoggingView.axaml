@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             x:Class="SuiteApp.Views.FreeLoggingView"
+             x:DataType="vm:RealtimeViewModel">
+    <!-- the panel's table: every row with value and peak, the user rows edited here (T5Suite's User defined tab) -->
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,4">
+            <Button Content="Save layout" Click="OnSaveLayout" />
+            <Button Content="Load layout" Click="OnLoadLayout" />
+            <Button Content="Add symbol to list" Click="OnAdd" />
+            <Button Content="Remove symbol" Click="OnRemove" />
+            <Button Content="Edit symbol" Click="OnEdit" />
+            <Button Content="Reset peak values" Command="{Binding ResetPeaksCommand}" />
+        </StackPanel>
+        <DataGrid x:Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" GridLinesVisibility="Horizontal"
+                  CanUserSortColumns="False" KeyDown="OnGridKeyDown" DoubleTapped="OnGridDoubleTapped">
+            <DataGrid.Columns>
+                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Symbol" Binding="{Binding Name, Mode=OneWay}" IsReadOnly="True" Width="2*" />
+                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Description" Binding="{Binding Description}" Width="2*" />
+                <DataGridTemplateColumn x:DataType="vm:RealtimeRow" Header="Value" Width="*">
+                    <DataTemplate x:DataType="vm:RealtimeRow">
+                        <Panel>
+                            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Fraction}" Foreground="#FF7F50" Background="Transparent" MinWidth="0" Height="20" Opacity="0.6" />
+                            <TextBlock Text="{Binding Value, StringFormat={}{0:0.###}}" VerticalAlignment="Center" Margin="4,0" />
+                        </Panel>
+                    </DataTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Peak" Binding="{Binding Peak, Mode=OneWay, StringFormat={}{0:0.###}}" IsReadOnly="True" Width="*" />
+                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="Symbolnumber (ECU)" Binding="{Binding SymbolNumberText, Mode=OneWay}" IsReadOnly="True" Width="Auto" />
+                <DataGridTextColumn x:DataType="vm:RealtimeRow" Header="SRAM address" Binding="{Binding SramText, Mode=OneWay}" IsReadOnly="True" Width="Auto" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

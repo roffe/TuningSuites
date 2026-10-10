@@ -1,0 +1,380 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:T5App.ViewModels"
+             xmlns:v="using:T5App.Views"
+             xmlns:sv="using:SuiteApp.Views"
+             xmlns:svm="using:SuiteApp.ViewModels"
+             xmlns:c="using:SuiteApp.Controls"
+             xmlns:mc="using:MapControls"
+             x:Class="T5App.Views.T5RealtimeView"
+             x:DataType="vm:T5RealtimeViewModel">
+    <!-- T5Suite's realtime monitor (ctrlRealtime): its tabs, each polling its own watch list, and its strip of displays at the bottom -->
+    <UserControl.Styles>
+        <StyleInclude Source="avares://SuiteApp/Views/RealtimeStyles.axaml" />
+        <Style Selector="StackPanel.measure">
+            <Setter Property="Margin" Value="4,6" />
+        </Style>
+        <Style Selector="TextBlock.mcaption">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="StackPanel.strip">
+            <Setter Property="Width" Value="96" />
+        </Style>
+        <Style Selector="TextBlock.digits.delta">
+            <Setter Property="Foreground" Value="Red" />
+        </Style>
+        <!-- the strip goes OrangeRed while the knock map runs (T5Suite) -->
+        <Style Selector="Border.strip.knock">
+            <Setter Property="Background" Value="OrangeRed" />
+        </Style>
+        <Style Selector="Ellipse.led">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Stroke" Value="Gray" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="LedTemplate" x:DataType="vm:StatusLed">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="4" ToolTip.Tip="{Binding Caption}">
+                <Ellipse Classes="led" Fill="{Binding IsOn, Converter={x:Static v:LedBrushConverter.Instance}}" />
+                <TextBlock Grid.Column="1" Text="{Binding Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Border Classes.night="{Binding IsNight}">
+        <DockPanel>
+            <!-- panel1, docked at the bottom as in T5Suite -->
+            <Border DockPanel.Dock="Bottom" Classes="strip" Classes.knock="{Binding IsKnockLed}" Padding="4">
+                <WrapPanel>
+                    <StackPanel Classes="strip">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Rpm, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="RPM" />
+                    </StackPanel>
+                    <StackPanel Classes="strip">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Boost, StringFormat={}{0:F2}}" /></Border>
+                        <TextBlock Classes="caption" Text="Boost" />
+                    </StackPanel>
+                    <StackPanel Classes="strip" PointerPressed="OnToggleAfr" Background="Transparent" ToolTip.Tip="Click to switch between AFR and lambda">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding AfrText}" /></Border>
+                        <TextBlock Classes="caption" Text="{Binding AfrCaption}" />
+                    </StackPanel>
+                    <StackPanel Classes="strip" PointerPressed="OnResetPeakBoost" Background="Transparent" ToolTip.Tip="Click to reset">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding PeakBoost, StringFormat={}{0:F2}}" /></Border>
+                        <TextBlock Classes="caption" Text="Peak boost" />
+                    </StackPanel>
+                    <StackPanel Classes="strip">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Coolant, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="Water ˚C" />
+                    </StackPanel>
+                    <StackPanel Classes="strip">
+                        <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding IntakeAir, StringFormat={}{0:F0}}" /></Border>
+                        <TextBlock Classes="caption" Text="Air ˚C" />
+                    </StackPanel>
+                    <StackPanel Spacing="4" Margin="6,4" VerticalAlignment="Center">
+                        <Button Content="Night/Day" Command="{Binding ToggleNightCommand}" />
+                        <Button Content="Write log marker [F6]" Command="{Binding WriteLogMarkerCommand}" />
+                    </StackPanel>
+                    <StackPanel Spacing="4" Margin="6,4" VerticalAlignment="Center" IsVisible="{Binding AdvancedMode}">
+                        <Button Content="{Binding IgnitionAutotuneCaption}" Command="{Binding ToggleIgnitionAutotuneCommand}" MinWidth="130" />
+                        <Button Content="{Binding AutotuneCaption}" Command="{Binding ToggleAutotuneCommand}" MinWidth="130"
+                                Foreground="{Binding IsAutotuning, Converter={x:Static sv:AutotuneBrushConverter.Instance}}" />
+                    </StackPanel>
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,Auto" Margin="8,4" VerticalAlignment="Center" RowSpacing="4" ColumnSpacing="6">
+                        <Ellipse Classes="led" Fill="{Binding IsIdleLed, Converter={x:Static v:LedBrushConverter.Instance}}" />
+                        <TextBlock Grid.Column="1" Classes="caption" Text="Idle" HorizontalAlignment="Left" />
+                        <Ellipse Grid.Row="1" Classes="led" Fill="{Binding IsClosedLoopLed, Converter={x:Static v:LedBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Classes="caption" Text="Closed loop" HorizontalAlignment="Left" />
+                        <Ellipse Grid.Row="2" Classes="led" Fill="{Binding IsKnockLed, Converter={x:Static v:LedBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Classes="caption" Text="Knock map" HorizontalAlignment="Left" />
+                        <Ellipse Grid.Row="3" Classes="led" Fill="{Binding IsWarmupLed, Converter={x:Static v:LedBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Classes="caption" Text="Warmup" HorizontalAlignment="Left" />
+                    </Grid>
+                    <StackPanel Classes="strip" IsVisible="{Binding IsAutotuneTab}" PointerPressed="OnToggleAfr" Background="Transparent">
+                        <Border Classes="display"><TextBlock Classes="digits small" Foreground="DodgerBlue" Text="{Binding TargetAfrText}" /></Border>
+                        <TextBlock Classes="caption" Text="Target AFR" />
+                    </StackPanel>
+                    <StackPanel Classes="strip" PointerPressed="OnToggleAfr" Background="Transparent" Width="130">
+                        <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding AfrText}" /></Border>
+                    </StackPanel>
+                    <StackPanel Spacing="4" Margin="6,4" VerticalAlignment="Center">
+                        <Button x:Name="EditMaps" Content="Edit maps" Click="OnEditMaps" IsVisible="{Binding HasTabMaps}" />
+                        <TextBlock Classes="caption" Text="{Binding FpsText}" />
+                    </StackPanel>
+                </WrapPanel>
+            </Border>
+
+            <TabControl x:Name="Tabs" SelectedIndex="{Binding SelectedTab}">
+                <TabItem Header="Fuel">
+                    <DockPanel Margin="4">
+                        <c:LinearGauge DockPanel.Dock="Bottom" Height="60" Caption="Injector DC %" Value="{Binding InjectorDc}" Minimum="0" Maximum="100" Format="F1" />
+                        <StackPanel DockPanel.Dock="Right" Spacing="6" Margin="8,0">
+                            <ToggleButton Content="Lambda" DataContext="{Binding LambdaToggle}" x:DataType="vm:EcuToggle" Width="120"
+                                          IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                            <ToggleButton Content="Lambda (idle)" DataContext="{Binding IdleLambdaToggle}" x:DataType="vm:EcuToggle" Width="120"
+                                          IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                        </StackPanel>
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding Enrichments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EnrichmentRow">
+                                        <Grid ColumnDefinitions="200,*" Margin="2">
+                                            <TextBlock Text="{Binding Caption}" VerticalAlignment="Center" />
+                                            <Panel Grid.Column="1">
+                                                <ProgressBar Minimum="0" Maximum="255" Value="{Binding Value}" Height="18" MinWidth="0" Background="Transparent"
+                                                             Foreground="{Binding Enlean, Converter={x:Static v:EnrichmentBrushConverter.Instance}}" />
+                                                <TextBlock Text="{Binding Value, StringFormat={}{0:F0}}" VerticalAlignment="Center" Margin="4,0" />
+                                            </Panel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Ignition">
+                    <DockPanel Margin="4">
+                        <c:LinearGauge DockPanel.Dock="Bottom" Height="60" Caption="Ignition advance degrees BTDC" Value="{Binding IgnitionAdvance}" Minimum="-10" Maximum="40" Format="F1" />
+                        <UniformGrid Columns="2" Margin="4">
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="˚ btdc" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding IgnitionAdvance, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="K offset #1" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[0].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="K offset #2" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[1].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="K offset #3" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[2].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="K offset #4" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[3].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                        </UniformGrid>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Boost">
+                    <DockPanel Margin="4">
+                        <c:LinearGauge DockPanel.Dock="Bottom" Height="60" Caption="Boost bar" Value="{Binding Boost}" Minimum="-1" Maximum="2" Format="F2" />
+                        <ToggleButton DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,4" Content="APC control" DataContext="{Binding ApcToggle}"
+                                      x:DataType="vm:EcuToggle" Width="120" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                        <UniformGrid Columns="5" Margin="4">
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Boost request" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding BoostRequest, StringFormat={}{0:F2}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Boost error" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding BoostError, StringFormat={}{0:F2}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="P factor" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding PFactor, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="I factor" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding IFactor, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="D factor" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding DFactor, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Target boost" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding BoostTarget, StringFormat={}{0:F2}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Boost reduction" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding BoostReduction, StringFormat={}{0:F2}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="PWM output" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding DutyCycle, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="TPS" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Tps, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                        </UniformGrid>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Knock">
+                    <DockPanel Margin="4">
+                        <ToggleButton DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,4" Content="Knock control" DataContext="{Binding KnockToggle}"
+                                      x:DataType="vm:EcuToggle" Width="120" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                        <ScrollViewer>
+                        <UniformGrid Columns="4" Margin="4">
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Knocks cyl #1" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[0].Count, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Delta cyl #1" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[0].Delta, StringFormat={}{0:F0}}" Classes.delta="{Binding Cylinders[0].HasDelta}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Ign offset cyl #1" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[0].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak offset cyl #1" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[0].PeakOffset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Knock cyl #2" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[1].Count, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Delta cyl #2" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[1].Delta, StringFormat={}{0:F0}}" Classes.delta="{Binding Cylinders[1].HasDelta}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Ign offset cyl #2" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[1].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak offset cyl #2" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[1].PeakOffset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Knocks cyl #3" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[2].Count, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Delta cyl #3" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[2].Delta, StringFormat={}{0:F0}}" Classes.delta="{Binding Cylinders[2].HasDelta}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Ign offset cyl #3" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[2].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak offset cyl #3" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[2].PeakOffset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Knocks cyl #4" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[3].Count, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Delta cyl #4" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[3].Delta, StringFormat={}{0:F0}}" Classes.delta="{Binding Cylinders[3].HasDelta}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Ign offset cyl #4" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[3].Offset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak offset cyl #4" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Cylinders[3].PeakOffset, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Boost reduction" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding BoostReduction, StringFormat={}{0:F2}}" /></Border>
+                            </StackPanel>
+                        </UniformGrid>
+                        </ScrollViewer>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Dashboard">
+                    <UniformGrid Columns="5" Margin="4">
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="km/h" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Speed, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Nm" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Torque, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak Nm" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding PeakTorque, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="bhp" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Power, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak bhp" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding PeakPower, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="˚ BTDC" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding IgnitionAdvance, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Boost reduction" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding BoostReduction, StringFormat={}{0:F2}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak torque RPM" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding PeakTorqueRpm, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="{Binding ConsumptionUnit}" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Consumption, StringFormat={}{0:F1}}" /></Border>
+                            </StackPanel>
+                            <StackPanel Classes="measure">
+                                <TextBlock Classes="mcaption" Text="Peak power RPM" />
+                                <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding PeakPowerRpm, StringFormat={}{0:F0}}" /></Border>
+                            </StackPanel>
+                        </UniformGrid>
+                </TabItem>
+                <TabItem Header="Settings" IsVisible="{Binding AdvancedMode}">
+                    <ItemsControl ItemsSource="{Binding Toggles}" Margin="8">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:EcuToggle">
+                                <ToggleButton Content="{Binding Caption}" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}"
+                                              Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch" Height="50" Margin="4" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </TabItem>
+                <TabItem Header="User defined" IsVisible="{Binding AdvancedMode}">
+                    <sv:FreeLoggingView />
+                </TabItem>
+                <TabItem Header="Autotune" IsVisible="{Binding AdvancedMode}">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="6" Margin="4">
+                        <mc:MapGrid Map="{Binding FeedbackGrid}" IsReadOnly="True" ViewType="Easy" />
+                        <mc:MapGrid Grid.Column="1" Map="{Binding FuelGrid}" IsReadOnly="True" ViewType="Easy" />
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Autotune ignition" IsVisible="{Binding AdvancedMode}">
+                    <mc:MapGrid Map="{Binding IgnitionGrid}" IsReadOnly="True" ViewType="Easy" Margin="4" />
+                </TabItem>
+                <TabItem Header="Engine status">
+                    <Grid ColumnDefinitions="*,*,*" Margin="8">
+                        <ItemsControl ItemsSource="{Binding StatusColumns[0]}" ItemTemplate="{StaticResource LedTemplate}" />
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding StatusColumns[1]}" ItemTemplate="{StaticResource LedTemplate}" />
+                        <ItemsControl Grid.Column="2" ItemsSource="{Binding StatusColumns[2]}" ItemTemplate="{StaticResource LedTemplate}" />
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Graph">
+                    <c:LogGraph x:Name="Graph" />
+                </TabItem>
+                <TabItem Header="User maps">
+                    <DataGrid x:Name="UserMapsGrid" ItemsSource="{Binding UserMaps}" IsReadOnly="True" SelectionMode="Single" GridLinesVisibility="Horizontal"
+                              DoubleTapped="OnUserMapDoubleTapped">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn x:DataType="vm:UserMap" Header="Mapname" Binding="{Binding Mapname}" Width="*" />
+                            <DataGridTextColumn x:DataType="vm:UserMap" Header="Description" Binding="{Binding Description}" Width="2*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+    </Border>
+</UserControl>
