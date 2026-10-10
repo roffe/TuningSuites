@@ -273,7 +273,16 @@ public abstract partial class MainWindowViewModel
         {
             if (!Settings.AutoChecksum && !await askYesNo("Checksums did not verify ok, do you want to recalculate and update the checksums?"))
                 return null;
-            bin.UpdateChecksum();
+            try
+            {
+                bin.UpdateChecksum();
+            }
+            catch (InvalidOperationException e)
+            {
+                // a file without the footer the checksum needs: nothing to flash
+                ShowInfo("The checksum could not be updated, nothing was flashed: " + e.Message);
+                return null;
+            }
         }
         return bin;
     }

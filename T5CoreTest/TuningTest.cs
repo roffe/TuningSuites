@@ -166,5 +166,30 @@ namespace T5CoreTest
             T5UserLibrary.Save(rows, store);
             Assert.AreEqual(rows.Count, T5UserLibrary.Load(store).Count);
         });
+
+        [TestMethod]
+        public void FlashChecks() => InTemp(dir =>
+        {
+            // every stock bin can be flashed: 128 KB with ROM offset 060000, 256 KB with 040000
+            foreach (string stock in BinGoldenTest.StockBins())
+            {
+                byte[] data = File.ReadAllBytes(stock);
+                Assert.AreEqual(data.Length == 0x20000 ? "060000" : "040000", T5Binary.RomOffset(data), stock);
+                Assert.IsNull(T5Binary.FlashProblem(stock, data.Length), stock);
+            }
+            byte[] t55 = File.ReadAllBytes(BinGoldenTest.StockBins().First(b => b.EndsWith("4239273.BIN")));
+            string file = Path.Combine(dir, "x.bin");
+            File.WriteAllBytes(file, new byte[0x80000]);
+            StringAssert.Contains(T5Binary.FlashProblem(file, 0x80000), "Only Trionic 5.2");
+            File.WriteAllBytes(file, t55);
+            StringAssert.Contains(T5Binary.FlashProblem(file, 0x20000), "changed size");
+            byte[] noFooter = (byte[])t55.Clone();
+            Array.Clear(noFooter, noFooter.Length - 0x80, 0x80);
+            File.WriteAllBytes(file, noFooter);
+            StringAssert.Contains(T5Binary.FlashProblem(file, 0x40000), "not a Trionic 5.5 file");
+            // a T5.5 file's second half alone: 128 KB, but the footer says 040000
+            File.WriteAllBytes(file, t55[0x20000..]);
+            StringAssert.Contains(T5Binary.FlashProblem(file, 0x20000), "not a Trionic 5.2 file");
+        });
 }
 }

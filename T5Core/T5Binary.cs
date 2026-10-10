@@ -69,6 +69,42 @@ namespace Trionic5Tools
         /// <summary>Where the file sits in the ECU's address space: 0x40000 (T5.5) or 0x60000 (T5.2).</summary>
         public override long FlashBase => 0x80000 - FileLength;
 
+        /// <summary>
+        /// The footer's ROM offset (identifier 0xFD) as TrionicCANLib's getIdentifierFromFooter reads it from the last 0x80 bytes:
+        /// "040000" in a T5.5 file, "060000" in a T5.2 one; "" when the footer has none.
+        /// </summary>
+        public static string RomOffset(byte[] data)
+        {
+            if (data.Length < 0x80) return "";
+            byte[] footer = data[^0x80..];
+            int offset = footer.Length - 5; // past the stored checksum
+            while (offset > 0)
+            {
+                int length = footer[offset--];
+                int id = footer[offset--];
+                if (offset - length < -1) return "";
+                if (id == 0xFD) return new string(Enumerable.Range(0, length).Select(i => (char)footer[offset - i]).ToArray());
+                offset -= length;
+            }
+            return "";
+        }
+
+        /// <summary>
+        /// Why a file can't be flashed into a T5 ECU, null when it can: 128 KB (T5.2) or 256 KB (T5.5), the size it had when it was
+        /// opened, and a footer whose ROM offset is where that size starts in flash. TrionicCANLib only checks the size against the ECU,
+        /// and nothing when it can't read the ECU's footer; T5Suite checked the size only.
+        /// </summary>
+        public static string FlashProblem(string file, int openedLength)
+        {
+            if (!System.IO.File.Exists(file)) return "The file is gone: " + file;
+            byte[] data = System.IO.File.ReadAllBytes(file);
+            if (data.Length is not (0x20000 or 0x40000)) return $"Only Trionic 5.2 (128 KB) and 5.5 (256 KB) files can be flashed; this file is {data.Length} bytes.";
+            if (data.Length != openedLength) return "The file changed size since it was opened; open it again before flashing.";
+            string expected = data.Length == 0x20000 ? "060000" : "040000", found = RomOffset(data);
+            return found == expected ? null
+                : $"This is not a Trionic {(data.Length == 0x20000 ? "5.2" : "5.5")} file: its footer gives the ROM offset \"{found}\" where \"{expected}\" belongs. Nothing was flashed.";
+        }
+
         /// <summary>T5.5 or T5.2, from the file length.</summary>
         public bool IsTrionic55 => FileLength == 0x40000;
 

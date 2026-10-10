@@ -35,10 +35,10 @@ public partial class T5MainWindowViewModel
     protected override async Task<string?> ConnectEcuAsync()
     {
         if (await Ecu.ConnectAsync(Settings, IsT52) is not { } sw) return null;
-        // another software: no sync offer, it would write every map at the file's SRAM addresses (Synchronize maps still can)
+        // T5Suite allowed everything whatever the version (and said nothing); the note is the port's
         if (Binary is T5Binary bin && bin.File.GetSoftwareVersion().Trim() is var fileSw && fileSw != "" && !sw.EndsWith(fileSw) && !fileSw.EndsWith(sw))
             ShowInfo($"The ECU runs software {sw}, the open file is {fileSw}. Maps are read and written at the file's SRAM addresses.");
-        else _ = OfferSyncAsync();
+        _ = OfferSyncAsync();
         return "Connected: " + sw;
     }
 
@@ -179,6 +179,12 @@ public partial class T5MainWindowViewModel
     /// <summary>Upload flash to ECU: the open file, checked first as T7 / T8 flash theirs; conversions are asked by the library.</summary>
     public override async Task FlashEcuAsync(Func<string, Task<bool>> askYesNo)
     {
+        // only a T5.2 or T5.5 file, before anything else touches it
+        if (T5 is { } t5 && T5Binary.FlashProblem(t5.FileName, t5.FileLength) is { } problem)
+        {
+            ShowInfo(problem);
+            return;
+        }
         if (await FlashableBinaryAsync(askYesNo) is not { } bin) return;
         await RunFlasherAsync(async () =>
         {
