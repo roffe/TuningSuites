@@ -73,6 +73,8 @@
                 <MenuItem Header="Compare to original file" Command="{Binding CompareToOriginalCommand}" IsEnabled="{Binding OriginalFile, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <MenuItem Header="Trionic options (firmware)" Click="OnFirmwareOptions" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Examine binary" Click="OnExamine" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Show dyno graph" Click="OnDyno" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Show compressor map" Click="OnCompressorMap" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import map from CSV" Click="OnImportMapCsv" IsEnabled="{Binding HasFile}" />
                 <Separator />
@@ -84,8 +86,10 @@
                 <Separator />
                 <MenuItem Header="Compare SRAM snapshot to binary" Click="OnCompareToSram" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare SRAM snapshots" Click="OnCompareSram" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Binary compare SRAM snapshots" Click="OnBinaryCompareSram" />
                 <MenuItem Header="Import SRAM snapshot into binary" Click="OnMergeAdaption" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Check for anomalies" Click="OnAnomalies" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Injection timing viewer" Click="OnInjectionTiming" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Open a saved report" Click="OnOpenReport" />
                 <MenuItem Header="Search map content" Click="OnSearchMaps" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Browse axis information" Command="{Binding BrowseAxesCommand}" IsEnabled="{Binding HasFile}" />

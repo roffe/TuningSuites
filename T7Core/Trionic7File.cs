@@ -16,73 +16,6 @@ namespace T7
     {
         private readonly static Logger logger = LogManager.GetCurrentClassLogger();
 
-        public enum VectorType : int
-        {
-            Reset_initial_stack_pointer,
-            Reset_initial_program_counter,
-            Bus_error,
-            Address_error,
-            Illegal_instruction,
-            Zero_division,
-            CHK_CHK2_instructions,
-            TRAPcc_TRAPV_instructions,
-            Privilege_violation,
-            Trace,
-            Line_1010_emulator,
-            Line_1111_emulator,
-            Hardware_breakpoint,
-            Coprocessor_protocol_violation,
-            Format_error_and_uninitialized_interrupt_1,
-            Format_error_and_uninitialized_interrupt_2,
-            Unassigned_reserved_1,
-            Unassigned_reserved_2,
-            Unassigned_reserved_3,
-            Unassigned_reserved_4,
-            Unassigned_reserved_5,
-            Unassigned_reserved_6,
-            Unassigned_reserved_7,
-            Unassigned_reserved_8,
-            Spurious_interrupt,
-            Level_1_interrupt_autovector,
-            Level_2_interrupt_autovector,
-            Level_3_interrupt_autovector,
-            Level_4_interrupt_autovector,
-            Level_5_interrupt_autovector,
-            Level_6_interrupt_autovector,
-            Level_7_interrupt_autovector,
-            Trap_instruction_vector_0,
-            Trap_instruction_vector_1,
-            Trap_instruction_vector_2,
-            Trap_instruction_vector_3,
-            Trap_instruction_vector_4,
-            Trap_instruction_vector_5,
-            Trap_instruction_vector_6,
-            Trap_instruction_vector_7,
-            Trap_instruction_vector_8,
-            Trap_instruction_vector_9,
-            Trap_instruction_vector_10,
-            Trap_instruction_vector_11,
-            Trap_instruction_vector_12,
-            Trap_instruction_vector_13,
-            Trap_instruction_vector_14,
-            Trap_instruction_vector_15,
-            Reserved_coprocessor_0,
-            Reserved_coprocessor_1,
-            Reserved_coprocessor_2,
-            Reserved_coprocessor_3,
-            Reserved_coprocessor_4,
-            Reserved_coprocessor_5,
-            Reserved_coprocessor_6,
-            Reserved_coprocessor_7,
-            Reserved_coprocessor_8,
-            Reserved_coprocessor_9,
-            Reserved_coprocessor_10,
-            Unassigned_reserved_9,
-            Unassigned_reserved_10,
-            Unassigned_reserved_11,
-            Unassigned_reserved_12,
-            Unassigned_reserved_13
-        }
 
         private int m_sramOffsetForOpenFile;
 
@@ -163,23 +96,7 @@ namespace T7
         /// 
         /// </summary>
         /// <returns></returns>
-        static public string[] GetVectorNames()
-        {
-            string[] vector_names = new string[256];
-            for (int i = 0; i < 256; i++)
-            {
-                if (i <= 63)
-                {
-                    vector_names[i] = ((Trionic7File.VectorType)i).ToString();
-                }
-                else
-                {
-                    int number = i - 64;
-                    vector_names[i] = "User defined vector " + number;
-                }
-            }
-            return vector_names;
-        }
+        static public string[] GetVectorNames() => Disassembly.VectorNames();
 
         /// <summary>
         /// 

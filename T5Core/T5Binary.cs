@@ -66,6 +66,9 @@ namespace Trionic5Tools
         public static (byte[] chip1, byte[] chip2) Split(byte[] data) =>
             (data.Where((_, i) => i % 2 == 1).ToArray(), data.Where((_, i) => i % 2 == 0).ToArray());
 
+        /// <summary>Where the file sits in the ECU's address space: 0x40000 (T5.5) or 0x60000 (T5.2).</summary>
+        public override long FlashBase => 0x80000 - FileLength;
+
         /// <summary>T5.5 or T5.2, from the file length.</summary>
         public bool IsTrionic55 => FileLength == 0x40000;
 
@@ -84,6 +87,9 @@ namespace Trionic5Tools
         /// The maps ("!" names, the ones in flash): SRAM compares cover them (StartCompareToSRAMFile took flash and SRAM symbols),
         /// and compare lists the ones only one file has.
         /// </summary>
+        /// <summary>Compare SRAM snapshots took every symbol in SRAM (Adapt_korr, Adapt_ggr, Knock_count_map are what one compares them for).</summary>
+        public override bool InSramCompare(SymbolHelper sh) => sh.Start_address > 0;
+
         public override bool IsCalibration(string name) => name.EndsWith('!') || Find(name) is { Flash_start_address: > 0 };
 
         /// <summary>Maps live in SRAM too (at Start_address); the ECU reads and writes them there.</summary>
@@ -115,6 +121,13 @@ namespace Trionic5Tools
         }
 
         public override bool ImportXmlSymbols(string file) => false;
+
+        // AxisBrowser: TranslateSymbolToHelpText's short text for the map and for each axis symbol
+        protected override AxisInfo AxisRow(string name, string x, string xDescription, string y, string yDescription)
+        {
+            string Short(string symbol) => symbol == "" ? "" : new SymbolTranslator().TranslateSymbolToHelpText(symbol, out _, out _, out _);
+            return new AxisInfo(name, Short(name), x, Short(x), y, Short(y));
+        }
 
         public override (string xAxis, string yAxis, string xDescr, string yDescr, string zDescr) AxisSymbols(string symbolname)
         {
@@ -251,7 +264,7 @@ namespace Trionic5Tools
         public override string ExportIdc()
         {
             IdaProIdcFile.create(FileName, Info, File);
-            return Path.Combine(Path.GetDirectoryName(FileName) ?? "", Path.GetFileNameWithoutExtension(FileName) + ".idc");
+            return Path.Combine(Path.GetDirectoryName(FileName) ?? "", Path.GetFileNameWithoutExtension(FileName) + "-autogen.idc");
         }
 
         public override void Disassemble(string output, bool full)
@@ -259,16 +272,20 @@ namespace Trionic5Tools
             var disasm = new Disassembler();
             if (full)
             {
-                disasm.DisassembleFile(true, FileLength + 0x40000, FileName, output, 0, FileLength, Symbols);
+                // the flash starts at 0x80000 - length (T5Suite had no full disassembly)
+                disasm.DisassembleFile(true, FlashBase, FileName, output, 0, FileLength, Symbols);
                 return;
             }
+            // the disassembler collects the functions, the listing is written as T7 / T8 write theirs (T5Suite's ctrlDisassembler)
             disasm.DisassembleFile(File, FileName, output, Symbols);
+            Disassembly.WriteFunctions(disasm.Mnemonics, output);
         }
 
         public override List<(string Name, long Address)> InterruptVectors()
         {
             long[] addresses = File.GetVectorAddresses(FileName);
-            return addresses.Select((a, i) => ("Vector " + i, a)).ToList();
+            string[] names = Disassembly.VectorNames();
+            return addresses.Select((a, i) => (names[i].Replace('_', ' '), a)).ToList();
         }
     }
 }

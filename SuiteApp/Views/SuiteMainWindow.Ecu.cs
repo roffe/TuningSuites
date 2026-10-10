@@ -1,4 +1,6 @@
+using System.IO;
 using Avalonia.Interactivity;
+using CommonSuite;
 using SuiteApp.Services;
 
 namespace SuiteApp.Views;
@@ -28,6 +30,16 @@ public partial class SuiteMainWindow
     {
         if (await Dialogs.OpenFile(this, "First SRAM dump", "*.ram") is { } first && await Dialogs.OpenFile(this, "Second SRAM dump", "*.ram") is { } second)
             await Vm.CompareSramAsync(first, second);
+    }
+
+    /// <summary>T5Suite's "Binary compare SRAM snapshots": the 16-byte line diff of two snapshots, no bin needed.</summary>
+    protected async void OnBinaryCompareSram(object? sender, RoutedEventArgs e)
+    {
+        if (await Dialogs.OpenFile(this, "SRAM dumps", "*.ram") is not { } first || await Dialogs.OpenFile(this, "SRAM dumps", "*.ram") is not { } second) return;
+        var lines = SuiteCompare.BinaryDiff(first, second);
+        var text = new System.Text.StringBuilder($"{Path.GetFileName(first)} / {Path.GetFileName(second)}: {lines.Count} lines differ\n\n");
+        foreach (var (mine, theirs) in lines) text.Append(mine).Append('\n').Append(theirs).Append("\n\n");
+        await Dialogs.Text(this, "Binary compare", text.ToString());
     }
 
     protected async void OnImportSram(object? sender, RoutedEventArgs e)

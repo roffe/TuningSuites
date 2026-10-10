@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CommonSuite
 {
@@ -220,10 +221,40 @@ namespace CommonSuite
             new("Garrett GT3076R", "gt30rcompress.gif", 50, 463, 6.4, 158),
             new("Garrett GT40R", "gt40rcompress.gif", 54, 482, 5.31, 171),
             new("Holset HX40w", "hx40w.jpg", 35, 762, 5.03, 167),
+            // T5Suite's own two
+            new("BorgWarner S400SX3-71", "S400SX3-71.jpg", 45, 484, 6.713, 102),
+            new("Garrett T25 54mm trim 60 (NG900, 9-3)", "T25_54mm_60trim_Map.jpg", 45, 622, 17.25, 258.5),
         ];
 
         /// <summary>Indexes into Compressors: the stock turbos the suites guess.</summary>
-        public const int T1752 = 0, Td04_15G = 3;
+        public const int T1752 = 0, Td04_15G = 3, T25Trim60 = 2, Td04_19T = 6, Gt28Rs = 9, Gt3071R = 10, Hx40w = 13, S400 = 14, T25Ng900 = 15;
+
+        // CalculateIntakeLoss: the intake's pressure loss in psi by rpm
+        private static readonly (int below, double psi)[] IntakeLoss =
+        [
+            (880, .08), (1260, .10), (1640, .17), (2020, .28), (2400, .42), (2780, .50), (3160, .58), (3540, .65), (3920, .74), (4300, .82),
+            (4680, .92), (5060, 1.03), (5440, 1.07), (5820, 1.10), (6000, 1.08),
+        ];
+
+        /// <summary>
+        /// T5Suite's compressor map (ctrlCompressorMapEx): one curve from the WOT boost per rpm. Pressure ratio 1 + boost + the intake
+        /// loss / 14.7; flow (14.5 + boost × 14.5) × displacement / 1728 × rpm / 2 × 29 / (10.73 × T °R) × VE, VE per rpm in %
+        /// (0: 1 − rpm × 4 / 100000).
+        /// </summary>
+        public static List<(double lbmin, double pr)> PointsFromBoost(IReadOnlyList<int> rpm, IReadOnlyList<double> boostBar, double cubicInches,
+            IReadOnlyList<double> vePercent, double tempC)
+        {
+            var points = new List<(double, double)>();
+            double rankine = tempC * 1.8 + 32 + 460;
+            for (int i = 0; i < rpm.Count && i < boostBar.Count; i++)
+            {
+                double pr = boostBar[i] + IntakeLoss.FirstOrDefault(l => rpm[i] < l.below, (below: 0, psi: 1.43)).psi / 14.7;
+                double ve = i < vePercent.Count && vePercent[i] > 0 ? vePercent[i] / 100 : 1 - rpm[i] / 100000.0 * 4;
+                double evf = cubicInches / 1728 * rpm[i] / 2;
+                points.Add(((14.5 + pr * 14.5) * evf * 29 / (10.73 * rankine) * ve, 1 + pr));
+            }
+            return points;
+        }
 
         public static readonly double[] AmbientPsi = [14.7, 12.5, 15.4];
 

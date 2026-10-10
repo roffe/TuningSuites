@@ -43,12 +43,16 @@ public partial class DisassemblyViewModel(string file, byte[] binary, bool full 
         if (line < 1 || line > Document.LineCount) return null;
         string text = Document.GetText(Document.GetLineByNumber(line));
         string? next = line < Document.LineCount ? Document.GetText(Document.GetLineByNumber(line + 1)) : null;
-        if (InstructionRange(text, next) is not { } r || r.Start >= Binary.Length) return null;
-        return (r.Start, Math.Min(r.End, Binary.Length));
+        if (InstructionRange(text, next) is not { } r || r.Start < Base) return null;
+        ulong start = r.Start - Base, end = r.End - Base;
+        return start >= Binary.Length ? null : (start, Math.Min(end, Binary.Length));
     }
 
+    // the listing's addresses are the ECU's: the file starts at the flash base (T5: 0x40000 / 0x60000)
+    private ulong Base => (ulong)(bin?.FlashBase ?? 0);
+
     /// <summary>Hex → text (hexViewer1_onSelectionChanged): where a byte address is in the listing, or null.</summary>
-    public (int Offset, int Length)? FindAddress(ulong address) => FindAddress(Document.Text, (uint)address, Full);
+    public (int Offset, int Length)? FindAddress(ulong address) => FindAddress(Document.Text, (uint)(address + Base), Full);
 
     /// <summary>
     /// The address a listing line starts with: "0xADDRESS" (the word up to the tab) or the full listing's 8 hex digits and ':'.

@@ -193,4 +193,21 @@ public partial class MainWindow : SuiteMainWindow
                 ("Cylinder fuel correction from knock information", false)) is { } o)
             await Vm.MergeAdaptionAsync(file, new Trionic5Tools.T5Tuning.AdaptionMerge(o[0], o[1], o[2], o[3]));
     }
+
+    // ---- Actions page: T5Suite's tools ----
+
+    private void OnDyno(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary != null) T5ToolWindows.Dyno(this, Vm);
+    }
+
+    private void OnCompressorMap(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary != null) T5ToolWindows.Compressor(this, Vm);
+    }
+
+    private void OnInjectionTiming(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary != null) T5ToolWindows.InjectionTiming(this, Vm);
+    }
 }

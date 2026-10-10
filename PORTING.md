@@ -559,7 +559,11 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Deliberate differences: one table polled instead of a watch list per panel tab (a pass reads about 30 symbols, the slow ones every 2nd to 5th pass); P / I / D read signed at 65536 (T5Suite: 65535); the wideband may come through AD_cat too (T5Suite converted only AD_EGR); a symbol the bin lacks isn't polled (T5Suite read SRAM 0); the panel's airmass and consumption displays are greyed (T5 has no such symbols); the first run's main AFR target is T5Suite's default (T5Suite put the idle default, a flat 14.7, in its place until the next start); the autotuned T5.2 adaption map stays in SRAM (T5Suite wrote it into the file's Insp_mat!); an accepted autotune is one file write with one transaction entry
 
 ### 7. Tools
-- [ ] Disassembler / vectors / Idc, hex view, axis browser, dyno graph and compressor map, injection timing viewer, boost adaption, merge adaption data
+- [x] Disassemble file (the functions listing at flash addresses; the hex pane follows through `SuiteBinary.FlashBase`), Show vector information (the CPU's vector names, now shared with T7), Generate Idc file (`<bin>-autogen.idc`), Show file in hex, Browse axis information (T5Suite's short texts for the map and its axes)
+- [x] Show dyno graph ("Estimated dyno results": torque, power and injector duty cycle from the WOT boost, Refresh, Export PNG), Show compressor map (the boost-based curve, T5Suite's two extra compressors, the turbo guessed from the footer and part number), Injection timing viewer (ms or duty cycle per cell of the fuel, idle or knock map at an intake temperature, voltage and injector constant) over `T5InjectionModel`, T5Suite's injection model in one place
+- [x] Compare SRAM snapshots covers every symbol in SRAM (T5Suite's, the adaption tables included); Binary compare SRAM snapshots; Import SRAM snapshot into binary (chunk 5)
+- Not ported: frmBoostAdaption, AsmViewer, FunctionCompiler (dead in T5Suite); the hex view scrolling to the selected symbol; "Snapshot: <name>" as the status text (the shared "SRAM: <name>")
+- Deliberate differences: the compressor map takes one VE for every rpm (T5Suite had 16 boxes, all 90 by default); the injection timing grid uses the map grid's colour scale (T5Suite: red cells and duty cycle bars); the dyno series are named Torque / Power / Injector DC (T5Suite's chart mislabelled them); the trap vectors read "Trap instruction vector N" (T5Suite's list said "vectors")
 
 ### 8. Release
 - [ ] SetupT5 replacing the old T5Suite 2.0, packages, CI, updater on `T5suite_v`, README
@@ -578,6 +582,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: T5 chunk 7 implemented: disassembly listing and hex sync, vectors, Idc, axis browser, dyno graph, compressor map, injection timing viewer, the SRAM snapshot compares.
 - 2026-10-10: T5 chunk 6 implemented: the realtime table and conversions, Pgm_status texts, live cells, logs, AFR maps and fuel autotune. The panel's dashboard names, a per-row decode, the status casts and a per-pass hook are suite hooks now; the wideband symbol settings and the autotune accept window moved into the shared projects. Waiting for a bench test.
 - 2026-10-10: T5 chunk 5 implemented: online maps from SRAM, the sync dialog and Synchronize maps, SRAM download / upload / compares, adaption merge, the CAN device migration. The SRAM compares moved into the shared view model. Waiting for a bench test.
 - 2026-10-10: An imported project folder inside Program Files falls back to the default (the old suites defaulted to the program folder, which isn't writable there).
