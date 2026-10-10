@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -131,5 +132,44 @@ public static class T5ToolWindows
         window = Frame("Fuel injection timing", 1250, 640, bar, grid);
         window.Show(owner);
         return window;
+    }
+
+    /// <summary>
+    /// frmKnockCounterMapSelect "Select a knock count map file...": file, snapshot time and total knocks; Ok shows one, Compare the
+    /// difference of two.
+    /// </summary>
+    public static async Task KnockSnapshots(Window owner, T5MainWindowViewModel vm)
+    {
+        var snapshots = vm.KnockSnapshots();
+        if (snapshots.Count == 0)
+        {
+            await Dialogs.Info(owner, "There are no knock counter snapshots yet (Settings → Knock counter snapshot after disconnect)", vm.Caption);
+            return;
+        }
+        var list = new ListBox
+        {
+            SelectionMode = SelectionMode.Multiple,
+            ItemsSource = snapshots.Select(k => $"{System.IO.Path.GetFileName(k.File)}    {k.Time:yyyy-MM-dd HH:mm:ss}    {k.Knocks} knocks").ToList(),
+            Height = 300,
+        };
+        Window? window = null;
+        Button ok = Button("Ok", () => window!.Close(list.SelectedItems?.Count == 1 ? 1 : 0)), compare = Button("Compare", () => window!.Close(2));
+        void Enable()
+        {
+            ok.IsEnabled = list.SelectedItems?.Count == 1;
+            compare.IsEnabled = list.SelectedItems?.Count == 2;
+        }
+        list.SelectionChanged += (_, _) => Enable();
+        Enable();
+        var bar = Bar(ok, compare, Button("Cancel", () => window!.Close(0)));
+        var body = new DockPanel();
+        DockPanel.SetDock(bar, Avalonia.Controls.Dock.Bottom);
+        body.Children.Add(bar);
+        body.Children.Add(new Avalonia.Controls.Primitives.HeaderedContentControl { Header = "Select a knock counter file", Content = list });
+        window = new Window { Title = "Select a knock count map file...", Width = 560, SizeToContent = SizeToContent.Height, Content = new Border { Padding = new Thickness(12), Child = body }, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        int choice = await window.ShowDialog<int>(owner);
+        var picked = list.Selection.SelectedIndexes.Select(i => snapshots[i].File).ToList();
+        if (choice == 1 && picked.Count == 1) vm.ShowKnockMap(picked[0]);
+        else if (choice == 2 && picked.Count == 2) vm.ShowKnockMap(picked[0], picked[1]);
     }
 }

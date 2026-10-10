@@ -55,6 +55,12 @@ public partial class MainWindow : SuiteMainWindow
         ApplyHideSymbolTable();
     }
 
+    private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
+    {
+        var settings = new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);
+        if (await new AutotuneSettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) settings.Apply(Vm.Settings, Vm.T5Settings);
+    }
+
     // ---- Tuning wizards ----
 
     private async void OnTuneMeUp(object? sender, RoutedEventArgs e)
@@ -183,6 +189,18 @@ public partial class MainWindow : SuiteMainWindow
     }
 
     private async void OnCompareEcu(object? sender, RoutedEventArgs e) => await Vm.CompareEcuWithBinaryAsync();
+
+    private async void OnKnockSnapshots(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Binary != null) await T5ToolWindows.KnockSnapshots(this, Vm);
+    }
+
+    /// <summary>Autotune ignition: starts or stops it on the running realtime panel.</summary>
+    private async void OnIgnitionAutotune(object? sender, RoutedEventArgs e)
+    {
+        if (Vm.Realtime is T5RealtimeViewModel rt) await rt.ToggleIgnitionAutotuneAsync();
+        else await Dialogs.Info(this, "Start the realtime panel first (Online tuning → Switch mode)", Vm.Caption);
+    }
 
     /// <summary>Import SRAM snapshot into binary: the snapshot, then "Select merge options" (frmMergeAdaptionData).</summary>
     private async void OnMergeAdaption(object? sender, RoutedEventArgs e)

@@ -88,5 +88,46 @@ namespace T5AppTest
                 return true;
             }, default).GetAwaiter().GetResult();
         }
+
+        [TestMethod]
+        public void KnockSnapshotsAndSettings()
+        {
+            string file = CopyOfStockBin("knock.BIN");
+            string folder = Path.Combine(Path.GetDirectoryName(file)!, "Snapshots");
+            Directory.CreateDirectory(folder);
+            var a = new byte[576];
+            var b = new byte[576];
+            a[1] = 5;      // cell 0: 5 knocks, then 2
+            b[1] = 2;
+            a[575] = 1;
+            File.WriteAllText(Path.Combine(folder, "Knockmap01012026100000.KNK"), System.Convert.ToHexString(a));
+            File.WriteAllText(Path.Combine(folder, "Knockmap01012026110000.KNK"), System.Convert.ToHexString(b));
+            File.WriteAllText(Path.Combine(folder, "broken.KNK"), "00");
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T5MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+
+                var snapshots = vm.KnockSnapshots();
+                Assert.AreEqual(2, snapshots.Count);
+                Assert.AreEqual(6, snapshots.Single(k => k.File.EndsWith("100000.KNK")).Knocks);
+                vm.ShowKnockMap(snapshots.Single(k => k.File.EndsWith("100000.KNK")).File, snapshots.Single(k => k.File.EndsWith("110000.KNK")).File);
+                var diff = (MapViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual(288, diff.Map.Count);
+                Assert.AreEqual(3, diff.Map[0]);
+                Assert.AreEqual(1, diff.Map[287]);
+                StringAssert.StartsWith(diff.Title, "Knock counter difference");
+
+                var settings = new SettingsViewModel(vm.Settings, vm.T5Settings);
+                var settingsWindow = new SettingsWindow { DataContext = settings };
+                settingsWindow.Show();
+                Save(settingsWindow, "settings");
+                settingsWindow.Close();
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
 }
 }

@@ -71,6 +71,21 @@ namespace T5AppTest
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "afrtarget");
 
+                // the ignition autotune's lock map (nothing locked yet) and the autotune settings
+                vm.ShowIgnitionLocksCommand.Execute(null);
+                var locks = (MapViewerViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("IgnitionLockMap", locks.MapName);
+                Assert.IsTrue(Enumerable.Range(0, locks.Map.Count).All(i => locks.Map[i] == 0));
+                var autotune = new AutotuneSettingsViewModel(vm.Settings, vm.T5Settings);
+                Assert.AreEqual(35m, autotune.GlobalMaximumAdvance);
+                autotune.GlobalMaximumAdvance = 33.5m;
+                var autotuneWindow = new AutotuneSettingsWindow { DataContext = autotune };
+                autotuneWindow.Show();
+                Save(autotuneWindow, "autotunesettings");
+                autotuneWindow.Close();
+                autotune.Apply(vm.Settings, vm.T5Settings);
+                Assert.AreEqual(33.5, vm.T5Settings.GlobalMaximumIgnitionAdvance);
+
                 // a .t5l in the viewer
                 await vm.OpenLogAsync(log, _ => System.Threading.Tasks.Task.FromResult<int?>(0));
                 var viewer = (LogViewerViewModel)vm.SelectedViewer!;

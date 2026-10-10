@@ -46,6 +46,9 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         // a throttle drop of more than 10 holds the autotune for 500 ms (tmrOverruleTPS)
         if (!double.IsNaN(m_lastTps) && m_lastTps - Tps > 10) m_tpsHold = sample.Time.AddMilliseconds(500);
         m_lastTps = Tps;
+        // the ignition autotune sees every pass except in the idle map (FeedInfoToAFRMaps)
+        if (m_ignition is { } ignition && ((long)(sample["Pgm_status"] ?? 0) & 0x40000000) == 0)
+            ignition.HandleRealtimeData(Rpm, Tps, Boost, IgnitionAdvance, (sample["Knock_offset1234"] ?? 0) > 0);
         if (m_afr is not { } afr || m_t5.AfrMaps is not { } maps) return;
         m_afr = null;
         AppSettings s = m_t5.Settings;
@@ -63,7 +66,119 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     protected override async Task OnStoppedAsync()
     {
         if (m_tuning != null) await StopAutotuneAsync();
+        if (m_ignition != null) await StopIgnitionAutotuneAsync();
         m_t5.AfrMaps?.SaveMaps();
+    }
+
+    // ---- autotune ignition (T5.5) ----
+
+    private IgnitionMaps? m_ignition;
+
+    public bool IsIgnitionAutotuning => m_ignition != null;
+
+    /// <summary>
+    /// Autotune ignition (onSwitchIgnitionTuningOnOff): T5.5 only. Ign_map_0! from SRAM, capped at the global maximum first when
+    /// "Adjust ignition map to global maximum" is set, Knock_press_tab! as the knock limit; each changed cell goes straight into SRAM.
+    /// </summary>
+    public async Task ToggleIgnitionAutotuneAsync()
+    {
+        if (m_ignition != null)
+        {
+            await StopIgnitionAutotuneAsync();
+            return;
+        }
+        if (!m_bin.IsTrionic55)
+        {
+            m_t5.ShowInfo("T5.2 is currently not supported for Autotuning Ignition");
+            return;
+        }
+        if (!IsRunning || m_t5.IgnitionMaps is not { } maps || m_bin.Find("Ign_map_0!") is not { Start_address: > 0 } ign) return;
+        T5AppSettings t5 = m_t5.T5Settings;
+        T5Ecu ecu = m_t5.Ecu;
+        m_t5.ProgressText = "Starting ignition autotune...";
+        maps.InitAutoTuneVars(true);
+        if (await ecu.ReadMapAsync(ign) is not { Length: > 1 } map)
+        {
+            m_t5.ShowInfo("Could not read the ignition map from the ECU");
+            return;
+        }
+        if (t5.CapIgnitionMap)
+        {
+            int max = (int)Math.Round(t5.GlobalMaximumIgnitionAdvance * 10);
+            bool capped = false;
+            for (int i = 0; i + 1 < map.Length; i += 2)
+            {
+                int advance = map[i] << 8 | map[i + 1];
+                if (advance > 32000) advance -= 65536;
+                if (advance <= max) continue;
+                map[i] = (byte)(max >> 8);
+                map[i + 1] = (byte)max;
+                capped = true;
+            }
+            if (capped) await ecu.WriteForcedAsync((int)ign.Start_address, map);
+        }
+        if (m_bin.Find("Knock_press_tab!") is { Start_address: > 0 } press && await ecu.ReadMapAsync(press) is { } knock) maps.SetKnockPressTab(Words(knock));
+        maps.SetOriginalIgnitionMap(Words(map));
+        maps.SetCurrentIgnitionMap(Words(map));
+        maps.CellStableTime_ms = t5.IgnitionCellStableTime_ms;
+        maps.MinimumEngineSpeedForIgnitionTuning = t5.MinimumEngineSpeedForIgnitionTuning;
+        maps.MaxumimIgnitionAdvancePerSession = t5.MaximumIgnitionAdvancePerSession;
+        maps.IgnitionAdvancePerCycle = t5.IgnitionAdvancePerCycle;
+        maps.IgnitionRetardFirstKnock = t5.IgnitionRetardFirstKnock;
+        maps.IgnitionRetardFurtherKnocks = t5.IgnitionRetardFurtherKnocks;
+        maps.GlobalMaximumIgnitionAdvance = t5.GlobalMaximumIgnitionAdvance;
+        maps.onIgnitionmapCellChanged += OnIgnitionCellChanged;
+        maps.IsAutoMappingActive = true;
+        m_ignition = maps;
+        OnPropertyChanged(nameof(IsIgnitionAutotuning));
+        m_t5.ProgressText = "Autotune ignition running...";
+    }
+
+    private static int[] Words(byte[] d) => Enumerable.Range(0, d.Length / 2).Select(i => d[i * 2] << 8 | d[i * 2 + 1]).ToArray();
+
+    private static byte[] Bytes(int[] words) => words.SelectMany(w => new[] { (byte)(w >> 8), (byte)w }).ToArray();
+
+    private void OnIgnitionCellChanged(object sender, IgnitionMaps.IgnitionmapChangedEventArgs e)
+    {
+        if (m_bin.Find("Ign_map_0!") is { Start_address: > 0 } ign)
+            _ = m_t5.Ecu.WriteForcedAsync((int)ign.Start_address + e.Mapindex * 2, [(byte)(e.Cellvalue >> 8), (byte)e.Cellvalue]);
+    }
+
+    /// <summary>
+    /// Stop: "Keep adjusted ignition map?" No puts the original back into SRAM; Yes writes the tuned map into the file (with a transaction
+    /// entry here; T5Suite logged none) and the checksum per Auto update checksum.
+    /// </summary>
+    private async Task StopIgnitionAutotuneAsync()
+    {
+        if (m_ignition is not { } maps) return;
+        m_ignition = null;
+        maps.IsAutoMappingActive = false;
+        maps.onIgnitionmapCellChanged -= OnIgnitionCellChanged;
+        OnPropertyChanged(nameof(IsIgnitionAutotuning));
+        try
+        {
+            if (m_bin.Find("Ign_map_0!") is not { } ign) return;
+            bool keep = m_t5.AskYesNoCancel == null || await m_t5.AskYesNoCancel("Keep adjusted ignition map?") == true;
+            if (!keep) await m_t5.Ecu.WriteForcedAsync((int)ign.Start_address, Bytes(maps.GetOriginalIgnitionmap()));
+            else if (m_bin.FileAddress(ign) is var address and >= 0)
+            {
+                int before = m_t5.TransactionLog?.TransCollection.Count ?? 0;
+                m_bin.WriteData(address, Bytes(maps.GetCurrentlyMutatedIgnitionMap()), m_t5.TransactionLog, "Autotune ignition");
+                if (m_t5.Settings.AutoChecksum) m_bin.UpdateChecksum();
+                m_t5.TransactionsAdded(before);
+                m_t5.RefreshViewers(m_bin.FileName);
+            }
+            maps.SaveMaps();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            m_t5.ShowInfo(e.Message);
+        }
+        finally
+        {
+            maps.InitAutoTuneVars(false);
+            m_t5.ProgressText = "Idle";
+        }
     }
 
     /// <summary>Autotune fuel: start (warm engine and a wideband symbol, as T5Suite enabled the button) or stop.</summary>

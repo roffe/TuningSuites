@@ -128,7 +128,11 @@ public partial class T5MainWindowViewModel
         return Task.CompletedTask;
     }
 
-    protected override Task DisconnectEcuAsync() => Ecu.DisconnectAsync();
+    protected override async Task DisconnectEcuAsync()
+    {
+        await KnockSnapshotAsync();
+        await Ecu.DisconnectAsync();
+    }
 
     protected override async Task<byte[]?> ReadEcuMapAsync(SymbolHelper sh) => await Ecu.ReadMapAsync(sh);
 

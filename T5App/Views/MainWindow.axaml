@@ -47,6 +47,7 @@
                 <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Options and settings" Click="OnSettings" />
+                <MenuItem Header="Autotune settings" Click="OnAutotuneSettings" />
                 <Separator />
                 <MenuItem Header="Lookup partnumber" Click="OnLookupPartnumber" />
                 <MenuItem Header="VIN decoder" Click="OnVinDecoder" />
@@ -128,6 +129,7 @@
                 <MenuItem Header="Read DTC codes" Click="OnFaultCodes" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Toggle Autotune" InputGesture="Shift+F5" Command="{Binding Realtime.ToggleAutotuneCommand, FallbackValue={x:Null}}"
                           IsVisible="{Binding AdvancedMode}" />
+                <MenuItem Header="Autotune ignition" Click="OnIgnitionAutotune" IsVisible="{Binding AdvancedMode}" />
                 <MenuItem Header="Set symbol colors" Click="OnSymbolColors" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="AFR target" Command="{Binding ShowAfrCommand}" CommandParameter="TargetAFR" IsEnabled="{Binding HasFile}" />
@@ -137,6 +139,9 @@
                 <MenuItem Header="Idle AFR feedback" Command="{Binding ShowAfrCommand}" CommandParameter="IdleFeedbackAFR" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Idle AFR error" Command="{Binding ShowAfrCommand}" CommandParameter="IdleFeedbackvsTargetAFR" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Generate AFR target" Command="{Binding GenerateAfrTargetCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Ignition lock map" Command="{Binding ShowIgnitionLocksCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Release locked ignition cells" Command="{Binding ReleaseIgnitionLocksCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Knock map snapshots" Click="OnKnockSnapshots" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <MenuItem Header="_Logfiles">
                 <MenuItem Header="Export T5Suite logfile to LogWorks" Click="OnExportLogDif" />

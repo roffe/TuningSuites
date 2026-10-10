@@ -11,7 +11,11 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
     {
         EnableAdvancedMode = t5.EnableAdvancedMode;
         AutoDetectMapsensorType = t5.AutoDetectMapsensorType;
+        KnockCounterSnapshot = t5.KnockCounterSnapshot;
     }
+
+    /// <summary>"Knock counter snapshot after disconnect" (T5.5): Knock_count_map saved into Snapshots.</summary>
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _knockCounterSnapshot;
 
     /// <summary>"Auto detect mapsensor type": a file whose marker says stock gets its sensor from the maps.</summary>
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _autoDetectMapsensorType;
@@ -27,5 +31,6 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
         base.Apply(s);
         t5.EnableAdvancedMode = EnableAdvancedMode;
         t5.AutoDetectMapsensorType = AutoDetectMapsensorType;
+        t5.KnockCounterSnapshot = KnockCounterSnapshot;
     }
 }

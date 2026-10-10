@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T5App.ViewModels"
+        x:Class="T5App.Views.AutotuneSettingsWindow"
+        x:DataType="vm:AutotuneSettingsViewModel"
+        Title="Autotune settings..." SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="16" Spacing="12">
+        <StackPanel Orientation="Horizontal" Spacing="16">
+            <HeaderedContentControl Header="Autotune fuel settings">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                    <TextBlock Text="Cell stable time (ms)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Column="1" Value="{Binding CellStableTime}" Minimum="100" Maximum="10000" Increment="100" FormatString="0" Width="140" />
+                    <TextBlock Grid.Row="1" Text="Correction percentage" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding CorrectionPercentage}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="140" />
+                    <TextBlock Grid.Row="2" Text="Acceptable target error (%)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AcceptableTargetError}" Minimum="1" Maximum="10" Increment="1" FormatString="0" Width="140" />
+                    <TextBlock Grid.Row="3" Text="Maximum adjustment per cycle (%)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding MaximumAdjustment}" Minimum="1" Maximum="20" Increment="1" FormatString="0" Width="140" />
+                    <TextBlock Grid.Row="4" Text="Enrichment filter (pts)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding EnrichmentFilter}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="140" />
+                    <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Auto update fuel map" IsChecked="{Binding AutoUpdateFuelMap}" />
+                    <CheckBox Grid.Row="6" Grid.ColumnSpan="2" Content="Discard AFR measurements with fuelcut" IsChecked="{Binding DiscardFuelcut}" />
+                    <CheckBox Grid.Row="7" Grid.ColumnSpan="2" Content="Discard closed throttle measurements" IsChecked="{Binding DiscardClosedThrottle}" />
+                    <CheckBox Grid.Row="8" Grid.ColumnSpan="2" Content="Disable closed loop on starting autotune" IsChecked="{Binding DisableClosedLoop}" />
+                    <CheckBox Grid.Row="9" Grid.ColumnSpan="2" Content="Reset fuel trims on starting autotune" IsChecked="{Binding ResetFuelTrims}" />
+                    <CheckBox Grid.Row="10" Grid.ColumnSpan="2" Content="Allow idle map autotune" IsChecked="{Binding AllowIdleAutoTune}" />
+                    <CheckBox Grid.Row="11" Grid.ColumnSpan="2" Content="Always create AFR maps" IsChecked="{Binding AlwaysCreateAfrMaps}" />
+                </Grid>
+            </HeaderedContentControl>
+            <HeaderedContentControl Header="Autotune ignition settings">
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                    <TextBlock Text="Cell stable time (ms)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Column="1" Value="{Binding IgnitionCellStableTime}" Minimum="100" Maximum="10000" Increment="100" FormatString="0" Width="140" />
+                    <TextBlock Grid.Row="1" Text="Minimal engine speed for tuning" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding MinimumEngineSpeed}" Minimum="500" Maximum="8000" Increment="100" FormatString="0" Width="140" />
+                    <TextBlock Grid.Row="2" Text="Ignition increase per cycle (°)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding IgnitionAdvancePerCycle}" Minimum="0.1" Maximum="2" Increment="0.1" FormatString="0.0" Width="140" />
+                    <TextBlock Grid.Row="3" Text="Ignition retard on first knock (°)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding RetardFirstKnock}" Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0" Width="140" />
+                    <TextBlock Grid.Row="4" Text="Ignition retard on further knocks (°)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding RetardFurtherKnocks}" Minimum="0.1" Maximum="5" Increment="0.1" FormatString="0.0" Width="140" />
+                    <TextBlock Grid.Row="5" Text="Global maximum ignition advance (°)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding GlobalMaximumAdvance}" Minimum="10" Maximum="50" Increment="0.5" FormatString="0.0" Width="140" />
+                    <TextBlock Grid.Row="6" Text="Max ignition increase per session (°)" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="6" Grid.Column="1" Value="{Binding MaximumAdvancePerSession}" Minimum="0.5" Maximum="10" Increment="0.5" FormatString="0.0" Width="140" />
+                    <CheckBox Grid.Row="7" Grid.ColumnSpan="2" Content="Adjust ignition map to global maximum before starting a session" IsChecked="{Binding CapIgnitionMap}" />
+                </Grid>
+            </HeaderedContentControl>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+        </StackPanel>
+    </StackPanel>
+</Window>
