@@ -45,6 +45,20 @@ public class SymbolColorConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
+/// <summary>A double as F1 the way the old suites' .NET Framework printed it: a half rounded away from zero.</summary>
+public class F1Converter : IValueConverter
+{
+    public static readonly F1Converter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is double d ? Text(d, CultureInfo.CurrentCulture) : value;
+
+    public static string Text(double d, IFormatProvider culture) =>
+        double.IsFinite(d) && Math.Abs(d) < 1e28 ? ((decimal)d).ToString("F1", culture) : d.ToString("F1", culture);
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
 /// <summary>Symbol list addresses and lengths, X6 hex or decimal per ShowAddressesInHex.</summary>
 public class SymbolNumberConverter : IValueConverter
 {

@@ -49,6 +49,12 @@ namespace T5AppTest
                 CollectionAssert.AreEqual(stored, ign.Map.XHex);
                 CollectionAssert.AreEqual(stored.Select(v => (double)((int)v * 120 / 100)).ToArray(), ign.Map.XAxis);
                 CollectionAssert.AreNotEqual(ign.Map.XAxis, ign.Map.XHex);
+                // the AFR maps on the fuel map's axis follow the sensor too (T5Suite's Decimal3Bar headers)
+                vm.ShowAfrCommand.Execute("TargetAFR");
+                var afr = (MapViewerViewModel)vm.SelectedViewer!;
+                double[] fuelAxis = [.. afr.Binary.GetXaxisValues("Insp_mat!").Select(v => (double)v)];
+                CollectionAssert.AreEqual(fuelAxis, afr.Map.XHex);
+                CollectionAssert.AreEqual(fuelAxis.Select(v => (double)((int)v * 120 / 100)).ToArray(), afr.Map.XAxis);
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();

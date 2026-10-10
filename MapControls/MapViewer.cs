@@ -199,12 +199,7 @@ public class MapViewer : UserControl
             if (change.NewValue is MapData map)
             {
                 map.Changed += OnMapChanged;
-                int zPrec = map.Factor < 1 ? Math.Min(4, (int)Math.Ceiling(-Math.Log10(map.Factor))) : 0;
-                // T5Suite's 3D graph had a MAP axis in bar in every view; a longer Y axis labels the rows as the grid's headers do,
-                // its last value on the top row
-                double[]? y = map.UpsideDown && map.YAxis is { } ya && ya.Length > map.Rows ? ya[^map.Rows..] : map.YAxis;
-                Surface.SetData(map.PhysicalValues(), map.Cols, map.Rows, map.XEasy ?? map.XAxis, y, map.XName, map.YName, map.ZName,
-                    map.XEasy != null ? 2 : 0, 0, zPrec);
+                ShowSurface(map);
                 m_slice.Maximum = map.Cols - 1;
                 m_slice.IsVisible = map.Cols > 1;
             }
@@ -215,6 +210,8 @@ public class MapViewer : UserControl
         {
             Grid.ViewType = ViewType;
             m_viewType.SelectedIndex = (int)ViewType;
+            // MapViewerEx refilled the 3D graph on a view change
+            if (Map is { } map) ShowSurface(map);
         }
         else if (change.Property == OnlineModeProperty)
         {
@@ -260,8 +257,28 @@ public class MapViewer : UserControl
     private void OnMapChanged(object? sender, EventArgs e)
     {
         if (Map is not { } map) return;
-        Surface.SetValues(map.PhysicalValues());
+        Surface.SetValues(SurfaceValues(map));
         ShowSlice();
+    }
+
+    // MapViewerEx's 3D graph (all three suites) plotted the table's numbers: factor and offset only in the Easy view, else the raw
+    // value (scaled in T5Suite's 3-5 bar Decimal views), so its Z scale matched the cells
+    private double[] SurfaceValues(MapData map) => ViewType switch
+    {
+        MapViewType.Easy => map.PhysicalValues(),
+        MapViewType.Decimal => Array.ConvertAll(map.RawValues(), r => (double)map.Scaled(r)),
+        _ => Array.ConvertAll(map.RawValues(), r => (double)r),
+    };
+
+    private void ShowSurface(MapData map)
+    {
+        int zPrec = ViewType == MapViewType.Easy && map.Factor < 1 ? Math.Min(4, (int)Math.Ceiling(-Math.Log10(map.Factor))) : 0;
+        // T5Suite's 3D graph had a MAP axis in bar in every view (frmMatrixResult's axes two decimals); a longer Y axis labels the
+        // rows as the grid's headers do, its last value on the top row
+        double[]? axis = map.YEasy ?? map.YAxis;
+        double[]? y = map.UpsideDown && axis is { } ya && ya.Length > map.Rows ? ya[^map.Rows..] : axis;
+        Surface.SetData(SurfaceValues(map), map.Cols, map.Rows, map.XEasy ?? map.XAxis, y, map.XName, map.YName, map.ZName,
+            map.XEasy != null ? 2 : 0, map.YEasy != null ? 2 : 0, zPrec);
     }
 
     // MapViewerEx's 2D chart: the slider's column over all data rows, plotted against the Y axis
@@ -273,7 +290,7 @@ public class MapViewer : UserControl
         double[] slice = Enumerable.Range(0, map.Rows).Select(r => r * map.Cols + col).Where(i => i < all.Length).Select(i => all[i]).ToArray();
         string at = map.XAxis != null && col < map.XAxis.Length ? $" @ {map.XName} {map.XAxis[col].ToString(CultureInfo.CurrentCulture)}" : "";
         int prec = map.Factor < 1 ? Math.Min(4, (int)Math.Ceiling(-Math.Log10(map.Factor))) : 0;
-        Graph.SetData(slice, map.YAxis, all.Min(), all.Max(), 0, prec, map.YName + at);
+        Graph.SetData(slice, map.YEasy ?? map.YAxis, all.Min(), all.Max(), map.YEasy != null ? 2 : 0, prec, map.YName + at);
     }
 
     private void SyncOthers(bool selection, bool camera)

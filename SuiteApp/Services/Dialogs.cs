@@ -121,7 +121,12 @@ namespace SuiteApp.Services
         }
 
         /// <summary>A wizard page of numbers (label, value, minimum, maximum, step) under an introduction; the values on OK, null on Cancel.</summary>
-        public static async Task<decimal[]?> Numbers(Window owner, string caption, string intro, params (string label, decimal value, decimal min, decimal max, decimal step)[] fields)
+        public static Task<decimal[]?> Numbers(Window owner, string caption, string intro, params (string label, decimal value, decimal min, decimal max, decimal step)[] fields) =>
+            Numbers(owner, caption, intro, null, fields);
+
+        /// <summary>The same with a line under the numbers that follows them (T5Suite's boost bias wizard: "Result rpm from 2500 rpm upto 5500").</summary>
+        public static async Task<decimal[]?> Numbers(Window owner, string caption, string intro, Func<decimal[], string>? result,
+            params (string label, decimal value, decimal min, decimal max, decimal step)[] fields)
         {
             var dlg = new Window { Title = caption, Width = 560, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
             var boxes = fields.Select(f => new NumericUpDown { Value = f.value, Minimum = f.min, Maximum = f.max, Increment = f.step, FormatString = f.step < 1 ? "0.00" : "0", Width = 160 }).ToArray();
@@ -136,6 +141,10 @@ namespace SuiteApp.Services
                 grid.Children.Add(label);
                 grid.Children.Add(boxes[i]);
             }
+            decimal[] Values() => boxes.Select(b => b.Value ?? 0).ToArray();
+            var resultText = new TextBlock { Margin = new Thickness(0, 6, 0, 0), IsVisible = result != null, Text = result?.Invoke(Values()) };
+            if (result != null)
+                foreach (NumericUpDown box in boxes) box.ValueChanged += (_, _) => resultText.Text = result(Values());
             bool ok = false;
             var okButton = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
             okButton.Click += (_, _) => { ok = true; dlg.Close(); };
@@ -147,10 +156,11 @@ namespace SuiteApp.Services
             var body = new StackPanel { Margin = new Thickness(16) };
             body.Children.Add(new TextBlock { Text = intro, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
             body.Children.Add(grid);
+            body.Children.Add(resultText);
             body.Children.Add(buttons);
             dlg.Content = body;
             await dlg.ShowDialog(owner);
-            return ok ? boxes.Select(b => b.Value ?? 0).ToArray() : null;
+            return ok ? Values() : null;
         }
 
         /// <summary>A group of check boxes with Ok / Cancel (T5Suite's "Select merge options"); the states, or null when cancelled.</summary>

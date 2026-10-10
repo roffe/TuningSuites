@@ -67,6 +67,9 @@ public partial class T5MainWindowViewModel
     /// <summary>T5Suite drew the closed-loop box always (it had no "Closed loop indicator" setting).</summary>
     public override OpenLoopMark OpenLoopMarkStyle => OpenLoopMark.Box;
 
+    /// <summary>MapViewerFactory.Get(settings, file): Decimal when that is the default, Easy for any other (a Hex or ASCII default never opened).</summary>
+    public override MapViewType DefaultMapView => Settings.DefaultViewType == SuiteViewType.Decimal ? MapViewType.Decimal : MapViewType.Easy;
+
     /// <summary>
     /// TryToAddOpenLoopTables' marks, compared raw as T5Suite did:
     /// - a padlock below the knock pressure (Knock_press_tab! by row, T5.2's single Knock_press!) and on the ignition autotune's locked
@@ -239,21 +242,25 @@ public partial class T5MainWindowViewModel
             title = $"Knock counter difference: {System.IO.Path.GetFileName(file)} vs {System.IO.Path.GetFileName(compare)}";
         }
         var (_, _, xDescr, yDescr, _) = bin.AxisSymbols("Ign_map_0!");
+        // the MAP axis follows the sensor as on the other maps (T5Suite's Decimal3Bar etc. views, integer math)
+        int xScale = bin.AxisScalePercent(xDescr);
+        int[] stored = bin.GetXaxisValues("Ign_map_0!");
         var map = new MapData("Knock_count_map", data, bin.TableWidth("Ign_map_0!"), true, 0xFFFF)
         {
             UpsideDown = true,
-            XAxis = bin.GetXaxisValues("Ign_map_0!").Select(v => (double)v).ToArray(),
+            XAxis = stored.Select(v => (double)(v * xScale / 100)).ToArray(),
             YAxis = bin.GetYaxisValues("Ign_map_0!").Select(v => (double)v).ToArray(),
             XName = xDescr,
             YName = yDescr,
             ZName = "knocks",
             Marks = CellMarks(bin, "Knock_count_map"),
             XEasy = bin.XAxisEasy("Ign_map_0!"),
+            XHex = xScale == 100 ? null : [.. stored.Select(v => (double)v)],
         };
         ShowDocument(new MapViewerViewModel
         {
             Owner = this, Binary = bin, Symbol = sh, MapName = "Knock_count_map", Map = map, Address = -1, IsReadOnly = true, TitleOverride = title,
-            ViewType = MapViewType.Decimal, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = Settings.ShowGraphs,
+            ViewType = DefaultMapView, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = Settings.ShowGraphs,
         });
     }
 
@@ -294,20 +301,24 @@ public partial class T5MainWindowViewModel
         string fuelName = idle ? "Idle_fuel_korr!" : "Insp_mat!";
         if (bin.Find(fuelName) is not { } fuel) return null;
         var (_, _, xDescr, yDescr, _) = bin.AxisSymbols(fuelName);
+        // the MAP axis follows the sensor as the fuel map's viewer does (T5Suite's Decimal3Bar headers)
+        int xScale = bin.AxisScalePercent(xDescr);
+        int[] stored = bin.GetXaxisValues(fuelName);
         var map = new MapData(kind, AfrContent(afr, kind), bin.TableWidth(fuelName), true)
         {
             Factor = 0.1,
             BlankZero = !target,
             FractionalMath = bin.FractionalMath,
             UpsideDown = true,
-            XAxis = bin.GetXaxisValues(fuelName).Select(v => (double)v).ToArray(),
+            XAxis = [.. stored.Select(v => (double)(v * xScale / 100))],
             YAxis = bin.GetYaxisValues(fuelName).Select(v => (double)v).ToArray(),
             XName = xDescr,
             YName = yDescr,
             ZName = "AFR",
-            OpenLoop = idle ? null : bin.OpenLoopLimits(fuelName),
+            OpenLoop = idle ? null : bin.OpenLoopLimits(fuelName)?.Select(v => (double)((int)v * xScale / 100)).ToArray(),
             Marks = CellMarks(bin, kind),
             XEasy = bin.XAxisEasy(fuelName),
+            XHex = xScale == 100 ? null : [.. stored.Select(v => (double)v)],
         };
         AppSettings settings = Settings;
         return new MapViewerViewModel
@@ -334,7 +345,7 @@ public partial class T5MainWindowViewModel
                 }
             },
             ReadFrom = target ? () => AfrContent(afr, kind) : null,
-            ViewType = MapViewType.Easy,
+            ViewType = DefaultMapView,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,

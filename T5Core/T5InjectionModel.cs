@@ -110,8 +110,10 @@ namespace Trionic5Tools
             int[] x = bin.GetXaxisValues(fuel.SmartVarname), y = bin.GetYaxisValues(fuel.SmartVarname);
             for (int i = 0; i < Math.Min(16, rpm.Length) && i * 8 + 7 < tryck.Length; i++)
             {
-                int pressure = tryck[i * 8 + 7] * bin.SensorPercent / 100;
-                double boost = (pressure - 100) / 100.0;
+                // BuildGraph scaled it as a double (× 1.2 for 3.0 bar), rounded for the injection time only
+                double scaled = tryck[i * 8 + 7] * (bin.SensorPercent / 100.0);
+                int pressure = Convert.ToInt32(scaled);
+                double boost = (scaled - 100) / 100;
                 double torque = new PressureToTorque().CalculateTorqueFromPressure(boost, p.TurboType);
                 rows.Add((rpm[i], boost, torque, Realtime.Power(rpm[i], torque), DutyCycle(model.Milliseconds(pressure, rpm[i], insp, x, y), rpm[i])));
             }

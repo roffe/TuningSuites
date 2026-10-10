@@ -82,6 +82,14 @@ namespace Trionic5Tools
 
         public override string LayoutExtension => "t5rtl";
 
+        /// <summary>T5Suite's DifGenerator: rpm, intake air, speed and EGT as they are, ignition, torque, duty cycle and power with one decimal, the rest two.</summary>
+        public override string LogWorksFormat(string symbol) => symbol switch
+        {
+            "Rpm" or "Lufttemp" or "Bil_hast" or "EGT" => "G15",
+            "Ign_angle" or "TQ" or "InjectorDC" or "Power" or "Torque" => "F1",
+            _ => "F2",
+        };
+
         /// <summary>
         /// The table: every symbol T5Suite's panel tabs read, with its conversions; boost values follow the MAP sensor (× 1.2 for
         /// 3.0 bar and so on). Each tab polls its WatchList of them. Symbols the bin lacks are left out (T5Suite read SRAM 0 for them).

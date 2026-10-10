@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using NLog;
 
@@ -19,6 +20,13 @@ namespace CommonSuite
             get { return m_appSettings; }
             set { m_appSettings = value; }
         }
+
+        /// <summary>A channel's number format: T7Suite and T8Suite wrote three decimals, T5Suite chose per channel.</summary>
+        public Func<string, string> ValueFormat { get; set; } = _ => "F3";
+
+        // as .NET Framework wrote a double: 15 significant digits, halves away from zero (decimal does both), with a '.'
+        private static string Text(double value, string format) => Math.Abs(value) < 1e15
+            ? ((decimal)value).ToString(format, CultureInfo.InvariantCulture) : value.ToString(format, CultureInfo.InvariantCulture);
 
         private double ConvertToDouble(string v)
         {
@@ -543,7 +551,7 @@ namespace CommonSuite
                                                                     }
                                                                 }
                                                             }
-                                                            sw.WriteLine("0," + value.ToString("F3").Replace(',', '.'));
+                                                            sw.WriteLine("0," + Text(value, ValueFormat(varname)));
                                                             sw.WriteLine("V");
 
                                                         }
@@ -576,7 +584,7 @@ namespace CommonSuite
 
                                                     double regkonmat = (pwmut * 10) - pfak - ifak - dfak;
                                                     regkonmat /= 10;
-                                                    sw.WriteLine("0," + regkonmat.ToString("F3").Replace(',', '.'));
+                                                    sw.WriteLine("0," + Text(regkonmat, "F3"));
                                                     sw.WriteLine("V");
                                                 }
                                                 else

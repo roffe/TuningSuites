@@ -12,8 +12,8 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>A row of the Free logging grid.</summary>
-public partial class RealtimeRow(RealtimeSymbol symbol) : ObservableObject
+/// <summary>A row of the Free logging grid; format gives the suite's text for its value and peak.</summary>
+public partial class RealtimeRow(RealtimeSymbol symbol, Func<string, double, string>? format = null) : ObservableObject
 {
     public RealtimeSymbol Symbol { get; } = symbol;
     public string Name => Symbol.Name;
@@ -28,10 +28,17 @@ public partial class RealtimeRow(RealtimeSymbol symbol) : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Fraction))]
+    [NotifyPropertyChangedFor(nameof(ValueText))]
     private double _value;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PeakText))]
     private double _peak;
+
+    public string ValueText => Text(Value);
+    public string PeakText => Text(Peak);
+
+    private string Text(double v) => format?.Invoke(Name, v) ?? v.ToString("G15", System.Globalization.CultureInfo.CurrentCulture);
 
     /// <summary>The value's place between minimum and maximum, the cell's bar.</summary>
     public double Fraction => Symbol.Maximum > Symbol.Minimum ? Math.Clamp((Value - Symbol.Minimum) / (Symbol.Maximum - Symbol.Minimum), 0, 1) : 0;
@@ -53,6 +60,9 @@ public partial class RealtimeRow(RealtimeSymbol symbol) : ObservableObject
 public partial class RealtimeViewModel : DocumentViewModel
 {
     protected readonly MainWindowViewModel m_owner;
+
+    /// <summary>The Free logging grid's value and peak text: T7Suite's and T8Suite's unformatted double (G15).</summary>
+    protected virtual string CellText(string name, double value) => value.ToString("G15", System.Globalization.CultureInfo.CurrentCulture);
     protected readonly SuiteBinary m_bin;
     protected readonly RealtimeRules m_rules;
     protected readonly RealtimeEngine m_engine;
@@ -139,7 +149,7 @@ public partial class RealtimeViewModel : DocumentViewModel
         _isNight = owner.Settings.Panelmode == PanelMode.Night;
         _lambdaMode = owner.Settings.MeasureAFRInLambda;
         foreach (RealtimeSymbol s in Realtime.Merge(rules.Dashboard(bin, owner.Settings), Realtime.LoadLayout(LayoutFile, bin)))
-            Rows.Add(new RealtimeRow(s) { Peak = s.Minimum });
+            Rows.Add(new RealtimeRow(s, CellText) { Peak = s.Minimum });
         // after Dashboard: T5's rules follow the bin's MAP sensor
         m_tracker = new CellTracker(bin, rules.CellRules);
         PushRows();
@@ -288,7 +298,7 @@ public partial class RealtimeViewModel : DocumentViewModel
             if (!byName.TryGetValue(name, out RealtimeRow? row))
             {
                 // KnockCyl1..4 / MisfCyl1..4 from the per-cylinder counters, the serial wideband
-                row = new RealtimeRow(new RealtimeSymbol { Name = name, Maximum = 65535, Derived = true });
+                row = new RealtimeRow(new RealtimeSymbol { Name = name, Maximum = 65535, Derived = true }, CellText);
                 Rows.Add(row);
                 byName[name] = row;
             }
@@ -397,8 +407,8 @@ public partial class RealtimeViewModel : DocumentViewModel
     public void Add(RealtimeSymbol symbol)
     {
         symbol.UserDefined = true;
-        if (Rows.FirstOrDefault(r => r.Name == symbol.Name) is { } existing) Rows[Rows.IndexOf(existing)] = new RealtimeRow(symbol) { Peak = symbol.Minimum };
-        else Rows.Add(new RealtimeRow(symbol) { Peak = symbol.Minimum });
+        if (Rows.FirstOrDefault(r => r.Name == symbol.Name) is { } existing) Rows[Rows.IndexOf(existing)] = new RealtimeRow(symbol, CellText) { Peak = symbol.Minimum };
+        else Rows.Add(new RealtimeRow(symbol, CellText) { Peak = symbol.Minimum });
         PushRows();
         SaveUserRows();
     }
@@ -451,7 +461,7 @@ public partial class RealtimeViewModel : DocumentViewModel
         List<RealtimeSymbol> keep = [.. user];
         Rows.Clear();
         foreach (RealtimeSymbol s in Realtime.Merge(m_rules.Dashboard(m_bin, m_owner.Settings), keep))
-            Rows.Add(new RealtimeRow(s) { Peak = s.Minimum });
+            Rows.Add(new RealtimeRow(s, CellText) { Peak = s.Minimum });
         PushRows();
     }
 

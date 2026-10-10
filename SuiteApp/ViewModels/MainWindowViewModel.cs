@@ -198,6 +198,10 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>The closed-loop mark: T7Suite's "Closed loop indicator" setting (none by default).</summary>
     public virtual OpenLoopMark OpenLoopMarkStyle => (OpenLoopMark)Math.Clamp(Settings.StandardFill, 0, 2);
 
+    /// <summary>The view a map opens in: "Default view type for maps" as it is (T7Suite's and T8Suite's MapViewerFactory).</summary>
+    public virtual MapViewType DefaultMapView =>
+        (int)Settings.DefaultViewType is var v && v <= (int)MapViewType.Ascii ? (MapViewType)v : MapViewType.Easy;
+
     /// <summary>A map's cell marks in a bin (T5Suite's padlocks and adaption boxes); null for none, as T7Suite and T8Suite.</summary>
     public virtual Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => null;
 

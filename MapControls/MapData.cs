@@ -36,9 +36,13 @@ public sealed class MapData
     /// <summary>One value per column / data row (the corrected axis symbol values), null if unknown.</summary>
     public double[]? XAxis { get; set; }
 
-    /// <summary>The X axis in the Easy view's units where they aren't its values (T5Suite's MAP axis in bar), two decimals: the Easy view's
-    /// column headers and the 3D graph's axis; null where they are.</summary>
+    /// <summary>The X axis in the Easy view's units where they aren't its values (T5Suite's MAP axis in bar) or want two decimals (the log
+    /// matrix's), two decimals: the Easy view's column headers and the 3D graph's axis; null where they are.</summary>
     public double[]? XEasy { get; set; }
+
+    /// <summary>The Y axis as <see cref="XEasy"/> (the log matrix's breakpoints): the Easy view's row headers, the 3D graph's and the 2D
+    /// graph's axis with two decimals; null: its values.</summary>
+    public double[]? YEasy { get; set; }
 
     /// <summary>The X axis as stored where its values are sensor scaled (T5's 3.0 to 5.0 bar MAP axis): the Hex view's headers, as
     /// T5Suite's; null where they are the values.</summary>
@@ -82,6 +86,9 @@ public sealed class MapData
 
     /// <summary>The Easy view shows such a value of 0 as empty: T5Suite's feedback and error AFR maps, where 0 is a cell without samples.</summary>
     public bool BlankZero { get; set; }
+
+    /// <summary>The Easy view's text of a data index where the raw value can't hold it (the log matrix's means with two decimals); null: from raw.</summary>
+    public Func<int, string>? EasyText { get; set; }
 
     /// <summary>True once anything changed since load or <see cref="MarkSaved"/>.</summary>
     public bool Mutated { get; private set; }
@@ -228,7 +235,16 @@ public sealed class MapData
 
     // ---- text, as MapViewerEx shows and parses cells ----
 
-    public string FormatCell(int index, MapViewType view) => Format(m_raw[index], view);
+    public string FormatCell(int index, MapViewType view) =>
+        view == MapViewType.Easy && EasyText != null ? EasyText(index) : Format(m_raw[index], view);
+
+    /// <summary>
+    /// A float as the old suites printed it on .NET Framework: 7 significant digits, a half rounded away from zero (.NET 10 gives
+    /// 0.625f "0.62" and 14.5f "14" with F2 / F0, T5Suite showed 0.63 and 15). Decimal keeps the 7 digits and rounds that way.
+    /// </summary>
+    public static string Fixed(float v, string format) => float.IsFinite(v) && Math.Abs(v) < 1e28f
+        ? ((decimal)v).ToString(format, CultureInfo.CurrentCulture)
+        : v.ToString(format, CultureInfo.CurrentCulture);
 
     public string Format(int raw, MapViewType view)
     {
@@ -244,10 +260,10 @@ public sealed class MapData
                 if (Factor != 1 || Offset != 0)
                 {
                     float v = (float)raw * (float)Factor + (float)Offset;
-                    if (Name.StartsWith("Ign_map_0!") || Name.StartsWith("Ign_map_4!")) return v.ToString("F1", CultureInfo.CurrentCulture) + "°";
-                    if (Name.StartsWith("Reg_kon_mat")) return v.ToString("F0", CultureInfo.CurrentCulture) + "%";
+                    if (Name.StartsWith("Ign_map_0!") || Name.StartsWith("Ign_map_4!")) return Fixed(v, "F1") + "°";
+                    if (Name.StartsWith("Reg_kon_mat")) return Fixed(v, "F0") + "%";
                     if (BlankZero && v == 0) return "";
-                    return v.ToString(EasyFormat, CultureInfo.CurrentCulture);
+                    return Fixed(v, EasyFormat);
                 }
                 if (Name.StartsWith("Reg_kon_mat")) return raw.ToString("F0", CultureInfo.CurrentCulture) + "%";
                 return raw.ToString(CultureInfo.CurrentCulture);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia.Controls.ApplicationLifetimes;
 using SuiteApp.Services;
 using SuiteApp.ViewModels;
@@ -9,6 +10,18 @@ namespace SuiteApp;
 /// <summary>A suite's start (frmMain_Load / frmMain_Shown): its main window, the library's questions as dialogs, then the file.</summary>
 public static class SuiteStartup
 {
+    /// <summary>
+    /// Negative numbers with a plain '-' in every locale, as the old suites showed them on Windows: ICU (Linux, macOS) gives
+    /// Swedish, Norwegian and Finnish a typographic minus (U+2212). Called first in Main, so every thread formats with it.
+    /// </summary>
+    public static void UseHyphenMinus()
+    {
+        if (CultureInfo.CurrentCulture.NumberFormat.NegativeSign == "-") return;
+        var culture = (CultureInfo)CultureInfo.CurrentCulture.Clone();
+        culture.NumberFormat.NegativeSign = "-";
+        CultureInfo.CurrentCulture = CultureInfo.DefaultThreadCurrentCulture = culture;
+    }
+
     public static void Start(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteMainWindow window)
     {
         SymbolNumberConverter.Hex = vm.Settings.ShowAddressesInHex;

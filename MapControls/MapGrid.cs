@@ -151,7 +151,7 @@ public class MapGrid : Control
         MapData map = Map!;
         if (map.XAxis == null || col >= map.XAxis.Length) return col.ToString(CultureInfo.CurrentCulture);
         double x = map.XAxis[col];
-        if (ViewType == MapViewType.Easy && map.XEasy is { } easy && col < easy.Length) return easy[col].ToString("F2", CultureInfo.CurrentCulture);
+        if (ViewType == MapViewType.Easy && map.XEasy is { } easy && col < easy.Length) return MapData.Fixed((float)easy[col], "F2");
         if (ViewType == MapViewType.Hex)
         {
             double[] hex = map.XHex ?? map.XAxis;
@@ -167,6 +167,7 @@ public class MapGrid : Control
         MapData map = Map!;
         int i = map.UpsideDown ? (map.YAxis?.Length ?? 0) - 1 - displayRow : displayRow;
         if (map.YAxis == null || i < 0 || i >= map.YAxis.Length) return "";
+        if (ViewType == MapViewType.Easy && map.YEasy is { } easy && i < easy.Length) return MapData.Fixed((float)easy[i], "F2");
         double y = map.YAxis[i];
         return ViewType == MapViewType.Hex ? ((int)y & 0xFFFF).ToString("X4", CultureInfo.InvariantCulture) : y.ToString(CultureInfo.CurrentCulture);
     }
@@ -556,7 +557,7 @@ public class MapGrid : Control
         if (map == null || i < 0 || IsReadOnly || ViewType == MapViewType.Ascii) return;
         m_editing = true;
         m_input = typed ?? (ViewType == MapViewType.Easy
-            ? ((float)map.Scaled(map[i]) * (float)map.Factor + (float)map.Offset).ToString("F2", CultureInfo.CurrentCulture)
+            ? MapData.Fixed((float)map.Scaled(map[i]) * (float)map.Factor + (float)map.Offset, "F2")
             : map.FormatCell(i, ViewType));
         InvalidateVisual();
     }

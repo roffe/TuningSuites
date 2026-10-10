@@ -159,7 +159,11 @@ public abstract partial class MainWindowViewModel
         var colors = new SymbolColors(Registry);
         foreach (string name in selection.Selected)
             symbols.Add(new SymbolHelper { Varname = name, Color = colors.GetColorFromRegistry(name) });
-        var dif = new DifGenerator { AppSettings = Settings, WidebandSymbol = RealtimeRules.LogWorksWidebandSymbol(Settings), UseWidebandInput = false };
+        var dif = new DifGenerator
+        {
+            AppSettings = Settings, WidebandSymbol = RealtimeRules.LogWorksWidebandSymbol(Settings), UseWidebandInput = false,
+            ValueFormat = RealtimeRules.LogWorksFormat,
+        };
         dif.SetFilters(LoadLogFilters());
         bool interpolate = Settings.InterpolateLogWorksTimescale;
         if (dif.ConvertFileToDif(file, symbols, selection.FromTime, selection.ToTime, interpolate, interpolate))
@@ -181,7 +185,8 @@ public abstract partial class MainWindowViewModel
 
     /// <summary>
     /// The matrix in a read-only map viewer "Matrix [x : y : z] (Mean values)": table and 3D surface, y ascending upwards.
-    /// Values are stored signed 16-bit with a power-of-ten factor that fits the largest one; empty cells show 0.
+    /// Values are stored signed 16-bit with a power-of-ten factor that fits the largest one (the 3D graph's 0 for an empty cell); the
+    /// Easy view shows the values themselves, empty cells blank.
     /// </summary>
     public void ShowMatrix(List<RealtimeLogLine> lines, MatrixSelectionViewModel s)
     {
@@ -211,6 +216,9 @@ public abstract partial class MainWindowViewModel
         var map = new MapControls.MapData(title, data, LogMatrix.Size, true, 0x7FFF)
         {
             Factor = factor, UpsideDown = true, XAxis = m.X.Select(v => Math.Round(v, 2)).ToArray(), YAxis = m.Y.Select(v => Math.Round(v, 2)).ToArray(), XName = s.X!, YName = s.Y!, ZName = s.Z!,
+            // frmMatrixResult: the cells (from the values, 16 bits can't hold two decimals above 327), headers and 3D axes with two decimals
+            XEasy = m.X, YEasy = m.Y,
+            EasyText = i => m.Values[i / LogMatrix.Size, i % LogMatrix.Size] is var v && !double.IsNaN(v) ? MapControls.MapData.Fixed((float)v, "F2") : "",
         };
         ShowDocument(new MapViewerViewModel
         {

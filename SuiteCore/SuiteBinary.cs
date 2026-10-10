@@ -214,6 +214,9 @@ namespace CommonSuite
         /// <summary>The difference map of a bin compare takes the compare file's axes (T5Suite); T7Suite / T8Suite took the open file's.</summary>
         public virtual bool DifferenceAxesFromCompareFile => false;
 
+        /// <summary>Compare results' average difference is |current − other| (T5Suite); T7Suite / T8Suite showed it signed.</summary>
+        public virtual bool AbsoluteCompareAverage => false;
+
         /// <summary>The map viewer's math toolbar keeps w's fraction and rounds Easy results (T5Suite); T7Suite's rounds w and truncates.</summary>
         public virtual bool FractionalMath => false;
     }

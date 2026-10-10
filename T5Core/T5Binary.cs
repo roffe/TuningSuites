@@ -302,6 +302,9 @@ namespace Trionic5Tools
 
         public override bool DifferenceAxesFromCompareFile => true;
 
+        /// <summary>CompareSymbolToCurrentFile: Math.Abs of the averages' difference.</summary>
+        public override bool AbsoluteCompareAverage => true;
+
         /// <summary>
         /// MapViewerEx's Easy view column headers and 3D graph: a "MAP" axis in bar (× the sensor scale × 0.01 − 1), a "Pressure error
         /// (bar)" one × the sensor scale × 0.01, both with two decimals (the Decimal view shows the scaled values, the Hex view the raw ones).

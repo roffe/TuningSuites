@@ -132,9 +132,9 @@ public partial class MainWindow : SuiteMainWindow
             Vm.ShowInfo("This file has no 16-bit boost bias map, its range can't be changed");
             return;
         }
-        if (await Dialogs.Numbers(this, "Boost bias RPM range wizard",
-                "Please note that this wizard will adjust the actual code in your binary! The boost bias map then runs from 2500 rpm up to 2500 + step × 300 rpm.",
-                ("Axis step range", step, 5, 20, 1)) is { } v)
+        // frmBoostBiasWizard recalculated the range on every step: 2500 + step × 30 × 10
+        if (await Dialogs.Numbers(this, "Boost bias RPM range wizard", "Please note that this wizard will adjust the actual code in your binary!",
+                s => $"Result rpm from 2500 rpm upto {2500 + (int)s[0] * 300}", ("Axis step range", step, 5, 20, 1)) is { } v)
             await Vm.SetBoostBiasStepAsync((int)v[0]);
     }
 

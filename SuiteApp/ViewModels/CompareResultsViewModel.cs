@@ -106,8 +106,8 @@ public partial class CompareResultsViewModel : DocumentViewModel
         var sb = new StringBuilder("Symbol;Description;Length (bytes);Percentage of values different;Number of values different;Average difference;Symbolnumber #1;Symbolnumber #2;User description;Missing in original file;Missing in compare file;Category\n");
         foreach (CompareRow r in Rows.SourceCollection.Cast<CompareRow>())
         {
-            sb.AppendJoin(';', r.SymbolName, r.Description.Replace(';', ','), r.LengthBytes, r.Percentage.ToString("F1", CultureInfo.InvariantCulture),
-                r.Differences, r.AverageDifference.ToString("F1", CultureInfo.InvariantCulture), r.SymbolNumber1, r.SymbolNumber2, r.Userdescription.Replace(';', ','),
+            sb.AppendJoin(';', r.SymbolName, r.Description.Replace(';', ','), r.LengthBytes, Views.F1Converter.Text(r.Percentage, CultureInfo.InvariantCulture),
+                r.Differences, Views.F1Converter.Text(r.AverageDifference, CultureInfo.InvariantCulture), r.SymbolNumber1, r.SymbolNumber2, r.Userdescription.Replace(';', ','),
                 r.MissingInOriFile, r.MissingInCompareFile, r.Category).Append('\n');
         }
         File.WriteAllText(file, sb.ToString());

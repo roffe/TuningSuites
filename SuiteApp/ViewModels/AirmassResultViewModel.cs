@@ -162,7 +162,8 @@ public partial class AirmassResultViewModel : DocumentViewModel
         return PowerInKw ? AirmassResult.PowerKw(tq, rpm) : AirmassResult.Power(tq, rpm);
     }
 
-    private static string F(double? v, string format = "0") => v?.ToString(format, CultureInfo.CurrentCulture) ?? "";
+    // halves away from zero as the old suites' .NET Framework did: target AFR 0.85 × 14.7 shows 12.50, not 12.49
+    private static string F(double? v, string format = "0") => v is { } d ? ((decimal)d).ToString(format, CultureInfo.CurrentCulture) : "";
 
     /// <summary>The display mode's cell texts, the dyno graph and the compressor points.</summary>
     private void Redisplay()
@@ -180,7 +181,8 @@ public partial class AirmassResultViewModel : DocumentViewModel
                     2 => PowerShown(r, air, rpm).ToString(),
                     3 => F(r.InjectorDc(air, rpm) is { } dc ? Math.Min(dc, 100) : null),
                     4 => F(r.TargetLambda(air, rpm), "F2"),
-                    5 => F(r.TargetAfr(air, rpm), "F2"),
+                    // the old suites multiplied in float (λ 0.65 × 14.7 = 9.554999, shown 9.55)
+                    5 => r.TargetLambda(air, rpm) is { } l ? MapControls.MapData.Fixed((float)l * (r.Options.E85 ? 9.76f : 14.7f), "F2") : "",
                     6 => F(r.Egt(air, rpm)),
                     7 => F(r.FuelFlow(air, rpm), "F2"),
                     _ => air.ToString(),

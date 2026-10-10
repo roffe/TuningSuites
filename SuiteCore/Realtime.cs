@@ -113,6 +113,9 @@ namespace CommonSuite
         /// <summary>The wideband symbol Export logfile to LogWorks converts (T8Suite passed none).</summary>
         public virtual string LogWorksWidebandSymbol(AppSettings settings) => settings.WideBandSymbol;
 
+        /// <summary>The number format Export logfile to LogWorks writes a channel in (T7Suite and T8Suite: three decimals).</summary>
+        public virtual string LogWorksFormat(string symbol) => "F3";
+
         /// <summary>A row of the dashboard: the symbol's number, SRAM address and length from the bin; null when it has no such symbol.</summary>
         protected static RealtimeSymbol Row(SuiteBinary bin, string name, string description, double offset, double correction, double min, double max, int reload = 1)
         {

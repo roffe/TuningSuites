@@ -119,17 +119,18 @@ internal sealed class SurfaceAxes(Surface3D mesh)
         {
             zLabels = new string[ZDivisions + 1];
             for (int k = 0; k <= ZDivisions; k++)
-                zLabels[k] = (mesh.ZMin + (double)k / ZDivisions * mesh.ZRange).ToString("F" + mesh.ZPrec, CultureInfo.InvariantCulture);
+                zLabels[k] = (mesh.ZMin + (double)k / ZDivisions * mesh.ZRange).ToString("F" + mesh.ZPrec, CultureInfo.CurrentCulture);
         }
         Axis(context, inside, zBrush, 0, true, new(zCorner.X, zCorner.Y, 0), new(zCorner.X, zCorner.Y, zTop), mesh.ZLabel, zLabels,
             k => new(zCorner.X, zCorner.Y, (double)k / ZDivisions * zTop));
     }
 
-    private static string[] Labels(double[]? data, int n, int prec)
+    internal static string[] Labels(double[]? data, int n, int prec)
     {
         if (data == null || data.Length < n) return [];
         var labels = new string[n];
-        for (int i = 0; i < n; i++) labels[i] = data[i].ToString("F" + prec, CultureInfo.InvariantCulture);
+        // as the grid's headers print them (the old suites' charts too: the user's number format)
+        for (int i = 0; i < n; i++) labels[i] = MapData.Fixed((float)data[i], "F" + prec);
         return labels;
     }
 

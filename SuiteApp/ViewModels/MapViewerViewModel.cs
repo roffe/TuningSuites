@@ -162,7 +162,6 @@ public partial class MapViewerViewModel : DocumentViewModel
             XHex = xScale == 100 ? null : [.. stored.Select(v => (double)v)],
         };
 
-        int viewType = (int)settings.DefaultViewType;
         return new MapViewerViewModel
         {
             Owner = owner,
@@ -173,7 +172,7 @@ public partial class MapViewerViewModel : DocumentViewModel
             Address = address,
             IsReadOnly = readOnly,
             TitleOverride = title,
-            ViewType = viewType <= (int)MapViewType.Ascii ? (MapViewType)viewType : MapViewType.Easy,
+            ViewType = owner.DefaultMapView,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,

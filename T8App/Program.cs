@@ -6,7 +6,11 @@ namespace T8App;
 static class Program
 {
     [STAThread]
-    static void Main(string[] args) => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    static void Main(string[] args)
+    {
+        SuiteApp.SuiteStartup.UseHyphenMinus();
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     // also used by the Avalonia previewer
     public static AppBuilder BuildAvaloniaApp() =>

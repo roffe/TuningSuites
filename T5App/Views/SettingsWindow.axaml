@@ -55,10 +55,10 @@
                     <ToolTip.Tip><c:SuperTip Title="Advanced mode enabled" Text="If checked, all advanced topics will be visible. If you are not sure whether you need this, leave it unchecked." /></ToolTip.Tip>
                 </CheckBox>
                 <TextBlock Grid.Row="3" Grid.Column="1" Text="Default view type for maps">
-                    <ToolTip.Tip><c:SuperTip Title="Default view type for maps" Text="Lets you choose the view type a symbol's map opens in: hexadecimal, decimal or easy view, which shows the values converted with the map's factor and offset. Each mapviewer can still be switched to another view type." /></ToolTip.Tip>
+                    <ToolTip.Tip><c:SuperTip Title="Default view type for maps" Text="Lets you choose the view type a symbol's map opens in: decimal view, or easy view, which shows the values converted with the map's factor and offset. Hexadecimal view opens maps in easy view too. Each mapviewer can still be switched to another view type." /></ToolTip.Tip>
                 </TextBlock>
                 <ComboBox Grid.Row="3" Grid.Column="2" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" HorizontalAlignment="Stretch">
-                    <ToolTip.Tip><c:SuperTip Title="Default view type for maps" Text="Lets you choose the view type a symbol's map opens in: hexadecimal, decimal or easy view, which shows the values converted with the map's factor and offset. Each mapviewer can still be switched to another view type." /></ToolTip.Tip>
+                    <ToolTip.Tip><c:SuperTip Title="Default view type for maps" Text="Lets you choose the view type a symbol's map opens in: decimal view, or easy view, which shows the values converted with the map's factor and offset. Hexadecimal view opens maps in easy view too. Each mapviewer can still be switched to another view type." /></ToolTip.Tip>
                 </ComboBox>
                 <TextBlock Grid.Row="4" Grid.Column="1" Text="Color blind mode">
                     <ToolTip.Tip><c:SuperTip Title="Color blind mode" Text="Lets you choose a color scale for maps and their graphs that is easier to tell apart with color blindness, instead of the normal green, yellow and red. Open mapviewers change at once; red and white tables and maps opened while connected to the ECU keep their own colors." /></ToolTip.Tip>

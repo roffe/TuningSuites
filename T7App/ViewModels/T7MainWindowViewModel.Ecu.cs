@@ -116,7 +116,8 @@ public partial class T7MainWindowViewModel
             IsAfrMap = true,
             SaveTo = target ? afr.SaveTarget : null,
             ReadFrom = target ? () => afr.Target : null,
-            ViewType = MapViewType.Easy,
+            // MapViewerFactory.Get(settings): the default view, as every other map
+            ViewType = DefaultMapView,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,

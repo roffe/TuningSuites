@@ -1329,7 +1329,7 @@ Every same-named symbol is copied, RAM-only ones included when the source flash 
 
 - **"Browse the library"** (5550) and **"Lookup partnumber"** (4117) both open frmPartnumberLookup ("Partnumber lookup"); Lookup hides "Open this file" / "Compare to this file". Enter or the box button (frmPartNumberList) runs `PartNumberConverter.GetECUInfo(pn, "")`; unknown: "The entered partnumber was not recognized by T5Suite". Shows Carmodel, Engine type, Base boost, Max. boost (M), Max. boost (AUT), Power, Torque, Stage I/II/III boost ("<x> bar"), MYs ("from-upto"), Region, a "T5.2" label, checks "2.0L engine", "2.3L engine", "Aero", "Turbo engine", "Full pressure turbo", "High altitude file". Open / Compare are enabled when `Binaries\<pn>.BIN` exists. Open: close the project and open **the library file itself** (its checksum is never updated there); Compare: `CompareToFile`.
 - **frmPartNumberList** ("Partnumber list"): the `PartnumberCollection` table grouped by Carmodel / Enginetype; a partnumber cell is YellowGreen when its bin is in `Binaries` (16 MHz), Orange when it is a 20 MHz bin (32-byte code sequence); double-click or Close picks it. Legend "Available in library: 16 Mhz" / "20 Mhz".
-- **"User library"** (File actions, 11642, frmUserLibrary "User library browser"): "Add files" scans a folder recursively for 0x20000 / 0x40000 bins and caches a row each in `<StartupPath>\UserLib.xml` (Filename, Engine type, Stage from `DetermineTuningStage`, Injectors / E85 guessed from max injection × Inj_konst!, Eftersta_fak![13] > 170 or Inj_konst! > 26 → E85, Mapsensor, Torque, T7 BCV, Partnumber, SoftwareID, CPU, RAM locked); "Open selected", "Compare to selected" (only with a file open), "Clear library", "Close".
+- **"User library"** (File actions, 11642, frmUserLibrary "User library browser"): "Add files" scans a folder recursively for 0x20000 / 0x40000 bins and caches a row each in `<StartupPath>\UserLib.xml` (Filename, Engine type, Stage from `DetermineTuningStage`, Injectors / E85 guessed from max injection × Inj_konst!, Eftersta_fak![13] > 170 or Inj_konst! > 26 → E85, Mapsensor, Torque (Convert.ToInt32 of CalculateTorqueFromPressure, rounded), T7 BCV, Partnumber, SoftwareID, CPU, RAM locked); "Open selected", "Compare to selected" (only with a file open), "Clear library", "Close".
 - **"Browse tunes in internet repository"** (Online page, frmBrowseTunes): downloads `http://trionic.mobixs.eu/t5tunes/t5tunes.xml`; the site is gone.
 - **"VIN decoder"** (4111, frmDecodeVIN): T5's own `VINDecoder` (Trionic5Tools/VINDecoder.cs): only `YK1…` / `YS3…`; shows Body, Car model, Engine type, Make year, Plant, Series, Turbo ("---" first); no gearbox line and no check-digit line (T7 has both).
 
@@ -2294,8 +2294,9 @@ torque  = PressureToTorque.CalculateTorqueFromPressure(boost, footer TurboType) 
           extrapolated below 0.2, held above 2.0; tables Stock 160..460, TD04-15T 170..560, TD04-19T/GT28BB/GT28RS 210..620,
           GT3071R/HX35w 250..650, HX40w/S400 270..670, others 197.5..640 Nm)
 power   = torque × rpm / 7121  bhp (as T7)
-injDC   = T5 injection model (below) at p, rpm, IAT AD 163 (≈20 °C), 13 V
+injDC   = T5 injection model (below) at Convert.ToInt32(p), rpm, IAT AD 163 (≈20 °C), 13 V
 ```
+- p is a double: boost and torque use it unrounded (374 Nm on a 3.0 bar bin where integer scaling gives 372).
 - Three smooth lines over rpm: torque (data labels "0"), power, injector DC (labels "0.0"). The legend is cleared.
 - `Init2dGraph` (188) runs after the data is filled and renames the series wrongly ("Surface", "Torque (Nm)", "Injector DC" on torque, power, DC). It also appends 16 extra X values to the torque series.
 - No colours are set (the Nevron default stylesheet). Unlike T7 there are no lambda, EGT or fuel-flow lines and no compare file.
@@ -2375,8 +2376,8 @@ Modal "Fuel injection timing" (`CalculateInjectionTiming` 322, parameter handler
 
 **Grid:**
 - Rows: the chosen map's rpm axis, **highest at the top**; the row headers show rpm.
-- Columns: its load axis. Headers show `x × sensor factor × 0.01 − 1` as `F2` bar.
-- Each cell holds "ms/DC" from the injection model, at the selected IAT and voltage.
+- Columns: its load axis. Headers show `x × sensor factor × 0.01 − 1` as `F2` bar, computed in float (raw × 1.2F × 0.01F − 1); the cells scale the load with integer × 120 / 100.
+- Each cell holds "ms/DC" from the injection model as F2 text, at the selected IAT and voltage; CustomDrawCell shows that text parsed back, so 40.80 shows as 40.8 and 1.00 as 1.
 - Cell drawing: shows ms or DC; red background with alpha `min(255, |(int)ms| × 8)`; a 3 px green→red bar at the bottom, DC % of the cell width wide.
 
 **Parameters** (each recalculates):

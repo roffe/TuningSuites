@@ -145,6 +145,9 @@ namespace T5AppTest
                 CollectionAssert.Contains(rt.PolledNames.ToList(), "AD_EGR");
                 for (int i = 0; i < 3; i++)
                     rt.Apply(new RealtimeSample(DateTime.Now, [("Rpm", 3000), ("P_medel", 0.8), ("AD_EGR", 12.5), ("Pgm_status", 0)], 20, null));
+                // T5Suite's User defined grid: F2, Pgm_status in 16 hex digits
+                Assert.AreEqual(3000.ToString("F2", System.Globalization.CultureInfo.CurrentCulture), rt.Rows.Single(r => r.Name == "Rpm").ValueText);
+                Assert.AreEqual("0000000000000000", rt.Rows.Single(r => r.Name == "Pgm_status").ValueText);
                 vm.ShowAfrCommand.Execute("FeedbackAFR");
                 var feedback = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("FeedbackAFR", feedback.MapName);

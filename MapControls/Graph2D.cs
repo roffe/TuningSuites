@@ -108,7 +108,7 @@ public class Graph2D : Control
         double maxCalloutW = 0, calloutH = 0;
         for (int i = 0; i < n; i++)
         {
-            callouts[i] = Text(m_values[i].ToString("F" + m_valuePrec, CultureInfo.InvariantCulture), CalloutTextSize, Brushes.Black);
+            callouts[i] = Text(m_values[i].ToString("F" + m_valuePrec, CultureInfo.CurrentCulture), CalloutTextSize, Brushes.Black);
             maxCalloutW = Math.Max(maxCalloutW, callouts[i].Width + 2 * CalloutPadX);
             calloutH = Math.Max(calloutH, callouts[i].Height + 2 * CalloutPadY);
         }
@@ -133,7 +133,7 @@ public class Graph2D : Control
         double maxYLabelW = 0;
         for (int i = 0; i < ticks; i++)
         {
-            tickTexts[i] = Text((yStart + i * step).ToString("F" + decimals, CultureInfo.InvariantCulture), TickTextSize, fg);
+            tickTexts[i] = Text((yStart + i * step).ToString("F" + decimals, CultureInfo.CurrentCulture), TickTextSize, fg);
             maxYLabelW = Math.Max(maxYLabelW, tickTexts[i].Width);
         }
         double padLeft = maxYLabelW + AxisGapX + 4;
@@ -192,7 +192,7 @@ public class Graph2D : Control
         double maxXLabelW = 0;
         for (int i = 0; i < n; i++)
         {
-            xTexts[i] = Text(m_axis[i].ToString("F" + m_axisPrec, CultureInfo.InvariantCulture), TickTextSize, fg);
+            xTexts[i] = Text(m_axis[i].ToString("F" + m_axisPrec, CultureInfo.CurrentCulture), TickTextSize, fg);
             maxXLabelW = Math.Max(maxXLabelW, xTexts[i].Width);
         }
         int labelSkip = maxXLabelW + 6 > xStep ? (int)Math.Ceiling((maxXLabelW + 6) / xStep) : 1;

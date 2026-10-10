@@ -114,8 +114,17 @@ namespace T8AppTest
                     dialog.Close();
                     return System.Threading.Tasks.Task.FromResult(true);
                 };
+                // opening it from the symbol list shows the dialog (Cancel: nothing written)
+                var ok = vm.ShowBitmask;
+                bool routed = false;
+                vm.ShowBitmask = _ => { routed = true; return System.Threading.Tasks.Task.FromResult(false); };
                 vm.OpenSymbolCommand.Execute(sh);
-                await System.Threading.Tasks.Task.Delay(100);
+                for (int i = 0; i < 100 && !routed; i++) await System.Threading.Tasks.Task.Delay(50);
+                Assert.IsTrue(routed);
+                // Ok: awaited, so nothing reads the file while the write and the checksum update run (a reader blocks the update on
+                // Linux, a fixed delay failed under load)
+                vm.ShowBitmask = ok;
+                await vm.OpenBitMaskAsync(bin, sh);
                 Assert.IsNotNull(shown);
                 Assert.AreEqual(shown!.Value, bin.Read(address, 2) is var after ? after[0] << 8 | after[1] : -1);
                 Assert.AreNotEqual((before[0] << 8 | before[1]) & sh.BitMask, shown.Value & sh.BitMask);

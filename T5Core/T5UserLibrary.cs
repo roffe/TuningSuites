@@ -46,7 +46,8 @@ namespace Trionic5Tools
                 T5Binary bin = T5Binary.Open(file);
                 Trionic5Properties p = bin.File.GetTrionicProperties();
                 T5Reports.FileGuess g = T5Reports.Guess(bin);
-                int torque = (int)new PressureToTorque().CalculateTorqueFromPressure(g.MaxBoost, p.TurboType);
+                // frmUserLibrary rounded it (Convert.ToInt32): 0.9 bar gives 284.99999… and shows 285
+                int torque = Convert.ToInt32(new PressureToTorque().CalculateTorqueFromPressure(g.MaxBoost, p.TurboType));
                 return new Row(file, Path.GetFileName(file), p.Enginetype.Trim(), g.Stage.ToString(), g.Injectors.ToString(), g.Sensor.ToString(), torque, g.E85,
                     !g.T5Valve, p.Partnumber.Trim(), p.SoftwareID.Trim(), p.CPUspeed, p.RAMlocked);
             }
