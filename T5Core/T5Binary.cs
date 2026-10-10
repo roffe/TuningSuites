@@ -234,8 +234,6 @@ namespace Trionic5Tools
 
         private static readonly TuningItem[] s_tuningMenu =
         [
-            new("Diagnostics", Children: [new("DTC Reader", Tool: "faultcodes"), new("Pgm_status", Tool: "enginestatus")]),
-            new("Options", Children: [new("Pgm_mod!", Tool: "firmware")]),
             new("Injection [Fuel]", Children:
             [
                 new("VE map - normal", ["Inj_map_0!", "Insp_mat!"]),

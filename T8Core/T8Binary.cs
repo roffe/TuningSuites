@@ -406,7 +406,6 @@ namespace T8SuitePro
             TuningItem[] e85Limits = e85 ? [new("FFTrqCal.FFTrq_MaxEngineTab1"), new("FFTrqCal.FFTrq_MaxEngineTab2")] : [];
             return
             [
-                new("Diagnostics", Children: [new("DTC Reader", Tool: "faultcodes"), new("Firmware info edit", Tool: "firmware")]),
                 new("Airmass", Children:
                 [
                     new("Max airmass map (manual)", ["BstKnkCal.MaxAirmass"]),

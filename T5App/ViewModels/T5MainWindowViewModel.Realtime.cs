@@ -126,15 +126,6 @@ public partial class T5MainWindowViewModel
 
     protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) => new T5RealtimeViewModel(this, (T5Binary)bin);
 
-    /// <summary>The realtime panel on its Engine status tab (Pgm_status' LEDs), opened and started when it isn't.</summary>
-    public void ShowEngineStatus()
-    {
-        if (Realtime is not { HasStarted: true }) ToggleRealtimePanelCommand.Execute(null);
-        if (Realtime is not T5RealtimeViewModel rt) return;
-        rt.SelectedTab = (int)T5RealtimeTab.EngineStatus;
-        SelectedViewer = rt;
-    }
-
     // ---- realtime user maps ----
 
     private ObservableCollection<UserMap>? m_userMaps;

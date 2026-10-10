@@ -103,9 +103,7 @@
             </MenuItem>
             <!-- the Tuning Wizard, then txlogger's T8 menu with the maps the bin has (built in code) -->
             <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}">
-                <MenuItem Header="Tuning wizards">
-                    <MenuItem Header="Tuning Wizard" Click="OnTuningWizard" />
-                </MenuItem>
+                <MenuItem Header="Tuning Wizard" Click="OnTuningWizard" />
             </MenuItem>
             <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
             <MenuItem Header="_Realtime">

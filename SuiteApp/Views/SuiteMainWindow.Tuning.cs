@@ -236,9 +236,6 @@ public partial class SuiteMainWindow
 
     private List<object?>? m_tuningItems;
 
-    /// <summary>The Tuning menu's tool entries (txlogger's own windows): the click of the suite's menu item for it, null for none.</summary>
-    protected virtual EventHandler<RoutedEventArgs>? TuningTool(string tool) => tool == "faultcodes" ? OnFaultCodes : null;
-
     // the menu's own items (the tuning wizards), then txlogger's menu for the ECU with what this bin and suite have
     private void BuildTuningMenu()
     {
@@ -250,7 +247,7 @@ public partial class SuiteMainWindow
             foreach (MenuItem item in TuningItems(bin, bin.TuningMenu())) menu.Items.Add(item);
     }
 
-    // left out: a map the bin has under none of its names, one opening what an entry above it does, a tool the suite lacks, an empty submenu
+    // left out: a map the bin has under none of its names, one opening what an entry above it does, an empty submenu
     private List<MenuItem> TuningItems(SuiteBinary bin, IEnumerable<TuningItem> entries)
     {
         var items = new List<MenuItem>();
@@ -262,11 +259,6 @@ public partial class SuiteMainWindow
             {
                 foreach (MenuItem child in TuningItems(bin, entry.Children)) item.Items.Add(child);
                 if (item.Items.Count == 0) continue;
-            }
-            else if (entry.Tool != null)
-            {
-                if (TuningTool(entry.Tool) is not { } click) continue;
-                item.Click += click;
             }
             else
             {

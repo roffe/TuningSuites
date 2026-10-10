@@ -198,8 +198,8 @@ namespace T8AppTest
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 // the wizard first in the Tuning menu, txlogger's menu after it
                 var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                Assert.AreEqual("Tuning wizards", ((MenuItem)tuning.Items[0]!).Header);
-                Assert.AreEqual("Diagnostics", ((MenuItem)tuning.Items[1]!).Header);
+                Assert.AreEqual("Tuning Wizard", ((MenuItem)tuning.Items[0]!).Header);
+                Assert.AreEqual("Airmass", ((MenuItem)tuning.Items[1]!).Header);
 
                 // an old calibration: the OLD and BOTH packs
                 TuningWizardViewModel wizard = vm.TuningWizard()!;

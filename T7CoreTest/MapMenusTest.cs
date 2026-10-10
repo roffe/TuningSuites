@@ -22,14 +22,12 @@ namespace T7CoreTest
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file);
                 var bin = T7Binary.Open(file, 0, false);
                 string[] Maps(string menu, string caption) => bin.TuningMenu().Single(i => i.Caption == menu).Children.Single(i => i.Caption == caption).Maps(bin);
-                CollectionAssert.AreEqual(new[] { "Actions", "Diagnostics", "Calibration", "Injectors", "Airmass", "Fuel", "Ignition", "Boost", "Knock", "Limiters", "Adaption", "Myrtilos" },
+                CollectionAssert.AreEqual(new[] { "Diagnostics", "Calibration", "Injectors", "Airmass", "Fuel", "Ignition", "Boost", "Knock", "Limiters", "Adaption", "Myrtilos" },
                     bin.TuningMenu().Select(i => i.Caption).ToArray());
                 CollectionAssert.AreEqual(new[] { "BFuelCal.Map" }, Maps("Fuel", "VE map"));
                 Assert.IsEmpty(Maps("Ignition", "Ignition for E85"));
-                // EA1WF0: start ignition by air temperature only; a petrol bin's Common for tuning without the BioPower switch
+                // EA1WF0: start ignition by air temperature only
                 CollectionAssert.AreEqual(new[] { "IgnStartCal.fi_StartTab" }, Maps("Ignition", "Ignition Start"));
-                CollectionAssert.AreEqual(new[] { "AdpFuelCal.T_AdaptLim", "FCutCal.ST_Enable", "LambdaCal.ST_Enable", "PurgeCal.ST_PurgeEnable", "TorqueCal.M_BrakeLimit" },
-                    Maps("Fuel", "Common for tuning"));
 
                 string xml = Path.Combine(dir, "mymaps.xml");
                 MapMenus.AddToMyMaps(xml, "IgnNormCal.Map");

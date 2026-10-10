@@ -90,7 +90,7 @@ namespace T8CoreTest
             Assert.IsNull(Maps(flexFuelOff, "Torque", "FFTrqCal.FFTrq_MaxEngineTab2"));
             Assert.IsNotNull(flexFuelOff.Find("FFTrqCal.FFTrq_MaxEngineTab2"));
             CollectionAssert.AreEqual(new[] { "FFTrqCal.FFTrq_MaxEngineTab2" }, Maps(bio, "Torque", "FFTrqCal.FFTrq_MaxEngineTab2"));
-            CollectionAssert.AreEqual(new[] { "Diagnostics", "Airmass", "Torque", "Injectors", "Fuel", "Boost", "Ignition", "Pedal" },
+            CollectionAssert.AreEqual(new[] { "Airmass", "Torque", "Injectors", "Fuel", "Boost", "Ignition", "Pedal" },
                 bio.TuningMenu().Select(i => i.Caption).ToArray());
         }
 

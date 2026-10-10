@@ -51,7 +51,6 @@ public partial class MainWindow : SuiteMainWindow
     }
 
     // txlogger's Firmware info edit: T8Suite's Firmware information (VIN, immobilizer code and software version)
-    protected override System.EventHandler<RoutedEventArgs>? TuningTool(string tool) => tool == "firmware" ? OnFirmwareInformation : base.TuningTool(tool);
 
     private async void OnFirmwareInformation(object? sender, RoutedEventArgs e)
     {

@@ -20,7 +20,7 @@ namespace T5AppTest
             return menu;
         }
 
-        /// <summary>The Tuning menu is txlogger's T5 menu after the wizards: T5.2's maps by its own names, T5Suite's tools.</summary>
+        /// <summary>The Tuning menu is txlogger's T5 map menus after the wizards: T5.2's maps by its own names.</summary>
         [TestMethod]
         public void TuningMenuIsTxloggersWithTheBinsMaps()
         {
@@ -32,7 +32,7 @@ namespace T5AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(t55, true));
                 var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                CollectionAssert.AreEqual(new[] { "Tuning wizards", "Diagnostics", "Options", "Injection [Fuel]", "Ignition", "Turbo control [M]", "Turbo control [A]",
+                CollectionAssert.AreEqual(new[] { "Tuning wizards", "Injection [Fuel]", "Ignition", "Turbo control [M]", "Turbo control [A]",
                     "Knock detection", "Warmup", "Idle" }, Headers(tuning));
                 string Opened(MenuItem item)
                 {
@@ -46,22 +46,6 @@ namespace T5AppTest
                 Assert.AreEqual("Knock_ref_matrix!", Opened(TuningEntry(tuning, "Knock detection", "Knock sensitivity map")));
                 CollectionAssert.AreEqual(new[] { "Boost request map", "Boost control bias", "P factors", "I factors", "D factors", "Boost limit in 1st gear",
                     "Boost limit in 2nd gear" }, Headers(TuningEntry(tuning, "Turbo control [M]")));
-
-                // Pgm_status: the realtime panel's Engine status tab (no adapter: it doesn't poll); Pgm_mod!: Firmware information
-                CollectionAssert.AreEqual(new[] { "DTC Reader", "Pgm__status" }, Headers(TuningEntry(tuning, "Diagnostics")));
-                vm.Settings.Adapter = "";
-                TuningEntry(tuning, "Diagnostics", "Pgm_status").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-                var rt = (T5RealtimeViewModel)vm.Realtime!;
-                Assert.AreEqual((int)T5RealtimeTab.EngineStatus, rt.SelectedTab);
-                Assert.AreSame(rt, vm.SelectedViewer);
-                Assert.IsTrue(rt.HasStarted);
-                Assert.IsTrue(await vm.CloseViewerAsync(rt));
-                TuningEntry(tuning, "Options", "Pgm_mod!").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
-                // (next to the panel's message that there is no adapter)
-                var options = window.OwnedWindows.OfType<FirmwareOptionsWindow>().Single();
-                options.Close(false);
-                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 
                 // T5.2: the automatic 1st gear limit and the knock reference by their T5.2 names, no manual gear limits or retard limit
                 Assert.IsTrue(await vm.OpenPlainFileAsync(t52, true));

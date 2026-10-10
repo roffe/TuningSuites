@@ -40,14 +40,6 @@ public partial class MainWindow : SuiteMainWindow
 
     private async void OnFirmwareOptions(object? sender, RoutedEventArgs e) => await Vm.EditFirmwareAsync();
 
-    // txlogger's Pgm_status LEDs and Pgm_mod! switches: the realtime panel's Engine status and Firmware information
-    protected override System.EventHandler<RoutedEventArgs>? TuningTool(string tool) => tool switch
-    {
-        "enginestatus" => (_, _) => Vm.ShowEngineStatus(),
-        "firmware" => OnFirmwareOptions,
-        _ => base.TuningTool(tool),
-    };
-
     // an action picked in the partnumber's lookup closes the dialog unchanged first (frmEasyFirmwareSettings' Abort)
     private async System.Threading.Tasks.Task<bool> ShowFirmwareOptions(FirmwareOptionsViewModel options)
     {

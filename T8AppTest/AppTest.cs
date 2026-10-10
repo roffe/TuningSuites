@@ -189,8 +189,8 @@ namespace T8AppTest
 
                 // the Tuning menu (txlogger's T8 menu) opening the maps of an old calibration
                 var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                // after the Tuning Wizard and Diagnostics
-                var airmass = (MenuItem)quick.Items[2]!;
+                // after the Tuning Wizard
+                var airmass = (MenuItem)quick.Items[1]!;
                 Assert.AreEqual("Airmass", airmass.Header);
                 var manual = (MenuItem)airmass.Items[0]!;
                 Assert.AreEqual("Max airmass map (manual)", manual.Header);

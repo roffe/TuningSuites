@@ -379,10 +379,8 @@ namespace T7
 
         private static readonly TuningItem[] s_tuningMenu =
         [
-            new("Actions", Children: [new("Firmware information", Tool: "firmware")]),
             new("Diagnostics", Children:
             [
-                new("DTC Reader", Tool: "faultcodes"),
                 new("F_KnkDetAdap.FKnkCntMap", Ecu: true),
                 new("F_KnkDetAdap.RKnkCntMap", Ecu: true),
                 new("KnkDetAdap.KnkCntMap", Ecu: true),
@@ -390,7 +388,6 @@ namespace T7
             ]),
             new("Calibration", Children:
             [
-                new("ESP Calibration", Tool: "esp"),
                 new("AirCompCal.PressMap"),
                 new("AirCtrlCal.map"),
                 new("AreaCal.Area"),
@@ -456,7 +453,6 @@ namespace T7
                 new("Enrichment factor during starting", ["StartCal.EnrFacTab", "StartCal.EnrFacManTAB|StartCal.EnrFacAutTAB"]),
                 new("Enrichment factor during starting E85", ["StartCal.EnrFacE85Tab"]),
                 new("Enable closed loop regulation", ["LambdaCal.ST_Enable"]),
-                new("Common for tuning", ["AdpFuelCal.T_AdaptLim|E85Cal.ST_Enable|FCutCal.ST_Enable|LambdaCal.ST_Enable|PurgeCal.ST_PurgeEnable|TorqueCal.M_BrakeLimit"]),
                 new("Injection end angles", ["InjAnglCal.Map"]),
             ]),
             new("Ignition", Children:
@@ -471,7 +467,6 @@ namespace T7
             ]),
             new("Boost", Children:
             [
-                new("Boost regulation overview", ["BoostCal.RegMap|BoostCal.PMap|BoostCal.IMap|BoostCal.DMap"]),
                 new("Boost calibration", ["BoostCal.RegMap"]),
                 new("P factor", ["BoostCal.PMap"]),
                 new("I factor", ["BoostCal.IMap"]),

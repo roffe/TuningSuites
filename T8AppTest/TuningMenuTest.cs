@@ -22,7 +22,7 @@ namespace T8AppTest
 
         /// <summary>
         /// The Tuning menu is txlogger's T8 menu after the wizard: the newer calibration's shared limiters in place of the old one's
-        /// manual and automatic ones, the latest BioPower software's jerk enrichment by temperature, T8Suite's tools.
+        /// manual and automatic ones, the latest BioPower software's jerk enrichment by temperature.
         /// </summary>
         [TestMethod]
         public void TuningMenuIsTxloggersWithTheBinsMaps()
@@ -42,7 +42,7 @@ namespace T8AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(old, true));
                 var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                CollectionAssert.AreEqual(new[] { "Tuning wizards", "Diagnostics", "Airmass", "Torque", "Injectors", "Fuel", "Boost", "Ignition", "Pedal" }, Headers(tuning));
+                CollectionAssert.AreEqual(new[] { "Tuning Wizard", "Airmass", "Torque", "Injectors", "Fuel", "Boost", "Ignition", "Pedal" }, Headers(tuning));
                 string Opened(MenuItem item)
                 {
                     item.Command!.Execute(item.CommandParameter);
@@ -57,14 +57,8 @@ namespace T8AppTest
                 CollectionAssert.AreEqual(new[] { "Nominal torque map", "Airmass torque map", "Ambient pressure trq limiter", "Trq limit in overboost",
                     "Trq limit manual 150hp", "Trq limit manual 175+hp", "Trq limit auto 150hp", "Trq limit auto 175+hp", "Manual gear trq limit", "RPM limiter" },
                     Headers(TuningEntry(tuning, "Torque")));
-                // Edit Parameters, NVDM editor and Rescale AccPedalMap have no T8Suite feature; Firmware info edit is Firmware information
-                CollectionAssert.AreEqual(new[] { "DTC Reader", "Firmware info edit" }, Headers(TuningEntry(tuning, "Diagnostics")));
+                // Rescale AccPedalMap has no T8Suite feature
                 CollectionAssert.AreEqual(new[] { "Pedal position map", "Torque request map" }, Headers(TuningEntry(tuning, "Pedal")));
-                TuningEntry(tuning, "Diagnostics", "Firmware info edit").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
-                var dialog = (FirmwareInfoWindow)window.OwnedWindows.Single();
-                dialog.Close(false);
-                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 
                 // FE: one limiter and max airmass map for both gearboxes, shown once; its E85 limiters stay out (FlexFuel off)
                 Assert.IsTrue(await vm.OpenPlainFileAsync(fe, true));

@@ -34,14 +34,6 @@ public partial class MainWindow : SuiteMainWindow
         };
     }
 
-    // txlogger's Firmware information and ESP Calibration: T7Suite's own
-    protected override System.EventHandler<RoutedEventArgs>? TuningTool(string tool) => tool switch
-    {
-        "firmware" => OnFirmwareInformation,
-        "esp" => OnEsp,
-        _ => base.TuningTool(tool),
-    };
-
     private async void OnFirmwareInformation(object? sender, RoutedEventArgs e)
     {
         if (Vm.FirmwareInfo() is not { } info) return;
