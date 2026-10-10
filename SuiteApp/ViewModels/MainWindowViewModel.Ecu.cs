@@ -191,7 +191,9 @@ public abstract partial class MainWindowViewModel
             ProgressText = "Could not read SRAM";
             return;
         }
-        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(v => v.MapName == viewer.MapName && !v.IsReadOnly))
+        // the same file's viewers of the map; another one with unsaved edits keeps them
+        foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>()
+                     .Where(v => v.MapName == viewer.MapName && !v.IsReadOnly && v.FileName == viewer.FileName && (v == viewer || !v.Map.Mutated)))
         {
             if (data.Length == v.Map.Count * (v.Map.SixteenBit ? 2 : 1)) v.Map.Load(data);
             v.OnlineMode = true;

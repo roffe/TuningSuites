@@ -20,7 +20,6 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     private double m_lastTps = double.NaN;
     private DateTime m_tpsHold;
     private AFRMaps? m_tuning;
-    private bool m_lambdaWasOn;
 
     public T5RealtimeViewModel(T5MainWindowViewModel owner, T5Binary bin) : base(owner, bin, T5Realtime.Rules, new T5RealtimeEngine(owner.Ecu))
     {
@@ -73,7 +72,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     // the switches as the ECU's Pgm_mod! has them; a byte the symbol lacks hides its switch's use (Knock control on short tables)
     private async Task RefreshTogglesAsync()
     {
-        if (m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm) return;
+        if (m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm || !Plausible(pgm)) return;
         for (int i = 0; i < PgmModBits.Length; i++)
         {
             var (_, index, mask, inverted) = PgmModBits[i];
@@ -86,7 +85,13 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     private async Task ToggleAsync(EcuToggle toggle)
     {
         int i = Toggles.IndexOf(toggle);
-        if (i < 0 || !IsRunning || m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm) return;
+        if (i < 0 || !IsRunning || m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod) return;
+        // a read that came back as zeros would switch everything off when written back
+        if (await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm || !Plausible(pgm))
+        {
+            m_t5.ShowInfo("Could not read Pgm_mod! from the ECU, nothing was changed");
+            return;
+        }
         var (_, index, mask, _) = PgmModBits[i];
         if (index >= pgm.Length) return;
         pgm[index] ^= (byte)mask;
@@ -163,7 +168,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         T5Ecu ecu = m_t5.Ecu;
         m_t5.ProgressText = "Starting ignition autotune...";
         maps.InitAutoTuneVars(true);
-        if (await ecu.ReadMapAsync(ign) is not { Length: > 1 } map)
+        if (await ecu.ReadMapAsync(ign) is not { Length: > 1 } map || !Plausible(map))
         {
             m_t5.ShowInfo("Could not read the ignition map from the ECU");
             return;
@@ -200,7 +205,15 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         m_t5.ProgressText = "Autotune ignition running...";
     }
 
-    private static int[] Words(byte[] d) => Enumerable.Range(0, d.Length / 2).Select(i => d[i * 2] << 8 | d[i * 2 + 1]).ToArray();
+    // signed: T5Suite's ByteArrayToIntArray read −1.0° as 65526, which the autotune then "advanced" straight to the global maximum
+    private static int[] Words(byte[] d) =>
+        Enumerable.Range(0, d.Length / 2).Select(i => d[i * 2] << 8 | d[i * 2 + 1]).Select(v => v > 32767 ? v - 65536 : v).ToArray();
+
+    /// <summary>
+    /// A read worth acting on: TrionicCANLib's readRAM gives zeros when the ECU doesn't answer, and no map, Pgm_mod! or fuel trim is
+    /// all zeros. ponytail: a zeroed part of a map still passes; a null-on-timeout readRAM in the library would close that.
+    /// </summary>
+    private static bool Plausible(byte[]? d) => d is { Length: > 0 } && d.Any(b => b != 0);
 
     private static byte[] Bytes(int[] words) => words.SelectMany(w => new[] { (byte)(w >> 8), (byte)w }).ToArray();
 
@@ -268,26 +281,20 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         T5Ecu ecu = m_t5.Ecu;
         try
         {
-            // closed loop off while tuning ("Disable closed loop on starting autotune")
-            if (m_bin.Find("Pgm_mod!") is { Start_address: > 0 } mod && await ecu.ReadMapAsync(mod) is { Length: > 0 } pgm)
-            {
-                m_lambdaWasOn = (pgm[0] & 0x10) != 0;
-                if (s.DisableClosedLoopOnStartAutotune && m_lambdaWasOn) await ecu.WriteForcedAsync((int)mod.Start_address, [(byte)(pgm[0] & ~0x10)]);
-            }
-            maps.InitAutoTuneVars(false);
-            if (await ecu.ReadMapAsync(fuel) is not { Length: > 0 } map)
+            if (await ecu.ReadMapAsync(fuel) is not { } map || !Plausible(map))
             {
                 m_t5.ShowInfo("Could not read the fuel map from the ECU");
                 return;
             }
-            // T5.5: the adaption folded into Insp_mat! first, the adaption back to neutral
-            if (m_bin.IsTrionic55 && m_bin.Find("Adapt_korr!") is { Start_address: > 0 } adapt && await ecu.ReadMapAsync(adapt) is { } a && a.Any(b => b != 0x80))
+            // closed loop off while tuning ("Disable closed loop on starting autotune"); the byte is kept to put back at the end.
+            // T5Suite's T5.5 branch also meant to fold Adapt_korr into Insp_mat! first, but looked it up without the "!" and never did.
+            if (s.DisableClosedLoopOnStartAutotune && m_bin.Find("Pgm_mod!") is { Start_address: > 0 } mod && await ecu.ReadMapAsync(mod) is { } pgm && Plausible(pgm)
+                && (pgm[0] & 0x10) != 0)
             {
-                m_t5.ProgressText = "Updating fuelmaps...";
-                for (int i = 0; i < Math.Min(map.Length, a.Length); i++) map[i] = (byte)Math.Clamp(map[i] * a[i] / 128, 1, 254);
-                await ecu.WriteForcedAsync((int)fuel.Start_address, map);
-                await ecu.WriteForcedAsync((int)adapt.Start_address, Enumerable.Repeat((byte)0x80, a.Length).ToArray());
+                m_closedLoopByte = pgm[0];
+                await ecu.WriteForcedAsync((int)mod.Start_address, [(byte)(pgm[0] & ~0x10)]);
             }
+            maps.InitAutoTuneVars(false);
             if (m_t5.T5Settings.ResetFuelTrims)
             {
                 if (m_bin.Find("Adapt_injfaktor!") is { Start_address: > 0 } ltft) await ecu.WriteForcedAsync((int)ltft.Start_address, Neutral(ltft));
@@ -321,11 +328,34 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         }
         finally
         {
+            // a start that failed after closed loop went off puts it back
+            if (m_tuning == null) await RestoreClosedLoopAsync();
             IsAutotuning = m_tuning != null;
             AutotuneCaption = IsAutotuning ? "Tuning..." : "Autotune fuel";
             m_t5.ProgressText = IsAutotuning ? "Autotune fuel running..." : "Autotune fuel not started";
         }
     }
+
+    // Pgm_mod![0] as it was when the autotune switched closed loop off; null when it didn't
+    private byte? m_closedLoopByte;
+
+    /// <summary>Closed loop back on, from the byte read at the start (a read now could come back as zeros and switch everything off).</summary>
+    private async Task RestoreClosedLoopAsync()
+    {
+        if (m_closedLoopByte is not { } original || m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod) return;
+        byte[]? now = await m_t5.Ecu.ReadMapAsync(mod);
+        await m_t5.Ecu.WriteForcedAsync((int)mod.Start_address, [Plausible(now) ? (byte)(now![0] | 0x10) : original]);
+        m_closedLoopByte = null;
+    }
+
+    /// <summary>Stops a running autotune (fuel and ignition) while the ECU is still there: before a disconnect, a flash or closing.</summary>
+    public async Task StopAutotunesAsync()
+    {
+        if (m_tuning != null) await StopAutotuneAsync();
+        if (m_ignition != null) await StopIgnitionAutotuneAsync();
+    }
+
+    public bool IsAnyAutotuning => m_tuning != null || m_ignition != null;
 
     // the fuel trims' neutral value
     private static byte[] Neutral(SymbolHelper sh) => Enumerable.Repeat((byte)128, sh.Length).ToArray();
@@ -359,15 +389,18 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         T5Ecu ecu = m_t5.Ecu;
         try
         {
-            if (s.DisableClosedLoopOnStartAutotune && m_lambdaWasOn && m_bin.Find("Pgm_mod!") is { Start_address: > 0 } mod
-                && await ecu.ReadMapAsync(mod) is { Length: > 0 } pgm)
-                await ecu.WriteForcedAsync((int)mod.Start_address, [(byte)(pgm[0] | 0x10)]);
+            await RestoreClosedLoopAsync();
             byte[] original = maps.GetOriginalFuelmap();
-            byte[]? keep = null;
+            byte[]? keep = null, keepIdle = null;
             if (s.AutoUpdateFuelMap)
             {
                 bool? answer = m_t5.AskYesNoCancel == null ? true : await m_t5.AskYesNoCancel("Keep adjusted fuel map?");
-                if (answer == true) keep = await ecu.ReadMapAsync(fuel);
+                // the tuned maps as the autotune wrote them into SRAM (T5Suite read SRAM again, which can come back as zeros)
+                if (answer == true)
+                {
+                    keep = maps.GetCurrentlyMutatedFuelMap();
+                    if (s.AllowIdleAutoTune) keepIdle = maps.GetIdleCurrentlyMutatedFuelMap();
+                }
                 else if (answer == false)
                 {
                     await ecu.WriteForcedAsync((int)fuel.Start_address, original);
@@ -388,6 +421,9 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             {
                 int before = m_t5.TransactionLog?.TransCollection.Count ?? 0;
                 m_bin.WriteData(address, keep, m_t5.TransactionLog, "Autotune fuel");
+                if (keepIdle is { Length: > 0 } && m_bin.Find("Idle_fuel_korr!") is { } idleMap && m_bin.FileAddress(idleMap) is var idleAddress and >= 0
+                    && keepIdle.Length == idleMap.Length)
+                    m_bin.WriteData(idleAddress, keepIdle, m_t5.TransactionLog, "Autotune fuel (idle)");
                 if (s.AutoChecksum) m_bin.UpdateChecksum();
                 m_t5.TransactionsAdded(before);
                 m_t5.RefreshViewers(m_bin.FileName);

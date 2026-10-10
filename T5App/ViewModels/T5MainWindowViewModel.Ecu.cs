@@ -18,7 +18,8 @@ public partial class T5MainWindowViewModel
 
     protected override bool EcuConnected => Ecu.IsConnected;
 
-    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished before closing T5Suite." : null;
+    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished before closing T5Suite."
+        : Realtime is T5RealtimeViewModel { IsAnyAutotuning: true } ? "Stop the autotune before closing T5Suite: it puts closed loop and the maps back." : null;
 
     public override void Shutdown() => Ecu.Dispose();
 
@@ -34,9 +35,10 @@ public partial class T5MainWindowViewModel
     protected override async Task<string?> ConnectEcuAsync()
     {
         if (await Ecu.ConnectAsync(Settings, IsT52) is not { } sw) return null;
+        // another software: no sync offer, it would write every map at the file's SRAM addresses (Synchronize maps still can)
         if (Binary is T5Binary bin && bin.File.GetSoftwareVersion().Trim() is var fileSw && fileSw != "" && !sw.EndsWith(fileSw) && !fileSw.EndsWith(sw))
             ShowInfo($"The ECU runs software {sw}, the open file is {fileSw}. Maps are read and written at the file's SRAM addresses.");
-        _ = OfferSyncAsync();
+        else _ = OfferSyncAsync();
         return "Connected: " + sw;
     }
 
@@ -95,18 +97,31 @@ public partial class T5MainWindowViewModel
         if (T5 is not { } bin) return;
         Project?.Logbook.WriteLogbookEntry(LogbookEntryType.SynchronizationStarted, toFile ? "ECU to binary" : "binary to ECU");
         var maps = bin.Symbols.Cast<SymbolHelper>().Where(sh => sh.Start_address > 0 && sh.Length > 0 && bin.FileAddress(sh) >= 0).ToList();
-        for (int i = 0; i < maps.Count && EcuConnected; i++)
+        int done = 0;
+        for (; done < maps.Count && EcuConnected; done++)
         {
-            ProgressText = $"Sync: {i * 100 / maps.Count}%";
-            SymbolHelper sh = maps[i];
+            ProgressText = $"Sync: {done * 100 / maps.Count}%";
+            SymbolHelper sh = maps[done];
             byte[] inFile = bin.ReadSymbol(sh);
             if (await Ecu.ReadMapAsync(sh) is not { } inEcu || inEcu.Length != inFile.Length || inEcu.AsSpan().SequenceEqual(inFile)) continue;
+            // ponytail: an all-zero answer for a map the file has values in is taken as a read that timed out (readRAM gives zeros)
+            if (toFile && inEcu.All(b => b == 0)) continue;
             if (toFile) bin.WriteData(bin.FileAddress(sh), inEcu);
             else await Ecu.WriteForcedAsync((int)sh.Start_address, inFile);
         }
+        if (done < maps.Count)
+        {
+            // cut off (disconnected): no new dates, so the next connect offers the sync again
+            ProgressText = "Synchronization interrupted";
+            if (toFile) RefreshViewers(bin.FileName);
+            return;
+        }
         if (toFile)
         {
-            bin.File.SetMemorySyncDate(ecu == DateTime.MinValue ? DateTime.Now : ecu);
+            DateTime date = ecu == DateTime.MinValue ? DateTime.Now : ecu;
+            bin.File.SetMemorySyncDate(date);
+            // an ECU that had no date gets the file's, else the next connect proposes the other way again
+            if (ecu == DateTime.MinValue) await Ecu.WriteSyncDateAsync(date);
             if (Settings.AutoChecksum) bin.UpdateChecksum();
             RefreshViewers(bin.FileName);
             await CheckChecksumAsync();
@@ -130,7 +145,16 @@ public partial class T5MainWindowViewModel
 
     protected override async Task DisconnectEcuAsync()
     {
-        await KnockSnapshotAsync();
+        // the autotune puts closed loop and the maps back while the ECU is still there
+        if (Realtime is T5RealtimeViewModel rt) await rt.StopAutotunesAsync();
+        try
+        {
+            await KnockSnapshotAsync();
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Could not save the knock counter snapshot: " + e.Message);
+        }
         await Ecu.DisconnectAsync();
     }
 
@@ -212,6 +236,12 @@ public partial class T5MainWindowViewModel
     {
         if (T5 is not { } bin || !EcuConnected) return;
         byte[] ram = await System.IO.File.ReadAllBytesAsync(file);
+        // a T5 SRAM image is 32 KB; anything else would write zeros or garbage into every map (T5Suite took any file)
+        if (ram.Length != 0x8000)
+        {
+            ShowInfo("This is not a Trionic 5 SRAM snapshot (32 KB), nothing was written");
+            return;
+        }
         ProgressText = "Restoring ECU state...";
         foreach (SymbolHelper sh in bin.Symbols.Cast<SymbolHelper>().Where(sh => sh.Start_address > 0 && sh.Length > 0 && bin.FileAddress(sh) >= 0).ToList())
         {

@@ -176,7 +176,13 @@ public partial class T5MainWindowViewModel
         int before = TransactionLog?.TransCollection.Count ?? 0;
         try
         {
-            T5Tuning.MergeAdaption(bin, await File.ReadAllBytesAsync(ramFile), options, TransactionLog, Settings.AutoChecksum);
+            byte[] ram = await File.ReadAllBytesAsync(ramFile);
+            if (ram.Length != 0x8000)
+            {
+                ShowInfo("This is not a Trionic 5 SRAM snapshot (32 KB), nothing was imported");
+                return;
+            }
+            T5Tuning.MergeAdaption(bin, ram, options, TransactionLog, Settings.AutoChecksum);
             ShowInfo("Data was imported");
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
