@@ -26,7 +26,7 @@ public partial class MainWindow : SuiteMainWindow
     {
         base.OnDataContextChanged(e);
         if (DataContext is not T5MainWindowViewModel vm) return;
-        vm.ShowFirmwareOptions = options => new FirmwareOptionsWindow { DataContext = options }.ShowDialog<bool>(this);
+        vm.ShowFirmwareOptions = ShowFirmwareOptions;
         // "Select mutations to accept" on Insp_mat!'s axes
         vm.AcceptAutotune = percent =>
         {
@@ -37,6 +37,21 @@ public partial class MainWindow : SuiteMainWindow
     }
 
     private async void OnFirmwareOptions(object? sender, RoutedEventArgs e) => await Vm.EditFirmwareAsync();
+
+    // an action picked in the partnumber's lookup closes the dialog unchanged first (frmEasyFirmwareSettings' Abort)
+    private async System.Threading.Tasks.Task<bool> ShowFirmwareOptions(FirmwareOptionsViewModel options)
+    {
+        var dialog = new FirmwareOptionsWindow { DataContext = options };
+        (string action, string stock)? pick = null;
+        dialog.LookupPartnumber = async () =>
+        {
+            pick = await ShowPartLookupAsync(dialog, options.Partnumber.Trim());
+            if (pick != null) dialog.Close(false);
+        };
+        bool ok = await dialog.ShowDialog<bool>(this);
+        if (pick is { } p) await RunPartLookupAsync(p.action, p.stock);
+        return ok;
+    }
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {

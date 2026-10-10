@@ -1,84 +1,154 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="using:System"
         xmlns:vm="using:T5App.ViewModels"
+        xmlns:v="using:T5App.Views"
         x:Class="T5App.Views.FirmwareOptionsWindow"
         x:DataType="vm:FirmwareOptionsViewModel"
-        Title="Trionic firmware settings" Width="1100" Height="860" WindowStartupLocation="CenterOwner">
-    <!-- frmEasyFirmwareSettings' groups; the flags come from the view model's table -->
+        Title="Trionic 5 firmware settings" Width="1200" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner">
+    <!-- frmEasyFirmwareSettings' layout: its groups where it had them, each group's flags row by row (two columns, Misc four) -->
     <Window.DataTemplates>
         <DataTemplate DataType="vm:OptionFlag">
             <CheckBox Content="{Binding Caption}" IsChecked="{Binding IsChecked}" IsEnabled="{Binding IsEnabled}" />
         </DataTemplate>
-        <DataTemplate DataType="vm:OptionGroup">
-            <HeaderedContentControl Header="{Binding Name}" Margin="0,0,12,8">
-                <ItemsControl ItemsSource="{Binding Flags}" />
-            </HeaderedContentControl>
-        </DataTemplate>
     </Window.DataTemplates>
-    <DockPanel Margin="12">
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
-            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
-            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
-        </StackPanel>
-        <ScrollViewer>
-    <StackPanel Spacing="8">
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-            <HeaderedContentControl Header="Car specifics">
-                <StackPanel Spacing="4">
-                    <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
-                        <TextBlock Text="Car model" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="1" Text="{Binding CarModel, Mode=OneWay}" IsReadOnly="True" />
-                        <TextBlock Grid.Row="1" Text="Engine type" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EngineType, Mode=OneWay}" IsReadOnly="True" />
-                        <TextBlock Grid.Row="2" Text="Injectors" VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.Injectors}" SelectedItem="{Binding Injector}" HorizontalAlignment="Stretch" />
-                        <TextBlock Grid.Row="3" Text="Mapsensor" VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.MapSensors}" SelectedItem="{Binding MapSensor}" HorizontalAlignment="Stretch" />
-                        <TextBlock Grid.Row="4" Text="Turbo" VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.Turbos}" SelectedItem="{Binding Turbo}" HorizontalAlignment="Stretch" />
-                        <TextBlock Grid.Row="5" Text="Tuning stage" VerticalAlignment="Center" />
-                        <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.Stages}" SelectedItem="{Binding Stage}" HorizontalAlignment="Stretch" />
-                        <TextBlock Grid.Row="6" Text="Synchronization timestamp" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding SyncTimestamp, Mode=OneWay}" IsReadOnly="True" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding CarGroup.Flags}" />
-                </StackPanel>
-            </HeaderedContentControl>
-            <HeaderedContentControl Grid.Column="1" Header="ECU specifics">
-                <StackPanel Spacing="4">
-                    <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
-                        <TextBlock Text="CPU speed" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="1" Text="{Binding CpuSpeed, Mode=OneWay}" IsReadOnly="True" />
-                        <TextBlock Grid.Row="1" Text="Dataname" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Dataname, Mode=OneWay}" IsReadOnly="True" />
-                        <TextBlock Grid.Row="2" Text="Partnumber" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Partnumber}" MaxLength="{Binding PartnumberLength}" />
-                        <TextBlock Grid.Row="3" Text="Software ID" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SoftwareId, Mode=OneWay}" IsReadOnly="True" />
-                        <TextBlock Grid.Row="4" Text="VSS code" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding VssCode}" MaxLength="{Binding VssCodeLength}" IsEnabled="{Binding HasVss}" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding EcuGroup.Flags}" />
-                </StackPanel>
-            </HeaderedContentControl>
-        </Grid>
-        <ItemsControl ItemsSource="{Binding FlagGroups}">
-            <ItemsControl.ItemsPanel>
+    <Window.Styles>
+        <!-- a group box: the title on the frame's top line -->
+        <Style Selector="HeaderedContentControl.group">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel>
+                        <Border Margin="0,10,0,0" Padding="10,14,10,6" BorderThickness="1" CornerRadius="3"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                            <ContentPresenter Content="{TemplateBinding Content}" />
+                        </Border>
+                        <ContentPresenter Content="{TemplateBinding Header}" Margin="8,0,0,0" Padding="4,0" FontWeight="SemiBold"
+                                          HorizontalAlignment="Left" VerticalAlignment="Top" Background="{Binding $parent[Window].Background}" />
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ItemsControl.two">
+            <Setter Property="ItemsPanel">
                 <ItemsPanelTemplate>
-                    <UniformGrid Columns="3" />
+                    <UniformGrid Columns="2" />
                 </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-        </ItemsControl>
-        <Expander Header="Advanced" HorizontalAlignment="Stretch">
-            <StackPanel Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasRpmLimit}">
-                    <TextBlock Text="Hardcoded RPM limit" VerticalAlignment="Center" />
-                    <NumericUpDown Value="{Binding RpmLimit}" Minimum="3000" Maximum="12000" Increment="100" FormatString="0" Width="140" />
+            </Setter>
+        </Style>
+        <Style Selector="ItemsControl.four">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="4" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="MinHeight" Value="28" />
+        </Style>
+        <Style Selector="Grid.fields > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="ItemTemplate">
+                <DataTemplate x:DataType="sys:Enum">
+                    <TextBlock Text="{Binding Converter={x:Static v:FirmwareOptionsWindow.CaptionOf}}" />
+                </DataTemplate>
+            </Setter>
+        </Style>
+        <!-- T5Suite showed RAM locked in red while checked -->
+        <Style Selector="ContentControl.ramLocked CheckBox:checked /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="Red" />
+        </Style>
+        <Style Selector="Button.lookup">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </Window.Styles>
+    <Grid Margin="12" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+        <HeaderedContentControl Classes="group" Grid.RowSpan="2" Header="Car specifics">
+            <Grid Classes="fields" ColumnDefinitions="90,*,90,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                <TextBlock Text="Car model" />
+                <TextBox Grid.Column="1" Text="{Binding CarModel, Mode=OneWay}" IsEnabled="False" />
+                <TextBlock Grid.Column="2" Text="Engine type" />
+                <TextBox Grid.Column="3" Text="{Binding EngineType, Mode=OneWay}" IsEnabled="False" />
+                <ItemsControl Grid.Row="1" Grid.ColumnSpan="4" Classes="two" ItemsSource="{Binding Car}" />
+                <TextBlock Grid.Row="2" Text="Injectors" />
+                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.Injectors}" SelectedItem="{Binding Injector}" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Mapsensor" />
+                <ComboBox Grid.Row="2" Grid.Column="3" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.MapSensors}" SelectedItem="{Binding MapSensor}" />
+                <TextBlock Grid.Row="3" Text="Turbo" />
+                <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.Turbos}" SelectedItem="{Binding Turbo}" />
+                <TextBlock Grid.Row="3" Grid.Column="2" Text="Tuning stage" />
+                <ComboBox Grid.Row="3" Grid.Column="3" ItemsSource="{x:Static vm:FirmwareOptionsViewModel.Stages}" SelectedItem="{Binding Stage}" />
+                <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Text="Synchronization timestamp" />
+                <TextBox Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding SyncTimestamp, Mode=OneWay}" IsEnabled="False" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Column="1" Header="Fuelling">
+            <ItemsControl Classes="two" ItemsSource="{Binding Fuelling}" />
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Row="1" Grid.Column="1" Header="Idle">
+            <ItemsControl Classes="two" ItemsSource="{Binding Idle}" />
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Row="2" Grid.ColumnSpan="2" Header="Misc">
+            <ItemsControl Classes="four" ItemsSource="{Binding Misc}" />
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Row="3" Header="Enrichment">
+            <ItemsControl Classes="two" ItemsSource="{Binding Enrichment}" />
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Row="3" Grid.Column="1" Header="Adaption">
+            <ItemsControl Classes="two" ItemsSource="{Binding Adaption}" />
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Row="4" Grid.RowSpan="2" Header="ECU specifics">
+            <Grid Classes="fields" ColumnDefinitions="90,*,90,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                <TextBlock Text="CPU speed" />
+                <TextBox Grid.Column="1" Text="{Binding CpuSpeed, Mode=OneWay}" IsEnabled="False" />
+                <TextBlock Grid.Column="2" Text="Partnumber" />
+                <TextBox Grid.Column="3" Text="{Binding Partnumber}" MaxLength="{Binding PartnumberLength}">
+                    <TextBox.InnerRightContent>
+                        <Button Classes="lookup" Click="OnLookup" ToolTip.Tip="Lookup partnumber">
+                            <Path Data="M6.5,1 A5.5,5.5 0 1 1 6.5,12 A5.5,5.5 0 1 1 6.5,1 Z M10.5,10.5 L15,15" StrokeThickness="1.6"
+                                  Stroke="{Binding $parent[Button].Foreground}" Width="16" Height="16" />
+                        </Button>
+                    </TextBox.InnerRightContent>
+                </TextBox>
+                <TextBlock Grid.Row="1" Text="Dataname" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Dataname, Mode=OneWay}" IsEnabled="False" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="Software ID" />
+                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SoftwareId, Mode=OneWay}" IsEnabled="False" />
+                <TextBlock Grid.Row="2" Text="VSS code" />
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding VssCode}" MaxLength="{Binding VssCodeLength}" IsEnabled="{Binding HasVss}" />
+                <ContentControl Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Content="{Binding VssEnabled}" />
+                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="16">
+                    <ContentControl Content="{Binding Trionic55}" />
+                    <ContentControl Classes="ramLocked" Content="{Binding RamLocked}" />
                 </StackPanel>
-                <ItemsControl ItemsSource="{Binding AdvancedGroup.Flags}" />
-            </StackPanel>
-        </Expander>
-    </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+                <ContentControl Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2" Content="{Binding TankDiagnostics}" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Classes="group" Grid.Row="4" Grid.Column="1" Header="Lambda control">
+            <ItemsControl Classes="two" ItemsSource="{Binding Lambda}" />
+        </HeaderedContentControl>
+        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Spacing="8">
+            <!-- the property grid's fields frmEasyFirmwareSettings didn't have -->
+            <Button Content="Advanced" MinWidth="80">
+                <Button.Flyout>
+                    <Flyout Placement="TopEdgeAlignedRight">
+                        <StackPanel Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasRpmLimit}">
+                                <TextBlock Text="Hardcoded RPM limit" VerticalAlignment="Center" />
+                                <NumericUpDown Value="{Binding RpmLimit}" Minimum="3000" Maximum="12000" Increment="100" FormatString="0" Width="140" />
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding Advanced}" />
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+        </StackPanel>
+    </Grid>
 </Window>

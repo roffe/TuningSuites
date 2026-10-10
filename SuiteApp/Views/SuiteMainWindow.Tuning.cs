@@ -103,9 +103,21 @@ public partial class SuiteMainWindow
 
     protected async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
     {
-        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption) { Browse = BrowsePartNumbers };
-        string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(this);
-        if (action == null || lookup.Info?.Binary is not { } stock) return;
+        if (await ShowPartLookupAsync(this) is { } pick) await RunPartLookupAsync(pick.action, pick.stock);
+    }
+
+    /// <summary>Lookup partnumber over owner, looked up at once when a partnumber is given: the action picked on its stock file, or null.</summary>
+    protected async Task<(string action, string stock)?> ShowPartLookupAsync(Window owner, string partNumber = "")
+    {
+        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption) { Browse = BrowsePartNumbers, PartNumber = partNumber };
+        if (partNumber != "") lookup.Lookup();
+        string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(owner);
+        return action != null && lookup.Info?.Binary is { } stock ? (action, stock) : null;
+    }
+
+    /// <summary>The lookup's Open this file, Compare to this file or Create new from original ("create:&lt;file&gt;").</summary>
+    protected async Task RunPartLookupAsync(string action, string stock)
+    {
         if (action == "open") await Vm.OpenFileAsync(stock, true);
         else if (action == "compare") await Vm.CompareToFileAsync(stock);
         else if (action.StartsWith("create:"))
