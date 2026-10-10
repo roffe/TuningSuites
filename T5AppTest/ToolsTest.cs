@@ -129,5 +129,32 @@ namespace T5AppTest
                 return true;
             }, default).GetAwaiter().GetResult();
         }
+
+        [TestMethod]
+        public void PartNumberList()
+        {
+            s_session!.Dispatch(async () =>
+            {
+                // Binaries next to the program (published only): a 16 MHz and a 20 MHz stock bin for the test
+                string library = Path.Combine(System.AppContext.BaseDirectory, "Binaries");
+                Directory.CreateDirectory(library);
+                foreach (string pn in new[] { "4239273", "4781035" })
+                    File.Copy(Path.Combine(Here(), "..", "T5Binaries", pn + ".BIN"), Path.Combine(library, pn + ".BIN"), true);
+                var rows = T5ToolWindows.PartNumbers();
+                Assert.IsTrue(rows.Count > 100, "rows " + rows.Count);
+                Assert.AreEqual("16 MHz", rows.First(r => r.Partnumber == "4239273").Library);
+                Assert.AreEqual("20 MHz", rows.First(r => r.Partnumber == "4781035").Library);
+                var window = new MainWindow { DataContext = new T5MainWindowViewModel(), Width = 1500, Height = 950 };
+                window.Show();
+                var pick = T5ToolWindows.PartNumberList(window);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                var list = window.OwnedWindows.Single();
+                Save(list, "partnumbers");
+                list.Close();
+                Assert.IsNull(await pick);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
 }
 }

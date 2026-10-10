@@ -20,6 +20,8 @@ public partial class PartLookupWindow : Window
 
     private void OnLookup(object? sender, RoutedEventArgs e) => Vm.Lookup();
 
+    private async void OnBrowse(object? sender, RoutedEventArgs e) => await Vm.BrowseAsync();
+
     private void OnOpenFile(object? sender, RoutedEventArgs e) => Close("open");
 
     private void OnCompare(object? sender, RoutedEventArgs e) => Close("compare");

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommonSuite;
@@ -97,9 +98,12 @@ public partial class SuiteMainWindow
         if (Vm.Binary != null && await new SearchMapsWindow { DataContext = options }.ShowDialog<bool>(this)) Vm.SearchMaps(options.ToOptions());
     }
 
+    /// <summary>The lookup's partnumber list (T5Suite's frmPartNumberList): the picked partnumber, null when cancelled.</summary>
+    protected virtual Func<Task<string?>>? BrowsePartNumbers => null;
+
     protected async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
     {
-        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption);
+        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption) { Browse = BrowsePartNumbers };
         string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(this);
         if (action == null || lookup.Info?.Binary is not { } stock) return;
         if (action == "open") await Vm.OpenFileAsync(stock, true);

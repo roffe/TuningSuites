@@ -6,10 +6,11 @@
         x:DataType="vm:PartLookupViewModel"
         Title="Partnumber lookup" MinWidth="480" SizeToContent="WidthAndHeight" CanResize="False" WindowStartupLocation="CenterOwner">
     <StackPanel Margin="12" Spacing="8">
-        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8">
+        <Grid ColumnDefinitions="110,*,Auto,Auto" ColumnSpacing="8">
             <TextBlock Text="Partnumber" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" Text="{Binding PartNumber}" KeyDown="OnKeyDown" />
-            <Button Grid.Column="2" Content="Lookup" Click="OnLookup" />
+            <Button Grid.Column="2" Content="..." Click="OnBrowse" IsVisible="{Binding CanBrowse}" ToolTip.Tip="Partnumber list" />
+            <Button Grid.Column="3" Content="Lookup" Click="OnLookup" />
         </Grid>
         <TextBlock Text="{Binding Message}" Foreground="IndianRed" IsVisible="{Binding Info, Converter={x:Static ObjectConverters.IsNull}}" />
         <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4" IsVisible="{Binding Info, Converter={x:Static ObjectConverters.IsNotNull}}">

@@ -172,4 +172,55 @@ public static class T5ToolWindows
         if (choice == 1 && picked.Count == 1) vm.ShowKnockMap(picked[0]);
         else if (choice == 2 && picked.Count == 2) vm.ShowKnockMap(picked[0], picked[1]);
     }
+
+    private static readonly Avalonia.Data.Converters.FuncValueConverter<string?, IBrush?> LibraryBrush =
+        new(library => library switch { "16 MHz" => Brushes.YellowGreen, "20 MHz" => Brushes.Orange, _ => null });
+
+    /// <summary>A partnumber list row; Library is "16 MHz" / "20 MHz" for the stock bins in Binaries.</summary>
+    public sealed record PartNumberRow(string Carmodel, string Enginetype, string Partnumber, string Power, string Torque, string Years, string Region, string Library);
+
+    /// <summary>frmPartNumberList's rows: PartnumberCollection, the library bins checked for the 20 MHz code.</summary>
+    public static List<PartNumberRow> PartNumbers() =>
+        new PartnumberCollection().GeneratePartNumberCollection().Rows.Cast<System.Data.DataRow>().Select(r =>
+        {
+            string pn = r["Partnumber"]?.ToString() ?? "";
+            string library = PartInfo.StockBinary(pn) is { } bin ? Trionic5File.Is20Mhz(bin) ? "20 MHz" : "16 MHz" : "";
+            string from = r["FromMY"]?.ToString() ?? "", upto = r["UptoMY"]?.ToString() ?? "";
+            return new PartNumberRow(r["Carmodel"]?.ToString() ?? "", r["Enginetype"]?.ToString() ?? "", pn, r["Power"]?.ToString() ?? "",
+                r["Torque"]?.ToString() ?? "", from == upto ? from : $"{from}-{upto}", r["Region"]?.ToString() ?? "", library);
+        }).ToList();
+
+    /// <summary>
+    /// frmPartNumberList "Partnumber list": every known partnumber grouped by car model and engine, the ones in the library coloured
+    /// ("Available in library: 16 Mhz" yellow green, "20 Mhz" orange); double-click or Ok picks one.
+    /// </summary>
+    public static Task<string?> PartNumberList(Window owner)
+    {
+        var view = new Avalonia.Collections.DataGridCollectionView(PartNumbers());
+        view.GroupDescriptions.Add(new Avalonia.Collections.DataGridPathGroupDescription(nameof(PartNumberRow.Carmodel)));
+        view.GroupDescriptions.Add(new Avalonia.Collections.DataGridPathGroupDescription(nameof(PartNumberRow.Enginetype)));
+        var grid = new DataGrid { ItemsSource = view, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single, GridLinesVisibility = DataGridGridLinesVisibility.Horizontal };
+        grid.Columns.Add(new DataGridTemplateColumn
+        {
+            Header = "Partnumber",
+            SortMemberPath = nameof(PartNumberRow.Partnumber),
+            // bound: the cell is made before its row is set
+            CellTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<PartNumberRow>((_, _) => new Border
+            {
+                Padding = new Thickness(6, 2),
+                [!Border.BackgroundProperty] = new Avalonia.Data.Binding(nameof(PartNumberRow.Library)) { Converter = LibraryBrush },
+                Child = new TextBlock { [!TextBlock.TextProperty] = new Avalonia.Data.Binding(nameof(PartNumberRow.Partnumber)) },
+            }),
+        });
+        foreach (var (header, path) in new[] { ("Power", nameof(PartNumberRow.Power)), ("Torque", nameof(PartNumberRow.Torque)), ("MYs", nameof(PartNumberRow.Years)),
+                     ("Region", nameof(PartNumberRow.Region)), ("Library", nameof(PartNumberRow.Library)) })
+            grid.Columns.Add(new DataGridTextColumn { Header = header, Binding = new Avalonia.Data.Binding(path) });
+        Window? window = null;
+        void Pick() => window!.Close((grid.SelectedItem as PartNumberRow)?.Partnumber);
+        grid.DoubleTapped += (_, _) => Pick();
+        var legend = new TextBlock { Text = "Available in library: 16 Mhz (yellow green), 20 Mhz (orange)", VerticalAlignment = VerticalAlignment.Center };
+        var bar = Bar(Button("Ok", Pick), Button("Close", () => window!.Close(null)), legend);
+        window = Frame("Partnumber list", 760, 640, bar, grid);
+        return window.ShowDialog<string?>(owner);
+    }
 }

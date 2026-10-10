@@ -2040,7 +2040,10 @@ namespace Trionic5Tools
             return retval;
         }
 
-        private bool Find20MhzSequence(string filename)
+        /// <summary>A 20 MHz binary: its 32-byte timer setup sequence (frmPartNumberList's library colours).</summary>
+        public static bool Is20Mhz(string filename) => Find20MhzSequence(filename);
+
+        private static bool Find20MhzSequence(string filename)
         {
             bool retval = false;
             FileInfo fi = new FileInfo(filename);
