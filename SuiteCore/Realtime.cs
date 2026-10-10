@@ -85,6 +85,9 @@ namespace CommonSuite
         /// <summary>"Add to realtime list": the range presets by name, else by length.</summary>
         public abstract RealtimeSymbol FromSymbol(SymbolHelper sh);
 
+        /// <summary>A symbol Add symbol offers (every one; T5Suite only SRAM symbols of 1 to 4 bytes).</summary>
+        public virtual bool CanPoll(SymbolHelper sh) => true;
+
         public abstract DashboardSymbols Symbols { get; }
 
         /// <summary>UpdateOpenViewers: the maps whose cell the engine is in.</summary>

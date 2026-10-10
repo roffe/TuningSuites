@@ -121,6 +121,7 @@
             <MenuItem x:Name="OnlineMenu" Header="_Online tuning">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
                 <MenuItem Header="Switch mode" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Configure realtime panel" Command="{Binding ConfigureRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Synchronize maps" Command="{Binding SynchronizeMapsCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />

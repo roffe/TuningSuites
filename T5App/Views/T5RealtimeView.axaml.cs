@@ -20,6 +20,21 @@ public partial class T5RealtimeView : UserControl
         InitializeComponent();
         // the grid takes Enter (next row) before a bubbling handler sees it
         UserMapsGrid.AddHandler(KeyDownEvent, OnUserMapKeyDown, RoutingStrategies.Tunnel);
+        Graph.ContextMenu = new ContextMenu();
+        Graph.ContextMenu.Opening += (_, _) => FillGraphMenu(Graph.ContextMenu);
+    }
+
+    /// <summary>The line selection (T5Suite: a click on the legend), a tick per shown line.</summary>
+    private void FillGraphMenu(ContextMenu menu)
+    {
+        menu.Items.Clear();
+        if (m_vm is not { } vm) return;
+        foreach (string name in T5RealtimeViewModel.GraphLineNames)
+        {
+            var item = new MenuItem { Header = name, ToggleType = MenuItemToggleType.CheckBox, IsChecked = vm.IsGraphLineShown(name) };
+            item.Click += (_, _) => vm.ToggleGraphLine(name);
+            menu.Items.Add(item);
+        }
     }
 
     // subscribed only while shown: a view in a closed window lets go of the view model

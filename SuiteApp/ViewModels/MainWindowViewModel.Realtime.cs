@@ -28,10 +28,15 @@ public abstract partial class MainWindowViewModel
     /// <summary>The open realtime panel.</summary>
     public RealtimeViewModel? Realtime => Viewers.OfType<RealtimeViewModel>().FirstOrDefault();
 
-    /// <summary>Toggle realtime panel [SHIFT+F1]: opens the panel and starts polling, or closes it.</summary>
+    /// <summary>Toggle realtime panel [SHIFT+F1]: opens the panel and starts polling, or closes it; a panel opened to configure it starts.</summary>
     [RelayCommand]
     private async Task ToggleRealtimePanel()
     {
+        if (Realtime is { HasStarted: false } configured)
+        {
+            _ = configured.StartAsync();
+            return;
+        }
         if (Realtime is { } open)
         {
             await CloseViewerAsync(open);
@@ -42,6 +47,13 @@ public abstract partial class MainWindowViewModel
         ShowDocument(panel);
         // not awaited: the command has to stay free to close the panel again
         _ = panel.StartAsync();
+    }
+
+    /// <summary>Configure realtime panel: the panel without connecting (T5Suite's Advanced actions); Toggle realtime panel then starts it.</summary>
+    [RelayCommand]
+    private void ConfigureRealtimePanel()
+    {
+        if (Realtime == null && Binary is { } bin) ShowDocument(CreateRealtimePanel(bin));
     }
 
     /// <summary>The Realtime menu's map buttons (ShowRealtimeMapFromECU): read from SRAM.</summary>

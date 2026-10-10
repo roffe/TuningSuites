@@ -62,8 +62,16 @@
         <Setter Property="Background" Value="#202020" />
         <Setter Property="Foreground" Value="#00C000" />
     </Style>
+    <Style Selector="Border.night Button:disabled /template/ ContentPresenter#PART_ContentPresenter, Border.night ToggleButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#101010" />
+        <Setter Property="Foreground" Value="#2E5E2E" />
+    </Style>
     <Style Selector="Border.night ToggleButton:checked">
         <Setter Property="Background" Value="#EA4D00" />
         <Setter Property="Foreground" Value="Black" />
+    </Style>
+    <!-- the autotune button while it tunes (after the night styles: red in both) -->
+    <Style Selector="Button.tuning">
+        <Setter Property="Foreground" Value="Red" />
     </Style>
 </Styles>

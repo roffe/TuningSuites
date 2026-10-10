@@ -787,6 +787,18 @@ namespace Trionic5Tools
                 SaveRegistrySetting("OneLogPerTypePerDay", m_OneLogPerTypePerDay);
             }
         }
+        private string m_HiddenGraphLines = string.Empty;
+
+        /// <summary>The realtime graph's lines switched off (OnlineGraph's line selection; T5Suite kept them under Software\T5Suite\Channels).</summary>
+        public string HiddenGraphLines
+        {
+            get { return m_HiddenGraphLines; }
+            set
+            {
+                m_HiddenGraphLines = value;
+                SaveRegistrySetting("HiddenGraphLines", m_HiddenGraphLines);
+            }
+        }
         private bool m_OneLogForAllTypes = false;
 
         public bool OneLogForAllTypes
@@ -1935,6 +1947,7 @@ namespace Trionic5Tools
                 saveSettings.SetValue("AutoDetectMapsensorType", m_AutoDetectMapsensorType);
                 saveSettings.SetValue("AutoOpenLogFile", m_AutoOpenLogFile);
                 saveSettings.SetValue("OneLogForAllTypes", m_OneLogForAllTypes);
+                saveSettings.SetValue("HiddenGraphLines", m_HiddenGraphLines);
                 saveSettings.SetValue("OneLogPerTypePerDay", m_OneLogPerTypePerDay);
                 saveSettings.SetValue("CorrectionPercentage", m_CorrectionPercentage);
                 saveSettings.SetValue("DiscardClosedThrottleMeasurements", m_DiscardClosedThrottleMeasurements);
@@ -2467,6 +2480,10 @@ namespace Trionic5Tools
                             else if (a == "AutoOpenLogFile")
                             {
                                 m_AutoOpenLogFile = Convert.ToBoolean(Settings.GetValue(a).ToString());
+                            }
+                            else if (a == "HiddenGraphLines")
+                            {
+                                m_HiddenGraphLines = Settings.GetValue(a).ToString();
                             }
                             else if (a == "OneLogForAllTypes")
                             {

@@ -22,19 +22,21 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     private double m_lastTps = double.NaN;
     private DateTime m_tpsHold;
     private AFRMaps? m_tuning;
-    private readonly int m_injectorCc;
+    private int m_injectorCc = 365;
 
     public T5RealtimeViewModel(T5MainWindowViewModel owner, T5Binary bin) : base(owner, bin, T5Realtime.Rules, new T5RealtimeEngine(owner.Ecu))
     {
         m_t5 = owner;
         m_bin = bin;
-        m_watchable.AddRange(Rows.Select(r => r.Symbol).Where(s => !s.UserDefined));
-        m_injectorCc = Cc(bin.File.GetTrionicProperties().InjectorType);
+        RefreshInjectorCc();
         AutotuneCaption = "Autotune fuel";
         foreach (string caption in PgmStatusBits) StatusLeds.Add(new StatusLed(caption));
         foreach (var (caption, _, _, _) in PgmModBits) Toggles.Add(new EcuToggle(caption, ToggleAsync) { IsAvailable = false });
         StatusColumns = [.. StatusColumnBits.Select(bits => (IReadOnlyList<StatusLed>)[.. bits.Select(b => StatusLeds[b])])];
     }
+
+    /// <summary>T5Suite's dock caption.</summary>
+    public override string Title => "Realtime monitor";
 
     /// <summary>The Engine status tab's LEDs, Pgm_status bit 0 first.</summary>
     public ObservableCollection<StatusLed> StatusLeds { get; } = [];
@@ -178,6 +180,10 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         if (m_tuning != null) await StopAutotuneAsync();
         if (m_ignition != null) await StopIgnitionAutotuneAsync();
         m_t5.AfrMaps?.SaveMaps();
+        // StopOnlineMode's knock snapshot (a disconnect took it already: no ECU now)
+        await m_t5.KnockSnapshotAsync();
+        foreach (EcuToggle t in Toggles) t.IsAvailable = false;
+        m_pgmModRead = false;
     }
 
     // ---- autotune ignition (T5.5) ----
@@ -197,7 +203,8 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             await StopIgnitionAutotuneAsync();
             return;
         }
-        if (!CanAutotune) return;
+        // one autotune at a time: each hid the other's button
+        if (!CanAutotune || m_tuning != null) return;
         if (!m_bin.IsTrionic55)
         {
             m_t5.ShowInfo("T5.2 is currently not supported for Autotuning Ignition");
@@ -292,9 +299,11 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             if (!keep) await m_t5.Ecu.WriteForcedAsync((int)ign.Start_address, Bytes(maps.GetOriginalIgnitionmap()));
             else if (m_bin.FileAddress(ign) is var address and >= 0)
             {
+                bool inSync = await InSyncAsync();
                 int before = m_t5.TransactionLog?.TransCollection.Count ?? 0;
                 m_bin.WriteData(address, Bytes(maps.GetCurrentlyMutatedIgnitionMap()), m_t5.TransactionLog, "Autotune ignition");
                 if (m_t5.Settings.AutoChecksum) m_bin.UpdateChecksum();
+                if (inSync) await m_t5.Ecu.WriteSyncDateAsync(m_bin.SyncDate);
                 m_t5.TransactionsAdded(before);
                 m_t5.RefreshViewers(m_bin.FileName);
             }
@@ -321,7 +330,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             return;
         }
         AppSettings s = m_t5.Settings;
-        if (!IsRunning || !CanAutotune) return;
+        if (!IsRunning || !CanAutotune || m_ignition != null) return;
         if (Coolant <= 70 || !s.UseWidebandLambda)
         {
             m_t5.ShowInfo("Autotune fuel needs a warm engine (coolant above 70 °C) and the wideband lambda through a symbol (Settings).");
@@ -340,11 +349,20 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             }
             // closed loop off while tuning ("Disable closed loop on starting autotune"); the byte is kept to put back at the end.
             // T5Suite's T5.5 branch also meant to fold Adapt_korr into Insp_mat! first, but looked it up without the "!" and never did.
-            if (s.DisableClosedLoopOnStartAutotune && m_bin.Find("Pgm_mod!") is { Start_address: > 0 } mod && await ecu.ReadMapAsync(mod) is { } pgm && Plausible(pgm)
-                && (pgm[0] & 0x10) != 0)
+            if (s.DisableClosedLoopOnStartAutotune)
             {
-                m_closedLoopByte = pgm[0];
-                await ecu.WriteForcedAsync((int)mod.Start_address, [(byte)(pgm[0] & ~0x10)]);
+                // T5Suite started nothing without Pgm_mod!; a tune in closed loop would fight the lambda control
+                if (m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await ecu.ReadMapAsync(mod) is not { } pgm || !Plausible(pgm))
+                {
+                    m_t5.ShowInfo("Could not read Pgm_mod! from the ECU to switch closed loop off; the autotune didn't start");
+                    return;
+                }
+                if ((pgm[0] & 0x10) != 0)
+                {
+                    m_closedLoopByte = pgm[0];
+                    await ecu.WriteForcedAsync((int)mod.Start_address, [(byte)(pgm[0] & ~0x10)]);
+                    await RefreshTogglesAsync();
+                }
             }
             maps.InitAutoTuneVars(false);
             if (m_t5.T5Settings.ResetFuelTrims)
@@ -355,10 +373,18 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             }
             maps.SetOriginalFuelMap(map);
             maps.SetCurrentFuelMap(map);
-            if (m_bin.Find("Idle_fuel_korr!") is { Start_address: > 0 } idleMap && await ecu.ReadMapAsync(idleMap) is { Length: > 0 } idle)
+            if (m_bin.Find("Idle_fuel_korr!") is { Start_address: > 0 } idleMap)
             {
-                maps.SetIdleOriginalFuelMap(idle);
-                maps.SetIdleCurrentFuelMap(idle);
+                if (await ecu.ReadMapAsync(idleMap) is { } idle && Plausible(idle))
+                {
+                    maps.SetIdleOriginalFuelMap(idle);
+                    maps.SetIdleCurrentFuelMap(idle);
+                }
+                else if (s.AllowIdleAutoTune)
+                {
+                    m_t5.ShowInfo("Could not read the idle fuel map from the ECU");
+                    return;
+                }
             }
             maps.AcceptableTargetErrorPercentage = s.AcceptableTargetErrorPercentage;
             maps.AreaCorrectionPercentage = s.AreaCorrectionPercentage;
@@ -400,6 +426,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         byte[]? now = await m_t5.Ecu.ReadMapAsync(mod);
         await m_t5.Ecu.WriteForcedAsync((int)mod.Start_address, [Plausible(now) ? (byte)(now![0] | 0x10) : original]);
         m_closedLoopByte = null;
+        await RefreshTogglesAsync();
     }
 
     /// <summary>Stops a running autotune (fuel and ignition) while the ECU is still there: before a disconnect, a flash or closing.</summary>
@@ -410,6 +437,13 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     }
 
     public bool IsAnyAutotuning => m_tuning != null || m_ignition != null;
+
+    /// <summary>
+    /// File and ECU on the same sync date: a kept autotune keeps them so (the file write stamps only the file; T5Suite stamped both
+    /// or neither), else the next connect would offer a synchronization of what the autotune already put in both.
+    /// </summary>
+    private async Task<bool> InSyncAsync() =>
+        await m_t5.Ecu.ReadSyncDateAsync() is var ecu && ecu != T5Ecu.NoDate && ecu == m_bin.SyncDate;
 
     // the fuel trims' neutral value
     private static byte[] Neutral(SymbolHelper sh) => Enumerable.Repeat((byte)128, sh.Length).ToArray();
@@ -459,7 +493,8 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
                 else if (answer == false)
                 {
                     await ecu.WriteForcedAsync((int)fuel.Start_address, original);
-                    if (m_bin.Find("Idle_fuel_korr!") is { Start_address: > 0 } idle) await ecu.WriteForcedAsync((int)idle.Start_address, maps.GetIdleOriginalFuelmap());
+                    if (s.AllowIdleAutoTune && m_bin.Find("Idle_fuel_korr!") is { Start_address: > 0 } idle)
+                        await ecu.WriteForcedAsync((int)idle.Start_address, maps.GetIdleOriginalFuelmap());
                 }
             }
             else if (m_t5.AcceptAutotune is { } accept && await accept(maps.GetPercentualDifferences()) is { Count: > 0 } cells)
@@ -474,12 +509,14 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
             }
             if (keep != null && m_bin.IsTrionic55 && m_bin.FileAddress(fuel) is var address and >= 0)
             {
+                bool inSync = await InSyncAsync();
                 int before = m_t5.TransactionLog?.TransCollection.Count ?? 0;
                 m_bin.WriteData(address, keep, m_t5.TransactionLog, "Autotune fuel");
                 if (keepIdle is { Length: > 0 } && m_bin.Find("Idle_fuel_korr!") is { } idleMap && m_bin.FileAddress(idleMap) is var idleAddress and >= 0
                     && keepIdle.Length == idleMap.Length)
                     m_bin.WriteData(idleAddress, keepIdle, m_t5.TransactionLog, "Autotune fuel (idle)");
                 if (s.AutoChecksum) m_bin.UpdateChecksum();
+                if (inSync) await ecu.WriteSyncDateAsync(m_bin.SyncDate);
                 m_t5.TransactionsAdded(before);
                 m_t5.RefreshViewers(m_bin.FileName);
             }

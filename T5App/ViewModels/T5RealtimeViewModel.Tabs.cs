@@ -83,8 +83,8 @@ public partial class T5RealtimeViewModel
 
     private T5RealtimeTab Tab => (T5RealtimeTab)SelectedTab;
 
-    // the panel's own rows: FillRealtimePool added the tab's symbols whatever the user had removed from the table
-    private readonly List<RealtimeSymbol> m_watchable = [];
+    // the panel's own rows by name: FillRealtimePool added the tab's symbols whatever the user had removed from the table
+    private readonly Dictionary<string, RealtimeSymbol> m_watchable = [];
 
     /// <summary>The tab's watch list plus the user rows on User defined and in the list of going online (Fuel and the user symbols).</summary>
     protected override IEnumerable<RealtimeSymbol> Polled(IEnumerable<RealtimeSymbol> rows)
@@ -92,7 +92,8 @@ public partial class T5RealtimeViewModel
         IReadOnlySet<string> names = T5Realtime.WatchList(m_pollTab, m_tuning != null, m_ignition != null, T5Realtime.Rules.LambdaSymbol);
         bool user = m_pollTab == T5RealtimeTab.Userdefined || m_firstList;
         List<RealtimeSymbol> table = [.. rows];
-        return table.Concat(m_watchable.Where(w => table.All(r => r.Name != w.Name)))
+        foreach (RealtimeSymbol r in table.Where(r => !r.UserDefined && !r.Derived)) m_watchable[r.Name] = r;
+        return table.Concat(m_watchable.Values.Where(w => table.All(r => r.Name != w.Name)))
             .Where(r => !r.Derived && (names.Contains(r.Name) || user && r.UserDefined));
     }
 
@@ -108,9 +109,23 @@ public partial class T5RealtimeViewModel
         var tab = (T5RealtimeTab)value;
         if (tab != T5RealtimeTab.AutotuneIgnition && tab != T5RealtimeTab.AutotuneFuel) m_mapsTab = tab == T5RealtimeTab.UserMaps ? m_mapsTab : tab;
         if (tab == T5RealtimeTab.UserMaps) return;
+        if (tab == T5RealtimeTab.OnlineGraph) ClearGraph();
         m_pollTab = tab;
         m_firstList = false;
+        RefreshInjectorCc();
         PushRows();
+    }
+
+    // FillRealtimePool took InjectorCC from the file's properties each time (Firmware options may have changed it)
+    private void RefreshInjectorCc()
+    {
+        try
+        {
+            m_injectorCc = Cc(m_bin.File.GetTrionicProperties().InjectorType);
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     public bool IsAutotuneTab => Tab == T5RealtimeTab.AutotuneFuel;
@@ -118,8 +133,10 @@ public partial class T5RealtimeViewModel
     /// <summary>Settings → Advanced mode: the Settings, User defined and autotune tabs, the autotune buttons and Edit maps.</summary>
     public bool AdvancedMode => m_t5.AdvancedMode;
 
-    public void AdvancedModeChanged()
+    /// <summary>After Settings Ok: Advanced mode, and the table again when the lambda input changed (FillRealtimePool read the setting each time).</summary>
+    public void SettingsChanged()
     {
+        if (T5Realtime.LambdaFor(m_t5.Settings) != T5Realtime.Rules.LambdaSymbol) Rebuild([.. Rows.Select(r => r.Symbol).Where(s => s.UserDefined)]);
         // the advanced tabs hide: off them (an autotune running keeps its tab)
         if (!AdvancedMode && !IsAnyAutotuning && Tab is T5RealtimeTab.Settings or T5RealtimeTab.Userdefined or T5RealtimeTab.AutotuneFuel or T5RealtimeTab.AutotuneIgnition)
             SelectedTab = (int)T5RealtimeTab.Fuel;
@@ -323,12 +340,35 @@ public partial class T5RealtimeViewModel
         GraphChanged?.Invoke();
     }
 
-    /// <summary>The graph's lines with T5Suite's fixed ranges, in seconds from the oldest sample (Start).</summary>
+    /// <summary>The graph's shown lines with T5Suite's fixed ranges, in seconds from the oldest sample (Start).</summary>
     public (IReadOnlyList<LogChannel> Channels, DateTime Start) GraphChannels()
     {
         DateTime start = m_graphTimes.Count > 0 ? m_graphTimes.Peek() : DateTime.Now;
         double[] time = [.. m_graphTimes.Select(t => (t - start).TotalSeconds)];
-        return ([.. GraphLines.Select((l, i) => new LogChannel(l.Symbol ?? "AFR", l.Name, l.Color, time, [.. m_graph[i]], l.Min, l.Max))], start);
+        return ([.. GraphLines.Select((l, i) => (l, i)).Where(x => IsGraphLineShown(x.l.Name))
+            .Select(x => new LogChannel(x.l.Symbol ?? "AFR", x.l.Name, x.l.Color, time, [.. m_graph[x.i]], x.l.Min, x.l.Max))], start);
+    }
+
+    // a new visit starts empty: the axis is time, and samples from an earlier visit would push the new ones off screen
+    private void ClearGraph()
+    {
+        m_graphTimes.Clear();
+        foreach (Queue<double> q in m_graph) q.Clear();
+    }
+
+    /// <summary>The graph's line selection (OnlineGraph's frmLineselection): every line by name.</summary>
+    public static IEnumerable<string> GraphLineNames => GraphLines.Select(l => l.Name);
+
+    private HashSet<string> HiddenLines => [.. m_t5.T5Settings.HiddenGraphLines.Split(',', StringSplitOptions.RemoveEmptyEntries)];
+
+    public bool IsGraphLineShown(string name) => !HiddenLines.Contains(name);
+
+    public void ToggleGraphLine(string name)
+    {
+        HashSet<string> hidden = HiddenLines;
+        if (!hidden.Remove(name)) hidden.Add(name);
+        m_t5.T5Settings.HiddenGraphLines = string.Join(",", hidden);
+        GraphChanged?.Invoke();
     }
 
     // ---- User maps ----
@@ -342,7 +382,7 @@ public partial class T5RealtimeViewModel
 
     private MapData? m_feedbackGrid, m_fuelGrid, m_ignitionGrid;
 
-    /// <summary>The Autotune tab's left grid: the feedback AFR (T5Suite's showed AFR in lambda mode too).</summary>
+    /// <summary>The Autotune tab's left grid: the feedback AFR, λ in lambda mode (gridView2_CustomDrawCell).</summary>
     public MapData? FeedbackGrid
     {
         get => m_feedbackGrid;
@@ -378,6 +418,13 @@ public partial class T5RealtimeViewModel
         };
     }
 
+    // a click on an AFR display: the feedback grid in λ or AFR at once
+    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName == nameof(LambdaMode)) ShowAutotuneGrids();
+    }
+
     // the grids follow the autotunes (UpdateMutatedFuelMap, UpdateFeedbackAFR, UpdateMutatedIgnitionMap)
     private void ShowAutotuneGrids()
     {
@@ -386,8 +433,9 @@ public partial class T5RealtimeViewModel
             // AFR to one decimal, rounded as T5Suite's F1 (GetFeedbackAFRMapinBytes rounds up)
             byte[] feedback = [.. maps.GetFeedbackAFRMap().Select(f => (int)Math.Round(f * 10, MidpointRounding.AwayFromZero)).SelectMany(v => new[] { (byte)(v >> 8), (byte)v })];
             byte[] mutated = maps.GetCurrentlyMutatedFuelMap();
-            if (FeedbackGrid is { } f && f.Count * 2 == feedback.Length) f.Load(feedback);
-            else FeedbackGrid = Grid("FeedbackAFR", fuel.SmartVarname, feedback, true, 0.1, 0);
+            double factor = LambdaMode ? 0.1 / WidebandAfr.Stoich : 0.1;
+            if (FeedbackGrid is { } f && f.Count * 2 == feedback.Length && f.Factor == factor) f.Load(feedback);
+            else FeedbackGrid = Grid("FeedbackAFR", fuel.SmartVarname, feedback, true, factor, 0);
             if (FuelGrid is { } g && g.Count == mutated.Length) g.Load(mutated);
             else FuelGrid = Grid(fuel.SmartVarname, fuel.SmartVarname, mutated, false, 1 / 256.0, 0.5);
         }

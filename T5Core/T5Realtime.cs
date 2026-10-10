@@ -32,6 +32,10 @@ namespace Trionic5Tools
         /// enrichments while the fuel autotune runs, Knock_offset1234 while the ignition autotune runs (T5Suite kept the last knock
         /// state on other tabs), then the tab's own. User rows are the caller's (User defined, and the first list).
         /// </summary>
+        /// <summary>The lambda input: the wideband symbol when one is used, else the narrowband sond.</summary>
+        public static string LambdaFor(AppSettings settings) =>
+            settings.UseWidebandLambda && settings.WideBandSymbol is "AD_EGR" or "AD_cat" or "AD_sond" ? settings.WideBandSymbol : "AD_sond";
+
         public static IReadOnlySet<string> WatchList(T5RealtimeTab tab, bool fuelAutotune, bool ignitionAutotune, string lambda)
         {
             var names = new HashSet<string>(tab switch
@@ -123,9 +127,7 @@ namespace Trionic5Tools
                     rows.Add(knock);
                 }
             }
-            // the lambda input: the wideband symbol when one is used, else the narrowband sond
-            string lambda = settings.UseWidebandLambda && settings.WideBandSymbol is "AD_EGR" or "AD_cat" or "AD_sond" ? settings.WideBandSymbol : "AD_sond";
-            LambdaSymbol = lambda;
+            string lambda = LambdaSymbol = LambdaFor(settings);
             rows.Add(lambda == "AD_sond" ? Row(bin, "AD_sond", "Lambda (narrowband)", 0, 1, 0, 2) : Row(bin, lambda, "Wideband AFR", 0, 1, 7, 24));
             return rows.Where(r => r != null).ToList();
         }
@@ -157,6 +159,9 @@ namespace Trionic5Tools
         }
 
         public override RealtimeSymbol FromSymbol(SymbolHelper sh) => UserRow(sh, sh.SmartVarname, 0, sh.Length == 1 ? 255 : 65535, 1);
+
+        // RealtimeSymbolCollection: SRAM symbols of 1 to 4 bytes
+        public override bool CanPoll(SymbolHelper sh) => sh.Start_address > 0 && sh.Length is >= 1 and <= 4;
 
         /// <summary>
         /// T5Suite matched viewers by their axis captions: "MAP" against the boost (axis × sensor factor × 0.01 − 1 bar), "RPM" and

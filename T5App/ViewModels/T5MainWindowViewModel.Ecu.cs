@@ -147,14 +147,7 @@ public partial class T5MainWindowViewModel
     {
         // the autotune puts closed loop and the maps back while the ECU is still there
         if (Realtime is T5RealtimeViewModel rt) await rt.StopAutotunesAsync();
-        try
-        {
-            await KnockSnapshotAsync();
-        }
-        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
-        {
-            ShowInfo("Could not save the knock counter snapshot: " + e.Message);
-        }
+        await KnockSnapshotAsync();
         await Ecu.DisconnectAsync();
     }
 

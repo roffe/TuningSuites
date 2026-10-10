@@ -143,12 +143,19 @@ public partial class T5MainWindowViewModel
     /// "Knock counter snapshot after disconnect" (T5.5): Knock_count_map (576 bytes) as hex into Snapshots\Knockmap&lt;MMddyyyyHHmmss&gt;.KNK
     /// when the ECU disconnects.
     /// </summary>
-    private async Task KnockSnapshotAsync()
+    internal async Task KnockSnapshotAsync()
     {
         if (!T5Settings.KnockCounterSnapshot || T5 is not { IsTrionic55: true } bin || !EcuConnected || SnapshotFolder is not { } folder
             || bin.Find("Knock_count_map") is not { Start_address: > 0 } sh || await Ecu.ReadMapAsync(sh) is not { Length: 576 } data) return;
-        System.IO.Directory.CreateDirectory(folder);
-        await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(folder, $"Knockmap{DateTime.Now:MMddyyyyHHmmss}.KNK"), Convert.ToHexString(data));
+        try
+        {
+            System.IO.Directory.CreateDirectory(folder);
+            await System.IO.File.WriteAllTextAsync(System.IO.Path.Combine(folder, $"Knockmap{DateTime.Now:MMddyyyyHHmmss}.KNK"), Convert.ToHexString(data));
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            ShowInfo("Could not save the knock counter snapshot: " + e.Message);
+        }
     }
 
     /// <summary>"Knock map snapshots": the .KNK files of 1152 hex characters, newest first, with their total of knocks.</summary>

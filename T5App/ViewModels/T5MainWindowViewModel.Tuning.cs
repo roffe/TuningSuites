@@ -30,7 +30,7 @@ public partial class T5MainWindowViewModel
     public void T5SettingsChanged()
     {
         OnPropertyChanged(nameof(AdvancedMode));
-        (Realtime as T5RealtimeViewModel)?.AdvancedModeChanged();
+        (Realtime as T5RealtimeViewModel)?.SettingsChanged();
         if (T5 is { } bin) bin.AutoDetectMapSensor = T5Settings.AutoDetectMapsensorType;
     }
 

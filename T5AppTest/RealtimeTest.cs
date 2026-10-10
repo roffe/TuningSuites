@@ -28,12 +28,22 @@ namespace T5AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
-                // the panel opens; without an adapter it doesn't poll
+                // Configure realtime panel opens it without connecting; Switch mode then starts it (without an adapter it doesn't poll)
                 vm.Settings.Adapter = "";
-                await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
+                vm.ConfigureRealtimePanelCommand.Execute(null);
                 var rt = (T5RealtimeViewModel)vm.Realtime!;
+                Assert.IsFalse(rt.HasStarted);
+                await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
+                Assert.AreSame(rt, vm.Realtime);
+                Assert.IsTrue(rt.HasStarted);
                 Assert.IsFalse(rt.IsRunning);
                 Assert.AreEqual("Rpm", rt.Rows[0].Name);
+                Assert.AreEqual("Realtime monitor", rt.Title);
+                // peaks start at the row's minimum (below any value read); Add symbol offers SRAM symbols of 1 to 4 bytes only
+                Assert.AreEqual(-1, rt.Rows.Single(r => r.Name == "P_medel").Peak);
+                CollectionAssert.Contains(rt.SymbolNames.ToList(), "Rpm");
+                CollectionAssert.DoesNotContain(rt.SymbolNames.ToList(), "Insp_mat!");
+                Assert.IsNull(rt.Lookup("Insp_mat!"));
 
                 // FillRealtimePool: going online reads the Fuel list (plus the user rows); each tab its own list
                 CollectionAssert.AreEquivalent(new[] { "P_medel", "Lufttemp", "Kyl_temp", "Rpm", "Medeltrot", "Regl_tryck", "Pgm_status", "AD_sond",
@@ -116,6 +126,12 @@ namespace T5AppTest
                 var (channels, start) = rt.GraphChannels();
                 Assert.AreEqual(g0, start);
                 Assert.AreEqual(0.95, channels[0].Time[^1], 1e-9);
+                // the line selection: a hidden line stays hidden (settings), back on with a second click
+                rt.ToggleGraphLine("TQ");
+                Assert.AreEqual(8, rt.GraphChannels().Channels.Count);
+                Assert.AreEqual("TQ", vm.T5Settings.HiddenGraphLines);
+                rt.ToggleGraphLine("TQ");
+                Assert.AreEqual(9, rt.GraphChannels().Channels.Count);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "rt-graph");
                 tabs.SelectedIndex = 0;
@@ -123,6 +139,10 @@ namespace T5AppTest
                 // the wideband through AD_EGR fills the AFR feedback map at 3000 rpm / 0.8 bar; the AFR viewers
                 vm.Settings.UseWidebandLambda = true;
                 vm.Settings.WideBandSymbol = "AD_EGR";
+                // Settings Ok: the panel reads the new lambda input (FillRealtimePool read the setting each time)
+                vm.T5SettingsChanged();
+                Assert.IsTrue(rt.Rows.Any(r => r.Name == "AD_EGR") && rt.Rows.All(r => r.Name != "AD_sond"));
+                CollectionAssert.Contains(rt.PolledNames.ToList(), "AD_EGR");
                 for (int i = 0; i < 3; i++)
                     rt.Apply(new RealtimeSample(DateTime.Now, [("Rpm", 3000), ("P_medel", 0.8), ("AD_EGR", 12.5), ("Pgm_status", 0)], 20, null));
                 vm.ShowAfrCommand.Execute("FeedbackAFR");

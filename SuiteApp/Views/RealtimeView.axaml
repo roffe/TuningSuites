@@ -58,7 +58,7 @@
                     <ToggleButton Content="Sport" IsVisible="{Binding HasPerformanceMode}" IsChecked="{Binding IsSport, Mode=OneWay}" Command="{Binding SetPerformanceModeCommand}" CommandParameter="2" />
                     <Button Content="Write log marker [F6]" Command="{Binding WriteLogMarkerCommand}" />
                     <Button Content="{Binding AutotuneCaption}" Command="{Binding ToggleAutotuneCommand}" IsVisible="{Binding CanAutotune}"
-                            Foreground="{Binding IsAutotuning, Converter={x:Static v:AutotuneBrushConverter.Instance}}" />
+                            Classes.tuning="{Binding IsAutotuning}" />
                     <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding FpsText}" />
                 </StackPanel>
             </StackPanel>

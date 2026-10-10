@@ -28,6 +28,15 @@
         <Style Selector="Border.strip.knock">
             <Setter Property="Background" Value="OrangeRed" />
         </Style>
+        <!-- a Pgm_mod! switch shows what the ECU read back, never just the click (T5Suite's image buttons) -->
+        <Style Selector="Button.on /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToggleButtonBackgroundChecked}" />
+            <Setter Property="Foreground" Value="{DynamicResource ToggleButtonForegroundChecked}" />
+        </Style>
+        <Style Selector="Border.night Button.on /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#EA4D00" />
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
         <Style Selector="Ellipse.led">
             <Setter Property="Width" Value="14" />
             <Setter Property="Height" Value="14" />
@@ -80,9 +89,12 @@
                         <Button Content="Write log marker [F6]" Command="{Binding WriteLogMarkerCommand}" />
                     </StackPanel>
                     <StackPanel Spacing="4" Margin="6,4" VerticalAlignment="Center" IsVisible="{Binding AdvancedMode}">
-                        <Button Content="{Binding IgnitionAutotuneCaption}" Command="{Binding ToggleIgnitionAutotuneCommand}" MinWidth="130" />
+                        <!-- one autotune at a time: each hides the other's button -->
+                        <Button Content="{Binding IgnitionAutotuneCaption}" Command="{Binding ToggleIgnitionAutotuneCommand}" MinWidth="130"
+                                IsVisible="{Binding !IsAutotuning}" />
                         <Button Content="{Binding AutotuneCaption}" Command="{Binding ToggleAutotuneCommand}" MinWidth="130"
-                                Foreground="{Binding IsAutotuning, Converter={x:Static sv:AutotuneBrushConverter.Instance}}" />
+                                IsVisible="{Binding !IsIgnitionAutotuning}"
+                                Classes.tuning="{Binding IsAutotuning}" />
                     </StackPanel>
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,Auto" Margin="8,4" VerticalAlignment="Center" RowSpacing="4" ColumnSpacing="6">
                         <Ellipse Classes="led" Fill="{Binding IsIdleLed, Converter={x:Static v:LedBrushConverter.Instance}}" />
@@ -113,10 +125,10 @@
                     <DockPanel Margin="4">
                         <c:LinearGauge DockPanel.Dock="Bottom" Height="60" Caption="Injector DC %" Value="{Binding InjectorDc}" Minimum="0" Maximum="100" Format="F1" />
                         <StackPanel DockPanel.Dock="Right" Spacing="6" Margin="8,0">
-                            <ToggleButton Content="Lambda" DataContext="{Binding LambdaToggle}" x:DataType="vm:EcuToggle" Width="120"
-                                          IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
-                            <ToggleButton Content="Lambda (idle)" DataContext="{Binding IdleLambdaToggle}" x:DataType="vm:EcuToggle" Width="120"
-                                          IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                            <Button Content="Lambda" DataContext="{Binding LambdaToggle}" x:DataType="vm:EcuToggle" Width="120"
+                                          Classes.on="{Binding IsOn}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                            <Button Content="Lambda (idle)" DataContext="{Binding IdleLambdaToggle}" x:DataType="vm:EcuToggle" Width="120"
+                                          Classes.on="{Binding IsOn}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
                         </StackPanel>
                         <ScrollViewer>
                             <ItemsControl ItemsSource="{Binding Enrichments}">
@@ -166,8 +178,8 @@
                 <TabItem Header="Boost">
                     <DockPanel Margin="4">
                         <c:LinearGauge DockPanel.Dock="Bottom" Height="60" Caption="Boost bar" Value="{Binding Boost}" Minimum="-1" Maximum="2" Format="F2" />
-                        <ToggleButton DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,4" Content="APC control" DataContext="{Binding ApcToggle}"
-                                      x:DataType="vm:EcuToggle" Width="120" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                        <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,4" Content="APC control" DataContext="{Binding ApcToggle}"
+                                      x:DataType="vm:EcuToggle" Width="120" Classes.on="{Binding IsOn}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
                         <UniformGrid Columns="5" Margin="4">
                             <StackPanel Classes="measure">
                                 <TextBlock Classes="mcaption" Text="Boost request" />
@@ -210,8 +222,8 @@
                 </TabItem>
                 <TabItem Header="Knock">
                     <DockPanel Margin="4">
-                        <ToggleButton DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,4" Content="Knock control" DataContext="{Binding KnockToggle}"
-                                      x:DataType="vm:EcuToggle" Width="120" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
+                        <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,4" Content="Knock control" DataContext="{Binding KnockToggle}"
+                                      x:DataType="vm:EcuToggle" Width="120" Classes.on="{Binding IsOn}" IsEnabled="{Binding IsAvailable}" Command="{Binding ToggleCommand}" />
                         <ScrollViewer>
                         <UniformGrid Columns="4" Margin="4">
                             <StackPanel Classes="measure">
@@ -337,7 +349,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:EcuToggle">
-                                <ToggleButton Content="{Binding Caption}" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}"
+                                <Button Content="{Binding Caption}" Classes.on="{Binding IsOn}" IsEnabled="{Binding IsAvailable}"
                                               Command="{Binding ToggleCommand}" HorizontalAlignment="Stretch" Height="50" Margin="4" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -363,7 +375,7 @@
                     </Grid>
                 </TabItem>
                 <TabItem Header="Graph">
-                    <c:LogGraph x:Name="Graph" />
+                    <c:LogGraph x:Name="Graph" ToolTip.Tip="Right-click to choose the lines" />
                 </TabItem>
                 <TabItem Header="User maps">
                     <DataGrid x:Name="UserMapsGrid" ItemsSource="{Binding UserMaps}" IsReadOnly="True" SelectionMode="Single" GridLinesVisibility="Horizontal"

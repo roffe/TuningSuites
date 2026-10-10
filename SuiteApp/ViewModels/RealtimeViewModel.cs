@@ -139,7 +139,7 @@ public partial class RealtimeViewModel : DocumentViewModel
         _isNight = owner.Settings.Panelmode == PanelMode.Night;
         _lambdaMode = owner.Settings.MeasureAFRInLambda;
         foreach (RealtimeSymbol s in Realtime.Merge(rules.Dashboard(bin, owner.Settings), Realtime.LoadLayout(LayoutFile, bin)))
-            Rows.Add(new RealtimeRow(s));
+            Rows.Add(new RealtimeRow(s) { Peak = s.Minimum });
         // after Dashboard: T5's rules follow the bin's MAP sensor
         m_tracker = new CellTracker(bin, rules.CellRules);
         PushRows();
@@ -167,8 +167,12 @@ public partial class RealtimeViewModel : DocumentViewModel
     }
 
     /// <summary>ToggleRealtimePanel (show): connect, let the engine take the session and poll.</summary>
+    /// <summary>StartAsync was called: false for a panel opened only to configure it (T5Suite's Configure realtime panel).</summary>
+    public bool HasStarted { get; private set; }
+
     public async Task StartAsync()
     {
+        HasStarted = true;
         if (IsRunning || !await m_owner.EnsureConnectedAsync()) return;
         await m_engine.BeginAsync();
         StartWideband();
@@ -437,17 +441,24 @@ public partial class RealtimeViewModel : DocumentViewModel
     /// <summary>Load layout: the dashboard rows and the layout's.</summary>
     public void LoadLayout(string file)
     {
-        Rows.Clear();
-        foreach (RealtimeSymbol s in Realtime.Merge(m_rules.Dashboard(m_bin, m_owner.Settings), Realtime.LoadLayout(file, m_bin)))
-            Rows.Add(new RealtimeRow(s));
-        PushRows();
+        Rebuild(Realtime.LoadLayout(file, m_bin));
         SaveUserRows();
     }
 
-    /// <summary>The symbol names offered by the add / edit dialog.</summary>
-    public IEnumerable<string> SymbolNames => m_bin.Symbols.Cast<SymbolHelper>().Select(s => s.SmartVarname).Distinct().OrderBy(n => n);
+    /// <summary>The suite's rows again (from the settings as they are now) with these user rows.</summary>
+    protected void Rebuild(IEnumerable<RealtimeSymbol> user)
+    {
+        List<RealtimeSymbol> keep = [.. user];
+        Rows.Clear();
+        foreach (RealtimeSymbol s in Realtime.Merge(m_rules.Dashboard(m_bin, m_owner.Settings), keep))
+            Rows.Add(new RealtimeRow(s) { Peak = s.Minimum });
+        PushRows();
+    }
 
-    public RealtimeSymbol? Lookup(string name) => m_bin.FindAny(name) is { } sh ? m_rules.FromSymbol(sh) : null;
+    /// <summary>The symbol names offered by the add / edit dialog.</summary>
+    public IEnumerable<string> SymbolNames => m_bin.Symbols.Cast<SymbolHelper>().Where(m_rules.CanPoll).Select(s => s.SmartVarname).Distinct().OrderBy(n => n);
+
+    public RealtimeSymbol? Lookup(string name) => m_bin.FindAny(name) is { } sh && m_rules.CanPoll(sh) ? m_rules.FromSymbol(sh) : null;
 }
 
 /// <summary>frmEditRealtimeSymbol: the symbol (only when adding), description, range, offset and correction.</summary>
