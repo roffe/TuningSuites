@@ -30,6 +30,7 @@ public class MapGrid : Control
     public static readonly StyledProperty<bool> IsRedWhiteProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(IsRedWhite));
     public static readonly StyledProperty<bool> OnlineModeProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(OnlineMode));
     public static readonly StyledProperty<bool> DisableColorsProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(DisableColors));
+    public static readonly StyledProperty<ColorBlindMode> ColorModeProperty = AvaloniaProperty.Register<MapGrid, ColorBlindMode>(nameof(ColorMode));
     public static readonly StyledProperty<OpenLoopMark> OpenLoopMarkProperty = AvaloniaProperty.Register<MapGrid, OpenLoopMark>(nameof(OpenLoopMark));
     public static readonly StyledProperty<bool> IsReadOnlyProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(IsReadOnly));
     public static readonly StyledProperty<IBrush?> ForegroundProperty = TextElement.ForegroundProperty.AddOwner<MapGrid>();
@@ -45,6 +46,8 @@ public class MapGrid : Control
     public bool IsRedWhite { get => GetValue(IsRedWhiteProperty); set => SetValue(IsRedWhiteProperty, value); }
     public bool OnlineMode { get => GetValue(OnlineModeProperty); set => SetValue(OnlineModeProperty, value); }
     public bool DisableColors { get => GetValue(DisableColorsProperty); set => SetValue(DisableColorsProperty, value); }
+    /// <summary>The value scale's colour blind mode (not the red-white or online tints, which are T7Suite's).</summary>
+    public ColorBlindMode ColorMode { get => GetValue(ColorModeProperty); set => SetValue(ColorModeProperty, value); }
     public OpenLoopMark OpenLoopMark { get => GetValue(OpenLoopMarkProperty); set => SetValue(OpenLoopMarkProperty, value); }
     public bool IsReadOnly { get => GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
     public IBrush? Foreground { get => GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
@@ -79,7 +82,7 @@ public class MapGrid : Control
     static MapGrid()
     {
         FocusableProperty.OverrideDefaultValue<MapGrid>(true);
-        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, OpenLoopMarkProperty, ForegroundProperty,
+        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, ColorModeProperty, OpenLoopMarkProperty, ForegroundProperty,
             HeaderBackgroundProperty, HeaderForegroundProperty, HeaderLinesProperty, GridLinesProperty);
         AffectsMeasure<MapGrid>(MapProperty, ViewTypeProperty, FontSizeProperty, FontFamilyProperty);
     }
@@ -228,7 +231,7 @@ public class MapGrid : Control
     private Color CellColor(int raw, int min, int max)
     {
         // txlogger's green → yellow → red over min..max; T7Suite's raw*255/max made a fuel map red from its lowest cell
-        if (!OnlineMode && !IsRedWhite) return HeatColor.Interpolate(min, max, raw);
+        if (!OnlineMode && !IsRedWhite) return HeatColor.Interpolate(min, max, raw, false, ColorMode);
         // T7Suite: b = raw*255/max (integer), alpha red, or a white→red tint online
         int b = raw * 255;
         if (max != 0) b /= max;
@@ -275,11 +278,15 @@ public class MapGrid : Control
                 if (i < 0) continue;
                 Rect rect = CellRect(r, c);
                 IBrush textBrush = fg;
+                IPen? markOutline = null;
                 if (colors)
                 {
                     Color col = CellColor(map[i], min, max);
                     context.FillRectangle(new ImmutableSolidColorBrush(col), rect);
-                    if (!IsRedWhite) textBrush = Brushes.Black;
+                    if (!IsRedWhite) textBrush = HeatColor.TextOn(col);
+                    // a colour blind scale can wear the corner mark's own colour (Tritanopia's teal is SeaGreen to a tritanope):
+                    // outline the mark like the text; the green → red scale keeps T7Suite's plain corner
+                    if (ColorMode != ColorBlindMode.Normal && !OnlineMode && !IsRedWhite) markOutline = new Pen(HeatColor.TextOn(col), 1);
                 }
                 if (OpenLoopMark != OpenLoopMark.None && map.IsOpenLoop(i))
                 {
@@ -298,7 +305,7 @@ public class MapGrid : Control
                             g.LineTo(new Point(rect.Right, rect.Top + rect.Height / 2));
                             g.EndFigure(true);
                         }
-                        context.DrawGeometry(OpenLoopCorner, null, tri);
+                        context.DrawGeometry(OpenLoopCorner, markOutline, tri);
                     }
                 }
                 if (i == m_highlight)

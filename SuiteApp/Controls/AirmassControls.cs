@@ -42,7 +42,11 @@ public class AirmassGrid : Control
     /// <summary>What each cell shows ([pedal row, rpm column]); the airmass when null.</summary>
     public string[,]? Texts { get => GetValue(TextsProperty); set => SetValue(TextsProperty, value); }
 
-    static AirmassGrid() => AffectsRender<AirmassGrid>(ResultProperty, TextsProperty);
+    public static readonly StyledProperty<ColorBlindMode> ColorModeProperty = MapGrid.ColorModeProperty.AddOwner<AirmassGrid>();
+
+    public ColorBlindMode ColorMode { get => GetValue(ColorModeProperty); set => SetValue(ColorModeProperty, value); }
+
+    static AirmassGrid() => AffectsRender<AirmassGrid>(ResultProperty, TextsProperty, ColorModeProperty);
 
     private const double Header = 56;
 
@@ -71,7 +75,8 @@ public class AirmassGrid : Control
             for (int c = 0; c < cols; c++)
             {
                 var cell = new Rect(Header + c * cw, y, cw, ch);
-                context.FillRectangle(new ImmutableSolidColorBrush(HeatColor.Interpolate(min, max, r.Airmass[p, c])), cell);
+                Color fill = HeatColor.Interpolate(min, max, r.Airmass[p, c], false, ColorMode);
+                context.FillRectangle(new ImmutableSolidColorBrush(fill), cell);
                 context.DrawRectangle(grid, cell);
                 if (LimiterColors.All.TryGetValue(r.Limiter[p, c], out Color lc))
                 {
@@ -84,9 +89,12 @@ public class AirmassGrid : Control
                         g.LineTo(new Point(cell.Right, cell.Top + size));
                         g.EndFigure(true);
                     }
-                    context.DrawGeometry(new ImmutableSolidColorBrush(lc), null, tri);
+                    // a colour blind scale can wear the limiter's own colour (Deuteranomaly's high end is SaddleBrown, the gear limiter):
+                    // outline the mark like the text; the green → red scale keeps T7Suite's plain corners
+                    IPen? outline = ColorMode != ColorBlindMode.Normal ? new Pen(HeatColor.TextOn(fill), 1) : null;
+                    context.DrawGeometry(new ImmutableSolidColorBrush(lc), outline, tri);
                 }
-                var text = Text(Texts?[p, c] ?? r.Airmass[p, c].ToString(), Brushes.Black);
+                var text = Text(Texts?[p, c] ?? r.Airmass[p, c].ToString(), HeatColor.TextOn(fill));
                 context.DrawText(text, new Point(cell.X + (cw - text.Width) / 2, cell.Y + (ch - text.Height) / 2));
             }
         }

@@ -8,7 +8,7 @@
     <Grid Margin="16" ColumnDefinitions="Auto,Auto" RowDefinitions="*,Auto" ColumnSpacing="16">
     <StackPanel Spacing="12">
         <HeaderedContentControl Header="User interface settings">
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
                 <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
                 <CheckBox Grid.Row="0" Grid.Column="1" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}" />
                 <CheckBox Grid.Row="1" Grid.Column="0" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}" />
@@ -19,6 +19,8 @@
                 <ComboBox Grid.Row="4" Grid.Column="0" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" HorizontalAlignment="Stretch" />
                 <TextBlock Grid.Row="3" Grid.Column="1" Text="Closed loop indicator" Margin="0,8,0,0" />
                 <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ClosedLoopIndicators}" SelectedIndex="{Binding StandardFill}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Color blind mode" Margin="0,8,0,0" />
+                <ComboBox Grid.Row="6" Grid.Column="0" ItemsSource="{Binding ColorBlindModes}" SelectedIndex="{Binding ColorBlindMode}" HorizontalAlignment="Stretch" />
             </Grid>
         </HeaderedContentControl>
         <HeaderedContentControl Header="General settings">

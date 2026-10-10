@@ -152,6 +152,18 @@
         <Setter Property="HeaderForeground" Value="{DynamicResource SuiteMapHeaderForeground}" />
         <Setter Property="HeaderLines" Value="{DynamicResource SuiteMapHeaderLines}" />
         <Setter Property="GridLines" Value="{DynamicResource SuiteMapGridLines}" />
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+    </Style>
+    <!-- the settings' color blind mode (MainWindowViewModel puts it in the application's resources): every open map, its 3D view and
+         graph, docked, floating or in a dialog, repaints when it changes -->
+    <Style Selector="mc|Surface3D">
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+    </Style>
+    <Style Selector="mc|Graph2D">
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+    </Style>
+    <Style Selector="c|AirmassGrid">
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
     </Style>
     <Style Selector="DockControl">
         <Setter Property="(ControlRecyclingDataTemplate.ControlRecycling)" Value="{StaticResource DocumentRecycling}" />

@@ -1243,6 +1243,19 @@ namespace CommonSuite
             }
         }
 
+        private string m_ColorBlindMode = "Normal";
+
+        /// <summary>txlogger's colour blind mode for the map viewers' value scale, by its name (Normal, Universal, Protanopia, Tritanopia, Deuteranomaly).</summary>
+        public string ColorBlindMode
+        {
+            get { return m_ColorBlindMode; }
+            set
+            {
+                m_ColorBlindMode = value;
+                SaveRegistrySetting("ColorBlindMode", m_ColorBlindMode);
+            }
+        }
+
         private bool m_AutoDockSameFile = false;
 
         public bool AutoDockSameFile
@@ -1793,6 +1806,7 @@ namespace CommonSuite
                 saveSettings.SetValue("AutoSizeNewWindows", m_AutoSizeNewWindows);
                 saveSettings.SetValue("AutoSizeColumnsInWindows", m_AutoSizeColumnsInWindows);
                 saveSettings.SetValue("DisableMapviewerColors", m_DisableMapviewerColors);
+                saveSettings.SetValue("ColorBlindMode", m_ColorBlindMode);
                 saveSettings.SetValue("AutoDockSameFile", m_AutoDockSameFile);
                 saveSettings.SetValue("AutoDockSameSymbol", m_AutoDockSameSymbol);
                 saveSettings.SetValue("ShowViewerInWindows", m_ShowViewerInWindows);
@@ -2115,6 +2129,10 @@ namespace CommonSuite
                             else if (a == "DisableMapviewerColors")
                             {
                                 m_DisableMapviewerColors = Convert.ToBoolean(Settings.GetValue(a).ToString());
+                            }
+                            else if (a == "ColorBlindMode")
+                            {
+                                m_ColorBlindMode = Settings.GetValue(a).ToString();
                             }
                             else if (a == "AutoDockSameFile")
                             {

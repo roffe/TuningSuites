@@ -138,6 +138,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Caption = caption;
         Registry = registry;
         Settings = new AppSettings(registry);
+        ApplyColorBlindMode();
         Title = $"{TitleName} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
@@ -573,12 +574,22 @@ public abstract partial class MainWindowViewModel : ObservableObject
         return ok;
     }
 
-    /// <summary>After the settings dialog: what applies at once (SetupDisplayOptions); viewer settings apply to new viewers.</summary>
+    /// <summary>
+    /// After the settings dialog: what applies at once (SetupDisplayOptions) and the colour blind mode, which open viewers take
+    /// too; the other viewer settings apply to new viewers.
+    /// </summary>
     public virtual void SettingsChanged()
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
+        ApplyColorBlindMode();
         RefreshSymbols();
         RestartSramTimer();
+    }
+
+    /// <summary>The colour blind mode into the application's resources, where SuiteTheme.axaml's styles hand it to every map control.</summary>
+    private void ApplyColorBlindMode()
+    {
+        if (Application.Current is { } app) app.Resources["SuiteColorBlindMode"] = MapControls.HeatColor.ParseMode(Settings.ColorBlindMode);
     }
 
     // ---- projects ----

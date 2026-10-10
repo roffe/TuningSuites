@@ -16,6 +16,10 @@ namespace MapControls;
 public class Graph2D : Control
 {
     public static readonly StyledProperty<IBrush?> ForegroundProperty = TextElement.ForegroundProperty.AddOwner<Graph2D>();
+    public static readonly StyledProperty<ColorBlindMode> ColorModeProperty = MapGrid.ColorModeProperty.AddOwner<Graph2D>();
+
+    /// <summary>The markers' colour blind mode.</summary>
+    public ColorBlindMode ColorMode { get => GetValue(ColorModeProperty); set => SetValue(ColorModeProperty, value); }
 
     public IBrush? Foreground
     {
@@ -44,7 +48,7 @@ public class Graph2D : Control
 
     static Graph2D()
     {
-        AffectsRender<Graph2D>(ForegroundProperty);
+        AffectsRender<Graph2D>(ForegroundProperty, ColorModeProperty);
     }
 
     /// <summary>axis may be null, cells are numbered then. min/max set the colour scale (the whole map's range).</summary>
@@ -164,7 +168,7 @@ public class Graph2D : Control
             context.DrawLine(LinePen, new Point(Cx(i), YFor(m_values[i])), new Point(Cx(i + 1), YFor(m_values[i + 1])));
         for (int i = 0; i < n; i++)
         {
-            var fill = new SolidColorBrush(HeatColor.Interpolate(m_min, m_max, m_values[i], m_online));
+            var fill = new SolidColorBrush(HeatColor.Interpolate(m_min, m_max, m_values[i], m_online, ColorMode));
             context.DrawEllipse(fill, MarkerPen, new Point(Cx(i), YFor(m_values[i])), MarkerRadius, MarkerRadius);
         }
 

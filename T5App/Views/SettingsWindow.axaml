@@ -22,8 +22,12 @@
                     <CheckBox Grid.Row="2" Grid.Column="1" Content="Advanced mode enabled" IsChecked="{Binding EnableAdvancedMode}"
                               ToolTip.Tip="If checked, all advanced topics will be visible. If you are not sure whether you need this, leave it unchecked." />
                 </Grid>
-                <TextBlock Text="Default view type for maps" Margin="0,8,0,0" />
-                <ComboBox ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" MinWidth="220" />
+                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="2" Margin="0,8,0,0">
+                    <TextBlock Text="Default view type for maps" />
+                    <ComboBox Grid.Row="1" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" MinWidth="220" />
+                    <TextBlock Grid.Column="1" Text="Color blind mode" />
+                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding ColorBlindModes}" SelectedIndex="{Binding ColorBlindMode}" MinWidth="220" />
+                </Grid>
             </StackPanel>
         </HeaderedContentControl>
         <HeaderedContentControl Header="Realtime settings">

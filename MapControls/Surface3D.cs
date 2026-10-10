@@ -38,9 +38,14 @@ public class Surface3D : Control
 
     private static readonly IBrush DarkBackground = new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
 
+    public static readonly StyledProperty<ColorBlindMode> ColorModeProperty = MapGrid.ColorModeProperty.AddOwner<Surface3D>();
+
+    /// <summary>The surface's colour blind mode, in both the shader's palette and the triangles.</summary>
+    public ColorBlindMode ColorMode { get => GetValue(ColorModeProperty); set => SetValue(ColorModeProperty, value); }
+
     static Surface3D()
     {
-        AffectsRender<Surface3D>(BackgroundProperty, ThemeVariantScope.ActualThemeVariantProperty);
+        AffectsRender<Surface3D>(BackgroundProperty, ThemeVariantScope.ActualThemeVariantProperty, ColorModeProperty);
     }
 
     internal bool IsDark => ActualThemeVariant == ThemeVariant.Dark;
@@ -555,7 +560,7 @@ public class Surface3D : Control
         return new SurfaceShader.Frame
         {
             Data = m_dataImage,
-            Colormap = SurfaceShader.ColormapImage(m_online, m_zrange == 0),
+            Colormap = SurfaceShader.ColormapImage(m_online, m_zrange == 0, ColorMode),
             Rotation = [(float)r.M00, (float)r.M10, (float)r.M20, (float)r.M01, (float)r.M11, (float)r.M21, (float)r.M02, (float)r.M12, (float)r.M22],
             GridCols = w - 1,
             GridRows = h - 1,
@@ -679,7 +684,7 @@ public class Surface3D : Control
 
     private SKColor ColorWithDepth(double value, double depth)
     {
-        Color baseColor = HeatColor.Interpolate(m_zmin, m_zmax, value, m_online);
+        Color baseColor = HeatColor.Interpolate(m_zmin, m_zmax, value, m_online, ColorMode);
         double f = 0.6 + 0.4 * depth;
         double haze = (1 - depth) * 15; // slight blue tint on distant parts
         byte r = (byte)(baseColor.R * f), g = (byte)(baseColor.G * f);
