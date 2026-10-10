@@ -59,22 +59,53 @@ public partial class SuiteMainWindow : Window
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
             // the first size: the width the saved or default share gives
-            if (double.IsNaN(m_symbolWidth)) m_symbolWidth = Space.SymbolPane.Proportion * e.NewSize.Width;
+            if (double.IsNaN(m_symbolWidth)) m_symbolWidth = Shown(Space.SymbolPane.Proportion, e.NewSize.Width);
             FitSymbolPane(e.NewSize.Width);
         };
+        // the splitter's width is known once the symbol list is laid out: fit again then (the first fits counted it as 0)
+        EventHandler? settle = null;
+        settle = (_, _) =>
+        {
+            if (Space.Workspace.Bounds.Width <= 0 || Available(Space.Workspace.Bounds.Width) == Space.Workspace.Bounds.Width) return;
+            Space.Workspace.LayoutUpdated -= settle;
+            FitSymbolPane(Space.Workspace.Bounds.Width);
+        };
+        Space.Workspace.LayoutUpdated += settle;
         Space.SymbolPane.PropertyChanged += (_, e) =>
         {
             // a splitter drag (not the fitting below, not while the list is pinned away)
             if (e.Property == Dock.Model.Avalonia.Core.DockableBase.ProportionProperty && !m_fittingSymbolPane && Space.Workspace.Bounds.Width > 0
                 && !double.IsNaN(Space.SymbolPane.Proportion) && DockFactory?.IsDockablePinned(Space.SymbolTool) != true)
-                m_symbolWidth = Space.SymbolPane.Proportion * Space.Workspace.Bounds.Width;
+                m_symbolWidth = Shown(Space.SymbolPane.Proportion, Space.Workspace.Bounds.Width);
         };
     }
 
-    // the share of the new width that keeps the symbol list as wide as it was; the documents take the rest
+    // Dock's panel gives a share of the width its splitters leave, rounded down to whole pixels
+    private Dock.Controls.ProportionalStackPanel.ProportionalStackPanel? m_mainPanel;
+    private double m_splitters;
+
+    private double Available(double total)
+    {
+        if (m_mainPanel == null || TopLevel.GetTopLevel(m_mainPanel) == null)
+        {
+            m_mainPanel = Space.GetVisualDescendants().OfType<SymbolListView>().FirstOrDefault()?.GetVisualAncestors()
+                .OfType<Dock.Controls.ProportionalStackPanel.ProportionalStackPanel>().FirstOrDefault();
+            m_splitters = 0;
+        }
+        if (m_splitters == 0 && m_mainPanel != null)
+            m_splitters = m_mainPanel.Children.Where(c => c.GetVisualDescendants().OfType<Dock.Controls.ProportionalStackPanel.ProportionalStackPanelSplitter>().Any())
+                .Sum(c => c.Bounds.Width);
+        return Math.Max(1, total - m_splitters);
+    }
+
+    // the width a share shows at this total width
+    private double Shown(double share, double total) => Math.Floor(share * Available(total));
+
+    // the share of the new width that keeps the symbol list exactly as wide as it was (0.3 px over the whole pixel, so the rounding
+    // down lands on it whatever the width, also at 125 / 150 / 200 % scaling); the documents take the rest
     private void FitSymbolPane(double total)
     {
-        double share = Math.Clamp(m_symbolWidth / total, 0.05, 0.95);
+        double share = Math.Clamp((m_symbolWidth + 0.3) / Available(total), 0.05, 0.95);
         m_fittingSymbolPane = true;
         Space.SymbolPane.Proportion = share;
         Space.Documents.Proportion = 1 - share;

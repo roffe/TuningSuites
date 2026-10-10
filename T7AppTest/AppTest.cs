@@ -105,25 +105,25 @@ namespace T7AppTest
                 vm.SetFilterColumns(grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => c.SortMemberPath));
                 // no "No documents open" behind an empty workspace
                 Assert.IsFalse(Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<TextBlock>().Any(t => t.Text == "No documents open"));
-                // the symbol list keeps its width when the window is resized
+                // the symbol list keeps its width to the pixel when the window is resized (it jumped a pixel back and forth)
                 double SymbolListWidth() => Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<SuiteApp.Views.SymbolListView>().First().Bounds.Width;
+                void SameWidthWhileResizing(double width)
+                {
+                    foreach (int w in Enumerable.Range(0, 40).Select(i => 1000 + i * 37).Append(1500))
+                    {
+                        window.Width = w;
+                        window.CaptureRenderedFrame();
+                        Assert.AreEqual(width, SymbolListWidth(), $"window {w}");
+                    }
+                }
                 double before = SymbolListWidth();
-                window.Width = 1100;
-                window.CaptureRenderedFrame();
-                Assert.AreEqual(before, SymbolListWidth(), 2);
-                window.Width = 1500;
-                window.CaptureRenderedFrame();
-                Assert.AreEqual(before, SymbolListWidth(), 2);
+                SameWidthWhileResizing(before);
                 // a splitter drag gives it a new width, which resizing keeps
                 WorkspacePart<Dock.Model.Avalonia.Controls.ToolDock>(window, "SymbolPane")!.Proportion = 0.4;
                 window.CaptureRenderedFrame();
                 double dragged = SymbolListWidth();
                 Assert.IsGreaterThan(before + 50, dragged);
-                window.Width = 1100;
-                window.CaptureRenderedFrame();
-                Assert.AreEqual(dragged, SymbolListWidth(), 2);
-                window.Width = 1500;
-                window.CaptureRenderedFrame();
+                SameWidthWhileResizing(dragged);
                 // a right click in the empty header space right of the last column opens the header menu, not the rows' menu
                 WorkspacePart<Dock.Model.Avalonia.Controls.ToolDock>(window, "SymbolPane")!.Proportion = 0.9;
                 window.CaptureRenderedFrame();
