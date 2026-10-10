@@ -44,9 +44,12 @@ public partial class SuiteMainWindow
         await Dialogs.Text(this, "Binary compare", text.ToString());
     }
 
+    // Import SRAM snapshot's type, also what a dropped file is imported as
+    private const string SramPattern = "*.RAM";
+
     protected async void OnImportSram(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Select a SRAM snapshot", "SRAM dump files", ["*.RAM"]) is { } file) Vm.ImportSramSnapshot(file);
+        if (await Dialogs.OpenFile(this, "Select a SRAM snapshot", "SRAM dump files", [SramPattern]) is { } file) Vm.ImportSramSnapshot(file);
     }
 
     protected void OnReadFromSramFile(object? sender, RoutedEventArgs e)

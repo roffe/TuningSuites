@@ -58,6 +58,7 @@ public partial class SuiteMainWindow : Window
         if (m_workspaceReady) return;
         m_workspaceReady = true;
         InitWorkspace();
+        InitDrop();
         Space.Workspace.SizeChanged += (_, e) =>
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
@@ -150,9 +151,12 @@ public partial class SuiteMainWindow : Window
         vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
     }
 
+    // Open file's types, also what a dropped file opens as
+    private static readonly string[] BinaryPatterns = ["*.bin", "*.s19"];
+
     protected async void OnOpenFile(object? sender, RoutedEventArgs e)
     {
-        string? path = await Dialogs.OpenFile(this, OpenFileTitle, BinaryFilesName, ["*.bin", "*.s19"]);
+        string? path = await Dialogs.OpenFile(this, OpenFileTitle, BinaryFilesName, BinaryPatterns);
         if (path != null) await Vm.OpenPlainFileAsync(path, true);
     }
 

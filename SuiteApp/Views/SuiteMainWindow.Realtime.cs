@@ -14,9 +14,12 @@ public partial class SuiteMainWindow
 
     protected async void OnOpenLog(object? sender, RoutedEventArgs e)
     {
-        if (await OpenLogFile() is not { } file) return;
-        await Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(this));
+        if (await OpenLogFile() is { } file) await LoadLog(file);
     }
+
+    // Load logfile, also for a dropped log
+    private Task LoadLog(string file) =>
+        Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(this));
 
     private async Task<(string file, LogSelectionViewModel selection)?> ChooseLogData()
     {

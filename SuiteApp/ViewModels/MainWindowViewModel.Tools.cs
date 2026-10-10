@@ -48,4 +48,20 @@ public abstract partial class MainWindowViewModel
         ShowDocument(new HexViewerViewModel(bin.FileName, bin));
         if (SramFile is { } ram && File.Exists(ram)) ShowDocument(new HexViewerViewModel(ram, bin, sram: true));
     }
+
+    /// <summary>A file dropped on a hex view (HexViewer's OpenFile): the view shows it instead, once the open one may close.</summary>
+    public async Task OpenInHexViewerAsync(HexViewerViewModel viewer, string file)
+    {
+        HexViewerViewModel opened;
+        try
+        {
+            opened = viewer.WithFile(file);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowInfo(e.Message);
+            return;
+        }
+        if (await CloseViewerAsync(viewer)) ShowDocument(opened);
+    }
 }
