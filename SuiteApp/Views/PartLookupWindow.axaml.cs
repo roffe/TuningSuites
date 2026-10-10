@@ -28,7 +28,7 @@ public partial class PartLookupWindow : Window
 
     private async void OnCreate(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.SaveFile(this, "binary files", "bin", Vm.PartNumber + ".bin") is { } file) Close("create:" + file);
+        if (await Dialogs.SaveFile(this, "Create new from original", "binary files", "bin", Vm.PartNumber + ".bin") is { } file) Close("create:" + file);
     }
 
     private void OnClose(object? sender, RoutedEventArgs e) => Close(null);

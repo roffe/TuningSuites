@@ -11,7 +11,8 @@ public partial class ProjectPropertiesWindow : Window
 
     private async void OnBrowse(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Binary files", "*.bin") is { } file) ((ProjectPropertiesViewModel)DataContext!).BinaryFile = file;
+        if (await Dialogs.OpenFile(this, "Trionic project properties: select the binary file", "Binary files", ["*.bin"]) is { } file)
+            ((ProjectPropertiesViewModel)DataContext!).BinaryFile = file;
     }
 
     private void OnOk(object? sender, RoutedEventArgs e) => Close(true);

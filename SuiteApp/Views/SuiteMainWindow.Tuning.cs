@@ -35,8 +35,9 @@ public partial class SuiteMainWindow
 
     protected async void OnCompareToFile(object? sender, RoutedEventArgs e)
     {
-        if (CompareSeveralFiles) await Vm.CompareToFilesAsync(await Dialogs.OpenFiles(this, CompareFilesName, "*.bin"));
-        else if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is { } file) await Vm.CompareToFileAsync(file);
+        const string title = "Compare symbols with other binary";
+        if (CompareSeveralFiles) await Vm.CompareToFilesAsync(await Dialogs.OpenFiles(this, title, CompareFilesName, ["*.bin"]));
+        else if (await Dialogs.OpenFile(this, title, CompareFilesName, ["*.bin"]) is { } file) await Vm.CompareToFileAsync(file);
     }
 
     protected void OnBinaryCompare(object? sender, RoutedEventArgs e) => BinaryCompare(false);
@@ -46,7 +47,8 @@ public partial class SuiteMainWindow
 
     private async void BinaryCompare(bool outsideSymbols)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } file) return;
+        string title = outsideSymbols ? "Compare binary outside symbolrange" : "Compare binary with other binary";
+        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, title, CompareFilesName, ["*.bin"]) is not { } file) return;
         var lines = SuiteCompare.BinaryDiff(bin.FileName, file, outsideSymbols ? bin.Symbols : null);
         var text = new StringBuilder($"{Path.GetFileName(bin.FileName)} / {Path.GetFileName(file)}: {lines.Count} lines differ\n\n");
         foreach (var (mine, theirs) in lines) text.Append(mine).Append('\n').Append(theirs).Append("\n\n");
@@ -65,7 +67,7 @@ public partial class SuiteMainWindow
         if (Vm.Binary is not { } bin) return;
         var (caption, text) = TransferWizard;
         if (!await Dialogs.YesNo(this, text, caption)) return;
-        if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } target) return;
+        if (await Dialogs.OpenFile(this, "Transfer maps to another binary", CompareFilesName, ["*.bin"]) is not { } target) return;
         var selection = new TransferSelectionViewModel(SuiteCompare.TransferCandidates(bin), Vm.LastTransferSelection());
         if (!await new TransferSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) return;
         var report = Vm.TransferMaps(target, selection.Selection);
@@ -74,7 +76,8 @@ public partial class SuiteMainWindow
 
     protected async void OnCopyAddressTable(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } target) return;
+        if (Vm.Binary is not { } bin
+            || await Dialogs.OpenFile(this, "Select binary file to transfer the address table to...", CompareFilesName, ["*.bin"]) is not { } target) return;
         if (bin.AddressTableStart(bin.FileName) != bin.AddressTableStart(target)
             && !await Dialogs.YesNo(this, "Address table start addresses are not equal, continue anyway?", "Attention!"))
         {
@@ -132,22 +135,23 @@ public partial class SuiteMainWindow
 
     protected async void OnImportXml(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "XML documents", "*.xml") is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportXml(bin, file));
+        if (await Dialogs.OpenFile(this, "Import XML descriptor", "XML documents", ["*.xml"]) is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportXml(bin, file));
     }
 
     protected async void OnImportCsv(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "CSV documents", "*.csv") is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportCsv(bin, file));
+        if (await Dialogs.OpenFile(this, "Import CSV descriptor", "CSV documents", ["*.csv"]) is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportCsv(bin, file));
     }
 
     protected async void OnImportAs2(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "AS2 documents", "*.as2") is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportAs2(bin, file));
+        if (await Dialogs.OpenFile(this, "Import AS2 descriptor", "AS2 documents", ["*.as2"]) is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportAs2(bin, file));
     }
 
     protected async void OnExportS19(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "S19 files", "S19", Path.ChangeExtension(Path.GetFileName(bin.FileName), ".S19")) is { } target)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Export file to motorola S19 format...", "S19 files", "S19",
+                Path.ChangeExtension(Path.GetFileName(bin.FileName), ".S19")) is { } target)
             SymbolFiles.ExportS19(bin, target);
     }
 
@@ -160,13 +164,13 @@ public partial class SuiteMainWindow
             return;
         }
         string name = Path.GetFileName(bin.FileName) + "~" + sh.SmartVarname + ".csv";
-        if (await Dialogs.SaveFile(this, "CSV files", "csv", name) is { } target) SymbolFiles.ExportMapCsv(bin, sh, target);
+        if (await Dialogs.SaveFile(this, "Export map to CSV", "CSV files", "csv", name) is { } target) SymbolFiles.ExportMapCsv(bin, sh, target);
     }
 
     /// <summary>T5Suite's Import map from Excel: the map from the name after the last '~', else the selected symbol.</summary>
     protected async void OnImportMapCsv(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, "CSV files", "*.csv") is not { } file) return;
+        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, "Import map from CSV", "CSV files", ["*.csv"]) is not { } file) return;
         string stem = Path.GetFileNameWithoutExtension(file);
         if (stem.Contains('~') && bin.Find(stem[(stem.LastIndexOf('~') + 1)..]) is { } named)
         {
@@ -188,7 +192,7 @@ public partial class SuiteMainWindow
 
     protected async void OnExportSymbolCsv(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "CSV files", "csv") is { } target)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Select a filename to save the symbollist", "CSV files", "csv", null) is { } target)
         {
             SymbolFiles.ExportSymbolCsv(bin, target, Vm.SymbolCsvUserDescription);
             await Dialogs.Info(this, "Export done", Vm.Caption);
@@ -199,20 +203,22 @@ public partial class SuiteMainWindow
 
     protected async void OnImportTuningPackage(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, Vm.PackageFilesName, "*." + Vm.PackageExtension) is { } file && Vm.ImportTuningPackage(file) is { } results)
+        if (await Dialogs.OpenFile(this, "Import tuning package", Vm.PackageFilesName, ["*." + Vm.PackageExtension]) is { } file
+            && Vm.ImportTuningPackage(file) is { } results)
             await new ImportResultsWindow(results).ShowDialog(this);
     }
 
     protected async void OnExportPackage(object? sender, RoutedEventArgs e)
     {
         var selected = Vm.SelectedSymbols.ToList();
-        if (Vm.Binary is { } bin && selected.Count > 0 && await Dialogs.SaveFile(this, Vm.PackageFilesName, Vm.PackageExtension) is { } target)
+        if (Vm.Binary is { } bin && selected.Count > 0
+            && await Dialogs.SaveFile(this, "Export as tuning package", Vm.PackageFilesName, Vm.PackageExtension, null) is { } target)
             SymbolFiles.ExportPackage(bin, selected, target);
     }
 
     protected async void OnExportFixedPackage(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, Vm.PackageFilesName, Vm.PackageExtension) is { } target)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Export fixed tuning package", Vm.PackageFilesName, Vm.PackageExtension, null) is { } target)
             SymbolFiles.ExportPackage(bin, SymbolFiles.FixedPackage(bin), target);
     }
 

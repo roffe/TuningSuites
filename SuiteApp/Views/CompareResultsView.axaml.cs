@@ -27,6 +27,6 @@ public partial class CompareResultsView : UserControl
 
     private async void OnExport(object? sender, RoutedEventArgs e)
     {
-        if (TopLevel.GetTopLevel(this) is Window w && await Dialogs.SaveFile(w, "CSV files", "csv", "diffexport.csv") is { } file) Vm.ExportCsv(file);
+        if (TopLevel.GetTopLevel(this) is Window w && await Dialogs.SaveFile(w, "Export to CSV", "CSV files", "csv", "diffexport.csv") is { } file) Vm.ExportCsv(file);
     }
 }

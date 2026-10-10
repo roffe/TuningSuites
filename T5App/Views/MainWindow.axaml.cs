@@ -16,6 +16,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 5 files";
 
+    protected override string OpenFileTitle => "Open a binary Trionic 5 file...";
+
     protected override string CompareFilesName => "Trionic 5 binary files";
 
     // T5Suite 2.0's frmAbout list
@@ -164,15 +166,15 @@ public partial class MainWindow : SuiteMainWindow
     /// <summary>Open a saved report: T5Suite read DevExpress .prnx files, the reports here are saved as text.</summary>
     private async void OnOpenReport(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Reports", "*.txt") is { } file)
+        if (await Dialogs.OpenFile(this, "Open a saved report", "Reports", ["*.txt"]) is { } file)
             await Dialogs.Report(this, System.IO.Path.GetFileNameWithoutExtension(file), await System.IO.File.ReadAllLinesAsync(file));
     }
 
     private async void OnMergeFiles(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFileIn(this, "First part of binary", null, "Binary files", "*.bin") is not { } first
-            || await Dialogs.OpenFileIn(this, "Second part of binary", System.IO.Path.GetDirectoryName(first), "Binary files", "*.bin") is not { } second
-            || await Dialogs.SaveFile(this, "Binary files", "bin", "merged.bin") is not { } output) return;
+        if (await Dialogs.OpenFile(this, "First part of binary", "Binary files", ["*.bin"]) is not { } first
+            || await Dialogs.OpenFileIn(this, "Second part of binary", System.IO.Path.GetDirectoryName(first), "Binary files", ["*.bin"]) is not { } second
+            || await Dialogs.SaveFile(this, "Save merged binary to...", "Binary files", "bin", "merged.bin") is not { } output) return;
         if (Trionic5Tools.T5Binary.Merge(await System.IO.File.ReadAllBytesAsync(first), await System.IO.File.ReadAllBytesAsync(second)) is not { } merged)
         {
             await Dialogs.Info(this, "File lengths don't match, unable to merge!");
@@ -203,12 +205,13 @@ public partial class MainWindow : SuiteMainWindow
             await Dialogs.Info(this, "A canbus connection is needed to create a SRAM snapshot");
             return;
         }
-        if ((Vm.ProjectSnapshotFile() ?? await Dialogs.SaveFile(this, "SRAM snapshots", "RAM", Vm.SnapshotName)) is { } file) await Vm.DownloadSramAsync(file);
+        if ((Vm.ProjectSnapshotFile() ?? await Dialogs.SaveFile(this, "Get SRAM snapshot", "SRAM snapshots", "RAM", Vm.SnapshotName)) is { } file)
+            await Vm.DownloadSramAsync(file);
     }
 
     private async void OnUploadSram(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is null || !Vm.IsConnected || await Dialogs.OpenFile(this, "SRAM snapshots", "*.ram") is not { } file) return;
+        if (Vm.Binary is null || !Vm.IsConnected || await Dialogs.OpenFile(this, "Upload SRAM to ECU", "SRAM snapshots", ["*.ram"]) is not { } file) return;
         bool toFile = await Dialogs.YesNo(this, "Do you want to write to the current binary file as well?", "Question");
         await Vm.UploadSramAsync(file, toFile);
     }
@@ -230,7 +233,7 @@ public partial class MainWindow : SuiteMainWindow
     /// <summary>Import SRAM snapshot into binary: the snapshot, then "Select merge options" (frmMergeAdaptionData).</summary>
     private async void OnMergeAdaption(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is null || await Dialogs.OpenFileIn(this, "Select SRAM file...", null, "SRAM dumps", "*.ram") is not { } file) return;
+        if (Vm.Binary is null || await Dialogs.OpenFile(this, "Select SRAM file...", "SRAM dumps", ["*.ram"]) is not { } file) return;
         if (await Dialogs.Checks(this, "Select merge options", "Select items to merge from adaption data",
                 ("Fuel adaption (spot adaption)", true), ("Long term fuel trim", true), ("Idle fuel trim", true),
                 ("Cylinder fuel correction from knock information", false)) is { } o)

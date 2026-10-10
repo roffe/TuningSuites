@@ -63,7 +63,7 @@ public static class T5ToolWindows
         Window? window = null;
         var bar = Bar(Button("Refresh", Fill), Button("Export", async () =>
         {
-            if (await Dialogs.SaveFile(window!, "PNG images", "png", "dyno.png") is not { } file) return;
+            if (await Dialogs.SaveFile(window!, "Export dyno graph", "PNG images", "png", "dyno.png") is not { } file) return;
             var size = new PixelSize(Math.Max(1, (int)chart.Bounds.Width), Math.Max(1, (int)chart.Bounds.Height));
             using var bitmap = new RenderTargetBitmap(size);
             bitmap.Render(chart);

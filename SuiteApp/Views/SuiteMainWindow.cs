@@ -42,6 +42,9 @@ public partial class SuiteMainWindow : Window
     /// <summary>Open file's filter name ("Trionic 7 binary or Motorola S19").</summary>
     protected virtual string BinaryFilesName => "Binary or Motorola S19";
 
+    /// <summary>Open file's picker title, as T7Suite's and T8Suite's "Open a binary Trionic 7 file...".</summary>
+    protected virtual string OpenFileTitle => "Open file";
+
     /// <summary>About...: the thanks, support and closing lines of the suite's frmAbout (T7Suite's by default).</summary>
     /// <summary>About's special thanks, the suite's own list (Roffe in every suite's); the rest of About is the same for all.</summary>
     protected virtual string AboutThanks =>
@@ -149,13 +152,14 @@ public partial class SuiteMainWindow : Window
 
     protected async void OnOpenFile(object? sender, RoutedEventArgs e)
     {
-        string? path = await Dialogs.OpenFile(this, BinaryFilesName, "*.bin", "*.s19");
+        string? path = await Dialogs.OpenFile(this, OpenFileTitle, BinaryFilesName, ["*.bin", "*.s19"]);
         if (path != null) await Vm.OpenPlainFileAsync(path, true);
     }
 
     protected async void OnSaveAs(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.SaveFile(this, "Binary files", "bin", Path.GetFileName(bin.FileName)) is not { } target) return;
+        if (Vm.Binary is not { } bin
+            || await Dialogs.SaveFile(this, "Save current file as...", "Binary files", "bin", Path.GetFileName(bin.FileName)) is not { } target) return;
         File.Copy(bin.FileName, target, true);
         if (await Dialogs.YesNo(this, "Do you want to open the newly saved file?", "Question")) await Vm.OpenPlainFileAsync(target, true);
     }
@@ -287,13 +291,13 @@ public partial class SuiteMainWindow : Window
         // the date picker gives midnight; the whole chosen day counts
         DateTime upTo = (p.UpTo ?? DateTime.Now).Date.AddDays(1).AddTicks(-1);
         if (Vm.Rebuild(upTo, p.StoreAsCurrent) is not { } rebuilt) return;
-        if (await Dialogs.SaveFile(this, "Binary files", "bin", "rebuild.bin") is { } dest) File.Copy(rebuilt, dest, true);
+        if (await Dialogs.SaveFile(this, "Save rebuild file as...", "Binary files", "bin", "rebuild.bin") is { } dest) File.Copy(rebuilt, dest, true);
         File.Delete(rebuilt);
     }
 
     protected async void OnProduceLatest(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Binary files", "bin", Path.GetFileName(bin.FileName)) is { } dest)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Produce latest binary", "Binary files", "bin", Path.GetFileName(bin.FileName)) is { } dest)
             File.Copy(bin.FileName, dest, true);
     }
 

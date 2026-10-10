@@ -20,7 +20,8 @@ public partial class TuningPackageEditorView : UserControl
 
     private async void OnOpen(object? sender, RoutedEventArgs e)
     {
-        if (Owner is { } w && Main is { } main && await Dialogs.OpenFile(w, main.PackageFilesName, "*." + main.PackageExtension) is { } file) Vm.Open(file);
+        if (Owner is { } w && Main is { } main && await Dialogs.OpenFile(w, "Open package", main.PackageFilesName, ["*." + main.PackageExtension]) is { } file)
+            Vm.Open(file);
     }
 
     // the symbol list's selection stands in for the suites' drag and drop
@@ -33,7 +34,7 @@ public partial class TuningPackageEditorView : UserControl
 
     private async void OnSave(object? sender, RoutedEventArgs e)
     {
-        if (Owner is { } w && Main is { } main && await Dialogs.SaveFile(w, main.PackageFilesName, main.PackageExtension) is { } file) Vm.Save(file);
+        if (Owner is { } w && Main is { } main && await Dialogs.SaveFile(w, "Save as", main.PackageFilesName, main.PackageExtension, null) is { } file) Vm.Save(file);
     }
 
     private void OnRowDoubleTapped(object? sender, TappedEventArgs e)

@@ -17,6 +17,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 7 binary or Motorola S19";
 
+    protected override string OpenFileTitle => "Open a binary Trionic 7 file...";
+
     protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
 
     protected override void OnDataContextChanged(System.EventArgs e)
@@ -55,12 +57,12 @@ public partial class MainWindow : SuiteMainWindow
 
     private async void OnUploadPackage(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Trionic 7 packages", "*.t7p") is { } file) await Vm.UploadPackageAsync(file);
+        if (await Dialogs.OpenFile(this, "Upload tuning package to ECU", "Trionic 7 packages", ["*.t7p"]) is { } file) await Vm.UploadPackageAsync(file);
     }
 
     private async void OnGeneratePackage(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } file) await Vm.GeneratePackageAsync(file);
+        if (await Dialogs.SaveFile(this, "Generate tuning package from ECU", "Trionic 7 packages", "t7p", null) is { } file) await Vm.GeneratePackageAsync(file);
     }
 
     private async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)

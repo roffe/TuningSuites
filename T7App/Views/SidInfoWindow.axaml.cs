@@ -13,12 +13,12 @@ public partial class SidInfoWindow : Window
 
     private async void OnExport(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.SaveFile(this, "SID settings", "sid") is { } file) Vm.Export(file);
+        if (await Dialogs.SaveFile(this, "Export SIDi settings", "SID settings", "sid", null) is { } file) Vm.Export(file);
     }
 
     private async void OnImport(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "SID settings", "*.sid") is { } file && !Vm.Import(file))
+        if (await Dialogs.OpenFile(this, "Import SIDi settings", "SID settings", ["*.sid"]) is { } file && !Vm.Import(file))
             await Dialogs.Info(this, "Unable to import SIDi settings with a different length!");
     }
 
