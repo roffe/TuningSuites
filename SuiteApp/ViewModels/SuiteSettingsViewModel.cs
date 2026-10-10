@@ -41,6 +41,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private int _baudrate;
     [ObservableProperty] private bool _onlyPBus;
     [ObservableProperty] private bool _autoUpdateSRAMViewers;
+    [ObservableProperty] private bool _interpolateLogWorksTimescale;
     [ObservableProperty] private decimal? _autoUpdateInterval;
 
     // "Use wideband O2 on com port", device and port
@@ -62,6 +63,9 @@ public partial class SuiteSettingsViewModel : ObservableObject
 
     /// <summary>The symbols the wideband can come through (T7: the scanner inputs; T5: AD_EGR pin 69, AD_cat pin 70).</summary>
     public virtual string[] WidebandSymbols => ["DisplProt.AD_Scanner", "DisplProt.LambdaScanner"];
+
+    /// <summary>The symbol when the stored one isn't in the list.</summary>
+    protected virtual string DefaultWidebandSymbol => WidebandSymbols[0];
 
     public string[] WidebandDevices { get; } = ["PLX", "LM1", "LC1", "LM2", "ZT2", "AEM", "STAG", "LambdaShield"];
     public string[] SerialPorts { get; } = System.IO.Ports.SerialPort.GetPortNames();
@@ -98,6 +102,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _baudrate = s.Baudrate;
         _onlyPBus = s.OnlyPBus;
         _autoUpdateSRAMViewers = s.AutoUpdateSRAMViewers;
+        _interpolateLogWorksTimescale = s.InterpolateLogWorksTimescale;
         _autoUpdateInterval = Math.Clamp(s.AutoUpdateInterval, 5, 60);
         _useDigitalWidebandLambda = s.UseDigitalWidebandLambda;
         _widebandDevice = Array.Exists(WidebandDevices, d => d == s.WidebandDevice) ? s.WidebandDevice : "LC1";
@@ -105,7 +110,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _measureAFRInLambda = s.MeasureAFRInLambda;
         _useWidebandLambda = s.UseWidebandLambda;
         if (s.UseWidebandLambda) _useDigitalWidebandLambda = false;
-        _wideBandSymbol = Array.Exists(WidebandSymbols, w => w == s.WideBandSymbol) ? s.WideBandSymbol : WidebandSymbols[0];
+        _wideBandSymbol = Array.Exists(WidebandSymbols, w => w == s.WideBandSymbol) ? s.WideBandSymbol : DefaultWidebandSymbol;
         _widebandLowVoltage = (decimal)s.WidebandLowVoltage / 1000;
         _widebandHighVoltage = (decimal)s.WidebandHighVoltage / 1000;
         _widebandLowAFR = (decimal)s.WidebandLowAFR / 1000;
@@ -134,6 +139,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.Baudrate = Baudrate;
         s.OnlyPBus = OnlyPBus;
         s.AutoUpdateSRAMViewers = AutoUpdateSRAMViewers;
+        s.InterpolateLogWorksTimescale = InterpolateLogWorksTimescale;
         s.AutoUpdateInterval = (int)(AutoUpdateInterval ?? 20);
         s.UseDigitalWidebandLambda = UseDigitalWidebandLambda;
         s.WidebandDevice = WidebandDevice;

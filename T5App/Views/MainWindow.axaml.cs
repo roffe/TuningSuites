@@ -56,13 +56,26 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings, Vm.T5Settings);
-        if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
+        // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T5Suite)
+        AutotuneSettingsViewModel? autotune = null;
+        var window = new SettingsWindow
+        {
+            DataContext = settings,
+            AutotuneSettings = async owner =>
+            {
+                var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);
+                if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
+            },
+        };
+        if (!await window.ShowDialog<bool>(this)) return;
+        autotune?.Apply(Vm.Settings, Vm.T5Settings);
         settings.Apply(Vm.Settings, Vm.T5Settings);
         Vm.SettingsChanged();
         Vm.T5SettingsChanged();
         ApplyHideSymbolTable();
     }
 
+    // File → Autotune settings: no Settings dialog around it, so its Ok saves at once
     private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);

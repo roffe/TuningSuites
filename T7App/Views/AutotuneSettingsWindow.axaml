@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:T7App.ViewModels"
+        x:Class="T7App.Views.AutotuneSettingsWindow"
+        x:DataType="vm:AutotuneSettingsViewModel"
+        Title="Autotune settings..." SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <!-- T7Suite's frmAutotuneSettings: a value and its unit per row; its disabled options and the ping sound aren't ported -->
+    <StackPanel Margin="12" Spacing="6">
+        <HeaderedContentControl Classes="group" Header="Autotune settings">
+            <Grid ColumnDefinitions="Auto,140,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                <Grid.Styles>
+                    <Style Selector="TextBlock">
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                    </Style>
+                </Grid.Styles>
+                <TextBlock Text="Cell stable time" />
+                <NumericUpDown Grid.Column="1" Value="{Binding CellStableTime}" Minimum="100" Maximum="10000" Increment="100" FormatString="0" />
+                <TextBlock Grid.Column="2" Text="milliseconds" />
+                <TextBlock Grid.Row="1" Text="Correction percentage" />
+                <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding CorrectionPercentage}" Minimum="1" Maximum="100" Increment="1" FormatString="0" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="%" />
+                <TextBlock Grid.Row="2" Text="Acceptable target error" />
+                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AcceptableTargetError}" Minimum="1" Maximum="10" Increment="1" FormatString="0" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="%" />
+                <TextBlock Grid.Row="3" Text="Maximum adjustment per cycle" />
+                <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding MaximumAdjustment}" Minimum="1" Maximum="20" Increment="1" FormatString="0" />
+                <TextBlock Grid.Row="3" Grid.Column="2" Text="%" />
+                <CheckBox Grid.Row="4" Grid.ColumnSpan="3" Content="Auto update fuel map" IsChecked="{Binding AutoUpdateFuelMap}" />
+                <CheckBox Grid.Row="5" Grid.ColumnSpan="3" Content="Disable closed loop on starting autotune" IsChecked="{Binding DisableClosedLoopOnStartAutotune}" />
+                <TextBlock Grid.Row="6" Text="Selected Fuelmap" />
+                <ComboBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" ItemsSource="{Binding FuelMaps}" SelectedItem="{Binding AutoTuneFuelMap}" Width="180" HorizontalAlignment="Left" />
+            </Grid>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+            <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+            <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+        </StackPanel>
+    </StackPanel>
+</Window>

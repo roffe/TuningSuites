@@ -18,7 +18,6 @@ public partial class AutotuneSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _disableClosedLoop;
     [ObservableProperty] private bool _resetFuelTrims;
     [ObservableProperty] private bool _allowIdleAutoTune;
-    [ObservableProperty] private bool _alwaysCreateAfrMaps;
     [ObservableProperty] private decimal? _ignitionCellStableTime;
     [ObservableProperty] private decimal? _minimumEngineSpeed;
     [ObservableProperty] private decimal? _ignitionAdvancePerCycle;
@@ -41,7 +40,6 @@ public partial class AutotuneSettingsViewModel : ObservableObject
         _disableClosedLoop = s.DisableClosedLoopOnStartAutotune;
         _allowIdleAutoTune = s.AllowIdleAutoTune;
         _resetFuelTrims = t5.ResetFuelTrims;
-        _alwaysCreateAfrMaps = t5.AlwaysCreateAFRMaps;
         _ignitionCellStableTime = t5.IgnitionCellStableTime_ms;
         _minimumEngineSpeed = t5.MinimumEngineSpeedForIgnitionTuning;
         _ignitionAdvancePerCycle = (decimal)t5.IgnitionAdvancePerCycle;
@@ -66,7 +64,6 @@ public partial class AutotuneSettingsViewModel : ObservableObject
         s.DisableClosedLoopOnStartAutotune = DisableClosedLoop;
         s.AllowIdleAutoTune = AllowIdleAutoTune;
         t5.ResetFuelTrims = ResetFuelTrims;
-        t5.AlwaysCreateAFRMaps = AlwaysCreateAfrMaps;
         t5.IgnitionCellStableTime_ms = (int)(IgnitionCellStableTime ?? 500);
         t5.MinimumEngineSpeedForIgnitionTuning = (int)(MinimumEngineSpeed ?? 1200);
         t5.IgnitionAdvancePerCycle = (double)(IgnitionAdvancePerCycle ?? 0.1m);
@@ -76,4 +73,7 @@ public partial class AutotuneSettingsViewModel : ObservableObject
         t5.MaximumIgnitionAdvancePerSession = (double)(MaximumAdvancePerSession ?? 2m);
         t5.CapIgnitionMap = CapIgnitionMap;
     }
+
+    /// <summary>A copy to edit, so a cancelled dialog leaves the values kept so far.</summary>
+    public AutotuneSettingsViewModel Clone() => (AutotuneSettingsViewModel)MemberwiseClone();
 }

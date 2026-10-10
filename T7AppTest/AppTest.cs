@@ -367,6 +367,22 @@ namespace T7AppTest
                 settings2.Apply(vm.Settings);
                 vm.SettingsChanged();
 
+                // the autotune options behind Settings' button, saved by their own Ok
+                var autotune = new AutotuneSettingsViewModel(vm.Settings) { CellStableTime = 1500, AutoTuneFuelMap = "BFuelCal.E85Map" };
+                var autotuneWindow = new AutotuneSettingsWindow { DataContext = autotune };
+                autotuneWindow.Show();
+                Save(autotuneWindow, "autotunesettings");
+                autotuneWindow.Close();
+                // what Settings' button edits: a copy, so a cancelled dialog leaves the values kept so far
+                var copy = autotune.Clone();
+                copy.CellStableTime = 2000;
+                Assert.AreEqual(1500m, autotune.CellStableTime);
+                autotune.Apply(vm.Settings);
+                Assert.AreEqual(1500, vm.Settings.CellStableTime_ms);
+                Assert.AreEqual("BFuelCal.E85Map", vm.Settings.AutoTuneFuelMap);
+                vm.Settings.CellStableTime_ms = 1000;
+                vm.Settings.AutoTuneFuelMap = "BFuelCal.Map";
+
                 var myMapsWindow = new MyMapsWindow { DataContext = new MyMapsViewModel(CommonSuite.MapMenus.LoadMyMaps(vm.MyMapsFile)) };
                 myMapsWindow.Show();
                 Save(myMapsWindow, "mymaps");

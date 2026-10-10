@@ -128,11 +128,29 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings);
-        if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
+        // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T7Suite)
+        AutotuneSettingsViewModel? autotune = null;
+        var window = new SettingsWindow
+        {
+            DataContext = settings,
+            AutotuneSettings = async owner =>
+            {
+                var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings);
+                if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
+            },
+        };
+        if (!await window.ShowDialog<bool>(this)) return;
         settings.Apply(Vm.Settings);
+        autotune?.Apply(Vm.Settings);
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
         Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);
     }
 
+    // File → Autotune settings (as T5): no Settings dialog around it, so its Ok saves at once
+    private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
+    {
+        var autotune = new AutotuneSettingsViewModel(Vm.Settings);
+        if (await new AutotuneSettingsWindow { DataContext = autotune }.ShowDialog<bool>(this)) autotune.Apply(Vm.Settings);
+    }
 }
