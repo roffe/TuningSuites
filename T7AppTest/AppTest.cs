@@ -910,6 +910,11 @@ namespace T7AppTest
                 CollectionAssert.Contains(infos, "Check settings, no CAN adapter has been selected!");
                 Assert.IsFalse(vm.IsConnected);
                 Assert.AreEqual("Connect ECU", vm.ConnectCaption);
+                // and Settings shows none chosen (it showed the first adapter found, which wasn't saved); choosing a type picks its first
+                var unset = new SettingsViewModel(vm.Settings);
+                Assert.IsNull(unset.Adapter);
+                unset.AdapterType = unset.AdapterTypes.First(t => t != unset.AdapterType);
+                Assert.AreEqual(unset.Adapters.FirstOrDefault(), unset.Adapter);
 
                 // an SRAM snapshot: the symbol's bytes at its SRAM address
                 var sh = vm.Binary!.Find("IgnNormCal.Map");

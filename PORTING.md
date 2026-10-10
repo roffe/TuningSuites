@@ -616,6 +616,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: Settings opens on the saved CAN adapter, an unset one as an empty "Select an adapter" (it showed the first adapter found, which wasn't saved, while Connect said none was selected); choosing an adapter type still picks its first adapter, as T7Suite did.
 - 2026-10-10: Autologging removed in all three suites (its settings too), the user's call.
 - 2026-10-10: The settings dialogs of T5, T7 and T8 laid out as their originals; T7's autotune options in their own dialog behind "Autotune settings" (and File → Autotune settings), T5's autotune dialog as T5Suite's.
 - 2026-10-10: T5's name is T5SuitePro like T7SuitePro / T8SuitePro: the window title ("T5SuitePro v<version> [ file ]"), the settings folder (`MattiasC/T5SuitePro`, the `T5Suite2` folder moved over once; the first-run import still reads T5Suite 2.0's registry keys) and the shipped user manual. The program, setup and About stay T5Suite like T7Suite / T8Suite; references to the old T5Suite 2.0 (its keys, `OldSuites/T5Suite2.0/`, its captions in the behaviour doc) keep its name.

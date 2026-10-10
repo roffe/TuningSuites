@@ -105,7 +105,8 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Adapter" />
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch" IsEnabled="{Binding HasAdapters}" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch" IsEnabled="{Binding HasAdapters}"
+                              PlaceholderText="Select an adapter" />
                 </Grid>
                 <Grid Grid.Row="6" Grid.Column="2" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0" IsVisible="{Binding AdapterNeedsBaudrate}">
                     <Grid.ColumnDefinitions>

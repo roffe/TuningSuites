@@ -75,11 +75,15 @@ public partial class SuiteSettingsViewModel : ObservableObject
     // frmComportSettings' speeds, plus the SLCAN ones the flasher offers
     public int[] Baudrates { get; } = [9600, 38400, 115200, 230400, 1000000, 2000000, 3000000];
 
+    private bool m_opened;
+
     partial void OnAdapterTypeChanged(string value)
     {
         CANBusAdapter? type = CanAdapters.FromDescription(value);
         Adapters = type is { } t ? ITrionic.GetAdapterNames(t) ?? [] : [];
-        if (Adapter == null || !Array.Exists(Adapters, a => a == Adapter)) Adapter = Adapters.Length > 0 ? Adapters[0] : null;
+        // the dialog opens on the saved adapter, an unset (or unplugged) one empty: showing the first one found looked chosen while
+        // Connect still said none was; choosing a type picks its first adapter, as T7Suite did
+        if (Adapter == null || !Array.Exists(Adapters, a => a == Adapter)) Adapter = m_opened && Adapters.Length > 0 ? Adapters[0] : null;
         AdapterNeedsBaudrate = CanAdapters.NeedsBaudrate(type);
     }
 
@@ -118,6 +122,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         PropertyChanged += (_, e) => { if (e.PropertyName == nameof(UseDigitalWidebandLambda) && UseDigitalWidebandLambda) UseWidebandLambda = false; };
         // not the field: the setter fills the adapter list
         AdapterType = Array.Exists(AdapterTypes, a => a == s.AdapterType) ? s.AdapterType : AdapterTypes[0];
+        m_opened = true;
     }
 
     /// <summary>OK: every value back into AppSettings (each setter saves).</summary>
