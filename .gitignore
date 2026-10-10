@@ -236,6 +236,3 @@ pip-log.txt
 project.lock.json
 project.assets.json
 *.nuget.props
-
-# OEM binaries for Lookup partnumber library
-/Binaries/
