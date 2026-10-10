@@ -31,7 +31,7 @@ jobs:
       with:
         fetch-depth: 0 # history and tags, each suite's version comes from its nearest <Suite>_v* tag (Directory.Build.props)
 
-    # TrionicCANLib from the Trionic submodule; only that one, T7Suite/CommonSuite's git:// url no longer resolves
+    # TrionicCANLib from the Trionic submodule; only that one, the old OldSuites/T7Suite/CommonSuite's git:// url no longer resolves
     - name: Trionic submodule
       run: git submodule update --init Trionic
 

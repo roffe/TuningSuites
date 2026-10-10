@@ -1,5 +1,5 @@
 [submodule "CommonSuite"]
-	path = T7Suite/CommonSuite
+	path = OldSuites/T7Suite/CommonSuite
 	url = git://github.com/mattiasclaesson/CommonSuite.git
 [submodule "Trionic"]
 	path = Trionic

@@ -567,7 +567,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ### 8. Release
 - [x] SetupT5 replacing the old T5Suite 2.0 (its upgrade code and folder, `MattiasC\T5SuiteII`; only a `T5suite_v` tag above its 2.0.30 replaces it), the publish folder (stock bins in Binaries, the two manuals, NLog.config, canlib32.dll on Windows), CI packages and the `T5suite_nightly` pre-release, Linux packaging, updater on `T5suite_v`, README
-- [ ] The old code (T5Suite2.0/, Trionic5Tools/, Trionic5Controls/, T5CANLib/, T7Suite/, T8Suite/, CommonSuite/, the old controls and setups) moves to `OldSuites/`, still in the tree for reference
+- [x] The old code (T5Suite2.0/, Trionic5Tools/, Trionic5Controls/, T5CANLib/, T7Suite/, T8Suite/, CommonSuite/, the old controls, flashers, libraries, setups, solutions and release scripts) moved to `OldSuites/`, still in the tree for reference (its README lists what is where); the behaviour docs' paths are relative to it
 
 ## After T7
 
@@ -582,6 +582,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: The old suites moved to `OldSuites/`; the root holds the .NET 10 suites, their data and docs.
 - 2026-10-10: T5 chunk 8: SetupT5, packaging, CI and README. Waiting for a first CI run on Windows.
 - 2026-10-10: T5 chunk 7 implemented: disassembly listing and hex sync, vectors, Idc, axis browser, dyno graph, compressor map, injection timing viewer, the SRAM snapshot compares.
 - 2026-10-10: T5 chunk 6 implemented: the realtime table and conversions, Pgm_status texts, live cells, logs, AFR maps and fuel autotune. The panel's dashboard names, a per-row decode, the status casts and a per-pass hook are suite hooks now; the wideband symbol settings and the autotune accept window moved into the shared projects. Waiting for a bench test.

@@ -2,6 +2,8 @@
 
 How the old T5Suite 2.0 (T5Suite2.0/, Trionic5Tools/, Trionic5Controls/, T5CANLib/) behaves, read from its code, where it differs from T7Suite ([T7SUITE-BEHAVIOUR.md](T7SUITE-BEHAVIOUR.md)) and T8Suite ([T8SUITE-BEHAVIOUR.md](T8SUITE-BEHAVIOUR.md)). Line numbers are `T5Suite2.0/frmMain.cs` unless another file is named. Check here before re-reading frmMain (13.3k lines).
 
+The old code is in [OldSuites/](../OldSuites); the paths below are relative to it.
+
 ## The T5 binary and opening a file
 
 How T5Suite 2.0 reads a T5.2 / T5.5 binary, read from `Trionic5Tools/Trionic5File.cs` (the file logic; line numbers without a file name are this file), `Trionic5FileInformation.cs`, `SymbolTranslator.cs`, `SymbolAxesTranslator.cs`, `T5Suite2.0/SrecordT5.cs` and `T5Suite2.0/frmMain.cs` ("frmMain"). Checked against the 85 stock bins in `T5Binaries/` with a re-implementation of the parser: all of them parse, find `END$`, find the address table and have a correct checksum.
