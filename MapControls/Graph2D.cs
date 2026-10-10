@@ -43,6 +43,8 @@ public class Graph2D : Control
     private double[] m_axis = [];
     private int m_axisPrec, m_valuePrec;
     private string m_axisLabel = "";
+
+    internal string AxisLabel => m_axisLabel;
     private double m_min, m_max;
     private double m_cursor = -1;
 

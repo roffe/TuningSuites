@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.LogicalTree;
 using Avalonia.VisualTree;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -27,6 +28,25 @@ namespace MapControlsTest
                 va.Grid.Select([3, 4, 5]);
                 CollectionAssert.AreEquivalent(new[] { 3, 4, 5 }, vb.Grid.SelectedCells.ToArray());
                 Assert.IsEmpty(vc.Grid.SelectedCells);
+                window.Close();
+            });
+        }
+
+        // MapViewerEx in all three suites: a single column on its 2D graph, captioned by its axis alone; a wider map on its 3D surface
+        [TestMethod]
+        public void SingleColumnOpensOnTheGraph()
+        {
+            Headless.Run(() =>
+            {
+                var column = new MapData("InjCorrCal.BattCorrTab", new byte[22], 1, true) { YAxis = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], YName = "V", XAxis = [0], XName = "x-axis" };
+                var one = new MapViewer { Map = column };
+                var wide = new MapViewer { Map = MapGridTest.IgnitionMapData() };
+                var window = new Window { Width = 1200, Height = 900, Content = new StackPanel { Children = { one, wide } } };
+                window.Show();
+                Assert.AreEqual(1, one.GetLogicalDescendants().OfType<TabControl>().First().SelectedIndex);
+                Assert.AreEqual("V", one.Graph.AxisLabel);
+                Assert.AreEqual(0, wide.GetLogicalDescendants().OfType<TabControl>().First().SelectedIndex);
+                StringAssert.StartsWith(wide.Graph.AxisLabel, "rpm @ mg/c ");
                 window.Close();
             });
         }

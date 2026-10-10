@@ -80,6 +80,7 @@ public class MapViewer : UserControl
     public MapGrid Grid { get; } = new();
     public Surface3D Surface { get; } = new();
     public Graph2D Graph { get; } = new();
+    private readonly TabControl m_graphTabs = new();
 
     private readonly Slider m_slice = new() { Minimum = 0, IsSnapToTickEnabled = true, TickFrequency = 1, Margin = new Thickness(8, 0) };
     private readonly ComboBox m_viewType = new() { ItemsSource = new[] { "Hex", "Decimal", "Easy", "ASCII" }, MinWidth = 100 };
@@ -130,7 +131,7 @@ public class MapViewer : UserControl
         }
         m_editX.IsEnabled = m_editY.IsEnabled = false;
 
-        var graphTabs = new TabControl();
+        var graphTabs = m_graphTabs;
         graphTabs.Items.Add(new TabItem { Header = "3D Graph", Content = Surface });
         var slicePanel = new DockPanel();
         DockPanel.SetDock(m_slice, Dock.Bottom);
@@ -202,6 +203,8 @@ public class MapViewer : UserControl
                 ShowSurface(map);
                 m_slice.Maximum = map.Cols - 1;
                 m_slice.IsVisible = map.Cols > 1;
+                // a single column opens on its 2D graph, as MapViewerEx did in all three suites (its 3D surface is a ribbon)
+                if (map.Cols == 1) m_graphTabs.SelectedIndex = 1;
             }
             Grid.Map = change.NewValue as MapData;
             ShowSlice();
@@ -288,7 +291,8 @@ public class MapViewer : UserControl
         int col = (int)Math.Clamp(m_slice.Value, 0, map.Cols - 1);
         double[] all = map.PhysicalValues();
         double[] slice = Enumerable.Range(0, map.Rows).Select(r => r * map.Cols + col).Where(i => i < all.Length).Select(i => all[i]).ToArray();
-        string at = map.XAxis != null && col < map.XAxis.Length ? $" @ {map.XName} {map.XAxis[col].ToString(CultureInfo.CurrentCulture)}" : "";
+        // the column's place only where the slider picks one
+        string at = map.Cols > 1 && map.XAxis != null && col < map.XAxis.Length ? $" @ {map.XName} {map.XAxis[col].ToString(CultureInfo.CurrentCulture)}" : "";
         int prec = map.Factor < 1 ? Math.Min(4, (int)Math.Ceiling(-Math.Log10(map.Factor))) : 0;
         Graph.SetData(slice, map.YEasy ?? map.YAxis, all.Min(), all.Max(), map.YEasy != null ? 2 : 0, prec, map.YName + at);
     }
