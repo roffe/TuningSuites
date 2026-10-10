@@ -4,7 +4,8 @@ on:
     branches: [master]
     tags:
     - 'T7suite_v*' # a T7Suite release, e.g. T7suite_v2.0.0
-    - 'T8suite_v*' # a T8Suite release, e.g. T8suite_v2.0.0; T5suite_v* tags belong to T5Suite
+    - 'T8suite_v*' # a T8Suite release, e.g. T8suite_v2.0.0
+    - 'T5suite_v*' # a T5Suite release, e.g. T5suite_v2.1.0
   pull_request:
   workflow_dispatch:
 
@@ -81,7 +82,7 @@ jobs:
     strategy:
       matrix:
         # a suite's tag packages that suite, anything else both
-        suite: ${{ fromJSON(startsWith(github.ref, 'refs/tags/T7suite_v') && '["T7"]' || startsWith(github.ref, 'refs/tags/T8suite_v') && '["T8"]' || '["T7","T8"]') }}
+        suite: ${{ fromJSON(startsWith(github.ref, 'refs/tags/T7suite_v') && '["T7"]' || startsWith(github.ref, 'refs/tags/T8suite_v') && '["T8"]' || startsWith(github.ref, 'refs/tags/T5suite_v') && '["T5"]' || '["T5","T7","T8"]') }}
         rid: [win-x86, linux-x64, linux-arm64, osx-arm64, osx-x64]
         include:
         - { rid: win-x86,     os: windows-latest }
@@ -105,7 +106,7 @@ jobs:
       with:
         dotnet-version: 10.x
 
-    # also puts the stock bins in Binaries (T7App.csproj, T8App.csproj)
+    # also puts the stock bins in Binaries (T5App.csproj, T7App.csproj, T8App.csproj)
     - name: Publish
       run: dotnet publish $APP/$APP.csproj -c Release -r ${{ matrix.rid }} --self-contained -o out/$SUITE
 
@@ -119,7 +120,7 @@ jobs:
         7z x -y -olibusb libusb.7z > /dev/null
         cp libusb/MinGW32/dll/libusb-1.0.dll out/$SUITE/
 
-    # T7Suite.msi / T8Suite.msi, and zipped as upstream's releases had it (T7Suite.zip)
+    # T5Suite.msi / T7Suite.msi / T8Suite.msi, and zipped as upstream's releases had it (T7Suite.zip)
     - name: Build Setup
       if: runner.os == 'Windows'
       run: |
@@ -176,6 +177,7 @@ jobs:
       run: |
         echo "t7=$(dotnet msbuild T7App/T7App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
         echo "t8=$(dotnet msbuild T8App/T8App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
+        echo "t5=$(dotnet msbuild T5App/T5App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
 
     # ponytail: rolling tags, one pre-release per suite that always points at the latest master build; the update check skips them
     - name: Move nightly tags
@@ -183,7 +185,8 @@ jobs:
       run: |
         git tag -f T7suite_nightly
         git tag -f T8suite_nightly
-        git push -f origin T7suite_nightly T8suite_nightly
+        git tag -f T5suite_nightly
+        git push -f origin T7suite_nightly T8suite_nightly T5suite_nightly
 
     - name: T7Suite nightly release
       if: github.ref == 'refs/heads/master'
@@ -208,6 +211,18 @@ jobs:
         prerelease: true
         make_latest: "false"
         files: dist/T8Suite*
+
+    - name: T5Suite nightly release
+      if: github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: T5suite_nightly
+        name: T5Suite nightly build ${{ steps.version.outputs.t5 }}
+        body: Automated build ${{ steps.version.outputs.t5 }} of ${{ github.sha }}
+        prerelease: true
+        make_latest: "false"
+        files: dist/T5Suite*
 
     # the update check finds it by its <suite>_v tag, not by GitHub's latest marker (that's whichever suite released last);
     # only the tagged suite was packaged

@@ -1,7 +1,7 @@
 # TuningSuites
-T7 and T8 Suites
+T5, T7 and T8 Suites
 
-The TxSuites are Open Source tools used to tune Trionic 7 and 8 based ECU’s.
+The TxSuites are Open Source tools used to tune Trionic 5, 7 and 8 based ECU’s.
 
 It is possible to tune how the software behaves to increase the performance of the car and adjust the software for hardware modifications, such a high performance injectors.
 
@@ -10,11 +10,11 @@ The TxSuites also supports real-time view and can be used to predict the behavio
 Installer packages and other information for the original suites are located here:
 http://www.txsuite.org
 
-# T7Suite and T8Suite for Windows, Linux and macOS
+# T5Suite, T7Suite and T8Suite for Windows, Linux and macOS
 
-T7Suite and T8Suite have been rebuilt on .NET 10 and Avalonia, without the commercial components the old suites needed, so they run on Windows, Linux and macOS. They read, edit and write the same files as the old suites and talk to the ECU through [TrionicCANLib](https://github.com/roffe/Trionic), the library of the Trionic CAN Flasher. [PORTING.md](PORTING.md) tracks what has been ported and every deliberate difference. T5Suite is still the old .NET Framework application.
+T5Suite, T7Suite and T8Suite have been rebuilt on .NET 10 and Avalonia, without the commercial components the old suites needed, so they run on Windows, Linux and macOS. They read, edit and write the same files as the old suites and talk to the ECU through [TrionicCANLib](https://github.com/roffe/Trionic), the library of the Trionic CAN Flasher. [PORTING.md](PORTING.md) tracks what has been ported and every deliberate difference; the old .NET Framework suites are kept in [OldSuites](OldSuites) for reference.
 
-Both suites support the same interfaces as the flasher:
+The suites support the same interfaces as the flasher (T5Suite talks to the ECU's P-bus):
 
 | Interface | Windows | Linux | macOS |
 |---|---|---|---|
@@ -36,12 +36,12 @@ The adapters still need their own drivers, see [Adapter setup](https://github.co
 
 ## Installation
 
-The downloads are on the [releases page](https://github.com/roffe/TuningSuites/releases): the `T7suite_v…` and `T8suite_v…` releases, and `T7suite_nightly` / `T8suite_nightly` with the latest build. Every package has the stock binaries in `Binaries` (Compare to original file, Lookup partnumber, Create binary from TIS file), which the separate T7Extras and T8Extras setups used to install. T8Suite's packages also carry the Tuning Wizard's packs in `TuningPacks`.
+The downloads are on the [releases page](https://github.com/roffe/TuningSuites/releases): the `T5suite_v…`, `T7suite_v…` and `T8suite_v…` releases, and `T5suite_nightly` / `T7suite_nightly` / `T8suite_nightly` with the latest build. Every package has the stock binaries in `Binaries` (Compare to original file, Lookup partnumber, Create binary from TIS file), which the separate T7Extras and T8Extras setups used to install. T8Suite's packages also carry the Tuning Wizard's packs in `TuningPacks`.
 
-Below, T7Suite stands for either suite: the T8Suite files are named the same way (T8Suite.msi, T8Suite-linux-x64.tar.gz, `./T8Suite/T8Suite`, `70-t8suite.rules`).
+Below, T7Suite stands for any of the suites: the T5Suite and T8Suite files are named the same way (T8Suite.msi, T8Suite-linux-x64.tar.gz, `./T8Suite/T8Suite`, `70-t8suite.rules`).
 
 ### Windows
-Download T7Suite.zip (or T7Suite.msi), extract T7Suite.msi and run it. It installs to `Program Files (x86)\MattiasC\T7Suite` and replaces an installed old T7Suite; T7Suite takes the old suite's settings over the first time it starts. T8Suite installs to `Program Files (x86)\MattiasC\T8SuitePro`, the old T8SuitePro's folder, and replaces it the same way. Running the setup of a newer build over an existing installation upgrades it. `.bin` files get the suite under Open with; their default program stays as it is.
+Download T7Suite.zip (or T7Suite.msi), extract T7Suite.msi and run it. It installs to `Program Files (x86)\MattiasC\T7Suite` and replaces an installed old T7Suite; T7Suite takes the old suite's settings over the first time it starts. T8Suite installs to `Program Files (x86)\MattiasC\T8SuitePro`, the old T8SuitePro's folder, and T5Suite to `Program Files (x86)\MattiasC\T5SuiteII`, the old T5Suite 2.0's, and they replace those the same way. Running the setup of a newer build over an existing installation upgrades it. `.bin` files get the suite under Open with; their default program stays as it is.
 
 ### Linux
 Download T7Suite-linux-x64.tar.gz (or -linux-arm64) and run it from where you extracted it:
@@ -62,7 +62,7 @@ Download T7Suite-osx-arm64.zip (Apple silicon) or -osx-x64 (Intel). The build is
     ./T7Suite/T7Suite
 
 ## Updates
-Each suite looks for a newer release of its own (`T7suite_v…`, `T8suite_v…`) when it starts and from Help → Check for updates, and shows the result in the status bar. When there is one it asks; OK downloads the setup on Windows and opens the release page elsewhere.
+Each suite looks for a newer release of its own (`T5suite_v…`, `T7suite_v…`, `T8suite_v…`) when it starts and from Help → Check for updates, and shows the result in the status bar. When there is one it asks; OK downloads the setup on Windows and opens the release page elsewhere.
 
 ## Disclaimer
 This is Open Source software that pokes around in your car's control system. The authors of the tools shall not be held accountable for how you decide to use the tools. If you are not careful, you can easily brick your car with these tools so please use this software with care.
@@ -78,6 +78,8 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). T
     dotnet run --project T7App
     dotnet test T8CoreTest
     dotnet run --project T8App
+    dotnet test T5CoreTest
+    dotnet run --project T5App
 
 `-p:TrionicDir=../Trionic` builds against another checkout of roffe/Trionic instead, for working on both.
 
@@ -85,6 +87,7 @@ A self-contained build that runs on a machine without .NET, for `win-x86`, `linu
 
     dotnet publish T7App/T7App.csproj -c Release -r linux-x64 --self-contained -o out/T7Suite
     dotnet publish T8App/T8App.csproj -c Release -r linux-x64 --self-contained -o out/T8Suite
+    dotnet publish T5App/T5App.csproj -c Release -r linux-x64 --self-contained -o out/T5Suite
 
 The Windows build is 32-bit (`win-x86`) because most J2534 drivers and the Lawicel CANUSB driver only come as 32-bit DLLs, so on Windows `dotnet run` needs the x86 .NET 10 runtime installed.
 
@@ -92,11 +95,12 @@ The Windows setup is built with WiX 6 (restored from NuGet) on Windows, from a `
 
     dotnet build SetupT7/SetupT7.wixproj -c Release -p:Platform=x86 -p:PublishDir=C:\path\to\out\T7Suite
     dotnet build SetupT8/SetupT8.wixproj -c Release -p:Platform=x86 -p:PublishDir=C:\path\to\out\T8Suite
+    dotnet build SetupT5/SetupT5.wixproj -c Release -p:Platform=x86 -p:PublishDir=C:\path\to\out\T5Suite
 
-The release builds are made by [.github/workflows/build.yml](.github/workflows/build.yml): every push to `master` updates the `T7suite_nightly` and `T8suite_nightly` pre-releases, a `T7suite_v*` or `T8suite_v*` tag makes a release of that suite.
+The release builds are made by [.github/workflows/build.yml](.github/workflows/build.yml): every push to `master` updates the `T5suite_nightly`, `T7suite_nightly` and `T8suite_nightly` pre-releases, a `T5suite_v*`, `T7suite_v*` or `T8suite_v*` tag makes a release of that suite.
 
 ## Versioning and releasing
-No file holds the version. Each suite takes it from its nearest tag, `T7suite_vX.Y.Z` or `T8suite_vX.Y.Z`, the tag scheme the suites' releases have always used ([Directory.Build.props](Directory.Build.props)), so a T7Suite tag doesn't version T8Suite or T5Suite. The window title shows it:
+No file holds the version. Each suite takes it from its nearest tag, `T5suite_vX.Y.Z`, `T7suite_vX.Y.Z` or `T8suite_vX.Y.Z`, the tag scheme the suites' releases have always used ([Directory.Build.props](Directory.Build.props)), so a T7Suite tag doesn't version T8Suite or T5Suite. The window title shows it:
 
 | Build | Version |
 |---|---|
@@ -113,6 +117,6 @@ To make a release, tag the commit and push the tag:
     git tag T7suite_v2.0.0
     git push origin T7suite_v2.0.0
 
-T8Suite's setup only replaces the old T8SuitePro (0.1.57) from a tagged build: a build without a `T8suite_v` tag is version 0.0.0, which Windows Installer treats as a downgrade.
+T8Suite's setup only replaces the old T8SuitePro (0.1.57) from a tagged build: a build without a `T8suite_v` tag is version 0.0.0, which Windows Installer treats as a downgrade. T5Suite's replaces the old T5SuiteII (2.0.30) from a tag above it, `T5suite_v2.1.0` or later.
 
 To build without git, for example from a source archive, pass the version: `dotnet build -p:Version=2.0.0`.
