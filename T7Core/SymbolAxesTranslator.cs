@@ -321,6 +321,12 @@ namespace T7
                     y_axis_description = "°C";
                     z_axis_description = "°";
                     break;
+                // the EA1x / E92x start ignition, a table on the same air temperatures
+                case "IgnStartCal.fi_StartTab":
+                    y_axis = "IgnStartCal.T_AirSP";
+                    y_axis_description = "°C";
+                    z_axis_description = "°";
+                    break;
                 case "IgnNormCal.Map":
                     x_axis = "IgnNormCal.m_AirXSP";
                     y_axis = "IgnNormCal.n_EngYSP";
@@ -1027,6 +1033,13 @@ namespace T7
                     y_axis_description = "°C";
                     z_axis_description = "0";
                     break;
+                // EH0B / EI0x / EJ06's start enrichment, manual and automatic
+                case "StartCal.EnrFacManTAB":
+                case "StartCal.EnrFacAutTAB":
+                    y_axis = "StartCal.T_EnrFacSP";
+                    y_axis_description = "°C";
+                    z_axis_description = "0";
+                    break;
                 case "StartCal.RestartFacTab":
                     y_axis = "StartCal.t_RestartSP";
                     y_axis_description = "sec";
@@ -1282,6 +1295,14 @@ namespace T7
                     break;
                 case "BoostCal.PWMTempTab":
                     y_axis = "BoostCal.PWMTempSP";
+                    y_axis_description = "°C";
+                    z_axis_description = "%";
+                    break;
+                // the newer boost temperature compensation, also over load
+                case "BoostCal.PWMTempMap":
+                    x_axis = "BoostCal.SetLoad2XSP";
+                    y_axis = "BoostCal.PWMTempSP";
+                    x_axis_description = "mg/c";
                     y_axis_description = "°C";
                     z_axis_description = "%";
                     break;

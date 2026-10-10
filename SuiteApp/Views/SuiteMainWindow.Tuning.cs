@@ -23,7 +23,7 @@ public partial class SuiteMainWindow
 
     private void WatchMapMenus(MainWindowViewModel vm)
     {
-        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildQuickMaps(); };
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildTuningMenu(); };
         vm.MyMapsChanged += BuildMyMaps;
         BuildMyMaps();
     }
@@ -135,17 +135,17 @@ public partial class SuiteMainWindow
 
     protected async void OnImportXml(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Import XML descriptor", "XML documents", ["*.xml"]) is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportXml(bin, file));
+        if (await Dialogs.OpenFile(this, "Import XML descriptor", "XML documents", ["*.xml"]) is { } file) ImportSymbols(bin => SymbolFiles.ImportXml(bin, file));
     }
 
     protected async void OnImportCsv(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Import CSV descriptor", "CSV documents", ["*.csv"]) is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportCsv(bin, file));
+        if (await Dialogs.OpenFile(this, "Import CSV descriptor", "CSV documents", ["*.csv"]) is { } file) ImportSymbols(bin => SymbolFiles.ImportCsv(bin, file));
     }
 
     protected async void OnImportAs2(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Import AS2 descriptor", "AS2 documents", ["*.as2"]) is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportAs2(bin, file));
+        if (await Dialogs.OpenFile(this, "Import AS2 descriptor", "AS2 documents", ["*.as2"]) is { } file) ImportSymbols(bin => SymbolFiles.ImportAs2(bin, file));
     }
 
     protected async void OnExportS19(object? sender, RoutedEventArgs e)
@@ -227,21 +227,61 @@ public partial class SuiteMainWindow
     private MenuItem Shortcut(MapShortcut m) =>
         new() { Header = MenuTextConverter.Escape(m.Caption), Command = Vm.OpenShortcutCommand, CommandParameter = m, [ToolTip.TipProperty] = m.Symbol };
 
+    // a descriptor import names symbols: the Tuning menu then shows the maps that have their names now
+    private void ImportSymbols(Action<SuiteBinary> import)
+    {
+        Vm.ImportSymbols(import);
+        BuildTuningMenu();
+    }
+
     private List<object?>? m_tuningItems;
 
-    // the ribbon's map buttons, grouped as the ribbon was, the ones this bin has (DynamicTuningMenu), after the menu's own items
-    private void BuildQuickMaps()
+    /// <summary>The Tuning menu's tool entries (txlogger's own windows): the click of the suite's menu item for it, null for none.</summary>
+    protected virtual EventHandler<RoutedEventArgs>? TuningTool(string tool) => tool == "faultcodes" ? OnFaultCodes : null;
+
+    // the menu's own items (the tuning wizards), then txlogger's menu for the ECU with what this bin and suite have
+    private void BuildTuningMenu()
     {
         if (this.FindControl<MenuItem>("QuickMapsMenu") is not { } menu) return;
         m_tuningItems ??= menu.Items.ToList();
         menu.Items.Clear();
         foreach (object? item in m_tuningItems) menu.Items.Add(item);
-        foreach (var group in (Vm.Binary?.QuickMaps() ?? []).GroupBy(m => m.Group))
+        if (Vm.Binary is { } bin)
+            foreach (MenuItem item in TuningItems(bin, bin.TuningMenu())) menu.Items.Add(item);
+    }
+
+    // left out: a map the bin has under none of its names, one opening what an entry above it does, a tool the suite lacks, an empty submenu
+    private List<MenuItem> TuningItems(SuiteBinary bin, IEnumerable<TuningItem> entries)
+    {
+        var items = new List<MenuItem>();
+        var opened = new HashSet<string>();
+        foreach (TuningItem entry in entries)
         {
-            var item = new MenuItem { Header = MenuTextConverter.Escape(group.Key) };
-            foreach (var m in group) item.Items.Add(Shortcut(m));
-            menu.Items.Add(item);
+            var item = new MenuItem { Header = MenuTextConverter.Escape(entry.Caption) };
+            if (entry.Children != null)
+            {
+                foreach (MenuItem child in TuningItems(bin, entry.Children)) item.Items.Add(child);
+                if (item.Items.Count == 0) continue;
+            }
+            else if (entry.Tool != null)
+            {
+                if (TuningTool(entry.Tool) is not { } click) continue;
+                item.Click += click;
+            }
+            else
+            {
+                string[] maps = entry.Maps(bin);
+                if (maps.Length == 0 || !opened.Add(string.Join('|', maps))) continue;
+                // named by its symbol: the name it opens
+                if (entry.Symbols?[0] == entry.Caption) item.Header = MenuTextConverter.Escape(string.Join(" + ", maps));
+                // a map that lives in the ECU (an adaption or counter): read from SRAM as the Realtime menu does, never the file
+                item.Command = entry.Ecu ? Vm.ShowEcuMapCommand : Vm.OpenMapsCommand;
+                item.CommandParameter = entry.Ecu ? maps[0] : maps;
+                ToolTip.SetTip(item, string.Join('\n', maps));
+            }
+            items.Add(item);
         }
+        return items;
     }
 
     private void BuildMyMaps()

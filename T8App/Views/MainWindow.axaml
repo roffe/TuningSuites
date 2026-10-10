@@ -101,7 +101,7 @@
                 <MenuItem Header="TEM editor" Click="OnPidEditor" Tag="tem" IsEnabled="{Binding HasTemTable}" />
                 <MenuItem Header="PID editor" Click="OnPidEditor" Tag="pid" IsEnabled="{Binding HasFile}" />
             </MenuItem>
-            <!-- the Tuning Wizard, then the map buttons the bin has (built in code) -->
+            <!-- the Tuning Wizard, then txlogger's T8 menu with the maps the bin has (built in code) -->
             <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}">
                 <MenuItem Header="Tuning wizards">
                     <MenuItem Header="Tuning Wizard" Click="OnTuningWizard" />

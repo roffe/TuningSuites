@@ -13,18 +13,23 @@ namespace T7CoreTest
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path);
 
         [TestMethod]
-        public void QuickMapsFollowTheBin()
+        public void TuningMenuFollowsTheBin()
         {
             string dir = Directory.CreateTempSubdirectory("t7menu").FullName;
             try
             {
                 string file = Path.Combine(dir, "5168646.bin");
                 File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file);
-                var maps = T7Binary.Open(file, 0, false).QuickMaps();
-                Assert.AreEqual("VE map", maps.First(m => m.Symbol == "BFuelCal.Map").Caption);
-                Assert.IsFalse(maps.Any(m => m.Symbol == "IgnE85Cal.fi_AbsMap"));
-                CollectionAssert.AreEqual(new[] { "Fuel", "Ignition", "Airmass request", "Boost control", "Knock", "Limiters" },
-                    maps.Select(m => m.Group).Distinct().ToArray());
+                var bin = T7Binary.Open(file, 0, false);
+                string[] Maps(string menu, string caption) => bin.TuningMenu().Single(i => i.Caption == menu).Children.Single(i => i.Caption == caption).Maps(bin);
+                CollectionAssert.AreEqual(new[] { "Actions", "Diagnostics", "Calibration", "Injectors", "Airmass", "Fuel", "Ignition", "Boost", "Knock", "Limiters", "Adaption", "Myrtilos" },
+                    bin.TuningMenu().Select(i => i.Caption).ToArray());
+                CollectionAssert.AreEqual(new[] { "BFuelCal.Map" }, Maps("Fuel", "VE map"));
+                Assert.IsEmpty(Maps("Ignition", "Ignition for E85"));
+                // EA1WF0: start ignition by air temperature only; a petrol bin's Common for tuning without the BioPower switch
+                CollectionAssert.AreEqual(new[] { "IgnStartCal.fi_StartTab" }, Maps("Ignition", "Ignition Start"));
+                CollectionAssert.AreEqual(new[] { "AdpFuelCal.T_AdaptLim", "FCutCal.ST_Enable", "LambdaCal.ST_Enable", "PurgeCal.ST_PurgeEnable", "TorqueCal.M_BrakeLimit" },
+                    Maps("Fuel", "Common for tuning"));
 
                 string xml = Path.Combine(dir, "mymaps.xml");
                 MapMenus.AddToMyMaps(xml, "IgnNormCal.Map");

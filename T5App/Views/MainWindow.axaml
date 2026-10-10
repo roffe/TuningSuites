@@ -102,7 +102,7 @@
                 <MenuItem Header="Merge binary files" Click="OnMergeFiles" />
                 <MenuItem Header="Split binary file" Click="OnSplitFile" IsEnabled="{Binding HasFile}" />
             </MenuItem>
-            <!-- the tuning wizards, then the map buttons the bin has (built in code), as T8 -->
+            <!-- the tuning wizards, then txlogger's T5 menu with the maps the bin has (built in code), as T8 -->
             <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}">
                 <MenuItem Header="Tuning wizards">
                     <MenuItem Header="Tune me up ®" Click="OnTuneMeUp" />

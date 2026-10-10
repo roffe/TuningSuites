@@ -172,8 +172,8 @@ namespace CommonSuite
         protected virtual AxisInfo AxisRow(string name, string x, string xDescription, string y, string yDescription) =>
             new(name, Describe(name), x, xDescription, y, yDescription);
 
-        /// <summary>The quick maps menu (the Tuning page's map buttons) for this binary.</summary>
-        public virtual List<MapShortcut> QuickMaps() => [];
+        /// <summary>The Tuning menu's map and tool entries (txlogger's menu for the ECU) for this binary.</summary>
+        public virtual IReadOnlyList<TuningItem> TuningMenu() => [];
 
         /// <summary>The open-loop limits drawn on the map's load × rpm cells, null when the suite has none.</summary>
         public virtual byte[] OpenLoopTable(string mapname) => null;

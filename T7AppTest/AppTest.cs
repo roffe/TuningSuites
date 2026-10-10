@@ -342,9 +342,7 @@ namespace T7AppTest
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
                 var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                Assert.AreEqual("Fuel", ((MenuItem)quick.Items[0]!).Header);
-                var ve = (MenuItem)((MenuItem)quick.Items[0]!).Items[0]!;
-                Assert.AreEqual("VE map", ve.Header);
+                var ve = TuningEntry(quick, "Fuel", "VE map");
                 ve.Command!.Execute(ve.CommandParameter);
                 Assert.AreEqual("BFuelCal.Map", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
 

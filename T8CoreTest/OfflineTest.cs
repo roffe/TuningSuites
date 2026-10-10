@@ -72,26 +72,26 @@ namespace T8CoreTest
         }
 
         [TestMethod]
-        public void QuickMapsFollowTheCalibration()
+        public void TuningMenuFollowsTheCalibration()
         {
-            List<MapShortcut> old = Open(Stock(Old)).QuickMaps(), petrol = Open(Stock(NewPetrol)).QuickMaps(), bio = Open(Stock(BioPower)).QuickMaps();
-            string Symbol(List<MapShortcut> maps, string caption) => maps.SingleOrDefault(m => m.Caption == caption)?.Symbol;
+            T8Binary old = Open(Stock(Old)), petrol = Open(Stock(NewPetrol)), flexFuelOff = Open(Stock("55567225_FE09_C_FME2_96_FIEF_82v.bin")), bio = Open(Stock(BioPower));
+            string[] Maps(T8Binary bin, string menu, string caption) =>
+                bin.TuningMenu().Single(i => i.Caption == menu).Children.SingleOrDefault(i => i.Caption == caption)?.Maps(bin);
 
-            Assert.AreEqual("BstKnkCal.MaxAirmassAu", Symbol(old, "Max airmass map (auto)"));
-            Assert.AreEqual("TrqLimCal.Trq_MaxEngineManTab2", Symbol(old, "Trq limit manual 150 hp"));
-            Assert.IsNull(Symbol(old, "Max torque 150hp"));
-            Assert.IsNull(Symbol(old, "FlexFuel torque limit"));
+            // the old calibration's manual and automatic limiters, the newer one's limiter for both
+            CollectionAssert.AreEqual(new[] { "BstKnkCal.MaxAirmassAu" }, Maps(old, "Airmass", "Max airmass map (auto)"));
+            CollectionAssert.AreEqual(new[] { "TrqLimCal.Trq_MaxEngineManTab2" }, Maps(old, "Torque", "Trq limit manual 150hp"));
+            Assert.IsEmpty(Maps(old, "Torque", "TrqLimCal.Trq_MaxEngineTab2"));
+            CollectionAssert.AreEqual(new[] { "BstKnkCal.MaxAirmass" }, Maps(petrol, "Airmass", "Max airmass map (auto)"));
+            CollectionAssert.AreEqual(new[] { "TrqLimCal.Trq_MaxEngineTab2" }, Maps(petrol, "Torque", "Trq limit auto 150hp"));
 
-            Assert.AreEqual("FFAirCal.m_maxAirmass", Symbol(petrol, "Max air E85"));
-            Assert.AreEqual("TrqLimCal.Trq_MaxEngineTab2", Symbol(petrol, "Trq limit 150hp"));
-            Assert.AreEqual("TMCCal.Trq_MaxEngineLowTab", Symbol(petrol, "Max torque 150hp"));
-            Assert.IsNull(Symbol(petrol, "Trq limit E85 150hp"));
-            Assert.IsNull(Symbol(petrol, "FlexFuel torque limit"));
-
-            Assert.AreEqual("FFTrqCal.FFTrq_MaxEngineTab2", Symbol(bio, "Trq limit E85 150hp"));
-            Assert.AreEqual("FFTrqCal.M_maxMAP", Symbol(bio, "FlexFuel torque limit"));
-            CollectionAssert.AreEqual(new[] { "Airmass controller", "Torque controller", "Fuel controller", "Boost controller", "Ignition controller", "Pedal controller", "General" },
-                bio.Select(m => m.Group).Distinct().ToArray());
+            // the E85 torque limiters on BioPower software, not on FE's with FlexFuel off
+            Assert.IsNull(Maps(petrol, "Torque", "FFTrqCal.FFTrq_MaxEngineTab2"));
+            Assert.IsNull(Maps(flexFuelOff, "Torque", "FFTrqCal.FFTrq_MaxEngineTab2"));
+            Assert.IsNotNull(flexFuelOff.Find("FFTrqCal.FFTrq_MaxEngineTab2"));
+            CollectionAssert.AreEqual(new[] { "FFTrqCal.FFTrq_MaxEngineTab2" }, Maps(bio, "Torque", "FFTrqCal.FFTrq_MaxEngineTab2"));
+            CollectionAssert.AreEqual(new[] { "Diagnostics", "Airmass", "Torque", "Injectors", "Fuel", "Boost", "Ignition", "Pedal" },
+                bio.TuningMenu().Select(i => i.Caption).ToArray());
         }
 
         [TestMethod]

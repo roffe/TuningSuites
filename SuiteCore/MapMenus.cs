@@ -5,8 +5,20 @@ using System.Xml;
 
 namespace CommonSuite
 {
-    /// <summary>A map button: the quick maps menu (the Tuning page's buttons) or My Maps.</summary>
+    /// <summary>A My Maps entry.</summary>
     public record MapShortcut(string Group, string Caption, string Symbol);
+
+    /// <summary>
+    /// An entry of the Tuning menu (txlogger's menu for the ECU): a submenu (Children), a feature of the suite (Tool, the window's
+    /// key for it) or maps. Symbols are the map's names in priority order (txlogger's and what other software of the ECU calls
+    /// it), each "a|b" for maps opened together; none: the caption is the symbol (txlogger's Name only entry).
+    /// </summary>
+    public record TuningItem(string Caption, string[] Symbols = null, string Tool = null, TuningItem[] Children = null, bool Ecu = false)
+    {
+        /// <summary>The maps the entry opens in bin: those of its first name the bin has; none leaves the entry out.</summary>
+        public string[] Maps(SuiteBinary bin) =>
+            (Symbols ?? [Caption]).Select(names => names.Split('|').Where(s => bin.Find(s) != null).ToArray()).FirstOrDefault(m => m.Length > 0) ?? [];
+    }
 
     /// <summary>My Maps (mymaps.xml in the suite's settings folder, the file both suites used).</summary>
     public static class MapMenus
