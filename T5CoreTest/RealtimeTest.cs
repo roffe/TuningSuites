@@ -24,6 +24,26 @@ namespace T5CoreTest
             }
         }
 
+        [TestMethod]
+        public void WatchListPerTab()
+        {
+            // FillRealtimePool: the tab's base, Pgm_status and the lambda symbol, the enrichments while the fuel autotune runs, then the tab's own
+            string[] basics = ["P_medel", "Lufttemp", "Kyl_temp", "Rpm", "Medeltrot", "Regl_tryck", "Pgm_status", "AD_sond"];
+            string[] enrich = ["Lacc_mangd", "Acc_mangd", "Lret_mangd", "Ret_mangd"];
+            void Is(IEnumerable<string> expected, T5RealtimeTab tab, bool tuning = false, bool ignition = false, string lambda = "AD_sond") =>
+                CollectionAssert.AreEquivalent(expected.ToList(), T5Realtime.WatchList(tab, tuning, ignition, lambda).ToList(), tab.ToString());
+
+            Is(basics, T5RealtimeTab.Settings);
+            Is(basics, T5RealtimeTab.Userdefined);
+            Is(basics.Concat(enrich), T5RealtimeTab.Settings, tuning: true);
+            Is([.. basics, "Knock_offset1234"], T5RealtimeTab.Settings, ignition: true);
+            Is([.. basics, "Insptid_ms10", .. enrich], T5RealtimeTab.Fuel);
+            Is([.. basics, "Max_tryck", "Apc_decrese", "P_fak", "I_fak", "D_fak", "PWM_ut10"], T5RealtimeTab.Boost);
+            Is([.. basics, "Bil_hast", "TQ", "Insptid_ms10", "Apc_decrese", "Ign_angle"], T5RealtimeTab.Dashboard);
+            Is(["P_medel", "Rpm", "Knock_offset1234", "Pgm_status", "AD_EGR"], T5RealtimeTab.AutotuneIgnition, lambda: "AD_EGR");
+            Is(["P_medel", "Kyl_temp", "Rpm", "Medeltrot", "Pgm_status", "AD_sond", .. enrich], T5RealtimeTab.AutotuneFuel, tuning: true);
+        }
+
         // the settings' setters save: only into the test's own folder
         private static void Run(T5Binary bin, AppSettings settings)
         {
