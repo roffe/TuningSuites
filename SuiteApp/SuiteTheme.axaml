@@ -156,6 +156,24 @@
     <Style Selector="DockControl">
         <Setter Property="(ControlRecyclingDataTemplate.ControlRecycling)" Value="{StaticResource DocumentRecycling}" />
     </Style>
+    <!-- a group box (the old suites' DevExpress GroupControls): the title in a gap of the frame's top line, on any background -->
+    <Style Selector="HeaderedContentControl.group">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border Margin="0,10,0,0" Padding="10,14,10,6" BorderThickness="1,0,1,1"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                        <ContentPresenter Content="{TemplateBinding Content}" />
+                    </Border>
+                    <Grid ColumnDefinitions="8,Auto,*" VerticalAlignment="Top">
+                        <Border Height="1" Margin="0,10,0,0" VerticalAlignment="Top" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                        <ContentPresenter Grid.Column="1" Content="{TemplateBinding Header}" Padding="4,0" FontWeight="SemiBold" />
+                        <Border Grid.Column="2" Height="1" Margin="0,10,0,0" VerticalAlignment="Top" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                    </Grid>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
     <!-- Fluent's tab headers are sized for touch, the suite is a dense desktop tool -->
     <Style Selector="TabStripItem, TabItem">
         <Setter Property="FontSize" Value="14" />

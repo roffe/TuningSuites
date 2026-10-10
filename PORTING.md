@@ -613,6 +613,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: The airmass result viewer (T7 / T8) laid out as ctrlAirmassResult: the Options group across the bottom (checkboxes, firmware limit / ambient pressure / display / gear / units, the legend in its two columns, names cut short in a narrow window as there), Compare / Refresh / Close under it. The dyno graph (also T5's) labels every point with its value and boxes its legend at the top right, as the old Nevron charts; about a dozen value axis steps (20 / 30).
 - 2026-10-10: T5's firmware settings (titled "Trionic 5 firmware settings" like T7 / T8's "Trionic N firmware information"; T5Suite: "Trionic firmware settings") laid out as T5Suite's (group boxes in its places, its flag order and captions, the partnumber's lookup button); the extra fields behind "Advanced".
 - 2026-10-10: The stock bins in T5Binaries and T8Binaries are named `*.bin` like T7Binaries' (git renames, the golden names and tests follow); T5 is merged into master and work goes on in `develop`.
 - 2026-10-10: Lookup partnumber's window is titled as its menu item in all three suites; T7 and T8 get the "..." partnumber list back (T7Suite / T8Suite had it): the stock bins in Binaries that the suite's lookup recognizes, grouped by car model and engine (no power / torque: their partnumber tables have none; T7Suite / T8Suite listed every bin by its file name: car type, engine, tuner, stage).

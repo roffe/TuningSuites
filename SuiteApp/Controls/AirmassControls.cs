@@ -96,7 +96,7 @@ public class AirmassGrid : Control
 /// <summary>A line of the dyno graph.</summary>
 public sealed record ChartSeries(string Name, Color Color, double?[] Values);
 
-/// <summary>The dyno graph: series over evenly spaced rpm categories, one shared value axis, the legend at the top.</summary>
+/// <summary>The dyno graph: series over evenly spaced rpm categories, one shared value axis, the legend boxed at the top right.</summary>
 public class LineChart : Control
 {
     public static readonly StyledProperty<IReadOnlyList<string>?> CategoriesProperty = AvaloniaProperty.Register<LineChart, IReadOnlyList<string>?>(nameof(Categories));
@@ -114,15 +114,21 @@ public class LineChart : Control
     {
         context.FillRectangle(Brushes.White, new Rect(Bounds.Size));
         if (Categories is not { Count: > 0 } cats || Series is not { Count: > 0 } series) return;
-        double max = series.SelectMany(s => s.Values).Where(v => v != null).Select(v => v!.Value).DefaultIfEmpty(1).Max();
-        max = Math.Max(1, Math.Ceiling(max / 50) * 50);
-        var plot = new Rect(50, 40, Math.Max(1, Bounds.Width - 70), Math.Max(1, Bounds.Height - 80));
+        double top = series.SelectMany(s => s.Values).Where(v => v != null).Select(v => v!.Value).DefaultIfEmpty(1).Max();
+        // about a dozen steps, as Nevron's axis had (20 or 30 for a 300 Nm dyno)
+        double step = NiceStep(Math.Max(top, 1) / 12);
+        int steps = Math.Max(1, (int)Math.Ceiling(top / step));
+        double max = steps * step;
+        var boxPen = new Pen(Brushes.DarkGray, 1);
+        var names = series.Select(s => Text(s.Name, Brushes.Black)).ToList();
+        var legend = new Rect(Math.Round(Bounds.Width - names.Max(n => n.Width) - 50) + 0.5, 10.5, Math.Ceiling(names.Max(n => n.Width)) + 40, series.Count * 20 + 8);
+        var plot = new Rect(50, 30, Math.Max(1, legend.Left - 70), Math.Max(1, Bounds.Height - 60));
         var gridPen = new Pen(new ImmutableSolidColorBrush(Color.FromArgb(50, 0, 0, 0)), 1);
-        for (int i = 0; i <= 5; i++)
+        for (int i = 0; i <= steps; i++)
         {
-            double v = max * i / 5, y = plot.Bottom - plot.Height * i / 5;
+            double y = plot.Bottom - plot.Height * i / steps;
             context.DrawLine(gridPen, new Point(plot.Left, y), new Point(plot.Right, y));
-            var t = Text(v.ToString("0"), Brushes.Black);
+            var t = Text((step * i).ToString("0"), Brushes.Black);
             context.DrawText(t, new Point(plot.Left - t.Width - 6, y - t.Height / 2));
         }
         double X(int i) => plot.Left + (cats.Count == 1 ? plot.Width / 2 : plot.Width * i / (cats.Count - 1));
@@ -131,9 +137,11 @@ public class LineChart : Control
             var t = Text(cats[i], Brushes.Black);
             context.DrawText(t, new Point(X(i) - t.Width / 2, plot.Bottom + 6));
         }
-        double lx = plot.Left;
-        foreach (ChartSeries s in series)
+        context.DrawRectangle(Brushes.White, boxPen, legend);
+        var labels = new List<(Point pt, double value, IBrush brush)>();
+        for (int k = 0; k < series.Count; k++)
         {
+            ChartSeries s = series[k];
             var brush = new ImmutableSolidColorBrush(s.Color);
             var pen = new Pen(brush, 2);
             Point? last = null;
@@ -147,13 +155,32 @@ public class LineChart : Control
                 var pt = new Point(X(i), plot.Bottom - plot.Height * v / max);
                 if (last is { } l) context.DrawLine(pen, l, pt);
                 context.DrawEllipse(brush, null, pt, 3, 3);
+                labels.Add((pt, v, brush));
                 last = pt;
             }
-            context.FillRectangle(brush, new Rect(lx, 14, 12, 12));
-            var name = Text(s.Name, Brushes.Black);
-            context.DrawText(name, new Point(lx + 16, 12));
-            lx += name.Width + 36;
+            double ly = legend.Top + 6 + k * 20;
+            context.DrawLine(pen, new Point(legend.Left + 8, ly + 12), new Point(legend.Left + 26, ly + 4));
+            context.DrawText(names[k], new Point(legend.Left + 32, ly));
         }
+        // every point's value in a box up and to the right, over all lines (the old suites' Nevron data labels)
+        foreach (var (pt, value, brush) in labels)
+        {
+            var t = Text(value.ToString("0"), brush);
+            // whole pixels plus a half: the 1 px box lines stay sharp
+            var box = new Rect(Math.Round(pt.X + 6) + 0.5, Math.Round(pt.Y - 10 - t.Height) + 0.5, Math.Ceiling(t.Width) + 6, Math.Ceiling(t.Height) + 2);
+            context.DrawLine(new Pen(brush, 1), pt, box.BottomLeft);
+            context.DrawRectangle(Brushes.White, boxPen, box);
+            context.DrawText(t, new Point(box.X + 3, box.Y + 1));
+        }
+    }
+
+    /// <summary>The smallest 1, 2, 3 or 5 × 10ⁿ at least <paramref name="raw"/>.</summary>
+    public static double NiceStep(double raw)
+    {
+        double magnitude = Math.Pow(10, Math.Floor(Math.Log10(raw)));
+        foreach (double m in (double[])[1, 2, 3, 5])
+            if (m * magnitude >= raw) return m * magnitude;
+        return 10 * magnitude;
     }
 }
 

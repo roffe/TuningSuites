@@ -91,6 +91,10 @@ public partial class AirmassResultViewModel : DocumentViewModel
 
     public IReadOnlyList<LimiterLegend> Legend { get; }
 
+    // the Options group's two legend columns, the first half on the left
+    public IReadOnlyList<LimiterLegend> LegendLeft => Legend.Take((Legend.Count + 1) / 2).ToList();
+    public IReadOnlyList<LimiterLegend> LegendRight => Legend.Skip((Legend.Count + 1) / 2).ToList();
+
     public AirmassResultViewModel(MainWindowViewModel owner, string file, AirmassSuite suite)
     {
         m_owner = owner;

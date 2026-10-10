@@ -664,6 +664,8 @@ namespace T7AppTest
                 Assert.AreEqual("245", am.Texts![wot, c2400]);
                 Assert.AreEqual(4, am.Series.Count);                           // power, torque, injector DC, lambda
                 Assert.AreEqual(3, am.CompressorPoints!.Length);
+                // the dyno graph's value axis steps
+                CollectionAssert.AreEqual(new[] { 30.0, 20, 10, 0.5 }, new[] { 24, 20, 7, 0.4 }.Select(SuiteApp.Controls.LineChart.NiceStep).ToArray());
                 Save(window, "airmass-table");
                 var tabs = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<AirmassResultView>().Single()
                     .GetLogicalDescendants().OfType<TabControl>().First();
