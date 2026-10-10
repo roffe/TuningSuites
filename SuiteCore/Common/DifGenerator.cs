@@ -47,10 +47,6 @@ namespace CommonSuite
                         if (varname == varnametofetch)
                         {
                             retval = (float)ConvertToDouble((string)subvals.GetValue(1));
-                            if (varname == "AD_sond")
-                            {
-                                retval = (float)ConvertToLambda(retval);
-                            }
                             if (varname == _widebandSymbol)
                             {
                                 if (varname == "DisplProt.AD_Scanner")
@@ -148,20 +144,6 @@ namespace CommonSuite
         public void SetFilters(LogFilterCollection filters)
         {
             _filters = filters;
-        }
-
-
-        private double ConvertToLambda(double value)
-        {
-            // converteer naar lambda waarden
-            // 23 = lambda = 1
-            // daarboven = rijk (lambda<1)
-            // daaronder = arm  (lambda>1)
-            value = Math.Abs(value - 125); // value - 125 means range -125 to -75 
-            // abs value means range 125 to 75 in which 125 = lean and 75 = rich
-            value /= 100;
-            return (value);
-
         }
 
 
@@ -494,10 +476,7 @@ namespace CommonSuite
                                                         {
                                                             double value = ConvertToDouble((string)subvals.GetValue(1));
 
-                                                            if (varname == "AD_sond")
-                                                            {
-                                                                value = ConvertToLambda(value);
-                                                            }
+                                                            // AD_sond is logged as λ already (T5Suite converted the raw A/D value here, |raw − 125| / 100)
                                                             if (varname == _widebandSymbol)
                                                             {
                                                                 if (varname == "DisplProt.AD_Scanner")

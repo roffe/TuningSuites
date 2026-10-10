@@ -153,16 +153,21 @@ public class MapGrid : Control
         double x = map.XAxis[col];
         if (ViewType == MapViewType.Easy && map.XEasy is { } easy && col < easy.Length) return easy[col].ToString("F2", CultureInfo.CurrentCulture);
         if (ViewType == MapViewType.Hex)
-            return ((int)x & 0xFFFF).ToString(map.XAxis.Max() <= 255 ? "X2" : "X4", CultureInfo.InvariantCulture);
+        {
+            double[] hex = map.XHex ?? map.XAxis;
+            return ((int)hex[col] & 0xFFFF).ToString(hex.Max() <= 255 ? "X2" : "X4", CultureInfo.InvariantCulture);
+        }
         return x.ToString(CultureInfo.CurrentCulture);
     }
 
-    private string YLabel(int displayRow)
+    // MapViewerEx's row indicator (all three suites): the axis's last value on the top row whatever the row count, so a shorter
+    // axis leaves the bottom rows blank, and a map without one has no row labels
+    internal string YLabel(int displayRow)
     {
         MapData map = Map!;
-        int row = map.DataRow(displayRow);
-        if (map.YAxis == null || row >= map.YAxis.Length) return row.ToString(CultureInfo.CurrentCulture);
-        double y = map.YAxis[row];
+        int i = map.UpsideDown ? (map.YAxis?.Length ?? 0) - 1 - displayRow : displayRow;
+        if (map.YAxis == null || i < 0 || i >= map.YAxis.Length) return "";
+        double y = map.YAxis[i];
         return ViewType == MapViewType.Hex ? ((int)y & 0xFFFF).ToString("X4", CultureInfo.InvariantCulture) : y.ToString(CultureInfo.CurrentCulture);
     }
 
@@ -551,7 +556,7 @@ public class MapGrid : Control
         if (map == null || i < 0 || IsReadOnly || ViewType == MapViewType.Ascii) return;
         m_editing = true;
         m_input = typed ?? (ViewType == MapViewType.Easy
-            ? ((float)map[i] * (float)map.Factor + (float)map.Offset).ToString("F2", CultureInfo.CurrentCulture)
+            ? ((float)map.Scaled(map[i]) * (float)map.Factor + (float)map.Offset).ToString("F2", CultureInfo.CurrentCulture)
             : map.FormatCell(i, ViewType));
         InvalidateVisual();
     }

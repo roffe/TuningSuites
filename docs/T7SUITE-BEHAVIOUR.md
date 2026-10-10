@@ -129,7 +129,7 @@ There is no Ctrl+O.
 |---|---|
 | X/Y axis values | `GetX/YaxisValues`: the axis symbol as 16-bit BE × the axis symbol's correction factor, truncated |
 | Y sign | values > 0x8000 negative (after the factor) |
-| X sign | > 32000 negative only for BstKnkCal.MaxAirmass(Au) |
+| X sign | > 32000 negative only for BstKnkCal.MaxAirmass(Au); the viewer (MapViewerEx) shows every value above 0xF000 negative in the headers, 3D labels and slider caption, and the Excel export runs ConvertSignedValue (0xFF00..0xFFFF negative) over the x row |
 | Fixed Y axes | gear maps and BoostMeter |
 | Width | `GetTableMatrixWitdhByName` |
 | 16-bit | `isSixteenBitTable` |

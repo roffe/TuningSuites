@@ -201,6 +201,9 @@ namespace T7
             return retval;
         }
 
+        // the other X axes MapViewerEx signed itself, after the factor (TorqueCal.M_EngXSP's 65496 showed as -40)
+        public override bool SignsXAxis => true;
+
         public override int[] GetYaxisValues(string symbolname)
         {
             int[] retval = new int[SymbolLength(symbolname)];

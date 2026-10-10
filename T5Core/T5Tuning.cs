@@ -42,12 +42,13 @@ namespace Trionic5Tools
             return (r, Lines(t));
         }
 
-        /// <summary>Stage 4 and higher: FreeTuneBinary with the wizard's settings.</summary>
+        /// <summary>Stage 4 and higher: FreeTuneBinary with the wizard's settings (the RPM limit in rpm).</summary>
         public static (TuningResult result, List<string> report) FreeTune(T5Binary bin, double peakTorque, double peakBoost, bool byTorque, MapSensorType sensor,
             TurboType turbo, InjectorType injectors, BPCType valve, int rpmLimit, int knockTime, bool autoChecksum)
         {
             Trionic5Tuner t = Tuner(autoChecksum);
-            TuningResult r = t.FreeTuneBinary(bin.File, peakTorque, peakBoost, byTorque, sensor, turbo, injectors, valve, rpmLimit, knockTime);
+            // Rpm_max! holds rpm / 10 (the wizard's GetRPMLimiter in T5Suite)
+            TuningResult r = t.FreeTuneBinary(bin.File, peakTorque, peakBoost, byTorque, sensor, turbo, injectors, valve, rpmLimit / 10, knockTime);
             // the writes after TuneToStage got no checksum of their own (T5Suite left it stale)
             if (r == TuningResult.TuningSuccess) bin.UpdateChecksum();
             return (r, Lines(t));

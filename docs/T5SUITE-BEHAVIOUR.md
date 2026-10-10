@@ -488,8 +488,9 @@ Negative values are refused only for `Insp_mat!`, `Inj_map_0!` and `Fuel_knock_m
 Clamps: 8-bit at 0 and at the view's max; 16-bit at 0xFFFF going up, **no lower clamp** going down. Same set as T7.
 
 **Math toolbar** (MVE 4835): "Addition / Multiply / Divide / Fill", value default "2", "Execute". Same as T7 except:
+- Decimal / Hex: Multiply is `v * (int)(100 * w) / 100` and Divide `(int)(v / w)` with w as typed; T7 rounded w to an integer first.
 - Easy views **round** (`Math.Round`) the converted-back result; T7 truncated.
-- The clamps follow the view's sensor range (16-bit 3-bar: 78642).
+- On a 3.0-5.0 bar sensor the keys and the math work on the shown (scaled) value, written back raw; the clamps follow the view's sensor range (16-bit 3-bar: 78642).
 
 **Other viewer behaviour:**
 - **Smooth selection**: same as T7, "Smoothing cannot be done in Hex view!".
@@ -1299,7 +1300,7 @@ T5.2: "Trionic 5.2 files are not supported by this wizard". T5.5 (12791): hardco
 - Stats (4825): diffabs = differing **bytes** (not halved for 16-bit), perc = integer `diffabs × 100 / length`, avg = **|**mean(current) − mean(compare)**|**.
 - Panel "Compare results: <file>" docked left, width **400**. Grid: visible "Description" (384) then "Symbol " (trailing space); hidden SRAM address, Flash address, Length (bytes), Length (values) (all `{0:X4}`), Percentage of values different (F1), Number of values different, Average difference (F1), Category, Subcategory; sorted Category asc / Subcategory desc; AutoFilterRow. Context menu: only "Show differences map" (no Excel export, no package export). Enter / double-click as T7.
 - Selecting `Pgm_mod!` opens frmEasyFirmwareInfo with both files' program-mode bytes side by side instead of map viewers.
-- Difference map "Symbol difference: <name> [<file>]": axes and descriptions from the **compare** file, factor **and offset** applied; "Map lengths don't match...".
+- Difference map "Symbol difference: <name> [<file>]": axes and descriptions from the **compare** file, the factor applied but not the offset (a compare viewer: MVE 2402 cells, 1630 3D; the slice chart at 1852 / 1895 still added it); "Map lengths don't match...".
 
 ### Move data to another binary (frmTransferDataWizard)
 
@@ -2237,7 +2238,7 @@ A snapshot is a raw 32 KB SRAM image with file offset = SRAM address (`DumpSRAMC
 - Double-click or Enter opens three viewers: the bin's map plus each snapshot's (`StartTableViewerSRAMFile`).
 - Context menu "Show differences map" → "SRAM symbol difference: <sym> [<f1> vs <f2>]":
   - |a − b| per value (16-bit pairs or bytes), read-only;
-  - factor **and offset** applied (the offset shifts a difference, a bug); always upside down;
+  - the factor applied, not the offset (a compare viewer, MVE 2402 / 1630); always upside down;
   - width 30 + (columns + 1) × 35, minimum 400;
   - a symbol with SRAM address 0 opens nothing.
 
@@ -2249,7 +2250,7 @@ A snapshot is a raw 32 KB SRAM image with file offset = SRAM address (`DumpSRAMC
 - Selecting a row:
   - `Pgm_mod!` → `frmEasyFirmwareInfo` with the bin's bytes ("<bin>") against the snapshot's ("SRAM <ram>");
   - otherwise the bin's viewer plus the snapshot's.
-- "Show differences map" → "SRAM-Flash symbol difference: <sym> [<ram> vs <bin>]": |sram − flash|, same rules as above, plus the open-loop overlay.
+- "Show differences map" → "SRAM-Flash symbol difference: <sym> [<ram> vs <bin>]": |sram − flash|, same rules as above, plus the open-loop overlay; opens in Decimal (frmMain 6465).
 
 **Binary compare SRAM snapshots (6618):** two plain open dialogs ("SRAM dumps|*.ram", no titles), then `frmBinCompare` on the two files. It works without a bin open.
 

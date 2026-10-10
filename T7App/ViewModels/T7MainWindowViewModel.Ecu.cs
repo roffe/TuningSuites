@@ -44,6 +44,9 @@ public partial class T7MainWindowViewModel
 
     protected override string WriteRefusedText(string map) => base.WriteRefusedText(map) + " Writing to SRAM needs an open binary in the ECU.";
 
+    // T7Suite opened the SRAM snapshots' symbol difference in Easy
+    protected override MapViewType? SramDifferenceView => MapViewType.Easy;
+
     // ---- realtime ----
 
     public override RealtimeRules RealtimeRules => T7Realtime.Rules;
@@ -143,7 +146,7 @@ public partial class T7MainWindowViewModel
     private void ImportAfrFeedback()
     {
         if (Binary is not T7Binary bin || AfrMaps is not { } afr || bin.FindAny("BFuelCal.Map") is not { } fuel || bin.ReadSymbol(fuel) is not { } map) return;
-        byte[] data = AfrFeedback.ApplyFeedback(map, afr.Target, afr.Feedback, afr.Counter, Settings.MeasureAFRInLambda);
+        byte[] data = afr.ApplyFeedback(map, Settings.MeasureAFRInLambda);
         int before = TransactionLog?.TransCollection.Count ?? 0;
         try
         {

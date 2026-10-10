@@ -200,8 +200,10 @@ public class MapViewer : UserControl
             {
                 map.Changed += OnMapChanged;
                 int zPrec = map.Factor < 1 ? Math.Min(4, (int)Math.Ceiling(-Math.Log10(map.Factor))) : 0;
-                // T5Suite's 3D graph had a MAP axis in bar in every view
-                Surface.SetData(map.PhysicalValues(), map.Cols, map.Rows, map.XEasy ?? map.XAxis, map.YAxis, map.XName, map.YName, map.ZName,
+                // T5Suite's 3D graph had a MAP axis in bar in every view; a longer Y axis labels the rows as the grid's headers do,
+                // its last value on the top row
+                double[]? y = map.UpsideDown && map.YAxis is { } ya && ya.Length > map.Rows ? ya[^map.Rows..] : map.YAxis;
+                Surface.SetData(map.PhysicalValues(), map.Cols, map.Rows, map.XEasy ?? map.XAxis, y, map.XName, map.YName, map.ZName,
                     map.XEasy != null ? 2 : 0, 0, zPrec);
                 m_slice.Maximum = map.Cols - 1;
                 m_slice.IsVisible = map.Cols > 1;

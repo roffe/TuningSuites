@@ -7,6 +7,7 @@ using System.Text;
 using Avalonia.Collections;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MapControls;
 
 namespace SuiteApp.ViewModels;
 
@@ -29,7 +30,7 @@ public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<st
 
 /// <summary>
 /// CompareResults / SRAMCompareResults: the symbols that differ between two sides (bin and bin, bin and SRAM snapshot, two
-/// snapshots), grouped by category. Viewers use the open bin's symbols and axes.
+/// snapshots), grouped by category. Viewers use the open bin's symbols and axes; T5's difference map the compare file's.
 /// </summary>
 public partial class CompareResultsViewModel : DocumentViewModel
 {
@@ -40,6 +41,12 @@ public partial class CompareResultsViewModel : DocumentViewModel
     public CompareSide First { get; }
     public CompareSide Second { get; }
     public DataGridCollectionView Rows { get; }
+
+    /// <summary>The other bin of a bin compare.</summary>
+    public SuiteBinary? Other { get; init; }
+
+    /// <summary>The view the difference map opens in, null for the default one.</summary>
+    public MapViewType? DifferenceView { get; init; }
 
     [ObservableProperty]
     private CompareRow? _selected;
@@ -62,7 +69,7 @@ public partial class CompareResultsViewModel : DocumentViewModel
     /// <summary>Compare with another bin: "Compare results: other.bin".</summary>
     public static CompareResultsViewModel Binaries(MainWindowViewModel owner, SuiteBinary current, SuiteBinary other, List<CompareRow> rows) =>
         new(owner, current, CompareSide.Bin(owner, current), CompareSide.OtherBin(owner, other), rows,
-            $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]");
+            $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]") { Other = other };
 
     /// <summary>Double-click / Enter (tabdet_onSymbolSelect): both sides' viewers.</summary>
     public void Open(CompareRow? row)
@@ -72,7 +79,7 @@ public partial class CompareResultsViewModel : DocumentViewModel
         Second.Open(row.SymbolName);
     }
 
-    /// <summary>"Show differences map": |second − first| per value, read-only, axes from the open file.</summary>
+    /// <summary>"Show differences map": |second − first| per value, no offset, read-only, axes from the open file (T5: the compare file).</summary>
     public void ShowDifferenceMap(CompareRow? row)
     {
         if (row == null || Current.FindAny(row.SymbolName) is not { } mine) return;
@@ -84,7 +91,13 @@ public partial class CompareResultsViewModel : DocumentViewModel
             return;
         }
         string title = string.Format(m_differenceTitle, mine.SmartVarname);
-        if (MapViewerViewModel.Create(m_owner, Current, mine, diff, readOnly: true, title: title) is { } viewer) m_owner.ShowDocument(viewer);
+        var (bin, sh) = Current.DifferenceAxesFromCompareFile && Other is { } other && other.FindAny(row.SymbolName) is { } theirs
+            ? (other, theirs) : (Current, mine);
+        if (MapViewerViewModel.Create(m_owner, bin, sh, diff, readOnly: true, title: title) is not { } viewer) return;
+        // T5Suite's compare viewers left the offset out (T7 / T8 have none): an unchanged cell reads 0
+        viewer.Map.Offset = 0;
+        if (DifferenceView is { } view) viewer.ViewType = view;
+        m_owner.ShowDocument(viewer);
     }
 
     /// <summary>"Export to Excel" becomes CSV: the grid's columns, one row per result.</summary>

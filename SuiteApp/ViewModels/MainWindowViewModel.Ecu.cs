@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MapControls;
 using TrionicCANLib.Checksum;
 
 namespace SuiteApp.ViewModels;
@@ -134,7 +135,7 @@ public abstract partial class MainWindowViewModel
         List<CompareRow> rows = await Task.Run(() => SuiteCompare.CompareToSram(bin, File.ReadAllBytes(file)));
         string name = Path.GetFileName(file);
         ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), SramSide(bin, file), rows,
-            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]"));
+            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]") { DifferenceView = SramToBinDifferenceView });
     }
 
     /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
@@ -145,8 +146,12 @@ public abstract partial class MainWindowViewModel
             SuiteCompare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2)));
         string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
         ShowDocument(new CompareResultsViewModel(this, bin, SramSide(bin, file1), SramSide(bin, file2), rows,
-            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]"));
+            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]") { DifferenceView = SramDifferenceView });
     }
+
+    /// <summary>The view the SRAM compares' difference maps open in (snapshot to bin, two snapshots), null for the default one.</summary>
+    protected virtual MapViewType? SramToBinDifferenceView => null;
+    protected virtual MapViewType? SramDifferenceView => null;
 
     // ---- SRAM maps ----
 

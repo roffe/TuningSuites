@@ -180,6 +180,9 @@ namespace T8SuitePro
             return retval;
         }
 
+        // MapViewerEx signed them (BstKnkCal.OffsetXSP's 65336 showed as -200)
+        public override bool SignsXAxis => true;
+
         /// <summary>Form1.GetYaxisValues: raw, above 0x8000 negative; "N : v1 v2 …" axes from the dictionary as they are.</summary>
         public override int[] GetYaxisValues(string symbolname)
         {
@@ -371,8 +374,12 @@ namespace T8SuitePro
             RawFile(target).UpdateChecksum();
         }
 
-        /// <summary>The viewer shows T8's axes raw; the Excel export applied the axis' dictionary factor.</summary>
-        public override double AxisFactor(string axisSymbol) => GetMapCorrectionFactor(axisSymbol);
+        /// <summary>
+        /// The viewer shows T8's axes without a factor; the Excel export applied the dictionary factor of the listed axis, not of the
+        /// duplicate AxisSymbols swaps in (BstKnkCal.MaxAirmass: fi_offsetXSP's 0.1 on OffsetXSP's values). T8Suite's offset was 0.
+        /// </summary>
+        public override (double factor, double offset) XAxisExportScale(string symbolname) =>
+            (GetMapCorrectionFactor(new SymbolAxesTranslator().GetXaxisSymbol(symbolname)), 0);
 
         /// <summary>Export fixed tuning package (Form1's list).</summary>
         public override IReadOnlyList<string> FixedPackageSymbols { get; } =

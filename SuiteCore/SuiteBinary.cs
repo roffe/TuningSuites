@@ -124,8 +124,11 @@ namespace CommonSuite
 
         public virtual double GetMapCorrectionOffset(string symbolname) => 0;
 
-        /// <summary>The factor an axis' values still need in an export: T7's come with it, T8's are raw.</summary>
-        public virtual double AxisFactor(string axisSymbol) => 1;
+        /// <summary>
+        /// The factor and offset the Excel export put on a map's X axis: those of the axis SymbolAxesTranslator.GetXaxisSymbol
+        /// lists. T7's values come with their factor (and its translator knew only T5 names), so 1 and 0.
+        /// </summary>
+        public virtual (double factor, double offset) XAxisExportScale(string symbolname) => (1, 0);
 
         /// <summary>Export fixed tuning package: the maps a stage tune touches.</summary>
         public abstract IReadOnlyList<string> FixedPackageSymbols { get; }
@@ -196,6 +199,9 @@ namespace CommonSuite
         /// <summary>The map viewer's sign rule: raw values above it read as negative; null for the viewer's default (0xF000 / none).</summary>
         public virtual int? SignAbove(string symbolname) => null;
 
+        /// <summary>MapViewerEx.HexadecimalFormatXAxis: the viewer shows X axis values above 0xF000 as negative (T7Suite, T8Suite).</summary>
+        public virtual bool SignsXAxis => false;
+
         /// <summary>The MAP sensor scale in percent on a map's values (T5's 3.0 to 5.0 bar sensors); 100 shows them raw.</summary>
         public virtual int ScalePercent(string symbolname) => 100;
 
@@ -204,5 +210,11 @@ namespace CommonSuite
 
         /// <summary>A map's X axis in the Easy view's units where they aren't its values (T5's MAP axis in bar); null where they are.</summary>
         public virtual double[] XAxisEasy(string symbolname) => null;
+
+        /// <summary>The difference map of a bin compare takes the compare file's axes (T5Suite); T7Suite / T8Suite took the open file's.</summary>
+        public virtual bool DifferenceAxesFromCompareFile => false;
+
+        /// <summary>The map viewer's math toolbar keeps w's fraction and rounds Easy results (T5Suite); T7Suite's rounds w and truncates.</summary>
+        public virtual bool FractionalMath => false;
     }
 }

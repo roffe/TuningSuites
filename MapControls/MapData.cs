@@ -39,6 +39,10 @@ public sealed class MapData
     /// <summary>The X axis in the Easy view's units where they aren't its values (T5Suite's MAP axis in bar), two decimals: the Easy view's
     /// column headers and the 3D graph's axis; null where they are.</summary>
     public double[]? XEasy { get; set; }
+
+    /// <summary>The X axis as stored where its values are sensor scaled (T5's 3.0 to 5.0 bar MAP axis): the Hex view's headers, as
+    /// T5Suite's; null where they are the values.</summary>
+    public double[]? XHex { get; set; }
     public double[]? YAxis { get; set; }
     public string XName { get; set; } = "";
     public string YName { get; set; } = "";
@@ -64,7 +68,20 @@ public sealed class MapData
     /// <summary>T5Suite's 3.0 to 5.0 bar sensor views: the Decimal and Easy values are raw × percent / 100 (100 shows them raw).</summary>
     public int ScalePercent { get; set; } = 100;
 
-    private int Scaled(int raw) => ScalePercent == 100 ? raw : raw * ScalePercent / 100;
+    /// <summary>
+    /// T5Suite's math toolbar: Multiply by w to two decimals and Divide by w as is in the Decimal and Hex views, Easy results
+    /// rounded back to raw. Off, it is T7Suite's: w rounded to an integer, Easy results truncated.
+    /// </summary>
+    public bool FractionalMath { get; set; }
+
+    /// <summary>The value the Decimal and Easy views show for a raw value (before factor and offset).</summary>
+    public int Scaled(int raw) => ScalePercent == 100 ? raw : raw * ScalePercent / 100;
+
+    /// <summary>The Easy view's number format when there is a factor or offset (T5Suite's realtime AFR feedback grid: F1).</summary>
+    public string EasyFormat { get; set; } = "F2";
+
+    /// <summary>The Easy view shows such a value of 0 as empty: T5Suite's feedback and error AFR maps, where 0 is a cell without samples.</summary>
+    public bool BlankZero { get; set; }
 
     /// <summary>True once anything changed since load or <see cref="MarkSaved"/>.</summary>
     public bool Mutated { get; private set; }
@@ -229,7 +246,8 @@ public sealed class MapData
                     float v = (float)raw * (float)Factor + (float)Offset;
                     if (Name.StartsWith("Ign_map_0!") || Name.StartsWith("Ign_map_4!")) return v.ToString("F1", CultureInfo.CurrentCulture) + "°";
                     if (Name.StartsWith("Reg_kon_mat")) return v.ToString("F0", CultureInfo.CurrentCulture) + "%";
-                    return v.ToString("F2", CultureInfo.CurrentCulture);
+                    if (BlankZero && v == 0) return "";
+                    return v.ToString(EasyFormat, CultureInfo.CurrentCulture);
                 }
                 if (Name.StartsWith("Reg_kon_mat")) return raw.ToString("F0", CultureInfo.CurrentCulture) + "%";
                 return raw.ToString(CultureInfo.CurrentCulture);
@@ -257,7 +275,7 @@ public sealed class MapData
                 if (!double.TryParse(text.TrimEnd('°', '%'), NumberStyles.Float, CultureInfo.CurrentCulture, out double d)
                     && !double.TryParse(text.TrimEnd('°', '%'), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) { error = "Not a number"; return false; }
                 double unscaled = Factor == 0 ? d - Offset : (d - Offset) / Factor;
-                // a scaled view rounds up, as T5Suite's 3 bar views did
+                // a scaled view rounds up, 16-bit cells too (T5Suite's 3 bar views truncated those, losing a count)
                 raw = ScalePercent == 100 ? (int)Math.Round(unscaled, MidpointRounding.ToEven) : Unscale(unscaled);
                 break;
             case MapViewType.Decimal:
@@ -272,5 +290,6 @@ public sealed class MapData
         return true;
     }
 
-    private int Unscale(double v) => (int)Math.Ceiling(Math.Round(v * 100 / ScalePercent, 6));
+    /// <summary>A shown (scaled) value back to raw, rounded up.</summary>
+    public int Unscale(double v) => (int)Math.Ceiling(Math.Round(v * 100 / ScalePercent, 6));
 }

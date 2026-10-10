@@ -217,6 +217,13 @@ namespace Trionic5Tools
 
         public override double GetMapCorrectionOffset(string symbolname) => File.GetOffsetForMap(symbolname);
 
+        // ExportToExcel wrote the X axis in its symbol's units (MAP axes in bar), with no sensor scaling
+        public override (double factor, double offset) XAxisExportScale(string symbolname)
+        {
+            string x = new SymbolAxesTranslator().GetXaxisSymbol(symbolname);
+            return (GetMapCorrectionFactor(x), GetMapCorrectionOffset(x));
+        }
+
         public override IReadOnlyList<string> FixedPackageSymbols { get; } = [];
 
         /// <summary>
@@ -293,6 +300,8 @@ namespace Trionic5Tools
 
         public override int AxisScalePercent(string caption) => caption is "MAP" or "Pressure error (bar)" ? SensorPercent : 100;
 
+        public override bool DifferenceAxesFromCompareFile => true;
+
         /// <summary>
         /// MapViewerEx's Easy view column headers and 3D graph: a "MAP" axis in bar (× the sensor scale × 0.01 − 1), a "Pressure error
         /// (bar)" one × the sensor scale × 0.01, both with two decimals (the Decimal view shows the scaled values, the Hex view the raw ones).
@@ -304,6 +313,9 @@ namespace Trionic5Tools
             double offset = caption == "MAP" ? -1 : 0;
             return GetXaxisValues(symbolname).Select(v => v * SensorPercent / 100.0 * 0.01 + offset).ToArray();
         }
+
+        /// <summary>MapViewerEx's Execute: Multiply by (int)(100*w)/100, Divide by w as a double, Easy results Math.Round.</summary>
+        public override bool FractionalMath => true;
 
         /// <summary>
         /// MapViewerEx's signs: 16-bit values above 32000 are negative, I_kyl_st! / I_luft_st! / Last_temp_st! above 128; the

@@ -92,7 +92,8 @@ public partial class T5MainWindowViewModel
         else if (ignition && bin.Find("Knock_press!") is { } press && bin.ReadSymbol(press) is [var p, ..])
             knock = [.. Enumerable.Repeat((int)p, y.Length)];
         // the ignition autotune's locks of an earlier session, without making the folder for a map only looked at
-        if (ignition && System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(bin.FileName) ?? "", "IgnitionMaps"))) _ = IgnitionMaps;
+        // (the open bin's only: IgnitionMaps loads that one, and a compare file's viewer shows no locks)
+        if (ignition && bin.FileName == T5?.FileName && System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(bin.FileName) ?? "", "IgnitionMaps"))) _ = IgnitionMaps;
 
         bool boxes = !idle && mapName != "Knock_count_map";
         int Symbol(string name) => bin.Find(name) != null ? bin.File.GetSymbolAsInt(name) : 0;
@@ -296,6 +297,8 @@ public partial class T5MainWindowViewModel
         var map = new MapData(kind, AfrContent(afr, kind), bin.TableWidth(fuelName), true)
         {
             Factor = 0.1,
+            BlankZero = !target,
+            FractionalMath = bin.FractionalMath,
             UpsideDown = true,
             XAxis = bin.GetXaxisValues(fuelName).Select(v => (double)v).ToArray(),
             YAxis = bin.GetYaxisValues(fuelName).Select(v => (double)v).ToArray(),

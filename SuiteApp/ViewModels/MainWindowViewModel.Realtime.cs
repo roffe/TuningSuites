@@ -142,6 +142,8 @@ public abstract partial class MainWindowViewModel
             ShowInfo("No data was found to export!");
             return;
         }
+        // CSVGenerator wrote the wideband's ADC count as AFR (ConvertToWidebandLambda), whatever the wideband setting
+        lines = lines.ConvertAll(l => l with { Values = l.Values.ConvertAll(v => v.Name == "DisplProt.AD_Scanner" ? (v.Name, WidebandAfr.AdcToAfr(v.Value, Settings)) : v) });
         string target = Path.ChangeExtension(file, ".csv");
         RealtimeLog.ExportCsv(lines, selection.Selected, target);
         ShowInfo("Exported to " + target);
@@ -179,7 +181,7 @@ public abstract partial class MainWindowViewModel
 
     /// <summary>
     /// The matrix in a read-only map viewer "Matrix [x : y : z] (Mean values)": table and 3D surface, y ascending upwards.
-    /// Values are stored 16-bit with a power-of-ten factor that fits the largest one; empty cells show 0.
+    /// Values are stored signed 16-bit with a power-of-ten factor that fits the largest one; empty cells show 0.
     /// </summary>
     public void ShowMatrix(List<RealtimeLogLine> lines, MatrixSelectionViewModel s)
     {
@@ -205,7 +207,8 @@ public abstract partial class MainWindowViewModel
                 data[i + 1] = (byte)raw;
             }
         string title = $"Matrix [{s.X} : {s.Y} : {s.Z}] ({s.Modes[s.Mode]})";
-        var map = new MapControls.MapData(title, data, LogMatrix.Size, true)
+        // the whole signed range: the factor keeps values within ±30000, and the maps' 0xF000 rule read -4096 and below as positive
+        var map = new MapControls.MapData(title, data, LogMatrix.Size, true, 0x7FFF)
         {
             Factor = factor, UpsideDown = true, XAxis = m.X.Select(v => Math.Round(v, 2)).ToArray(), YAxis = m.Y.Select(v => Math.Round(v, 2)).ToArray(), XName = s.X!, YName = s.Y!, ZName = s.Z!,
         };

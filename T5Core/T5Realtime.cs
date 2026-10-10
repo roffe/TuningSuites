@@ -165,12 +165,13 @@ namespace Trionic5Tools
 
         /// <summary>
         /// T5Suite matched viewers by their axis captions: "MAP" against the boost (axis × sensor factor × 0.01 − 1 bar), "RPM" and
-        /// "Throttle position" against the values as read. The "Pressure error (bar)" maps aren't tracked.
+        /// "Throttle position" against the values as read. The "Pressure error (bar)" maps aren't tracked. LOLA's Inj_map_0! has a
+        /// "TPS" X caption, so it follows the throttle.
         /// </summary>
         public override IReadOnlyList<CellRule> CellRules =>
         [
-            new(["Insp_mat!", "Inj_map_0!", "Fuel_knock_mat!", "Ign_map_0!", "Ign_map_2!", "Ign_map_4!"], "", CellInput.Boost, m_percent / 10000.0, "", CellInput.Rpm, 1, -1),
-            new(["Tryck_mat!", "Tryck_mat_a!", "Reg_kon_mat!", "Reg_kon_mat_a!"], "", CellInput.Tps, 1, "", CellInput.Rpm, 1),
+            new(["Insp_mat!", "Fuel_knock_mat!", "Ign_map_0!", "Ign_map_2!", "Ign_map_4!"], "", CellInput.Boost, m_percent / 10000.0, "", CellInput.Rpm, 1, -1),
+            new(["Tryck_mat!", "Tryck_mat_a!", "Reg_kon_mat!", "Reg_kon_mat_a!", "Inj_map_0!"], "", CellInput.Tps, 1, "", CellInput.Rpm, 1),
         ];
 
         public override string AirDemand(int value) => "";
