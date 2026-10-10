@@ -85,6 +85,12 @@ namespace T5AppTest
                 Assert.IsTrue(bin.IsTrionic55);
 
                 // "Only symbols within binary" by default: SRAM-only symbols hidden until a snapshot or the ECU is there
+                // sorted by category ascending and grouped by it, in every suite; inside a category the suite's order (subcategory, then description)
+                var byCategory = vm.Symbols!.Cast<CommonSuite.SymbolHelper>().ToList();
+                Assert.IsTrue(vm.IsSortedBy("Category", false) && vm.IsGroupedBy("Category"));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => string.Compare(byCategory[i - 1].Category, byCategory[i].Category, System.StringComparison.CurrentCulture) <= 0));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => byCategory[i - 1].Category != byCategory[i].Category
+                    || byCategory[i - 1].XdfSubcategory <= byCategory[i].XdfSubcategory));
                 var visible = vm.Symbols!.Cast<CommonSuite.SymbolHelper>().ToList();
                 Assert.IsTrue(visible.Count > 0 && visible.All(sh => sh.Flash_start_address > 0));
                 vm.ImportSramSnapshot(file);

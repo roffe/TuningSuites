@@ -263,11 +263,13 @@ public abstract partial class MainWindowViewModel : ObservableObject
             ReadOnlyText = new FileInfo(path).IsReadOnly ? "File is READ ONLY" : "File access OK";
             SuiteBinary bin = await Task.Run(() => OpenBinary(path));
 
-            // grouped by category like the old grid; the view filters as it's made, so the suite's filter first
+            // grouped by category and sorted by it ascending in every suite (the suite's order inside a category); the view filters
+            // as it's made, so the suite's filter first
             SymbolFilter = DefaultSymbolFilter;
             var rows = OrderSymbols(bin.Symbols.Cast<SymbolHelper>()).ToList();
             var view = new DataGridCollectionView(rows) { Filter = MatchesSearch };
             foreach (string group in SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
+            view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
             Binary = bin;
             Symbols = view;
             Title = $"{TitleName} v{Version} [ {Path.GetFileName(path)} ]";

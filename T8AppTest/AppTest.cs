@@ -87,9 +87,11 @@ namespace T8AppTest
                 Assert.AreEqual("Only symbols within binary", vm.SymbolFilter!.Name);
                 var shown = vm.Symbols!.Cast<SymbolHelper>().ToList();
                 Assert.IsTrue(shown.All(sh => sh.Length != 0 && sh.Flash_start_address < 0x100000));
-                // the categories alphabetically, then the longest first
-                Assert.AreEqual(shown.Select(sh => sh.Category).Min(System.StringComparer.Ordinal), shown[0].Category);
-                Assert.AreEqual(shown.Where(sh => sh.Category == shown[0].Category).Max(sh => sh.Length), shown[0].Length);
+                // sorted by category ascending and grouped by it, in every suite; inside a category the suite's order (the longest first)
+                var byCategory = vm.Symbols!.Cast<SymbolHelper>().ToList();
+                Assert.IsTrue(vm.IsSortedBy("Category", false) && vm.IsGroupedBy("Category"));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => string.Compare(byCategory[i - 1].Category, byCategory[i].Category, System.StringComparison.CurrentCulture) <= 0));
+                Assert.IsTrue(Enumerable.Range(1, byCategory.Count - 1).All(i => byCategory[i - 1].Category != byCategory[i].Category || byCategory[i - 1].Length >= byCategory[i].Length));
                 vm.SymbolFilter = vm.SymbolFilters[0];
                 Assert.IsGreaterThan(shown.Count, vm.Symbols!.Cast<SymbolHelper>().Count());
                 vm.SymbolFilter = vm.SymbolFilters[1];

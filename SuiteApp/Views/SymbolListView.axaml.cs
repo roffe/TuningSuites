@@ -25,18 +25,20 @@ public partial class SymbolListView : UserControl
 
     private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (e.Source is not Avalonia.Visual source
-            || Avalonia.VisualTree.VisualExtensions.FindAncestorOfType<Avalonia.Controls.DataGridColumnHeader>(source, true) is not { } header) return;
-        DataGridColumn? column = SymbolGrid.Columns.FirstOrDefault(c => Equals(c.Header, header.Content));
-        if (column == null || Vm is not { } vm) return;
+        // a column's header, or the empty header space right of the last one (the menu without the column's own items)
+        if (e.Source is not Avalonia.Visual source || Vm is not { } vm
+            || Avalonia.VisualTree.VisualExtensions.FindAncestorOfType<Avalonia.Controls.Primitives.DataGridColumnHeadersPresenter>(source, true) is not { } headers)
+            return;
+        var header = Avalonia.VisualTree.VisualExtensions.FindAncestorOfType<Avalonia.Controls.DataGridColumnHeader>(source, true);
+        DataGridColumn? column = header == null ? null : SymbolGrid.Columns.FirstOrDefault(c => Equals(c.Header, header.Content));
         e.Handled = true;
-        HeaderMenu(vm, column).Open(header);
+        HeaderMenu(vm, column).Open((Control?)header ?? headers);
     }
 
-    // the DevExpress column menu, as far as it applies here
-    private ContextMenu HeaderMenu(MainWindowViewModel vm, DataGridColumn column)
+    // the DevExpress column menu, as far as it applies here; no column: the empty header space
+    private ContextMenu HeaderMenu(MainWindowViewModel vm, DataGridColumn? column)
     {
-        string? path = column.SortMemberPath;
+        string? path = column?.SortMemberPath;
         // ticked: what is on already
         MenuItem Item(string text, System.Action action, bool enabled = true, bool? on = null)
         {
@@ -71,11 +73,11 @@ public partial class SymbolListView : UserControl
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Hide this column", () =>
         {
-            column.IsVisible = false;
+            column!.IsVisible = false;
             UpdateFilterColumns();
-        }, SymbolGrid.Columns.Count(c => c.IsVisible) > 1));
+        }, column != null && SymbolGrid.Columns.Count(c => c.IsVisible) > 1));
         menu.Items.Add(chooser);
-        menu.Items.Add(Item("Best fit", () => column.Width = DataGridLength.Auto));
+        menu.Items.Add(Item("Best fit", () => column!.Width = DataGridLength.Auto, column != null));
         menu.Items.Add(Item("Best fit (all columns)", () => { foreach (DataGridColumn c in SymbolGrid.Columns) c.Width = DataGridLength.Auto; }));
         menu.Items.Add(new Separator());
         var filterRow = new MenuItem { Header = "Show auto filter row", ToggleType = MenuItemToggleType.CheckBox, IsChecked = vm.ShowFilterRow };
