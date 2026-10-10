@@ -18,10 +18,9 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string CompareFilesName => "Trionic 5 binary files";
 
-    // T5Suite 2.0's frmAbout
-    protected override (string thanks, string support, string closing) AboutTexts =>
-        ("Steve Hayes, Hook, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Danibjor, Johnc, tomas0student, Janus0070 and...",
-         "T5Suite 2.0 was created with the help of lots of people on ecuproject.com.", "Just4pLeisure ;-)");
+    // T5Suite 2.0's frmAbout list
+    protected override string AboutThanks =>
+        "Steve Hayes, Hook, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Danibjor, Johnc, tomas0student, Janus0070, Roffe and...";
 
     protected override void OnDataContextChanged(System.EventArgs e)
     {

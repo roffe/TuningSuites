@@ -812,6 +812,12 @@ namespace T7AppTest
                 var about = window.NewAboutWindow("2.5.0");
                 about.Show();
                 Save(about, "about");
+                // About in the same words for every suite; Roffe among the thanks
+                var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
+                CollectionAssert.Contains(aboutTexts, "T7Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
+                CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
+                Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
                 about.Close();
 
                 var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "5168646" };

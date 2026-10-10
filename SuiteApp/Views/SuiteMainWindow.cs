@@ -43,9 +43,9 @@ public partial class SuiteMainWindow : Window
     protected virtual string BinaryFilesName => "Binary or Motorola S19";
 
     /// <summary>About...: the thanks, support and closing lines of the suite's frmAbout (T7Suite's by default).</summary>
-    protected virtual (string thanks, string support, string closing) AboutTexts =>
-        ("Dilemma, Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Mattias Claesson, Roffe and...",
-         "No e-mail support currently, check out www.trionictuning.com", "Just4pLeisure ;-)");
+    /// <summary>About's special thanks, the suite's own list (Roffe in every suite's); the rest of About is the same for all.</summary>
+    protected virtual string AboutThanks =>
+        "Dilemma, Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Mattias Claesson, Roffe and...";
 
     private bool m_workspaceReady;
 
@@ -240,11 +240,7 @@ public partial class SuiteMainWindow : Window
     }
 
     /// <summary>The suite's About... for a version.</summary>
-    public AboutWindow NewAboutWindow(string version)
-    {
-        var (thanks, support, closing) = AboutTexts;
-        return new AboutWindow(Vm.Caption, version, thanks, support, closing);
-    }
+    public AboutWindow NewAboutWindow(string version) => new(Vm.Caption, version, AboutThanks);
 
     // ---- projects ----
 

@@ -79,6 +79,16 @@ namespace T5AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 StringAssert.StartsWith(vm.Title, "T5Suite v");
+                var about = window.NewAboutWindow("2.5.0");
+                about.Show();
+                about.CaptureRenderedFrame();
+                // About in the same words for every suite; Roffe among the thanks
+                var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
+                CollectionAssert.Contains(aboutTexts, "T5Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
+                CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
+                Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
+                about.Close();
                 // the menus the three suites share: the same menus, captions and order (T5Suite's own items in their place)
                 var menu = window.GetVisualDescendants().OfType<Menu>().First();
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },

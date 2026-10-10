@@ -83,6 +83,16 @@ namespace T8AppTest
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
                 Assert.IsInstanceOfType<T8Binary>(vm.Binary);
 
+                var about = window.NewAboutWindow("2.5.0");
+                about.Show();
+                about.CaptureRenderedFrame();
+                // About in the same words for every suite; Roffe among the thanks
+                var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
+                CollectionAssert.Contains(aboutTexts, "T8Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
+                CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
+                Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
+                about.Close();
                 // the menus the three suites share
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
                     window.GetVisualDescendants().OfType<Menu>().First().Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
