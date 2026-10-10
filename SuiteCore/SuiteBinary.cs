@@ -82,6 +82,12 @@ namespace CommonSuite
                 fs.Write(data, 0, data.Length);
             }
             log?.AddToTransactionLog(new TransactionEntry(DateTime.Now, address, data.Length, before, data, 0, 0, note));
+            Written(address, data.Length);
+        }
+
+        /// <summary>After WriteData (T5: the file's sync date is stamped "now", for the ECU synchronization).</summary>
+        protected virtual void Written(int address, int length)
+        {
         }
 
         /// <summary>A map save (tabdet_onSymbolSave): the data, then the checksum.</summary>
@@ -158,5 +164,32 @@ namespace CommonSuite
 
         /// <summary>The open-loop limits drawn on the map's load × rpm cells, null when the suite has none.</summary>
         public virtual byte[] OpenLoopTable(string mapname) => null;
+
+        /// <summary>
+        /// The open-loop limit per data row in X-axis units, for the viewer's open-loop mark; null for none. T7Suite marked only
+        /// (mg/c) × rpm maps, from the 16-bit OpenLoopTable.
+        /// </summary>
+        public virtual double[] OpenLoopLimits(string mapname)
+        {
+            var (_, _, x, y, _) = AxisSymbols(mapname);
+            if (!x.Equals("mg/c", StringComparison.OrdinalIgnoreCase) || !y.Equals("rpm", StringComparison.OrdinalIgnoreCase) || OpenLoopTable(mapname) is not { Length: > 1 } ol)
+                return null;
+            var limits = new double[ol.Length / 2];
+            for (int i = 0; i < limits.Length; i++)
+            {
+                int b = ol[i * 2] << 8 | ol[i * 2 + 1];
+                limits[i] = b > 0xF000 ? b - 0x10000 : b;
+            }
+            return limits;
+        }
+
+        /// <summary>The map viewer's sign rule: raw values above it read as negative; null for the viewer's default (0xF000 / none).</summary>
+        public virtual int? SignAbove(string symbolname) => null;
+
+        /// <summary>The MAP sensor scale in percent on a map's values (T5's 3.0 to 5.0 bar sensors); 100 shows them raw.</summary>
+        public virtual int ScalePercent(string symbolname) => 100;
+
+        /// <summary>The same scale on an axis, by its caption.</summary>
+        public virtual int AxisScalePercent(string caption) => 100;
     }
 }

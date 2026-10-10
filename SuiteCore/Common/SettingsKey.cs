@@ -31,8 +31,11 @@ namespace CommonSuite
 
         public static string Folder(string suite) => Path.Combine(BaseFolder, suite);
 
+        /// <summary>The registry key a suite kept its settings under when it isn't HKCU\Software\MattiasC\&lt;suite&gt; (T5Suite: Software\T5Suite2).</summary>
+        public static Dictionary<string, string> RegistryPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
+
         public static SettingsKey Open(string suite, string subkey = null) =>
-            new SettingsKey(Path.Combine(Folder(suite), "settings.json"), @"Software\MattiasC\" + suite, subkey);
+            new SettingsKey(Path.Combine(Folder(suite), "settings.json"), RegistryPaths.GetValueOrDefault(suite, @"Software\MattiasC\" + suite), subkey);
 
         internal SettingsKey(string file, string registryPath, string subkey = null)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace CommonSuite
 {
@@ -8,6 +9,9 @@ namespace CommonSuite
     public sealed record PartInfo(string PartNumber, string CarModel, string EngineType, int Bhp, int Torque, bool TwoLiter, bool TwoPointThreeLiter,
         bool Turbo, bool FullPressureTurbo, string Binary)
     {
+        /// <summary>The suite's own extra rows (T5Suite: boosts, model years, region, ECU type, Aero, high altitude).</summary>
+        public IReadOnlyList<PartDetail> Extra { get; init; } = [];
+
         /// <summary>&lt;name&gt;.bin in Binaries next to the executable (the T7Extras / T8Extras installers put the stock bins there).</summary>
         public static string StockBinary(string name)
         {
@@ -17,4 +21,6 @@ namespace CommonSuite
                 : null;
         }
     }
+
+    public sealed record PartDetail(string Label, string Value);
 }

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- T5 logic lifted from Trionic5Tools/, no UI; the CommonSuite code it uses is in SuiteCore. Original namespace (Trionic5Tools)
+       kept so the files diff against the old code. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Trionic5Tools</RootNamespace>
+    <AssemblyName>T5Core</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="T5CoreTest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- symbol names in table order for bins with masked names (T5Suite's setup installed it next to the program) -->
+    <Content Include="symbolindex.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SuiteCore\SuiteCore.csproj" />
+    <ProjectReference Include="$(TrionicDir)\TrionicCANLib\TrionicCANLib.csproj" />
+  </ItemGroup>
+
+</Project>
