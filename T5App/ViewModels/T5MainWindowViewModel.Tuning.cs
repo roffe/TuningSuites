@@ -154,6 +154,8 @@ public partial class T5MainWindowViewModel
     {
         base.OnPropertyChanged(e);
         if (e.PropertyName == nameof(Binary)) OnPropertyChanged(nameof(OriginalFile));
+        // the SRAM symbols matter once the ECU or a snapshot is there: T5Suite switched its filter off
+        if (e.PropertyName is nameof(IsConnected) or nameof(SramFile) && (IsConnected || SramFile != null) && Binary != null) SymbolFilter = SymbolFilters[0];
     }
 
     /// <summary>

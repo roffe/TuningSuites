@@ -84,6 +84,13 @@ namespace T5AppTest
                 var bin = (T5Binary)vm.Binary!;
                 Assert.IsTrue(bin.IsTrionic55);
 
+                // "Only symbols within binary" by default: SRAM-only symbols hidden until a snapshot or the ECU is there
+                var visible = vm.Symbols!.Cast<CommonSuite.SymbolHelper>().ToList();
+                Assert.IsTrue(visible.Count > 0 && visible.All(sh => sh.Flash_start_address > 0));
+                vm.ImportSramSnapshot(file);
+                Assert.AreEqual("All symbols", vm.SymbolFilter!.Name);
+                vm.SymbolFilter = vm.SymbolFilters[1];
+
                 // T5Suite's grid: the description first, then the symbol
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 window.CaptureRenderedFrame();

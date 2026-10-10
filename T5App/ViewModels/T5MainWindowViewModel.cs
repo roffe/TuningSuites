@@ -136,6 +136,15 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         };
     }
 
+    private static readonly SymbolFilter AllSymbols = new("All symbols", _ => true);
+
+    /// <summary>SetDefaultFilters: "Only symbols within binary" (flash address set) after every open; the SRAM-only ones are hidden.</summary>
+    private static readonly SymbolFilter WithinBinary = new("Only symbols within binary", sh => sh.Flash_start_address > 0);
+
+    public override IReadOnlyList<SymbolFilter> SymbolFilters { get; } = [AllSymbols, WithinBinary];
+
+    protected override SymbolFilter? DefaultSymbolFilter => WithinBinary;
+
     // T5Suite's grid grouped by XDF category, then subcategory
     protected override string[] SymbolGroupPaths => [nameof(SymbolHelper.Category), nameof(SymbolHelper.Subcategory)];
 
