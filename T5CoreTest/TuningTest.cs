@@ -15,7 +15,7 @@ namespace T5CoreTest
     {
         public TestContext TestContext { get; set; } = null!;
 
-        private static T5Binary OpenCopy(string dir, string name = "4239273.BIN")
+        private static T5Binary OpenCopy(string dir, string name = "4239273.bin")
         {
             string file = Path.Combine(dir, name);
             File.Copy(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == name), file);
@@ -97,7 +97,7 @@ namespace T5CoreTest
             CollectionAssert.Contains(examine, "Mapsensor type: stock 2.5 bar sensor");
             CollectionAssert.Contains(examine, "Injectors: stock");
             List<string> anomalies = T5Reports.Anomalies(bin);
-            Assert.AreEqual("Checking file 4239273.BIN", anomalies[0]);
+            Assert.AreEqual("Checking file 4239273.bin", anomalies[0]);
 
             // a stage 1 copy: the boost maps differ, SRAM-only symbols are never listed
             string stock = Path.Combine(dir, "stock.BIN");
@@ -142,7 +142,7 @@ namespace T5CoreTest
             Assert.AreEqual(ChecksumResult.Ok, bin.VerifyChecksum());
 
             // a T5.2 file lacks the adaption maps: nothing to do, no exception
-            T5Binary t52 = OpenCopy(dir, "4300810.BIN");
+            T5Binary t52 = OpenCopy(dir, "4300810.bin");
             T5Tuning.MergeAdaption(t52, ram, new T5Tuning.AdaptionMerge(), null, true);
         });
 
@@ -152,14 +152,14 @@ namespace T5CoreTest
             string sub = Directory.CreateDirectory(Path.Combine(dir, "a", "b")).FullName;
             T5Binary stage1 = OpenCopy(dir);
             T5Tuning.TuneToStage(stage1, 1, true);
-            File.Copy(BinGoldenTest.StockBins().First(b => Path.GetFileName(b) == "4300810.BIN"), Path.Combine(sub, "t52.BIN"));
+            File.Copy(BinGoldenTest.StockBins().First(b => Path.GetFileName(b) == "4300810.bin"), Path.Combine(sub, "t52.BIN"));
             File.WriteAllBytes(Path.Combine(sub, "notabin.BIN"), new byte[0x40000]);
             // the stage 1 file, the tuner's backup next to it and the T5.2 bin; not the zero file
             var rows = T5UserLibrary.AddFolder([], dir);
             Assert.AreEqual(3, rows.Count, string.Join(", ", rows.Select(r => r.Name)));
             Assert.IsTrue(rows.Any(r => r.Name == "t52.BIN") && rows.All(r => r.Name != "notabin.BIN"));
-            Assert.AreEqual("Stage1", rows.Single(r => r.Name == "4239273.BIN").Stage);
-            Assert.AreEqual("4239273", rows.Single(r => r.Name == "4239273.BIN").Partnumber);
+            Assert.AreEqual("Stage1", rows.Single(r => r.Name == "4239273.bin").Stage);
+            Assert.AreEqual("4239273", rows.Single(r => r.Name == "4239273.bin").Partnumber);
             // a second scan replaces the rows of the same files; the store round-trips
             Assert.AreEqual(3, T5UserLibrary.AddFolder(rows, dir).Count);
             string store = Path.Combine(dir, "UserLib.json");
@@ -177,7 +177,7 @@ namespace T5CoreTest
                 Assert.AreEqual(data.Length == 0x20000 ? "060000" : "040000", T5Binary.RomOffset(data), stock);
                 Assert.IsNull(T5Binary.FlashProblem(stock, data.Length), stock);
             }
-            byte[] t55 = File.ReadAllBytes(BinGoldenTest.StockBins().First(b => b.EndsWith("4239273.BIN")));
+            byte[] t55 = File.ReadAllBytes(BinGoldenTest.StockBins().First(b => b.EndsWith("4239273.bin")));
             string file = Path.Combine(dir, "x.bin");
             File.WriteAllBytes(file, new byte[0x80000]);
             StringAssert.Contains(T5Binary.FlashProblem(file, 0x80000), "Only Trionic 5.2");

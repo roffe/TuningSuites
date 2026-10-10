@@ -30,7 +30,7 @@ namespace T5AppTest
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
         // a T5.5 (256 KB) stock bin
-        private const string StockBin = "4239273.BIN";
+        private const string StockBin = "4239273.bin";
 
         private static HeadlessUnitTestSession? s_session;
         private static string s_dir = "";

@@ -29,7 +29,7 @@ namespace T8AppTest
 
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
-        private const string StockBin = "55353231_FA56_C_FME2_37_FIEF_81c.BIN";
+        private const string StockBin = "55353231_FA56_C_FME2_37_FIEF_81c.bin";
 
         private static HeadlessUnitTestSession? s_session;
         private static string s_dir = "";

@@ -244,7 +244,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - **Stock bins:** `T8Binaries/` (72 bins) is the golden corpus. All verify their checksum and none is open software.
   - **Names:** 45 tables are packed and 27 encrypted (14 keys). 71 bins get names; 1 has a corrupt table.
   - **Tables:** every bin has a PID table, none a TEM table.
-  - **File names:** 69 end in `.BIN`, so enumerate case-insensitively.
+  - **File names:** 69 ended in `.BIN` (renamed to `.bin` on 2026-10-10, as T5Binaries'); enumeration stays case-insensitive.
 
 ### Decisions (T8)
 
@@ -613,6 +613,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: The stock bins in T5Binaries and T8Binaries are named `*.bin` like T7Binaries' (git renames, the golden names and tests follow); T5 is merged into master and work goes on in `develop`.
 - 2026-10-10: Lookup partnumber's window is titled as its menu item in all three suites; T7 and T8 get the "..." partnumber list back (T7Suite / T8Suite had it): the stock bins in Binaries that the suite's lookup recognizes, grouped by car model and engine, with power and torque (T7Suite / T8Suite listed every bin by its file name: car type, engine, tuner, stage).
 - 2026-10-10: One symbol list column order for T5, T7 and T8 (user's order); T5 symbols get numbers and user descriptions (notes, matched back by number, saved with a message instead of a crash in a read-only folder). The header menu ticks the sort and grouping in use; grouping, sorting or filtering while a user description is being edited no longer crashes (the grid's edit is committed first); the auto filter row follows the shown columns.
 - 2026-10-10: The symbol list opens sorted by category ascending and grouped by it in all three suites (each suite's order inside a category: T7 longest first, T8 longest first then name, T5 by subcategory then description); a right click in the empty header space right of the last column opens the header menu (without the column's own items).

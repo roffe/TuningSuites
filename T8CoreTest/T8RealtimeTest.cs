@@ -14,7 +14,7 @@ namespace T8CoreTest
         private static string NoSymbolLists => Path.Combine(Path.GetTempPath(), "t8golden-no-symbol-lists");
 
         private static T8Binary Stock() =>
-            T8Binary.Open(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == "55353231_FA56_C_FME2_37_FIEF_81c.BIN"), false, NoSymbolLists);
+            T8Binary.Open(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == "55353231_FA56_C_FME2_37_FIEF_81c.bin"), false, NoSymbolLists);
 
         [TestMethod]
         public void DashboardRowsAndCells()

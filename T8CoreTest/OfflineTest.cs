@@ -13,8 +13,8 @@ namespace T8CoreTest
     [TestClass]
     public class OfflineTest
     {
-        private const string Old = "55353231_FA56_C_FME2_37_FIEF_81c.BIN", NewPetrol = "55565020_FC0J_C_FMEP_63_FIEF_82s.BIN",
-            BioPower = "55565020_FD0I_C_FMEP_33_FIEF_81l.BIN", Stripped = "55352688_FA4H_C_FME9_28_SAN_PF_81b.BIN";
+        private const string Old = "55353231_FA56_C_FME2_37_FIEF_81c.bin", NewPetrol = "55565020_FC0J_C_FMEP_63_FIEF_82s.bin",
+            BioPower = "55565020_FD0I_C_FMEP_33_FIEF_81l.bin", Stripped = "55352688_FA4H_C_FME9_28_SAN_PF_81b.bin";
 
         private static string NoSymbolLists => Path.Combine(Path.GetTempPath(), "t8golden-no-symbol-lists");
 
