@@ -123,6 +123,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Yes / No / Cancel question (null = Cancel), answered by the view.</summary>
     public Func<string, Task<bool?>>? AskYesNoCancel { get; set; }
 
+    /// <summary>Autotune without auto update: the cells (data indices) to take from the proposed percentages, null to cancel.</summary>
+    public Func<double[], Task<IReadOnlyCollection<int>?>>? AcceptAutotune { get; set; }
+
     /// <summary>Text, caption and button labels: the index clicked, null when closed.</summary>
     public Func<string, string, string[], Task<int?>>? AskButtons { get; set; }
 

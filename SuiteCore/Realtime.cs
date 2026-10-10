@@ -50,14 +50,22 @@ namespace CommonSuite
         }
     }
 
-    /// <summary>The symbols the dashboard's displays show where the suites named them differently.</summary>
-    public sealed record DashboardSymbols(string Torque, string IgnitionOffset, string AirmassRequest, string Tps);
+    /// <summary>The symbols the dashboard's displays show; T7's names unless a suite names them differently ("" shows 0).</summary>
+    public sealed record DashboardSymbols(string Torque, string IgnitionOffset, string AirmassRequest, string Tps,
+        string Speed = "In.v_Vehicle", string Boost = "In.p_AirInlet", string DutyCycle = "Out.PWM_BoostCntrl", string IgnitionAdvance = "Out.fi_Ignition",
+        string Airmass = "MAF.m_AirInlet", string Rpm = "ActualIn.n_Engine", string Coolant = "ActualIn.T_Engine", string IntakeAir = "ActualIn.T_AirInlet",
+        string Egt = "Exhaust.T_Calc", string ActiveAirDemand = "ECMStat.ST_ActiveAirDem", string FuelConsumption = "BFuelProt.CurrentFuelCon",
+        string Power = "ECMStat.P_Engine", string LambdaInt = "Lambda.LambdaInt", string LambdaStatus = "Lambda.Status", string Fuelcut = "FCut.CutStatus");
 
     /// <summary>What a map viewer's live cell follows: which axis value the engine's value is matched with.</summary>
-    public enum CellInput { Rpm, Airmass, Tps, Torque, IgnitionOffset }
+    public enum CellInput { Rpm, Airmass, Tps, Torque, IgnitionOffset, Boost }
 
-    /// <summary>Live cell tracking for maps whose name starts with one of Maps: the axes ("A|B" for B when the bin has no A) and the values to find on them.</summary>
-    public sealed record CellRule(string[] Maps, string XAxis, CellInput X, double XScale, string YAxis, CellInput Y, double YScale);
+    /// <summary>
+    /// Live cell tracking for maps whose name starts with one of Maps: the axes ("A|B" for B when the bin has no A; "" for the map's own
+    /// axis values, as its viewer shows them) and the values to find on them, axis × scale + offset.
+    /// </summary>
+    public sealed record CellRule(string[] Maps, string XAxis, CellInput X, double XScale, string YAxis, CellInput Y, double YScale,
+        double XOffset = 0, double YOffset = 0);
 
     /// <summary>
     /// A suite's realtime table: its symbol names and conventions (FillRealtimeTable, the signed list, the per-cylinder counters,
@@ -86,6 +94,9 @@ namespace CommonSuite
         public abstract string AirDemand(int value);
         public abstract string Lambda(int value);
         public abstract string Fuelcut(int value);
+
+        /// <summary>A row's value from its bytes, before the row's correction and offset (big-endian, the signed names above 32000).</summary>
+        public virtual double Decode(RealtimeSymbol row, byte[] data) => Realtime.Decode(row.Name, data, Signed);
 
         /// <summary>"t7l": the logs' extension.</summary>
         public abstract string LogExtension { get; }
@@ -152,7 +163,7 @@ namespace CommonSuite
                     row.Delay = row.Reload;
                     if (read(row) is { } data)
                     {
-                        row.Last = Decode(row.Name, data, rules.Signed) * row.Correction + row.Offset;
+                        row.Last = rules.Decode(row, data) * row.Correction + row.Offset;
                         if (rules.PerCylinder.TryGetValue(row.Name, out var cyl))
                         {
                             for (int c = 0; c < 4 && (c + 1) * cyl.Size <= data.Length; c++)
@@ -298,18 +309,18 @@ namespace CommonSuite
         {
             CellRule rule = rules.FirstOrDefault(r => r.Maps.Any(map.StartsWith));
             if (rule == null) return null;
-            int x = Nearest(rule.XAxis, value(rule.X), rule.XScale), y = Nearest(rule.YAxis, value(rule.Y), rule.YScale);
+            int x = Nearest(rule.XAxis == "" ? bin.GetXaxisValues(map) : Axis(rule.XAxis), value(rule.X), rule.XScale, rule.XOffset);
+            int y = Nearest(rule.YAxis == "" ? bin.GetYaxisValues(map) : Axis(rule.YAxis), value(rule.Y), rule.YScale, rule.YOffset);
             return x < 0 || y < 0 ? null : (x, y);
         }
 
-        private int Nearest(string axis, double value, double scale)
+        private static int Nearest(int[] a, double value, double scale, double offset)
         {
-            int[] a = Axis(axis);
             int best = -1;
             double min = double.MaxValue;
             for (int i = 0; i < a.Length; i++)
             {
-                double diff = Math.Abs(a[i] * scale - value);
+                double diff = Math.Abs(a[i] * scale + offset - value);
                 if (diff < min)
                 {
                     min = diff;

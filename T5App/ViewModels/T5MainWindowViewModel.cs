@@ -19,11 +19,24 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         InitEcu();
     }
 
-    /// <summary>T5Suite's CanDevice ("Lawicel", "CombiAdapter" / "Multiadapter", "Just4Trionic", "Kvaser") as the shared adapter type, once.</summary>
+    /// <summary>
+    /// Once, T5Suite's own names as the shared settings: CanDevice ("Lawicel", "CombiAdapter" / "Multiadapter", "Just4Trionic", "Kvaser")
+    /// as the adapter type, "Use wideband lambda through symbol" (AD_EGR / AD_cat; AD_sond stays the narrowband) as the wideband symbol.
+    /// </summary>
     private void MigrateCanDevice()
     {
+        bool hasAdapter, hasWideband;
         using (var key = SettingsKey.Open(T5AppSettings.Suite))
-            if (key.GetValue("AdapterType") != null) return;
+        {
+            hasAdapter = key.GetValue("AdapterType") != null;
+            hasWideband = key.GetValue("WideBandSymbol") != null;
+        }
+        if (!hasWideband)
+        {
+            Settings.WideBandSymbol = T5Settings.WidebandLambdaSymbol is "AD_cat" ? "AD_cat" : "AD_EGR";
+            Settings.UseWidebandLambda = T5Settings.UseWidebandLambdaThroughSymbol && T5Settings.WidebandLambdaSymbol is "AD_EGR" or "AD_cat";
+        }
+        if (hasAdapter) return;
         string? adapter = T5Settings.CanDevice switch
         {
             "Lawicel" => "Lawicel CANUSB",
@@ -97,6 +110,8 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
     /// <summary>On open the checksum is checked, and the status bar shows the ECU type, CPU speed and RAM lock (frmMain 929).</summary>
     protected override async Task OnOpenedAsync(SuiteBinary bin)
     {
+        // "Always create AFR maps": the AFRMaps folder next to the bin
+        if (T5Settings.AlwaysCreateAFRMaps) _ = AfrMaps;
         ShowFirmwareStatus();
         await CheckChecksumAsync();
     }

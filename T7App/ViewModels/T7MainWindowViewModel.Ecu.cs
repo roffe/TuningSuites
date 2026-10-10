@@ -57,9 +57,6 @@ public partial class T7MainWindowViewModel
     /// <summary>The open bin's AFR target / feedback / counter maps (AFRMaps folder next to it).</summary>
     public AfrFeedback? AfrMaps => Binary is not T7Binary bin ? null : m_afr?.Binary == bin ? m_afr : m_afr = new AfrFeedback(bin);
 
-    /// <summary>Autotune without auto update: the cells (data indices) to take from the proposed percentages, null to cancel.</summary>
-    public Func<double[], Task<IReadOnlyCollection<int>?>>? AcceptAutotune { get; set; }
-
     /// <summary>SetupMeasureAFRorLambda's captions.</summary>
     public string FeedbackMapCaption => Settings.MeasureAFRInLambda ? "Show lambda feedback map" : "Show AFR feedback map";
     public string ClearFeedbackCaption => Settings.MeasureAFRInLambda ? "Clear lambda feedback map" : "Clear AFR feedback map";

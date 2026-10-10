@@ -41,6 +41,7 @@
                     <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="110" />
                     <TextBlock Text="seconds" VerticalAlignment="Center" />
                 </StackPanel>
+                <CheckBox Grid.Row="3" Grid.ColumnSpan="2" Content="Measure AFR in lambda" IsChecked="{Binding MeasureAFRInLambda}" />
                 <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}" />
                 <TextBlock Grid.Row="6" Text="Wideband device" VerticalAlignment="Center" />
                 <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch"
@@ -48,6 +49,22 @@
                 <TextBlock Grid.Row="7" Text="Wideband port" VerticalAlignment="Center" />
                 <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch"
                           IsEnabled="{Binding UseDigitalWidebandLambda}" />
+            </Grid>
+        </HeaderedContentControl>
+        <HeaderedContentControl Header="Wideband through a symbol">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
+                <CheckBox Content="Use wideband lambda through symbol" IsChecked="{Binding UseWidebandLambda}" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding WidebandSymbols}" SelectedItem="{Binding WideBandSymbol}" HorizontalAlignment="Stretch" />
+                <TextBlock Grid.Row="1" Text="Low voltage (Volt) equals AFR" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding WidebandLowVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" Width="140" />
+                    <NumericUpDown Value="{Binding WidebandLowAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" Width="140" />
+                </StackPanel>
+                <TextBlock Grid.Row="2" Text="High voltage (Volt) equals AFR" VerticalAlignment="Center" />
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding WidebandHighVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" Width="140" />
+                    <NumericUpDown Value="{Binding WidebandHighAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" Width="140" />
+                </StackPanel>
             </Grid>
         </HeaderedContentControl>
         <HeaderedContentControl Header="Project settings">

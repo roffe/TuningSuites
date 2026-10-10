@@ -12,6 +12,7 @@
     <Window.KeyBindings>
         <KeyBinding Gesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" />
         <KeyBinding Gesture="F6" Command="{Binding WriteLogMarkerCommand}" />
+        <KeyBinding Gesture="Shift+F5" Command="{Binding Realtime.ToggleAutotuneCommand, FallbackValue={x:Null}}" />
     </Window.KeyBindings>
     <Window.Resources>
         <!-- the symbol list's row menu, the ported items -->
@@ -121,7 +122,17 @@
                 <MenuItem Header="Upload SRAM to ECU" Click="OnUploadSram" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare ECU with binary" Click="OnCompareEcu" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Read DTC codes" Click="OnFaultCodes" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Toggle Autotune" InputGesture="Shift+F5" Command="{Binding Realtime.ToggleAutotuneCommand, FallbackValue={x:Null}}"
+                          IsVisible="{Binding AdvancedMode}" />
                 <MenuItem Header="Set symbol colors" Click="OnSymbolColors" IsEnabled="{Binding HasFile}" />
+                <Separator />
+                <MenuItem Header="AFR target" Command="{Binding ShowAfrCommand}" CommandParameter="TargetAFR" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="AFR feedback" Command="{Binding ShowAfrCommand}" CommandParameter="FeedbackAFR" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="AFR error" Command="{Binding ShowAfrCommand}" CommandParameter="FeedbackvsTargetAFR" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Idle AFR target" Command="{Binding ShowAfrCommand}" CommandParameter="IdleTargetAFR" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Idle AFR feedback" Command="{Binding ShowAfrCommand}" CommandParameter="IdleFeedbackAFR" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Idle AFR error" Command="{Binding ShowAfrCommand}" CommandParameter="IdleFeedbackvsTargetAFR" IsEnabled="{Binding HasFile}" />
+                <MenuItem Header="Generate AFR target" Command="{Binding GenerateAfrTargetCommand}" IsEnabled="{Binding HasFile}" />
             </MenuItem>
             <MenuItem Header="_Logfiles">
                 <MenuItem Header="Export T5Suite logfile to LogWorks" Click="OnExportLogDif" />

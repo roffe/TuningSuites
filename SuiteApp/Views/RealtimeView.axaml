@@ -41,6 +41,10 @@
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="FontSize" Value="12" />
         </Style>
+        <!-- displays the suite has no symbol for -->
+        <Style Selector="StackPanel:disabled, c|LinearGauge:disabled, TextBlock.caption:disabled">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
         <Style Selector="Border.night">
             <Setter Property="Background" Value="Black" />
         </Style>
@@ -84,11 +88,11 @@
                         <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding Egt, StringFormat={}{0:F0}}" /></Border>
                         <TextBlock Classes="caption" Text="EGT ˚C" />
                     </StackPanel>
-                    <StackPanel>
+                    <StackPanel IsEnabled="{Binding HasAirmass}">
                         <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding ActiveAirDemand, StringFormat={}{0:F0}}" /></Border>
                         <TextBlock Classes="caption" Text="ActiveAirDem" />
                     </StackPanel>
-                    <StackPanel>
+                    <StackPanel IsEnabled="{Binding HasConsumption}">
                         <Border Classes="display"><TextBlock Classes="digits small" Text="{Binding FuelConsumption, StringFormat={}{0:F1}}" /></Border>
                         <TextBlock Classes="caption" Text="L/100km" />
                     </StackPanel>
@@ -98,7 +102,7 @@
                     </StackPanel>
                 </UniformGrid>
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="4,6">
-                    <TextBlock Classes="caption" Text="Airmass limiter" HorizontalAlignment="Left" Margin="0,0,12,0" />
+                    <TextBlock Classes="caption" Text="Airmass limiter" HorizontalAlignment="Left" Margin="0,0,12,0" IsEnabled="{Binding HasAirmass}" />
                     <TextBlock Classes="status limiter" Grid.Column="1" Text="{Binding AirmassLimiter}" />
                     <TextBlock Classes="caption" Grid.Row="1" Text="Lambda status" HorizontalAlignment="Left" />
                     <TextBlock Classes="status lambda" Grid.Row="1" Grid.Column="1" Text="{Binding LambdaStatus}" />
@@ -123,7 +127,7 @@
                         <UniformGrid DockPanel.Dock="Bottom" Columns="2" Height="70">
                             <c:LinearGauge Caption="{Binding AfrCaption}" Value="{Binding AfrValue}" Minimum="{Binding AfrMinimum}" Maximum="{Binding AfrMaximum}"
                                            Format="{Binding AfrFormat}" PointerPressed="OnToggleAfr" />
-                            <c:LinearGauge Caption="Airmass mg/c" Value="{Binding Airmass}" Minimum="0" Maximum="1600" Format="F0" />
+                            <c:LinearGauge Caption="Airmass mg/c" Value="{Binding Airmass}" Minimum="0" Maximum="1600" Format="F0" IsEnabled="{Binding HasAirmass}" />
                         </UniformGrid>
                         <UniformGrid Columns="3" Rows="3">
                             <StackPanel VerticalAlignment="Center">
@@ -137,7 +141,7 @@
                                 </Border>
                                 <TextBlock Classes="caption" Text="I offset" />
                             </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
+                            <StackPanel VerticalAlignment="Center" IsEnabled="{Binding HasAirmass}">
                                 <Border Classes="display"><TextBlock Classes="digits big" Text="{Binding AirmassRequest, StringFormat={}{0:F0}}" /></Border>
                                 <TextBlock Classes="caption" Text="Req. airmass" />
                             </StackPanel>

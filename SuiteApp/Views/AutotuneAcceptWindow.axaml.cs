@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using MapControls;
 
-namespace T7App.Views;
+namespace SuiteApp.Views;
 
 /// <summary>
 /// frmFuelMapAccept: the proposed change per fuel map cell in percent (0.1 % steps), rows as the fuel map; returns the cells to
@@ -17,7 +17,7 @@ public partial class AutotuneAcceptWindow : Window
 
     public AutotuneAcceptWindow() => InitializeComponent();
 
-    public AutotuneAcceptWindow(string fuelMap, double[] percent, double[] xAxis, double[] yAxis) : this()
+    public AutotuneAcceptWindow(string fuelMap, double[] percent, double[] xAxis, double[] yAxis, string xName = "mg/c", string yName = "rpm") : this()
     {
         m_percent = percent;
         Title = "Select percent mutations to accept for map " + fuelMap;
@@ -30,7 +30,7 @@ public partial class AutotuneAcceptWindow : Window
         }
         Grid.Map = new MapData(fuelMap, data, xAxis.Length > 0 ? xAxis.Length : 18, true)
         {
-            Factor = 0.1, UpsideDown = true, XAxis = xAxis, YAxis = yAxis, XName = "mg/c", YName = "rpm", ZName = "%",
+            Factor = 0.1, UpsideDown = true, XAxis = xAxis, YAxis = yAxis, XName = xName, YName = yName, ZName = "%",
         };
         Grid.ViewType = MapViewType.Easy;
     }

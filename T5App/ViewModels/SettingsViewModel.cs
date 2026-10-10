@@ -16,6 +16,9 @@ public partial class SettingsViewModel : SuiteSettingsViewModel
     /// <summary>"Auto detect mapsensor type": a file whose marker says stock gets its sensor from the maps.</summary>
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _autoDetectMapsensorType;
 
+    /// <summary>"Use wideband lambda through symbol": T5Suite's AD_EGR (pin 69); AD_cat (pin 70) converts the same way here.</summary>
+    public override string[] WidebandSymbols => ["AD_EGR", "AD_cat"];
+
     /// <summary>"Advanced mode enabled": shows the advanced tuning wizards.</summary>
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty] private bool _enableAdvancedMode;
 

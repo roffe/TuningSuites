@@ -1492,8 +1492,9 @@ namespace Trionic5Tools
 
         public void CreateIdleTargetMap()
         {
-            targetmap = CreateDefaultIdleTargetAFRMap();
-            SaveIdleTargetAFRMap(Path.GetFileNameWithoutExtension(m_TrionicFile.GetFileInfo().Filename) + "-idletargetafr.afr", targetmap);
+            // T5Suite assigned the main target map here: on a first run the main target in memory was the idle one
+            idletargetmap = CreateDefaultIdleTargetAFRMap();
+            SaveIdleTargetAFRMap(Path.GetFileNameWithoutExtension(m_TrionicFile.GetFileInfo().Filename) + "-idletargetafr.afr", idletargetmap);
         }
 
 

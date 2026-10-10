@@ -138,7 +138,6 @@ public partial class T5MainWindowViewModel
 
     public override RealtimeRules RealtimeRules => T5Realtime.Rules;
 
-    protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) => new(this, bin, T5Realtime.Rules, new T5RealtimeEngine(Ecu));
 
     // ---- flash over CAN ----
 

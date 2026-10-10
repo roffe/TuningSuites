@@ -1,3 +1,4 @@
+using System.Linq;
 using Avalonia.Interactivity;
 using SuiteApp.Services;
 using SuiteApp.ViewModels;
@@ -21,6 +22,19 @@ public partial class MainWindow : SuiteMainWindow
     protected override (string thanks, string support, string closing) AboutTexts =>
         ("Steve Hayes, Hook, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Danibjor, Johnc, tomas0student, Janus0070 and...",
          "T5Suite 2.0 was created with the help of lots of people on ecuproject.com.", "Just4pLeisure ;-)");
+
+    protected override void OnDataContextChanged(System.EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (DataContext is not T5MainWindowViewModel vm) return;
+        // "Select mutations to accept" on Insp_mat!'s axes
+        vm.AcceptAutotune = percent =>
+        {
+            double[] x = vm.Binary?.GetXaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
+            double[] y = vm.Binary?.GetYaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
+            return new AutotuneAcceptWindow("Insp_mat!", percent, x, y, "MAP", "RPM").ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(this);
+        };
+    }
 
     private async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
         await new VinDecoderWindow { DataContext = new VinDecoderViewModel("") }.ShowDialog(this);
