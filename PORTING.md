@@ -542,7 +542,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Compare with another binary, Compare to original file, Binary compare files, Move data to another binary (T5Suite's wizard texts, the shared symbol selection), Search map content, Export / Import map to CSV, Examine binary, Check for anomalies, Open a saved report (.txt), Merge binary files, Split binary file, Lookup partnumber (with T5Suite's boosts, model years, region, Aero, high altitude), VIN decoder
 - [x] Compare with another binary takes several files: one opens its results, more a "Compare list" (file, number of differing symbols; Enter / double-click opens its results); shared, T7 / T8 keep one file
 - [x] The partnumber list (Lookup partnumber's "..." button): every known partnumber grouped by car model and engine, the stock bins in Binaries coloured (16 MHz yellow green, 20 MHz orange); Ok or double-click looks it up
-- [ ] The user library (a folder scan of bins with guessed stage, injectors and fuel)
+- [x] User library (File): "Add files" scans a folder for T5 bins and lists each with T5Suite's guesses (stage, injectors, sensor, torque, E85, T7 valve, partnumber, software, CPU, RAM lock); Open selected, Compare to selected, Clear library. Kept in `UserLib.json` in the settings folder (T5Suite: UserLib.xml next to the program)
 - Deliberate differences: the MAP sensor wizard converts to the sensor chosen (T5Suite always converted to 3.0 bar); the free tune updates the checksum after its last writes; the injector wizard and RPM limit write transaction entries in a project; boost adaption / bias say when the code pattern isn't found (T5Suite stayed silent); the wizards refresh open viewers; Compare to original file finds `Binaries/<partnumber>-<software id>.bin` or `Binaries/<partnumber>.bin` (T5Suite looked for the first and compared the second, so the item never lit up); compare skips SRAM-only symbols (T5Suite compared file offset 0 for them), lists flash symbols only one file has as "Missing in", and counts values as the shared compare does; transfer skips SRAM-only symbols; the CSV import scales values back (T5Suite's Excel import took them raw, so a round trip changed scaled maps) and the CSV export writes enough decimals for maps with factors below 0.01; reports are text (T5Suite's were DevExpress .prnx); Split asks nothing and overwrites chip1.bin / chip2.bin as before
 
 ### 5. ECU
@@ -596,7 +596,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - An ECU running another software version than the open file gets a warning on connect; SRAM access is still allowed (T5Suite said nothing). Block writes instead?
 - Projects use the shared folder (`<Documents>/TxSuite/Projects`), so T5, T7 and T8 projects list each other's there.
 - Reports (examine, anomalies, tuning wizards) are text with Save (.txt); "Open a saved report" opens those (T5Suite's .prnx were DevExpress documents).
-- Not ported yet: the user library (folder scan), T5Suite's LogWorks range tables, Ctrl+Z for project roll back. Which matter?
+- Not ported yet: T5Suite's LogWorks range tables, Ctrl+Z for project roll back. Which matter?
 - Not ported on purpose: "Browse tunes in internet repository" (the host is gone), the BDM groups (P&E / DIY USB BDM, no .NET 10 drivers), the DIY CAN adapter (mct_can.dll), the licence check.
 - First release: SetupT5 replaces the old T5SuiteII only from a tag above 2.0.30, e.g. `T5suite_v2.1.0`.
 

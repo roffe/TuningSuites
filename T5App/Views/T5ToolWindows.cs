@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using CommonSuite;
 using MapControls;
 using SuiteApp.Controls;
@@ -222,5 +223,56 @@ public static class T5ToolWindows
         var bar = Bar(Button("Ok", Pick), Button("Close", () => window!.Close(null)), legend);
         window = Frame("Partnumber list", 760, 640, bar, grid);
         return window.ShowDialog<string?>(owner);
+    }
+
+    /// <summary>
+    /// frmUserLibrary "User library browser": the bins under the folders added, with T5Suite's guesses; Open selected, Compare to selected
+    /// (with a file open), Clear library.
+    /// </summary>
+    public static async Task UserLibrary(Window owner, T5MainWindowViewModel vm)
+    {
+        var rows = new System.Collections.ObjectModel.ObservableCollection<T5UserLibrary.Row>(T5UserLibrary.Load());
+        var grid = new DataGrid { ItemsSource = rows, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single, GridLinesVisibility = DataGridGridLinesVisibility.Horizontal };
+        foreach (var (header, path) in new[] { ("Filename", nameof(T5UserLibrary.Row.Name)), ("Engine type", nameof(T5UserLibrary.Row.EngineType)),
+                     ("Stage", nameof(T5UserLibrary.Row.Stage)), ("Injectors", nameof(T5UserLibrary.Row.Injectors)), ("Mapsensor", nameof(T5UserLibrary.Row.Mapsensor)),
+                     ("Torque", nameof(T5UserLibrary.Row.Torque)), ("E85", nameof(T5UserLibrary.Row.E85)), ("T7 BCV", nameof(T5UserLibrary.Row.T7Valve)),
+                     ("Partnumber", nameof(T5UserLibrary.Row.Partnumber)), ("Software ID", nameof(T5UserLibrary.Row.SoftwareID)), ("CPU", nameof(T5UserLibrary.Row.Cpu)),
+                     ("RAM locked", nameof(T5UserLibrary.Row.RamLocked)) })
+            grid.Columns.Add(new DataGridTextColumn { Header = header, Binding = new Avalonia.Data.Binding(path) });
+        Window? window = null;
+        string? action = null;
+        async void Add()
+        {
+            var folders = await window!.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Select a folder with binaries" });
+            if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } folder) return;
+            vm.IsBusy = true;
+            try
+            {
+                var all = await Task.Run(() => T5UserLibrary.AddFolder(rows.ToList(), folder));
+                rows.Clear();
+                foreach (var r in all) rows.Add(r);
+                T5UserLibrary.Save(rows);
+            }
+            finally
+            {
+                vm.IsBusy = false;
+            }
+        }
+        void Act(string what)
+        {
+            if (grid.SelectedItem is not T5UserLibrary.Row) return;
+            action = what;
+            window!.Close();
+        }
+        var compare = Button("Compare to selected", () => Act("compare"));
+        compare.IsEnabled = vm.Binary != null;
+        var bar = Bar(Button("Add files", Add), Button("Open selected", () => Act("open")), compare,
+            Button("Clear library", () => { rows.Clear(); T5UserLibrary.Save(rows); }), Button("Close", () => window!.Close()));
+        grid.DoubleTapped += (_, _) => Act("open");
+        window = Frame("User library browser", 1200, 600, bar, grid);
+        await window.ShowDialog(owner);
+        if (grid.SelectedItem is not T5UserLibrary.Row row) return;
+        if (action == "open") await vm.OpenFileAsync(row.File, true);
+        else if (action == "compare") await vm.CompareToFileAsync(row.File);
     }
 }

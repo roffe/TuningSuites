@@ -42,29 +42,18 @@ namespace Trionic5Tools
             _ => 100,
         };
 
-        /// <summary>Examine binary (btnBinExaminor): "Examination report", the stage, sensor, fuel, injector and valve guesses.</summary>
-        public static List<string> Examine(T5Binary bin)
+        /// <summary>What T5Suite guessed about a file (Examine binary, the user library): its stage and peak boost, sensor, fuel, injectors, valve.</summary>
+        public sealed record FileGuess(TuningStage Stage, float MaxBoost, MapSensorType Sensor, bool E85, InjectorType Injectors, bool T5Valve);
+
+        /// <summary>
+        /// The stage from the boost request peak, the sensor from the marker or the maps, E85 from the injection peak, Inj_konst! or
+        /// the afterstart factor, the injectors from the injection peak corrected for the sensor and fuel, the valve from Frek_230! / Frek_250!.
+        /// </summary>
+        public static FileGuess Guess(T5Binary bin)
         {
             Trionic5File f = bin.File;
             MapSensorType sensor = f.GetMapSensorType(true);
-            Trionic5Properties p = f.GetTrionicProperties();
-            List<string> r = ["", "Report for file: " + Path.GetFileName(bin.FileName), "", bin.IsTrionic55 ? "File type: Trionic 5.5" : "File type: Trionic 5.2",
-                "CPU speed: " + p.CPUspeed, "Data name: " + p.Dataname, "Engine type: " + p.Enginetype, "Partnumber: " + p.Partnumber,
-                "Software ID: " + p.SoftwareID, p.RAMlocked ? "SRAM is locked" : "SRAM is unlocked"];
-
             TuningStage stage = f.DetermineTuningStage(out float maxBoost);
-            int n = (int)stage;
-            r.Add(stage == TuningStage.Stock ? "Stage: stock" : stage == TuningStage.StageX ? "Stage: X" : "Stage: " + n);
-            if (stage != TuningStage.Stock && (n >= 3 || stage == TuningStage.StageX))
-            {
-                // Stage X listed stage 8's parts without the plugs
-                string[] parts = stage == TuningStage.StageX ? Requires[^1][..^1] : Requires[Math.Min(n, 8) - 3];
-                r.AddRange(parts.Select(x => "\tRequires: " + x));
-                r.Add("");
-            }
-            r.Add($"Boost request peak: {maxBoost:F2} bar");
-            r.Add(sensor == MapSensorType.MapSensor25 ? "Mapsensor type: stock 2.5 bar sensor" : $"Mapsensor type: {T5Tuning.SensorName(sensor)[..3]} bar sensor");
-
             int injkonst = f.GetSymbolAsInt("Inj_konst!");
             int maxInjection = f.GetMaxInjection() * injkonst;
             byte[] xaxis = bin.Find("Fuel_map_xaxis!") is { } xs && bin.FileAddress(xs) is var xa and >= 0 ? bin.Read(xa, xs.Length) : [0];
@@ -72,24 +61,50 @@ namespace Trionic5Tools
             maxInjection = maxInjection * (int)(1.4F / maxSupportBoost * 100) / 100;
             byte[] afterstart = bin.Find("Eftersta_fak!") is { } es && bin.FileAddress(es) is var ea and >= 0 ? bin.Read(ea, es.Length) : [];
             bool e85 = maxInjection > 7500 || injkonst > 26 || afterstart.Length == 15 && afterstart[13] > 170;
-            if (e85)
+            if (e85) maxInjection = maxInjection * 10 / 14;
+            InjectorType injectors = maxInjection switch
             {
-                maxInjection = maxInjection * 10 / 14;
-                r.Add("Probable fuel: E85");
-            }
-            else r.Add(maxBoost > 1.1 ? "Probable fuel: Premium quality petrol" : "Probable fuel: Petrol");
-            r.Add(maxInjection switch
-            {
-                > 5000 => "Injectors: stock",
-                > 3500 => "Injectors: Green giants (413 cc/min)",
-                > 2000 => "Injectors: Siemens deka 630 cc/min",
-                > 1565 => "Injectors: Siemens deka 875 cc/min",
-                _ => "Injectors: Siemens deka 1000 cc/min",
-            });
+                > 5000 => InjectorType.Stock,
+                > 3500 => InjectorType.GreenGiants,
+                > 2000 => InjectorType.Siemens630Dekas,
+                > 1565 => InjectorType.Siemens875Dekas,
+                _ => InjectorType.Siemens1000cc,
+            };
             int frek230 = f.GetSymbolAsInt("Frek_230!"), frek250 = f.GetSymbolAsInt("Frek_250!");
             bool t5Valve = bin.IsTrionic55 ? frek230 == 90 || frek250 == 70 : frek230 == 728 || frek250 == 935;
-            r.Add(t5Valve ? "APC valve type: Trionic 5" : "APC valve type: Trionic 7");
+            return new FileGuess(stage, maxBoost, sensor, e85, injectors, t5Valve);
+        }
+
+        /// <summary>Examine binary (btnBinExaminor): "Examination report", the stage, sensor, fuel, injector and valve guesses.</summary>
+        public static List<string> Examine(T5Binary bin)
+        {
+            Trionic5Properties p = bin.File.GetTrionicProperties();
+            FileGuess g = Guess(bin);
+            List<string> r = ["", "Report for file: " + Path.GetFileName(bin.FileName), "", bin.IsTrionic55 ? "File type: Trionic 5.5" : "File type: Trionic 5.2",
+                "CPU speed: " + p.CPUspeed, "Data name: " + p.Dataname, "Engine type: " + p.Enginetype, "Partnumber: " + p.Partnumber,
+                "Software ID: " + p.SoftwareID, p.RAMlocked ? "SRAM is locked" : "SRAM is unlocked"];
+            int n = (int)g.Stage;
+            r.Add(g.Stage == TuningStage.Stock ? "Stage: stock" : g.Stage == TuningStage.StageX ? "Stage: X" : "Stage: " + n);
+            if (g.Stage != TuningStage.Stock && (n >= 3 || g.Stage == TuningStage.StageX))
+            {
+                // Stage X listed stage 8's parts without the plugs
+                string[] parts = g.Stage == TuningStage.StageX ? Requires[^1][..^1] : Requires[Math.Min(n, 8) - 3];
+                r.AddRange(parts.Select(x => "\tRequires: " + x));
+                r.Add("");
+            }
+            r.Add($"Boost request peak: {g.MaxBoost:F2} bar");
+            r.Add(g.Sensor == MapSensorType.MapSensor25 ? "Mapsensor type: stock 2.5 bar sensor" : $"Mapsensor type: {T5Tuning.SensorName(g.Sensor)[..3]} bar sensor");
+            r.Add(g.E85 ? "Probable fuel: E85" : g.MaxBoost > 1.1 ? "Probable fuel: Premium quality petrol" : "Probable fuel: Petrol");
+            r.Add(g.Injectors switch
+            {
+                InjectorType.Stock => "Injectors: stock",
+                InjectorType.GreenGiants => "Injectors: Green giants (413 cc/min)",
+                InjectorType.Siemens630Dekas => "Injectors: Siemens deka 630 cc/min",
+                InjectorType.Siemens875Dekas => "Injectors: Siemens deka 875 cc/min",
+                _ => "Injectors: Siemens deka 1000 cc/min",
+            });
+            r.Add(g.T5Valve ? "APC valve type: Trionic 5" : "APC valve type: Trionic 7");
             return r;
         }
-    }
+}
 }

@@ -145,5 +145,26 @@ namespace T5CoreTest
             T5Binary t52 = OpenCopy(dir, "4300810.BIN");
             T5Tuning.MergeAdaption(t52, ram, new T5Tuning.AdaptionMerge(), null, true);
         });
+
+        [TestMethod]
+        public void UserLibraryScan() => InTemp(dir =>
+        {
+            string sub = Directory.CreateDirectory(Path.Combine(dir, "a", "b")).FullName;
+            T5Binary stage1 = OpenCopy(dir);
+            T5Tuning.TuneToStage(stage1, 1, true);
+            File.Copy(BinGoldenTest.StockBins().First(b => Path.GetFileName(b) == "4300810.BIN"), Path.Combine(sub, "t52.BIN"));
+            File.WriteAllBytes(Path.Combine(sub, "notabin.BIN"), new byte[0x40000]);
+            // the stage 1 file, the tuner's backup next to it and the T5.2 bin; not the zero file
+            var rows = T5UserLibrary.AddFolder([], dir);
+            Assert.AreEqual(3, rows.Count, string.Join(", ", rows.Select(r => r.Name)));
+            Assert.IsTrue(rows.Any(r => r.Name == "t52.BIN") && rows.All(r => r.Name != "notabin.BIN"));
+            Assert.AreEqual("Stage1", rows.Single(r => r.Name == "4239273.BIN").Stage);
+            Assert.AreEqual("4239273", rows.Single(r => r.Name == "4239273.BIN").Partnumber);
+            // a second scan replaces the rows of the same files; the store round-trips
+            Assert.AreEqual(3, T5UserLibrary.AddFolder(rows, dir).Count);
+            string store = Path.Combine(dir, "UserLib.json");
+            T5UserLibrary.Save(rows, store);
+            Assert.AreEqual(rows.Count, T5UserLibrary.Load(store).Count);
+        });
 }
 }

@@ -215,6 +215,8 @@ public partial class MainWindow : SuiteMainWindow
 
     // ---- Actions page: T5Suite's tools ----
 
+    private async void OnUserLibrary(object? sender, RoutedEventArgs e) => await T5ToolWindows.UserLibrary(this, Vm);
+
     private void OnDyno(object? sender, RoutedEventArgs e)
     {
         if (Vm.Binary != null) T5ToolWindows.Dyno(this, Vm);

@@ -50,6 +50,7 @@
                 <MenuItem Header="Autotune settings" Click="OnAutotuneSettings" />
                 <Separator />
                 <MenuItem Header="Lookup partnumber" Click="OnLookupPartnumber" />
+                <MenuItem Header="User library" Click="OnUserLibrary" />
                 <MenuItem Header="VIN decoder" Click="OnVinDecoder" />
                 <Separator />
                 <MenuItem Header="_Project">
