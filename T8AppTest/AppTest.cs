@@ -209,6 +209,8 @@ namespace T8AppTest
                 var settingsWindow = new SettingsWindow { DataContext = settings };
                 settingsWindow.Show();
                 Save(settingsWindow, "settings");
+                // every option says what it does: the old dialogs' SuperTips, the same style for the rest
+                CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
                 settingsWindow.Close();
                 settings.Apply(vm.Settings);
                 Assert.IsTrue(vm.Settings.MapDetectionActive);
