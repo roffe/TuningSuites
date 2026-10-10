@@ -91,12 +91,51 @@ namespace T5AppTest
                 Assert.AreEqual("All symbols", vm.SymbolFilter!.Name);
                 vm.SymbolFilter = vm.SymbolFilters[1];
 
-                // T5Suite's grid: the description first, then the symbol
+                // the symbol list's columns as in every suite (no type or bit mask on T5); numbered in symbol table order as ecusymbol does
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 window.CaptureRenderedFrame();
                 var grid = window.GetVisualDescendants().OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
-                CollectionAssert.AreEqual(new[] { "Description", "Symbol" },
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Address", "Length", "Description", "User description" },
                     grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Number", "Address", "SRAM address", "Length", "Description", "User description", "Category" },
+                    grid.Columns.OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                CollectionAssert.AreEqual(Enumerable.Range(0, bin.Symbols.Count).ToArray(),
+                    bin.Symbols.Cast<CommonSuite.SymbolHelper>().Select(sh => sh.Symbol_number).ToArray());
+
+                // a user description is a note: saved to <bin>.xml, read back on open, never the symbol's name
+                bin.Find("Insp_mat!")!.Userdescription = "my main fuel notes";
+                vm.SaveUserDescriptions();
+                Assert.AreEqual("Insp_mat!", bin.Find("Insp_mat!")!.SmartVarname);
+                Assert.IsNull(bin.FindAny("my main fuel notes"));
+                Assert.AreEqual("my main fuel notes", T5Binary.Open(file).Find("Insp_mat!")!.Userdescription);
+                // by number: the second of two same-named symbols keeps its own note; a note that starts like T7's placeholder stays a note
+                var twins = bin.Symbols.Cast<CommonSuite.SymbolHelper>().Where(sh => sh.Varname == "AMOS_text").ToList();
+                Assert.HasCount(2, twins);
+                twins[1].Userdescription = "the second one";
+                bin.Find("Ign_map_0!")!.Userdescription = "Symbolnumber 5 is not this one";
+                vm.SaveUserDescriptions();
+                var reopened = T5Binary.Open(file);
+                var reopenedTwins = reopened.Symbols.Cast<CommonSuite.SymbolHelper>().Where(sh => sh.Varname == "AMOS_text").ToList();
+                Assert.AreEqual("", reopenedTwins[0].Userdescription);
+                Assert.AreEqual("the second one", reopenedTwins[1].Userdescription);
+                Assert.AreEqual("Symbolnumber 5 is not this one", reopened.Find("Ign_map_0!")!.Userdescription);
+                // a read-only folder: a message, no crash (ponytail: checked where folder modes exist)
+                if (!OperatingSystem.IsWindows())
+                {
+                    string? info = null;
+                    vm.Info += t => info = t;
+                    string folder = Path.GetDirectoryName(file)!;
+                    File.SetUnixFileMode(folder, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+                    try
+                    {
+                        vm.SaveUserDescriptions();
+                    }
+                    finally
+                    {
+                        File.SetUnixFileMode(folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                    }
+                    StringAssert.StartsWith(info, "The user descriptions could not be saved");
+                }
 
                 // the main fuel map: 16 x 16 bytes, its factor and axes; its row coloured as a Fuel symbol
                 vm.SelectedSymbol = bin.Find("Insp_mat!");

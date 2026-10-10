@@ -36,7 +36,7 @@ namespace CommonSuite
 
         /// <summary>By name or user description, as the feature checks and tuning packages matched symbols.</summary>
         public SymbolHelper FindAny(string symbolname) =>
-            Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.Userdescription == symbolname);
+            Symbols.Cast<SymbolHelper>().FirstOrDefault(sh => sh.Varname == symbolname || sh.UserdescriptionIsName && sh.Userdescription == symbolname);
 
         /// <summary>The name compare and transfer match symbols by, "" leaves one out. T8Suite matched by SmartVarname.</summary>
         public virtual string CompareName(SymbolHelper sh) => sh.SmartVarname;

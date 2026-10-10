@@ -94,8 +94,11 @@ namespace T8AppTest
                 Assert.IsGreaterThan(shown.Count, vm.Symbols!.Cast<SymbolHelper>().Count());
                 vm.SymbolFilter = vm.SymbolFilters[1];
                 var grid = window.GetVisualDescendants().OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
-                CollectionAssert.AreEqual(new[] { "Symbol name", "Length", "User description", "Number", "Type" },
+                // the symbol list's columns as in every suite
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Address", "Length", "Description", "User description" },
                     grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Number", "Address", "SRAM address", "Length", "Type", "Bitmask", "Description", "User description", "Category" },
+                    grid.Columns.OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
 
                 // Enter opens the selected map
                 vm.SelectedSymbol = vm.Binary!.Find("IgnAbsCal.fi_NormalMAP");

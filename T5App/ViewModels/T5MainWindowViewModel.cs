@@ -207,14 +207,8 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         return (p.Carmodel, p.Partnumber.Trim() + " " + p.SoftwareID.Trim());
     }
 
-    /// <summary>frmMain's gridSymbols: the description first, then the symbol; category, subcategory, addresses and length hidden.</summary>
-    public override IReadOnlyList<SymbolColumn> SymbolColumns { get; } =
-    [
-        new("Description", nameof(SymbolHelper.Description)), new("Symbol", nameof(SymbolHelper.Varname)),
-        new("Flash address", nameof(SymbolHelper.Flash_start_address), false), new("Length", nameof(SymbolHelper.Length), false),
-        new("SRAM address", nameof(SymbolHelper.Start_address), false), new("Category", nameof(SymbolHelper.Category), false),
-        new("Subcategory", nameof(SymbolHelper.Subcategory), false),
-    ];
+    // T5 symbols have no type or bit mask
+    protected override bool HasSymbolColumn(string path) => path is not (nameof(SymbolHelper.Symbol_type) or nameof(SymbolHelper.BitMask));
 
     /// <summary>Grouped by category (descending, as T5Suite sorted it), inside a category by subcategory, then description.</summary>
     protected override IEnumerable<SymbolHelper> OrderSymbols(IEnumerable<SymbolHelper> symbols) =>

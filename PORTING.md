@@ -307,7 +307,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] T8App:
   - **Open:** bin / S19, with T8Suite's messages.
   - **Checksum on open:** checked every time, as T8Suite did ("Checksum: OK" in the status bar). With AutoChecksum it is corrected without asking; otherwise it asks per layer.
-  - **Symbol list:** T8Suite's columns, its order (category, length, name) and its "Only symbols within binary" / "Only live-tuneable symbols" filters.
+  - **Symbol list:** T8Suite's order (category, length, name) and its "Only symbols within binary" / "Only live-tuneable symbols" filters; the columns are the shared ones (see Decided under Open questions).
   - **Map viewers:** saving already works (the shared viewer, T8Binary's ChecksumT8).
   - **Projects:** prefilled from the T8 header.
   - **Verify checksum:** status bar only, as T8Suite.
@@ -527,7 +527,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Nothing T5-specific expected; T5's viewer differences go with chunk 3.
 
 ### 3. Read-only app
-- [x] T5App on the shared window: open bin / S19, the symbol list with T5Suite's columns (Description, Symbol; addresses and length in the column chooser), map viewers with T5's factors, offsets, axes and units, projects, Recent, the status bar's "T5.5 | 16 Mhz | RAM locked"
+- [x] T5App on the shared window: open bin / S19, the symbol list with the shared columns (T5Suite had Description, Symbol first), the symbols numbered in symbol table order from 0 (as ecusymbol: the same numbers on all 81 stock bins it reads) and user descriptions as notes in `<bin>.xml` (new; never the symbol's name, unlike T7 / T8 where they name "Symbolnumber n" symbols), map viewers with T5's factors, offsets, axes and units, projects, Recent, the status bar's "T5.5 | 16 Mhz | RAM locked"
 - [x] Map viewers follow MapViewerEx: 16-bit values above 32000 read negative, `I_kyl_st!` / `I_luft_st!` / `Last_temp_st!` signed 8-bit, the injection maps unsigned (`SuiteBinary.SignAbove`); with a 3.0 / 3.5 / 4.0 / 5.0 bar sensor the pressure maps (MapIsScalableFor3Bar) and the "MAP" / "Pressure error (bar)" axes show × 1.2 / 1.4 / 1.6 / 2.0, edits round up (`ScalePercent`); the open-loop mark on the injection, ignition and knock fuel maps from `Open_loop!` / `Open_loop_knock!` when lambda control is on
 - [x] The symbol filter "Only symbols within binary" after every open, switched to all symbols when the ECU connects or an SRAM snapshot opens (T5Suite's SetDefaultFilters)
 - [x] The symbol list grouped by category, then subcategory (`SymbolGroupPaths`), the description cell coloured by category as in T5Suite (Fuel, Ignition, Boost control, Misc, Sensor, Correction, Idle); `Pgm_mod!` opens the firmware options (T5Suite: a read-only view of the file's or the ECU's bits); SRAM-only symbols offline open from the loaded snapshot, else "Symbol resides in SRAM..." (chunk 5)
@@ -590,6 +590,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Open questions
 
+- Decided (user, 2026-10-10): one symbol list for all three suites, in this order: Symbol name, Number (hidden), Address, SRAM address (hidden), Length, Type (hidden; T7 / T8), Bitmask (hidden; T8), Description, User description, Category (hidden). Each old suite had its own order (T5Suite: Description, Symbol; T8Suite: name, length, user description, number, type). Hidden columns are in the column chooser.
+
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 **T5Suite (branch `net10-t5`), each with the default taken:**
@@ -609,6 +611,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: One symbol list column order for T5, T7 and T8 (user's order); T5 symbols get numbers and user descriptions (notes, matched back by number, saved with a message instead of a crash in a read-only folder). The header menu ticks the sort and grouping in use; grouping, sorting or filtering while a user description is being edited no longer crashes (the grid's edit is committed first); the auto filter row follows the shown columns.
 - 2026-10-10: T5Suite's own realtime panel: its tabs with per-tab watch lists, the strip, knock / boost / dashboard displays, graph, user maps and autotune grids; flashing only T5.2 / T5.5 files; the sync offered on a software mismatch, as T5Suite did. Shared fixes from its review: Ctrl+Up / Ctrl+Down in the Free logging grid move the row (the grid took the keys first), night mode colours text without its own colour (the Free logging grid and T7's fps label were black on black) and dims disabled buttons, the autotune button's caption shows when not tuning (a null brush hid it), Edit symbol refreshes the polled rows, the table's peaks start at the row's minimum (T7Suite's frmMain; they started at 0).
 - 2026-10-10: T5's ECU write paths reviewed and hardened (autotune stop before disconnect / flash / close, zeroed reads, snapshot sizes, interrupted syncs, signed ignition cells).
 - 2026-10-10: T5's compare list, partnumber list, user library, symbol filter and category colours, LogWorks names; every T5Suite feature on the list is ported except Ctrl+Z for roll back.

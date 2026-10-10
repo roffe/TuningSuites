@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using CommonSuite;
 using TrionicCANLib.Checksum;
 
@@ -44,14 +45,42 @@ namespace Trionic5Tools
             var file = new Trionic5File();
             file.SelectFile(fileName);
             Trionic5FileInformation info = file.ParseFile();
-            // the grid's Description column showed the help text, grouped by the XDF category and subcategory
+            // the grid's Description column showed the help text, grouped by the XDF category and subcategory; the number is the
+            // symbol's place in the file's symbol table (from 0, as T7's); a user description is a note here, never the symbol's name
+            int number = 0;
             foreach (SymbolHelper sh in info.SymbolCollection)
             {
                 sh.Description = sh.Helptext;
                 sh.Category = sh.XdfCategory.ToString();
                 sh.Subcategory = sh.XdfSubcategory.ToString();
+                sh.Symbol_number = number++;
+                sh.UserdescriptionIsName = false;
             }
-            return new T5Binary(fileName, file, info);
+            var bin = new T5Binary(fileName, file, info);
+            LoadUserDescriptions(bin);
+            return bin;
+        }
+
+        /// <summary>The symbol list's notes from &lt;bin&gt;.xml, the file the symbol list saves them to (SymbolXMLFile, as T7 / T8).</summary>
+        private static void LoadUserDescriptions(T5Binary bin)
+        {
+            string xml = Path.ChangeExtension(bin.FileName, ".xml");
+            if (!System.IO.File.Exists(xml)) return;
+            try
+            {
+                // by number first: a symbol table can have a name twice (AMOS_text, Ap_max_on_time!)
+                List<SymbolHelper> symbols = [.. bin.Symbols.Cast<SymbolHelper>()];
+                foreach (XElement row in XDocument.Load(xml).Root?.Elements() ?? [])
+                {
+                    string name = (string)row.Element("SYMBOLNAME") ?? "";
+                    SymbolHelper sh = int.TryParse((string)row.Element("SYMBOLNUMBER"), out int number)
+                        ? symbols.FirstOrDefault(s => s.Symbol_number == number && s.Varname == name) : null;
+                    if ((sh ?? bin.Find(name)) is { } found) found.Userdescription = (string)row.Element("DESCRIPTION") ?? "";
+                }
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Xml.XmlException)
+            {
+            }
         }
 
         public override SuiteBinary RawFile(string fileName) => new T5Binary(fileName);

@@ -53,7 +53,7 @@ namespace CommonSuite
                                     bool sfound = false;
                                     foreach (SymbolHelper sh in sc)
                                     {
-                                        if (sh.Varname == varname || sh.Userdescription == varname)
+                                        if (sh.Varname == varname || sh.UserdescriptionIsName && sh.Userdescription == varname)
                                         {
                                             sfound = true;
                                         }

@@ -21,6 +21,9 @@ namespace T7App.ViewModels;
 /// </summary>
 public partial class T7MainWindowViewModel : MainWindowViewModel
 {
+    // T7 symbols have no bit mask (T8's)
+    protected override bool HasSymbolColumn(string path) => path != nameof(SymbolHelper.BitMask);
+
     public T7MainWindowViewModel() : base("T7SuitePro", "T7Suite", new T7SuiteRegistry())
     {
         Trionic7File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Percentage >= 55 ? "" : e.Info);

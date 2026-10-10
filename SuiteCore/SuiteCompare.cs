@@ -19,7 +19,7 @@ namespace CommonSuite
     {
         private static string CategoryOf(SymbolHelper sh)
         {
-            foreach (string n in new[] { sh.Varname, sh.Userdescription })
+            foreach (string n in sh.UserdescriptionIsName ? [sh.Varname, sh.Userdescription] : new[] { sh.Varname })
                 if (n.Contains('.')) return n[..n.IndexOf('.')];
             return "";
         }

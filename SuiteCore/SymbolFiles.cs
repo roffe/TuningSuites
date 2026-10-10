@@ -76,7 +76,7 @@ namespace CommonSuite
             foreach (SymbolHelper sh in bin.Symbols)
             {
                 sb.Append(CultureInfo.InvariantCulture, $"{sh.Varname.Replace(',', '.')},{sh.Flash_start_address},{sh.Start_address},{sh.Length},{sh.Symbol_number},{sh.Symbol_type}");
-                if (userDescription) sb.Append(',').Append(sh.Userdescription);
+                if (userDescription) sb.Append(',').Append(sh.Userdescription.Replace(',', '.'));
                 sb.Append("\r\n");
             }
             File.WriteAllText(file, sb.ToString());

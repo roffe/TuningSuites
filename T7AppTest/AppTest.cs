@@ -85,6 +85,29 @@ namespace T7AppTest
                 vm.SelectedSymbol = vm.Binary!.Find("IgnNormCal.Map");
                 window.CaptureRenderedFrame();
                 var grid = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
+                // the symbol list's columns as in every suite (no bit mask on T7)
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Number", "Address", "SRAM address", "Length", "Type", "Description", "User description", "Category" },
+                    grid.Columns.OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                CollectionAssert.AreEqual(new[] { "Symbol name", "Address", "Length", "Description", "User description" },
+                    grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => (string)c.Header!).ToArray());
+                // the auto filter row follows the shown columns: Number hidden by default, its box back when the column shows
+                CollectionAssert.AreEqual(new[] { "Varname", "Flash_start_address", "Length", "Description", "Userdescription" }, vm.ColumnFilters.Select(f => f.Path).ToArray());
+                vm.ColumnFilters[0].Text = "IgnNorm";
+                vm.SetFilterColumns(["Varname", "Symbol_number", "Flash_start_address"]);
+                CollectionAssert.AreEqual(new[] { "Varname", "Symbol_number", "Flash_start_address" }, vm.ColumnFilters.Select(f => f.Path).ToArray());
+                Assert.AreEqual("IgnNorm", vm.ColumnFilters[0].Text);
+                vm.ColumnFilters[0].Text = "";
+                vm.SetFilterColumns(grid.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayIndex).Select(c => c.SortMemberPath));
+                // grouping, sorting and refreshing while a user description is being edited (Group by category crashed)
+                grid.CurrentColumn = grid.Columns.First(c => c.SortMemberPath == "Userdescription");
+                Assert.IsTrue(grid.BeginEdit());
+                vm.GroupSymbols("Category");
+                vm.SortSymbols("Varname", true);
+                vm.SearchText = "IgnNormCal";
+                vm.SearchText = "";
+                vm.SortSymbols(null);
+                vm.SelectedSymbol = vm.Binary!.Find("IgnNormCal.Map");
+                window.CaptureRenderedFrame();
                 grid.Focus();
                 window.KeyPress(Avalonia.Input.Key.Enter, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Enter, null);
                 Assert.HasCount(1, vm.Viewers);

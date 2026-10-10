@@ -151,7 +151,7 @@ public abstract partial class MainWindowViewModel
         {
             ShowInfo("Failed to import: " + e.Message);
         }
-        Symbols?.Refresh();
+        RefreshSymbols();
     }
 
     // ---- tuning packages ----
