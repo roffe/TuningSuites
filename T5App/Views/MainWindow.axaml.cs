@@ -124,6 +124,8 @@ public partial class MainWindow : SuiteMainWindow
 
     // ---- Actions page ----
 
+    protected override bool CompareSeveralFiles => true;
+
     protected override (string caption, string text) TransferWizard =>
         ("Data transfer wizard", "Welcome to the data transfer wizard\n\nThis wizard will help you transferring data from the currect binary to the target binary file.\n\n"
             + "Make sure the source and target binary files are for the same engine type and such to prevent problem in ignition advance and fuelling from occuring!\n\n"

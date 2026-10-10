@@ -40,6 +40,26 @@ public abstract partial class MainWindowViewModel
 
     // ---- compare ----
 
+    /// <summary>Compare with several binaries (T5Suite): one goes straight to its results, more to a compare list.</summary>
+    public async Task CompareToFilesAsync(IReadOnlyList<string> files)
+    {
+        if (Binary is not { } bin || files.Count == 0) return;
+        if (files.Count == 1)
+        {
+            await CompareToFileAsync(files[0]);
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            ShowDocument(new CompareListViewModel(this, bin.FileName, await Task.Run(() => CompareListViewModel.Count(bin, files, OpenCompareBinary))));
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     /// <summary>"Compare symbols with other binary": the results open as a tab.</summary>
     public async Task CompareToFileAsync(string otherFile)
     {

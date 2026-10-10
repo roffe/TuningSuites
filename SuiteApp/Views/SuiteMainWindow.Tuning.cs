@@ -29,9 +29,13 @@ public partial class SuiteMainWindow
 
     // ---- compare ----
 
+    /// <summary>T5Suite's compare took several files at once (a compare list); T7Suite's and T8Suite's one.</summary>
+    protected virtual bool CompareSeveralFiles => false;
+
     protected async void OnCompareToFile(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is { } file) await Vm.CompareToFileAsync(file);
+        if (CompareSeveralFiles) await Vm.CompareToFilesAsync(await Dialogs.OpenFiles(this, CompareFilesName, "*.bin"));
+        else if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is { } file) await Vm.CompareToFileAsync(file);
     }
 
     protected void OnBinaryCompare(object? sender, RoutedEventArgs e) => BinaryCompare(false);

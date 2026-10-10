@@ -236,7 +236,13 @@ namespace SuiteApp.Services
         public static Task<string?> OpenFile(Window owner, string filterName, params string[] patterns) => OpenFileIn(owner, null, null, filterName, patterns);
 
         /// <summary>OpenFile with the picker's title and first folder, where the suite's dialog had them.</summary>
-        public static async Task<string?> OpenFileIn(Window owner, string? title, string? folder, string filterName, params string[] patterns)
+        public static async Task<string?> OpenFileIn(Window owner, string? title, string? folder, string filterName, params string[] patterns) =>
+            (await OpenFiles(owner, title, folder, false, filterName, patterns)).FirstOrDefault();
+
+        /// <summary>Several files at once (T5Suite's Compare with another binary); empty when cancelled.</summary>
+        public static Task<string[]> OpenFiles(Window owner, string filterName, params string[] patterns) => OpenFiles(owner, null, null, true, filterName, patterns);
+
+        private static async Task<string[]> OpenFiles(Window owner, string? title, string? folder, bool multiple, string filterName, string[] patterns)
         {
             // GTK / portal globs are case-sensitive (Windows' aren't): *.bin must also list FOO.BIN
             // ponytail: mixed case like *.Bin still hidden
@@ -249,10 +255,10 @@ namespace SuiteApp.Services
                 {
                     Title = title,
                     SuggestedStartLocation = folder != null && Directory.Exists(folder) ? await owner.StorageProvider.TryGetFolderFromPathAsync(folder) : null,
-                    AllowMultiple = false,
+                    AllowMultiple = multiple,
                     FileTypeFilter = new[] { new FilePickerFileType(filterName) { Patterns = patterns.Concat(patterns.Select(p => p.ToUpperInvariant())).Distinct().ToArray() } },
                 });
-                return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+                return files.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray();
             }
             finally
             {

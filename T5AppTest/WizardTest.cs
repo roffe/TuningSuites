@@ -56,5 +56,28 @@ namespace T5AppTest
                 return true;
             }, default).GetAwaiter().GetResult();
         }
-    }
+    
+        [TestMethod]
+        public void CompareList()
+        {
+            string file = CopyOfStockBin("list.BIN"), same = CopyOfStockBin("same.BIN"), tuned = CopyOfStockBin("tuned.BIN");
+            T5Tuning.TuneToStage(T5Binary.Open(tuned), 1, true);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T5MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                await vm.CompareToFilesAsync([same, tuned]);
+                var list = (SuiteApp.ViewModels.CompareListViewModel)vm.SelectedViewer!;
+                Assert.AreEqual("Compare list: list.BIN", list.Title);
+                Assert.AreEqual(0, list.Rows.Single(r => r.Name == "same.BIN").Differences);
+                Assert.IsTrue(list.Rows.Single(r => r.Name == "tuned.BIN").Differences > 0);
+                await list.Open(list.Rows.Single(r => r.Name == "tuned.BIN"));
+                Assert.AreNotSame(list, vm.SelectedViewer);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+}
 }
