@@ -27,6 +27,71 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
         m_t5 = owner;
         m_bin = bin;
         AutotuneCaption = "Autotune fuel";
+        foreach (string caption in PgmStatusBits) StatusLeds.Add(new StatusLed(caption));
+        foreach (var (caption, _, _, _) in PgmModBits) Toggles.Add(new EcuToggle(caption, ToggleAsync) { IsAvailable = false });
+    }
+
+    // ---- Engine status (Pgm_status) and Settings (Pgm_mod!) tabs ----
+
+    /// <summary>ctrlRealtime's 40 Engine status LEDs, Pgm_status bit 0 first.</summary>
+    private static readonly string[] PgmStatusBits =
+    [
+        "Ignition", "Afterstart 2 ok", "Engine stopped", "Engine started", "Engine is warm", "Fuel cut", "Temp. compensation", "RPM limiter",
+        "Appl. sync ok", "Fuel knock map", "Throttle closed", "Room temp. start", "Fuel cut cyl 4", "Fuel cut cyl 3", "Fuel cut cyl 2", "Fuel cut cyl 1",
+        "Fuel not off (during sync. off ign.)", "Dec.enleanment completed throttledec.", "Acc.enrichment completed throttleinc.", "Decrease of retard enrichment allowed",
+        "Start of retard enrichment in progress", "Adaption allowed", "Limp-home mode", "Always active temp.compensation",
+        "Restart", "Active lambda control", "Afterstart enrichment completed", "Init during start completed",
+        "Cooling water enrichment finished", "Purge control active", "Idle fuel map", "Ignition synchronized",
+        "Sond heating second sond", "Sond heating first sond", "ETS error", "Ordinary idle control disable",
+        "Fuel cut allowed (Dashpot)", "Enrichment after fuelcut", "Fulload enrichment", "Fuel syncronized",
+    ];
+
+    /// <summary>ctrlRealtime's Settings switches: Pgm_mod! byte and mask; Knock control is on while its bit is clear.</summary>
+    private static readonly (string Caption, int Byte, int Mask, bool Inverted)[] PgmModBits =
+    [
+        ("Afterstart enrichment", 0, 0x01, false), ("WOT enrichment", 0, 0x02, false), ("Lambda control", 0, 0x10, false), ("Spot adaption", 0, 0x20, false),
+        ("Idle control", 0, 0x40, false), ("Cranking enrichment", 0, 0x80, false), ("Fuel cut in engine braking", 1, 0x04, false),
+        ("Acceleration enrichment", 1, 0x10, false), ("Deceleration enleanment", 1, 0x20, false), ("Purge control", 2, 0x20, false),
+        ("Adaption of idle control", 2, 0x40, false), ("Lambda during idle", 2, 0x80, false), ("APC control", 3, 0x10, false),
+        ("Global adaption", 3, 0x40, false), ("Knock control", 4, 0x20, true),
+    ];
+
+    private bool m_pgmModRead;
+
+    private void ShowStatus(RealtimeSample sample)
+    {
+        if (sample["Pgm_status"] is not { } value) return;
+        long status = (long)value;
+        for (int i = 0; i < StatusLeds.Count; i++) StatusLeds[i].IsOn = (status & 1L << i) != 0;
+        if (!m_pgmModRead)
+        {
+            m_pgmModRead = true;
+            _ = RefreshTogglesAsync();
+        }
+    }
+
+    // the switches as the ECU's Pgm_mod! has them; a byte the symbol lacks hides its switch's use (Knock control on short tables)
+    private async Task RefreshTogglesAsync()
+    {
+        if (m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm) return;
+        for (int i = 0; i < PgmModBits.Length; i++)
+        {
+            var (_, index, mask, inverted) = PgmModBits[i];
+            Toggles[i].IsAvailable = index < pgm.Length;
+            Toggles[i].IsOn = index < pgm.Length && ((pgm[index] & mask) != 0) != inverted;
+        }
+    }
+
+    /// <summary>A switch: Pgm_mod! read, the bit flipped, the whole symbol written (forced), then read back for every switch.</summary>
+    private async Task ToggleAsync(EcuToggle toggle)
+    {
+        int i = Toggles.IndexOf(toggle);
+        if (i < 0 || !IsRunning || m_bin.Find("Pgm_mod!") is not { Start_address: > 0 } mod || await m_t5.Ecu.ReadMapAsync(mod) is not { } pgm) return;
+        var (_, index, mask, _) = PgmModBits[i];
+        if (index >= pgm.Length) return;
+        pgm[index] ^= (byte)mask;
+        await m_t5.Ecu.WriteForcedAsync((int)mod.Start_address, pgm);
+        await RefreshTogglesAsync();
     }
 
     /// <summary>The autotune button shows with Settings → Advanced mode enabled, as in T5Suite.</summary>
@@ -43,6 +108,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     /// </summary>
     protected override void OnApplied(RealtimeSample sample)
     {
+        ShowStatus(sample);
         // a throttle drop of more than 10 holds the autotune for 500 ms (tmrOverruleTPS)
         if (!double.IsNaN(m_lastTps) && m_lastTps - Tps > 10) m_tpsHold = sample.Time.AddMilliseconds(500);
         m_lastTps = Tps;

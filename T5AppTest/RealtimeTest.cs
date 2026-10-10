@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SuiteApp.ViewModels;
@@ -49,6 +50,20 @@ namespace T5AppTest
                 Assert.AreEqual(0.98, rt.Lambda);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "realtime");
+
+                // the Engine status LEDs follow Pgm_status, bit 37 included; the Settings switches wait for the ECU
+                rt.Apply(new RealtimeSample(DateTime.Now, [("Pgm_status", 0x2000000010L | 0x02000000)], 20, null));
+                Assert.AreEqual(40, rt.StatusLeds.Count);
+                Assert.IsTrue(rt.StatusLeds.Single(l => l.Caption == "Engine is warm").IsOn);
+                Assert.IsTrue(rt.StatusLeds.Single(l => l.Caption == "Active lambda control").IsOn);
+                Assert.IsTrue(rt.StatusLeds.Single(l => l.Caption == "Enrichment after fuelcut").IsOn);
+                Assert.IsFalse(rt.StatusLeds.Single(l => l.Caption == "Fuel cut").IsOn);
+                Assert.AreEqual(15, rt.Toggles.Count);
+                var tabs = window.GetVisualDescendants().OfType<Avalonia.Controls.TabControl>().First(t => t.Name == "Tabs");
+                tabs.SelectedIndex = 4;
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                Save(window, "enginestatus");
+                tabs.SelectedIndex = 0;
 
                 // the wideband through AD_EGR fills the AFR feedback map at 3000 rpm / 0.8 bar; the AFR viewers
                 vm.Settings.UseWidebandLambda = true;

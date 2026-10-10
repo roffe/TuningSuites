@@ -203,6 +203,38 @@
                     </DockPanel>
                 </TabItem>
                 <TabItem Header="Empty (speed up logging)" />
+                <!-- T5Suite's Settings (Pgm_mod!) and Engine status (Pgm_status) tabs, after Empty: its index hides the bottom panel -->
+                <TabItem Header="Settings" IsVisible="{Binding HasToggles}">
+                    <ItemsControl ItemsSource="{Binding Toggles}" Margin="8">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:EcuToggle">
+                                <ToggleButton Content="{Binding Caption}" IsChecked="{Binding IsOn, Mode=OneWay}" IsEnabled="{Binding IsAvailable}"
+                                              Command="{Binding ToggleCommand}" Width="230" Margin="4" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </TabItem>
+                <TabItem Header="Engine status" IsVisible="{Binding HasStatusLeds}">
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding StatusLeds}" Margin="8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:StatusLed">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="4" ToolTip.Tip="{Binding Caption}">
+                                        <Ellipse Width="14" Height="14" Stroke="Gray" StrokeThickness="1"
+                                                 Fill="{Binding IsOn, Converter={x:Static v:LedBrushConverter.Instance}}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Caption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </TabItem>
             </TabControl>
         </DockPanel>
     </Border>

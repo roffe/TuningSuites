@@ -156,3 +156,13 @@ public class AutotuneBrushConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
+
+/// <summary>An engine status LED: lime when on, dark grey when off.</summary>
+public class LedBrushConverter : IValueConverter
+{
+    public static readonly LedBrushConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true ? Brushes.LimeGreen : Brushes.DimGray;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}

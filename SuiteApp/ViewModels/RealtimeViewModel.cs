@@ -349,6 +349,18 @@ public partial class RealtimeViewModel : DocumentViewModel
     [RelayCommand]
     private void ToggleNight() => IsNight = !IsNight;
 
+    // ---- what only T5Suite had: the Engine status LEDs and the Settings toggles ----
+
+    /// <summary>The Engine status tab's LEDs (T5: the 40 Pgm_status bits); the tab shows when a suite fills it.</summary>
+    public ObservableCollection<StatusLed> StatusLeds { get; } = [];
+
+    /// <summary>The Settings tab's switches (T5: Pgm_mod! bits written to the ECU); the tab shows when a suite fills it.</summary>
+    public ObservableCollection<EcuToggle> Toggles { get; } = [];
+
+    // the suite fills both in its constructor
+    public bool HasStatusLeds => StatusLeds.Count > 0;
+    public bool HasToggles => Toggles.Count > 0;
+
     // ---- what only T7Suite had: AutoTune and Eco / Norm / Sport ----
 
     /// <summary>The AutoTune button shows.</summary>
@@ -465,4 +477,25 @@ public partial class RealtimeSymbolEdit : ObservableObject
         s.Offset = Offset;
         s.Correction = Correction;
     }
+}
+
+/// <summary>An engine status LED.</summary>
+public partial class StatusLed(string caption) : ObservableObject
+{
+    public string Caption { get; } = caption;
+
+    [ObservableProperty] private bool _isOn;
+}
+
+/// <summary>A switch the suite writes to the ECU when clicked; IsOn shows what the ECU has.</summary>
+public partial class EcuToggle(string caption, Func<EcuToggle, Task> toggle) : ObservableObject
+{
+    public string Caption { get; } = caption;
+
+    [ObservableProperty] private bool _isOn;
+
+    [ObservableProperty] private bool _isAvailable = true;
+
+    [RelayCommand]
+    private Task Toggle() => toggle(this);
 }

@@ -557,7 +557,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - [x] Autotune fuel (Settings → Advanced mode, Shift+F5): T5Suite's gate (CheckAutoTuneParameters, the enrichment filter, 500 ms after a throttle drop), closed loop off while tuning, the adaption folded into Insp_mat! first (T5.5), Reset fuel trims, auto update straight into SRAM or "Select mutations to accept" (the accept window is shared with T7 now)
 - [x] Autotune ignition (T5.5, Settings → Advanced mode): Ign_map_0! from SRAM capped at the global maximum first, the knock pressure limit, knocks retard and lock a cell, changed cells straight into SRAM, "Keep adjusted ignition map?"; Ignition lock map (a read-only viewer), Release locked ignition cells; File → Autotune settings (T5Suite's fuel and ignition groups)
 - [x] Knock map snapshots: "Knock counter snapshot after disconnect" (T5.5) writes Knock_count_map into Snapshots as .KNK; the list shows the total knocks, Ok shows one, Compare the difference of two
-- [ ] The Pgm_mod! toggles and Engine status LEDs as panel tabs, T5Suite's LogWorks range and unit tables
+- [x] The panel's Settings tab (T5Suite's Pgm_mod! switches: read, flip, write the whole symbol, read back) and Engine status tab (the 40 Pgm_status LEDs); the shared panel shows them when a suite fills them
+- [ ] T5Suite's LogWorks range and unit tables (the shared ones are T7's)
 - Deliberate differences: one table polled instead of a watch list per panel tab (a pass reads about 30 symbols, the slow ones every 2nd to 5th pass); P / I / D read signed at 65536 (T5Suite: 65535); the wideband may come through AD_cat too (T5Suite converted only AD_EGR); a symbol the bin lacks isn't polled (T5Suite read SRAM 0); the panel's airmass and consumption displays are greyed (T5 has no such symbols); the first run's main AFR target is T5Suite's default (T5Suite put the idle default, a flat 14.7, in its place until the next start); the autotuned T5.2 adaption map stays in SRAM (T5Suite wrote it into the file's Insp_mat!); an accepted autotune is one file write with one transaction entry
 
 ### 7. Tools
@@ -592,12 +593,13 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - An ECU running another software version than the open file gets a warning on connect; SRAM access is still allowed (T5Suite said nothing). Block writes instead?
 - Projects use the shared folder (`<Documents>/TxSuite/Projects`), so T5, T7 and T8 projects list each other's there.
 - Reports (examine, anomalies, tuning wizards) are text with Save (.txt); "Open a saved report" opens those (T5Suite's .prnx were DevExpress documents).
-- Not ported yet: the Pgm_mod! toggles and engine status LEDs as panel tabs, the multi-file "Compare list", the partnumber list with its library colours, the user library (folder scan), T5Suite's LogWorks range tables, Ctrl+Z for project roll back. Which matter?
+- Not ported yet: the multi-file "Compare list", the partnumber list with its library colours, the user library (folder scan), T5Suite's LogWorks range tables, Ctrl+Z for project roll back. Which matter?
 - Not ported on purpose: "Browse tunes in internet repository" (the host is gone), the BDM groups (P&E / DIY USB BDM, no .NET 10 drivers), the DIY CAN adapter (mct_can.dll), the licence check.
 - First release: SetupT5 replaces the old T5SuiteII only from a tag above 2.0.30, e.g. `T5suite_v2.1.0`.
 
 ## Log
 
+- 2026-10-10: T5's Settings (Pgm_mod!) and Engine status panel tabs.
 - 2026-10-10: T5 autotune ignition, its lock map and settings, knock map snapshots.
 - 2026-10-10: The old suites moved to `OldSuites/`; the root holds the .NET 10 suites, their data and docs.
 - 2026-10-10: T5 chunk 8: SetupT5, packaging, CI and README. Waiting for a first CI run on Windows.
