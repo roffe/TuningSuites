@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using NLog;
 
 namespace Trionic5Tools
 {
@@ -19,6 +20,7 @@ namespace Trionic5Tools
 
     public class AFRMaps
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public delegate void FuelmapCellChanged(object sender, FuelmapChangedEventArgs e);
         public event AFRMaps.FuelmapCellChanged onFuelmapCellChanged;
 
@@ -210,10 +212,6 @@ namespace Trionic5Tools
                     _isAutoMappingActive = value;
                     if (_isAutoMappingActive)
                     {
-                        _currentEngineSpeed = 0;
-                        _currentBoostLevel = 0;
-                        _currentThrottlePosition = 0;
-                        _currentAFR = 0;
                         _cellDurationMonitor.Stop();
                         _cellDurationMonitor.Reset();
                     }
@@ -243,10 +241,6 @@ namespace Trionic5Tools
             set { m_TrionicFile = value; }
         }
 
-        private double _currentEngineSpeed = 0;
-        private double _currentBoostLevel = 0;
-        private double _currentThrottlePosition = 0;
-        private double _currentAFR = 0;
         private Stopwatch _cellDurationMonitor = new Stopwatch();
         private int _monitoringCellRPMIndex = -1;
         private int _monitoringCellMAPIndex = -1;
@@ -487,7 +481,7 @@ namespace Trionic5Tools
 
                             if (elapsed_ms > _CellStableTime_ms)
                             {
-                                Console.WriteLine("Stable in cell: " + rpmindex.ToString() + " " + mapindex.ToString());
+                                logger.Debug("Stable in cell: " + rpmindex.ToString() + " " + mapindex.ToString());
                                 if (!IsIdleCellLocked(mapindex, rpmindex))
                                 {
                                     // check afr against target afr
@@ -669,8 +663,8 @@ namespace Trionic5Tools
 
                                             if (afr_diff_to_correct < 2)
                                             {
-                                                Console.WriteLine("Stable in cell (LEAN): " + rpmindex.ToString() + " " + mapindex.ToString() + " afrtarget = " + targetafr_currentcell.ToString("F2") + " afravg: " + average_afr_in_cell.ToString("F2") + " percdiff: " + _afr_diff_percentage.ToString("F2") + " corrperc: " + afr_diff_to_correct.ToString("F2"));
-                                                Console.WriteLine("Ori fuel value: " + _fuelcorrectionvalue.ToString());
+                                                logger.Debug("Stable in cell (LEAN): " + rpmindex.ToString() + " " + mapindex.ToString() + " afrtarget = " + targetafr_currentcell.ToString("F2") + " afravg: " + average_afr_in_cell.ToString("F2") + " percdiff: " + _afr_diff_percentage.ToString("F2") + " corrperc: " + afr_diff_to_correct.ToString("F2"));
+                                                logger.Debug("Ori fuel value: " + _fuelcorrectionvalue.ToString());
                                             }
 
                                             // we're running too lean, so we need to increase the fuelmap value by afr_diff_to_correct %
@@ -682,24 +676,24 @@ namespace Trionic5Tools
                                             _tempcorrectionvalue /= 100F;
                                             if (afr_diff_to_correct < 10)
                                             {
-                                                Console.WriteLine("Multiply fuel value: " + _tempcorrectionvalue.ToString("F3"));
+                                                logger.Debug("Multiply fuel value: " + _tempcorrectionvalue.ToString("F3"));
                                             }
                                             if (_tempcorrectionvalue > 254) _tempcorrectionvalue = 254;
                                             _fuelcorrectionvalue = Convert.ToInt32(Math.Round(_tempcorrectionvalue));
                                             if (afr_diff_to_correct < 2)
                                             {
-                                                Console.WriteLine("New fuel value: " + _fuelcorrectionvalue.ToString());
+                                                logger.Debug("New fuel value: " + _fuelcorrectionvalue.ToString());
                                             }
                                             /*_fuelcorrectionvalue *= (int)(100 + afr_diff_to_correct);
                                             if (afr_diff_to_correct < 10)
                                             {
-                                                Console.WriteLine("Multiply fuel value: " + _fuelcorrectionvalue.ToString());
+                                                logger.Debug("Multiply fuel value: " + _fuelcorrectionvalue.ToString());
                                             }
 
                                             _fuelcorrectionvalue /= 100;
                                             if (afr_diff_to_correct < 10)
                                             {
-                                                Console.WriteLine("New fuel value: " + _fuelcorrectionvalue.ToString());
+                                                logger.Debug("New fuel value: " + _fuelcorrectionvalue.ToString());
                                             }
 
                                             if (_fuelcorrectionvalue > 254) _fuelcorrectionvalue = 254;*/
@@ -710,7 +704,7 @@ namespace Trionic5Tools
                                         {
                                             // we're running too rich, so we need to decrease the fuelmap value by afr_diff_to_correct %
                                             // correct it with the percentage
-                                            Console.WriteLine("Stable in cell (RICH): " + rpmindex.ToString() + " " + mapindex.ToString() + " afrtarget = " + targetafr_currentcell.ToString("F2") + " afravg: " + average_afr_in_cell.ToString("F2") + " percdiff: " + _afr_diff_percentage.ToString("F2") + " corrperc: " + afr_diff_to_correct.ToString("F2"));
+                                            logger.Debug("Stable in cell (RICH): " + rpmindex.ToString() + " " + mapindex.ToString() + " afrtarget = " + targetafr_currentcell.ToString("F2") + " afravg: " + average_afr_in_cell.ToString("F2") + " percdiff: " + _afr_diff_percentage.ToString("F2") + " corrperc: " + afr_diff_to_correct.ToString("F2"));
                                             float _tempcorrectionvalue = _fuelcorrectionvalue;
                                             _tempcorrectionvalue *= 100F - afr_diff_to_correct;
                                             _tempcorrectionvalue /= 100F;
@@ -756,7 +750,7 @@ namespace Trionic5Tools
                                     }
                                     else
                                     {
-                                        Console.WriteLine("Fuelling correct in cell: " + rpmindex.ToString() + " " + mapindex.ToString() + " afrtarget = " + targetafr_currentcell.ToString("F2") + " afravg: " + average_afr_in_cell.ToString("F2") + " percdiff: " + _afr_diff_percentage.ToString("F2"));
+                                        logger.Debug("Fuelling correct in cell: " + rpmindex.ToString() + " " + mapindex.ToString() + " afrtarget = " + targetafr_currentcell.ToString("F2") + " afravg: " + average_afr_in_cell.ToString("F2") + " percdiff: " + _afr_diff_percentage.ToString("F2"));
                                         //what to do if AFR is correct (within limits), should we reset the stopwatch?
                                         _afrMeasurements.Clear(); // clear average collection
                                         _cellDurationMonitor.Stop();
@@ -939,7 +933,7 @@ namespace Trionic5Tools
             }
             catch (Exception tafrE)
             {
-                Console.WriteLine(tafrE.Message);
+                logger.Debug(tafrE.Message);
             }
 
             string idleinjection_map_name = "Idle_fuel_korr!";
@@ -1001,7 +995,7 @@ namespace Trionic5Tools
             }
             catch (Exception tafrE)
             {
-                Console.WriteLine(tafrE.Message);
+                logger.Debug(tafrE.Message);
             }
         }
 
@@ -1430,7 +1424,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine("LogWidebandAFR: " + E.Message);
+                logger.Debug("LogWidebandAFR: " + E.Message);
             }
         }
 
@@ -1485,7 +1479,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
         }
 
@@ -1562,7 +1556,7 @@ namespace Trionic5Tools
             }
             catch (Exception stargetE)
             {
-                Console.WriteLine(stargetE.Message);
+                logger.Debug(stargetE.Message);
             }
         }
 
@@ -1705,8 +1699,8 @@ namespace Trionic5Tools
                         {
                             if (IsCellClosedLoop(mapvalue, rpmtel))
                             {
-                                if (props.Lambdacontrolduringidle == false && rpmvalue < 1000) ;
-                                else afrtarget = 14.7F; 
+                                // at idle (below 1000 rpm) without lambda control during idle the map's target stays
+                                if (props.Lambdacontrolduringidle || rpmvalue >= 1000) afrtarget = 14.7F;
                             }
                         }
                         map.SetValue(afrtarget, rpmtel * columns + maptel);
@@ -1935,7 +1929,7 @@ namespace Trionic5Tools
                     catch (Exception E)
                     {
                         //  MessageBox.Show("Failed to load target AFR map: " + E.Message);
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
 
                     }
                 }
@@ -1994,7 +1988,7 @@ namespace Trionic5Tools
                     catch (Exception E)
                     {
                         //  MessageBox.Show("Failed to load target AFR map: " + E.Message);
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
 
                     }
                 }
@@ -2030,7 +2024,7 @@ namespace Trionic5Tools
                 catch (Exception E)
                 {
                     //   MessageBox.Show("Failed to load target AFR map: " + E.Message);
-                    Console.WriteLine(E.Message);
+                    logger.Debug(E.Message);
                 }
             }
             else
@@ -2085,7 +2079,7 @@ namespace Trionic5Tools
                     {
                         //      MessageBox.Show("Failed to load target AFR map: " + E.Message);
                         // something went wrong, try to reinitialize the map
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
 
                     }
                 }
@@ -2142,7 +2136,7 @@ namespace Trionic5Tools
                     {
                         //      MessageBox.Show("Failed to load target AFR map: " + E.Message);
                         // something went wrong, try to reinitialize the map
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
 
                     }
                 }
@@ -2189,7 +2183,7 @@ namespace Trionic5Tools
                     catch (Exception E)
                     {
                         //  MessageBox.Show("Failed to load target AFR counter map: " + E.Message);
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
                     }
                 }
             }
@@ -2237,7 +2231,7 @@ namespace Trionic5Tools
                     catch (Exception E)
                     {
                         //  MessageBox.Show("Failed to load target AFR counter map: " + E.Message);
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
                     }
                 }
             }
@@ -2321,7 +2315,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
         }
 
@@ -2340,7 +2334,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
         }
     }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using NLog;
 
 // allows autotuning Ignition map (Ign_map_0!)
 // we need a locking map (which cells are locked)
@@ -18,6 +19,7 @@ namespace Trionic5Tools
 
     public class IgnitionMaps
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public delegate void IgnitionmapCellChanged(object sender, IgnitionmapChangedEventArgs e);
         public event IgnitionMaps.IgnitionmapCellChanged onIgnitionmapCellChanged;
 
@@ -127,11 +129,6 @@ namespace Trionic5Tools
                     _isAutoMappingActive = value;
                     if (_isAutoMappingActive)
                     {
-                        _currentEngineSpeed = 0;
-                        _currentBoostLevel = 0;
-                        _currentThrottlePosition = 0;
-                        _currentAdvance = 0;
-                        _currentKnockCondition = false;
                         _cellDurationMonitor.Stop();
                         _cellDurationMonitor.Reset();
                     }
@@ -157,11 +154,6 @@ namespace Trionic5Tools
             }
         }
 
-        private double _currentEngineSpeed = 0;
-        private double _currentBoostLevel = 0;
-        private double _currentThrottlePosition = 0;
-        private double _currentAdvance = 0;
-        private bool _currentKnockCondition = false;
         private Stopwatch _cellDurationMonitor = new Stopwatch();
         private int _monitoringCellRPMIndex = -1;
         private int _monitoringCellMAPIndex = -1;
@@ -527,7 +519,7 @@ namespace Trionic5Tools
             }
             catch (Exception tafrE)
             {
-                Console.WriteLine(tafrE.Message);
+                logger.Debug(tafrE.Message);
             }
 
         }
@@ -798,7 +790,7 @@ namespace Trionic5Tools
             }
             catch (Exception stargetE)
             {
-                Console.WriteLine(stargetE.Message);
+                logger.Debug(stargetE.Message);
             }
         }
 
@@ -970,7 +962,7 @@ namespace Trionic5Tools
                     catch (Exception E)
                     {
                         //  MessageBox.Show("Failed to load target IGN map: " + E.Message);
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
 
                     }
                 }
@@ -1006,7 +998,7 @@ namespace Trionic5Tools
                 catch (Exception E)
                 {
                     //   MessageBox.Show("Failed to load target IGN map: " + E.Message);
-                    Console.WriteLine(E.Message);
+                    logger.Debug(E.Message);
                 }
             }
             else
@@ -1061,7 +1053,7 @@ namespace Trionic5Tools
                     {
                         //      MessageBox.Show("Failed to load target IGN map: " + E.Message);
                         // something went wrong, try to reinitialize the map
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
 
                     }
                 }
@@ -1110,7 +1102,7 @@ namespace Trionic5Tools
                     catch (Exception E)
                     {
                         //  MessageBox.Show("Failed to load target IGN counter map: " + E.Message);
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
                     }
                 }
             }
@@ -1149,7 +1141,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
         }
     }

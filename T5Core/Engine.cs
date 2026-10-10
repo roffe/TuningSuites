@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using NLog;
 
 namespace Trionic5Tools
 {
     public class Engine
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         private float m_rpm = 0;
         private float m_coolant_temperature = 70;
         private float m_oil_temperature = 85;
@@ -203,7 +205,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine("Failed to run the engine: " + E.Message);
+                logger.Debug("Failed to run the engine: " + E.Message);
             }
             m_enginestate_timer.Enabled = true;
         }

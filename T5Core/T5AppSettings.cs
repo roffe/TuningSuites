@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Data;
 using System.IO;
 using CommonSuite;
+using NLog;
 
 //[assembly: RegistryPermissionAttribute(SecurityAction.RequestMinimum,ViewAndModify = "HKEY_CURRENT_USER")]
 
@@ -12,6 +13,7 @@ namespace Trionic5Tools
 {
     public class T5AppSettings
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         /// <summary>T5Suite 2.0's settings key, HKCU\\Software\\T5Suite2 (outside MattiasC); settings.json in &lt;AppData&gt;/MattiasC/T5Suite2.</summary>
         public const string Suite = "T5Suite2";
 
@@ -2600,7 +2602,7 @@ namespace Trionic5Tools
                         }
                         catch (Exception E)
                         {
-                            Console.WriteLine("error retrieving registry settings: " + E.Message);
+                            logger.Debug("error retrieving registry settings: " + E.Message);
                         }
 
                     }

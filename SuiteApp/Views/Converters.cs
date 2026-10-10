@@ -82,7 +82,7 @@ public class CategoryColorConverter : IValueConverter
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        IBrush? brush = !Enabled ? null : value as string switch
+        IBrush? brush = !Enabled ? null : (value as string) switch
         {
             "Fuel" => Brushes.LightSteelBlue,
             "Ignition" => Brushes.LightGreen,

@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using NLog;
 
 namespace Trionic5Tools
 {
     class TuningReferenceMaps
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public double GetIgnitionAdvanceForPressureRpm(double pressure, double rpm)
         {
             double advance = 0;
@@ -195,7 +197,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             return retval;
 

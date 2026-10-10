@@ -4,11 +4,13 @@ using System.Text;
 using System.Data;
 using System.IO;
 using CommonSuite;
+using NLog;
 
 namespace Trionic5Tools
 {
     public class Trionic5Anomalies
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         IECUFileInformation m_fileInformation = new Trionic5FileInformation();
         /// <summary>
         /// Check binary file for anomalies that cannot be right
@@ -44,7 +46,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine("CheckBoostRequestAgainstAxisRanges: " + E.Message);
+                logger.Debug("CheckBoostRequestAgainstAxisRanges: " + E.Message);
             }
             if (showreport)
             {
@@ -318,7 +320,7 @@ namespace Trionic5Tools
                             }
                             catch (Exception E)
                             {
-                                Console.WriteLine(E.Message);
+                                logger.Debug(E.Message);
                             }
                         }
                     }

@@ -17,7 +17,8 @@ namespace T5App.ViewModels;
 public partial class T5RealtimeViewModel : RealtimeViewModel
 {
     private readonly T5MainWindowViewModel m_t5;
-    private readonly T5Binary m_bin;
+    // the base class's m_bin as the T5Binary it is
+    private new readonly T5Binary m_bin;
     private double? m_afr;
     private double m_lastTps = double.NaN;
     private DateTime m_tpsHold;

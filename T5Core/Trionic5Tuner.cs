@@ -4,6 +4,7 @@ using System.Text;
 using System.IO;
 using CommonSuite;
 using TrionicCANLib.API;
+using NLog;
 
 namespace Trionic5Tools
 {
@@ -30,6 +31,7 @@ namespace Trionic5Tools
 
     public class Trionic5Tuner
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         /// <summary>Stage X's settings dialog (frmTuningSettings); true for OK. Unset: stage X is cancelled.</summary>
         public Func<TuningSettings, bool> AskTuningSettings { get; set; }
 
@@ -795,7 +797,7 @@ namespace Trionic5Tools
             int DivisorOffset = findBoostRegulationDivisorOffset(m_fileInformation.Filename, currentDivisor);
             if (DivisorOffset != -1)
             {
-                Console.WriteLine("DivisorOffset: " + DivisorOffset.ToString("X8"));
+                logger.Debug("DivisorOffset: " + DivisorOffset.ToString("X8"));
                 byte[] divisor_data = readdatafromfile(m_fileInformation.Filename, DivisorOffset, 7);
                 divisor_data[5] = Convert.ToByte(divisorToSet); // set the divisor value
                 savedatatobinary(DivisorOffset, 7, divisor_data, m_fileInformation.Filename);
@@ -803,13 +805,13 @@ namespace Trionic5Tools
                 // <GS-19052010> also update the max rp m range for which to check
                 // this should be 28 bytes back from DivisorOffset
                 int maxRpm = 2500 + (30 * (divisorToSet*10));
-                Console.WriteLine("Max rpm to set would be: " + maxRpm.ToString());
+                logger.Debug("Max rpm to set would be: " + maxRpm.ToString());
                 
                 int currentRpm = Convert.ToInt32(readbytefromfile(m_fileInformation.Filename, DivisorOffset - 28));
                 currentRpm *= 256;
                 currentRpm += Convert.ToInt32(readbytefromfile(m_fileInformation.Filename, DivisorOffset - 27));
                 currentRpm *= 10;
-                Console.WriteLine("Current rpm limit: " + currentRpm.ToString());
+                logger.Debug("Current rpm limit: " + currentRpm.ToString());
                 maxRpm /= 10;
                 byte b1rpmmax = (byte)(maxRpm / 256);
                 byte b2rpmmax = (byte)(maxRpm - (256 * b1rpmmax));
@@ -894,7 +896,7 @@ namespace Trionic5Tools
             int AutomaticFirstOffset = findBoostAdpationAreaAutomatic(m_fileInformation.Filename);
             if (AutomaticFirstOffset != -1)
             {
-                Console.WriteLine("AutomaticFirstOffset: " + AutomaticFirstOffset.ToString("X8"));
+                logger.Debug("AutomaticFirstOffset: " + AutomaticFirstOffset.ToString("X8"));
                 byte[] Aut_1_data = readdatafromfile(m_fileInformation.Filename, AutomaticFirstOffset, 14);
                 Aut_1_data[2] = b1rpmlowaut;
                 Aut_1_data[3] = b2rpmlowaut;
@@ -911,7 +913,7 @@ namespace Trionic5Tools
             int ManualFirstOffset = findBoostAdpationAreaManualFirst(m_fileInformation.Filename);
             if (ManualFirstOffset != -1)
             {
-                Console.WriteLine("ManualFirstOffset: " + ManualFirstOffset.ToString("X8"));
+                logger.Debug("ManualFirstOffset: " + ManualFirstOffset.ToString("X8"));
                 byte[] Manual_1_data = readdatafromfile(m_fileInformation.Filename, ManualFirstOffset, 14);
                 Manual_1_data[2] = b1rpmlowman;
                 Manual_1_data[3] = b2rpmlowman;
@@ -929,7 +931,7 @@ namespace Trionic5Tools
             if (ManualSecondOffset != -1)
             {
                 // read data
-                Console.WriteLine("ManualSecondOffset: " + ManualSecondOffset.ToString("X8"));
+                logger.Debug("ManualSecondOffset: " + ManualSecondOffset.ToString("X8"));
                 byte[] Manual_2_data = readdatafromfile(m_fileInformation.Filename, ManualSecondOffset, 18);
                 Manual_2_data[2] = b1rpmlowman;
                 Manual_2_data[3] = b2rpmlowman;
@@ -3501,7 +3503,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine("CheckBinForAnomalies: " + E.Message);
+                logger.Debug("CheckBinForAnomalies: " + E.Message);
             }
 
             // mark this particular file as tuned to stage X, to prevent running the wizard on this file again!
@@ -3811,7 +3813,7 @@ namespace Trionic5Tools
                 }
                 catch (Exception E)
                 {
-                    Console.WriteLine(E.Message);
+                    logger.Debug(E.Message);
                     m_resume.AddToResumeTable("Failed to alter and smooth: " + symbolname);
                 }
             }
@@ -3901,7 +3903,7 @@ namespace Trionic5Tools
                 }
                 catch (Exception E)
                 {
-                    Console.WriteLine(E.Message);
+                    logger.Debug(E.Message);
                     m_resume.AddToResumeTable("Failed to alter and smooth: " + symbolname);
                 }
             }

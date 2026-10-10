@@ -5,6 +5,7 @@ using System.IO;
 using System.Data;
 using System.Diagnostics;
 using CommonSuite;
+using NLog;
 
 namespace Trionic5Tools
 {
@@ -90,6 +91,7 @@ namespace Trionic5Tools
 
     public class Trionic5File : IECUFile
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
         private string _libraryPath = string.Empty;
 
         public override string LibraryPath
@@ -227,7 +229,7 @@ namespace Trionic5Tools
                             }
                             catch (Exception E)
                             {
-                                Console.WriteLine(E.Message);
+                                logger.Debug(E.Message);
                             }
                         }
                     }
@@ -653,7 +655,7 @@ namespace Trionic5Tools
                 {
                     Trionic5Tuner tun = new Trionic5Tuner();
                     tun.TuneFileToStage((int)properties.TuningStage, m_currentFile, this, m_fileInfo, true);
-                    Console.WriteLine("Silently tuned to stage " + properties.TuningStage.ToString());
+                    logger.Debug("Silently tuned to stage " + properties.TuningStage.ToString());
                 }*/
                 WriteTuningStageMarker(properties.TuningStage);
             }
@@ -1266,7 +1268,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             return retval;
         }
@@ -1300,7 +1302,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
         }
 
@@ -2305,12 +2307,12 @@ namespace Trionic5Tools
                         }
                         catch (Exception E)
                         {
-                            Console.WriteLine(E.Message);
+                            logger.Debug(E.Message);
                         }
                     }
                 }
             }
-            Console.WriteLine("BIN: " + dt_sync.ToString("dd/MM/yyyy HH:mm:ss"));
+            logger.Debug("BIN: " + dt_sync.ToString("dd/MM/yyyy HH:mm:ss"));
             return dt_sync;
         }
 
@@ -2799,7 +2801,7 @@ namespace Trionic5Tools
             }
             br.Close();
             fs.Close();
-            Console.WriteLine("SW ID: " + swid);
+            logger.Debug("SW ID: " + swid);
             return swid;
         }
 
@@ -3073,7 +3075,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             /*            System.Windows.Forms.Application.DoEvents();
                         System.Threading.Thread.Sleep(5);
@@ -3099,7 +3101,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             /*System.Windows.Forms.Application.DoEvents();
             System.Threading.Thread.Sleep(5);
@@ -4873,7 +4875,7 @@ namespace Trionic5Tools
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             return retval;
         }
@@ -4941,7 +4943,7 @@ namespace Trionic5Tools
                     }
                     catch (Exception E)
                     {
-                        Console.WriteLine(E.Message);
+                        logger.Debug(E.Message);
                     }
                     fs.Flush();
                     br.Close();
@@ -5652,7 +5654,7 @@ Temp_fak is one part for injection time calculation.*/
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             // Console.WriteLine("looked for : " + axisvalue.ToString() + " found idx in kyltemp_steg : " + index.ToString() + " value in kyltemp_tab:  " + retval.ToString());
 
@@ -5708,7 +5710,7 @@ Temp_fak is one part for injection time calculation.*/
                         }
                         catch (Exception sE)
                         {
-                            Console.WriteLine(sE.Message);
+                            logger.Debug(sE.Message);
                         }
                     }
                     idx++;
@@ -5745,7 +5747,7 @@ Temp_fak is one part for injection time calculation.*/
             }
             catch (Exception E)
             {
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             /*if (m_appSettings.TemperaturesInFahrenheit)
             {
@@ -5825,7 +5827,7 @@ Temp_fak is one part for injection time calculation.*/
             catch (Exception E)
             {
 //                AddLogItem("Failed to convert symbol: " + E.Message);
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             return retval;
         }
@@ -6289,13 +6291,13 @@ Temp_fak is one part for injection time calculation.*/
                             if (cursymbol == previousssymbolname)
                             {
                                 fetchnext = true;
-                                Console.WriteLine("Previous symbol was: " + previousssymbolname);
+                                logger.Debug("Previous symbol was: " + previousssymbolname);
                             }
                             else if (fetchnext)
                             {
                                 fetchnext = false;
                                 symbolname = dr["SYMBOLNAME"].ToString();
-                                Console.WriteLine("Fetched symbolname to replace: " + symbolname);
+                                logger.Debug("Fetched symbolname to replace: " + symbolname);
                                 break;
                             }
                         }
@@ -6315,7 +6317,7 @@ Temp_fak is one part for injection time calculation.*/
             }
             catch (Exception E)
             {
-                Console.WriteLine("FetchSymbolNameFromSequenceList: " + E.Message);
+                logger.Debug("FetchSymbolNameFromSequenceList: " + E.Message);
             }
             return symbolname;
         }
@@ -6328,7 +6330,7 @@ Temp_fak is one part for injection time calculation.*/
             {
                 if (sh.Varname.Trim() == "")
                 {
-                    Console.WriteLine("Fetching symbolname for symbol after: " + previoussymbol);
+                    logger.Debug("Fetching symbolname for symbol after: " + previoussymbol);
                     sh.Varname = FetchSymbolNameFromSequenceList(idx, previoussymbol);
                 }
                 previoussymbol = sh.Varname;
@@ -6519,7 +6521,7 @@ Temp_fak is one part for injection time calculation.*/
             catch (Exception E)
             {
                 //MessageBox.Show(E.Message);
-                Console.WriteLine(E.Message);
+                logger.Debug(E.Message);
             }
             finally
             {
@@ -6535,7 +6537,7 @@ Temp_fak is one part for injection time calculation.*/
                     }
                     catch (Exception fmsE)
                     {
-                        Console.WriteLine("Failed to fix masked symbols: " + fmsE.Message);
+                        logger.Debug("Failed to fix masked symbols: " + fmsE.Message);
                     }
                     try
                     {
@@ -6552,7 +6554,7 @@ Temp_fak is one part for injection time calculation.*/
                     }
                     catch (Exception wsiE)
                     {
-                        Console.WriteLine("Failed to write symbolindex: " + wsiE.Message);
+                        logger.Debug("Failed to write symbolindex: " + wsiE.Message);
                     }
                     SignalDecodeProgress(50);
 
@@ -6578,7 +6580,7 @@ Temp_fak is one part for injection time calculation.*/
                     {
                         if (!alh.UsedAddress)
                         {
-                            Console.WriteLine("Unused addresshelper: " + alh.Flash_address.ToString("X6") + " " + alh.Sram_adddress.ToString("X4"));
+                            logger.Debug("Unused addresshelper: " + alh.Flash_address.ToString("X6") + " " + alh.Sram_adddress.ToString("X4"));
                         }
 
                     }
@@ -6587,7 +6589,7 @@ Temp_fak is one part for injection time calculation.*/
                 }
                 catch (Exception finE)
                 {
-                    Console.WriteLine(finE.Message);
+                    logger.Debug(finE.Message);
                 }
             }
 

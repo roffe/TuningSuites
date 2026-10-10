@@ -37,7 +37,7 @@ namespace CommonSuite
                         }
                         catch (Exception E)
                         {
-                            Console.WriteLine(E.Message);
+                            logger.Debug(E.Message);
                         }
                     }
                 }

@@ -67,7 +67,7 @@ public static class T5ToolWindows
             var size = new PixelSize(Math.Max(1, (int)chart.Bounds.Width), Math.Max(1, (int)chart.Bounds.Height));
             using var bitmap = new RenderTargetBitmap(size);
             bitmap.Render(chart);
-            bitmap.Save(file);
+            bitmap.Save(file, new PngBitmapEncoderOptions());
         }), Button("Close", () => window!.Close()));
         window = Frame("Estimated dyno results", 900, 560, bar, chart);
         window.Show(owner);

@@ -4,11 +4,13 @@ using System.Text;
 using System.IO;
 using Trionic5Tools;
 using CommonSuite;
+using NLog;
 
 namespace Trionic5Tools
 {
     public class Disassembler
     {
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         public enum ProgressType : int
         {
@@ -1268,7 +1270,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
 
                           /*if (trgdata == 0xFFF2)
                           {
-                              Console.WriteLine("break!");
+                              logger.Debug("break!");
                           }*/
 
                           str = "JSR\t" + dest;
@@ -1868,11 +1870,11 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                     }
                     catch (Exception E)
                     {
-                        Console.WriteLine("Failed to handle vector: " + E.Message);
+                        logger.Debug("Failed to handle vector: " + E.Message);
                     }
                 }
             }
-            Console.WriteLine("Found " + _labels.Count.ToString() + " in pass one");
+            logger.Debug("Found " + _labels.Count.ToString() + " in pass one");
             return _labels;
         }
 
@@ -1938,7 +1940,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                     }
                     catch (Exception E)
                     {
-                        Console.WriteLine("Failed to handle vector: " + E.Message);
+                        logger.Debug("Failed to handle vector: " + E.Message);
                     }
                 }
             }
@@ -2094,7 +2096,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                 }
             }
             /*
-            Console.WriteLine("Translating known functions");
+            logger.Debug("Translating known functions");
             CastProgressEvent("Translating known functions", 0, ProgressType.TranslatingLabels);
             lblcount = 0;
             foreach (MNemonicHelper label in labels)
@@ -2307,7 +2309,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                 uint adr = (uint)(((addr + offaddr) & 0xffff));
                 /*if (ch1 == 0x58 && ch2 == 0x8F)
                 {
-                    Console.WriteLine("break!");
+                    logger.Debug("break!");
                 }*/
                 uint t = disasm(out str, addr, ch1, ch2, offaddr, br, out endsub, out issub, out isjump);
                 //Console.WriteLine(str);
@@ -2353,7 +2355,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                 {
                     /*if (trgdata == 0)
                     {
-                        Console.WriteLine("break!");
+                        logger.Debug("break!");
                     }*/
                     
                     // alleen als die nog niet geweest is
@@ -2711,7 +2713,7 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
                 }
                 catch (Exception E)
                 {
-                    Console.WriteLine(E.Message);
+                    logger.Debug(E.Message);
                     addr++;
                 }
             }
