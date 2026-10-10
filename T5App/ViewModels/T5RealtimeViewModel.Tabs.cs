@@ -412,6 +412,7 @@ public partial class T5RealtimeViewModel
             Offset = offset,
             UpsideDown = true,
             XAxis = [.. m_bin.GetXaxisValues(axesOf).Select(v => (double)v)],
+            XEasy = m_bin.XAxisEasy(axesOf),
             YAxis = [.. m_bin.GetYaxisValues(axesOf).Select(v => (double)v)],
             XName = xDescr,
             YName = yDescr,

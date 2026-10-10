@@ -17,7 +17,8 @@ public partial class AutotuneAcceptWindow : Window
 
     public AutotuneAcceptWindow() => InitializeComponent();
 
-    public AutotuneAcceptWindow(string fuelMap, double[] percent, double[] xAxis, double[] yAxis, string xName = "mg/c", string yName = "rpm") : this()
+    public AutotuneAcceptWindow(string fuelMap, double[] percent, double[] xAxis, double[] yAxis, string xName = "mg/c", string yName = "rpm",
+        double[]? xEasy = null) : this()
     {
         m_percent = percent;
         Title = "Select percent mutations to accept for map " + fuelMap;
@@ -30,7 +31,7 @@ public partial class AutotuneAcceptWindow : Window
         }
         Grid.Map = new MapData(fuelMap, data, xAxis.Length > 0 ? xAxis.Length : 18, true)
         {
-            Factor = 0.1, UpsideDown = true, XAxis = xAxis, YAxis = yAxis, XName = xName, YName = yName, ZName = "%",
+            Factor = 0.1, UpsideDown = true, XAxis = xAxis, XEasy = xEasy, YAxis = yAxis, XName = xName, YName = yName, ZName = "%",
         };
         Grid.ViewType = MapViewType.Easy;
     }

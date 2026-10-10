@@ -247,6 +247,7 @@ public partial class T5MainWindowViewModel
             YName = yDescr,
             ZName = "knocks",
             Marks = CellMarks(bin, "Knock_count_map"),
+            XEasy = bin.XAxisEasy("Ign_map_0!"),
         };
         ShowDocument(new MapViewerViewModel
         {
@@ -303,6 +304,7 @@ public partial class T5MainWindowViewModel
             ZName = "AFR",
             OpenLoop = idle ? null : bin.OpenLoopLimits(fuelName),
             Marks = CellMarks(bin, kind),
+            XEasy = bin.XAxisEasy(fuelName),
         };
         AppSettings settings = Settings;
         return new MapViewerViewModel

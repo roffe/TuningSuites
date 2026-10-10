@@ -618,6 +618,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-10: T5's MAP axes read in bar in the Easy view as in T5Suite (× sensor scale × 0.01 − 1, "Pressure error (bar)" without the − 1, two decimals; it showed the raw 0..240): the map viewers, the AFR and knock counter maps, the realtime autotune grids and the accept dialog; the 3D graph's MAP axis in bar in every view, as T5Suite's (which left out the sensor scale outside the Easy 3 to 5 bar views).
 - 2026-10-10: T5's map viewer shows T5Suite's cell marks: the closed-loop box (it was off with no way to turn it on), padlocks, the knock and boost adaption boxes and the AFR sample boxes; Ignition lock map opens Ign_map_0!.
 - 2026-10-10: Mouseover tips for every option in the settings dialogs of all three suites (T5 34, T7 34, T8 26), in the old SuperTip style.
 - 2026-10-10: A double click on an inner window's title bar maximizes it again (it only restored): Dock's press started a drag that captured the pointer, so the double tap missed its header handler.

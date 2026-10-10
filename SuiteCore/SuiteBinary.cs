@@ -201,5 +201,8 @@ namespace CommonSuite
 
         /// <summary>The same scale on an axis, by its caption.</summary>
         public virtual int AxisScalePercent(string caption) => 100;
+
+        /// <summary>A map's X axis in the Easy view's units where they aren't its values (T5's MAP axis in bar); null where they are.</summary>
+        public virtual double[] XAxisEasy(string symbolname) => null;
     }
 }

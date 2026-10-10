@@ -35,6 +35,10 @@ public sealed class MapData
 
     /// <summary>One value per column / data row (the corrected axis symbol values), null if unknown.</summary>
     public double[]? XAxis { get; set; }
+
+    /// <summary>The X axis in the Easy view's units where they aren't its values (T5Suite's MAP axis in bar), two decimals: the Easy view's
+    /// column headers and the 3D graph's axis; null where they are.</summary>
+    public double[]? XEasy { get; set; }
     public double[]? YAxis { get; set; }
     public string XName { get; set; } = "";
     public string YName { get; set; } = "";

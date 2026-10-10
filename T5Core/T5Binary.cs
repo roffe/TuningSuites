@@ -294,6 +294,18 @@ namespace Trionic5Tools
         public override int AxisScalePercent(string caption) => caption is "MAP" or "Pressure error (bar)" ? SensorPercent : 100;
 
         /// <summary>
+        /// MapViewerEx's Easy view column headers and 3D graph: a "MAP" axis in bar (× the sensor scale × 0.01 − 1), a "Pressure error
+        /// (bar)" one × the sensor scale × 0.01, both with two decimals (the Decimal view shows the scaled values, the Hex view the raw ones).
+        /// </summary>
+        public override double[] XAxisEasy(string symbolname)
+        {
+            string caption = AxisSymbols(symbolname).xDescr;
+            if (caption is not ("MAP" or "Pressure error (bar)")) return null;
+            double offset = caption == "MAP" ? -1 : 0;
+            return GetXaxisValues(symbolname).Select(v => v * SensorPercent / 100.0 * 0.01 + offset).ToArray();
+        }
+
+        /// <summary>
         /// MapViewerEx's signs: 16-bit values above 32000 are negative, I_kyl_st! / I_luft_st! / Last_temp_st! above 128; the
         /// injection maps take none (MapSupportsNegativeValues). T5Suite saved negative 8-bit values as 0.
         /// </summary>

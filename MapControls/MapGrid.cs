@@ -151,6 +151,7 @@ public class MapGrid : Control
         MapData map = Map!;
         if (map.XAxis == null || col >= map.XAxis.Length) return col.ToString(CultureInfo.CurrentCulture);
         double x = map.XAxis[col];
+        if (ViewType == MapViewType.Easy && map.XEasy is { } easy && col < easy.Length) return easy[col].ToString("F2", CultureInfo.CurrentCulture);
         if (ViewType == MapViewType.Hex)
             return ((int)x & 0xFFFF).ToString(map.XAxis.Max() <= 255 ? "X2" : "X4", CultureInfo.InvariantCulture);
         return x.ToString(CultureInfo.CurrentCulture);

@@ -200,7 +200,9 @@ public class MapViewer : UserControl
             {
                 map.Changed += OnMapChanged;
                 int zPrec = map.Factor < 1 ? Math.Min(4, (int)Math.Ceiling(-Math.Log10(map.Factor))) : 0;
-                Surface.SetData(map.PhysicalValues(), map.Cols, map.Rows, map.XAxis, map.YAxis, map.XName, map.YName, map.ZName, 0, 0, zPrec);
+                // T5Suite's 3D graph had a MAP axis in bar in every view
+                Surface.SetData(map.PhysicalValues(), map.Cols, map.Rows, map.XEasy ?? map.XAxis, map.YAxis, map.XName, map.YName, map.ZName,
+                    map.XEasy != null ? 2 : 0, 0, zPrec);
                 m_slice.Maximum = map.Cols - 1;
                 m_slice.IsVisible = map.Cols > 1;
             }

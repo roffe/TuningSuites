@@ -31,6 +31,10 @@ namespace T5AppTest
                 vm.OpenSymbolByName("Insp_mat!");
                 var fuel = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual(OpenLoopMark.Box, fuel.OpenLoopMark, "T5Suite always drew the closed-loop box");
+                // the Easy view's MAP axis in bar as T5Suite's (raw × 0.01 − 1 on the 2.5 bar sensor), the Decimal view's raw
+                CollectionAssert.AreEqual(new double[] { 22, 30, 38 }, fuel.Map.XAxis![..3]);
+                Assert.AreEqual(-0.78, fuel.Map.XEasy![0], 1e-9);
+                Assert.AreEqual(1.08, fuel.Map.XEasy![15], 1e-9);
                 Assert.AreEqual(16 * 16, fuel.Map.Count);
                 CollectionAssert.AreEqual(Cells(fuel.Map, (r, c) => c == 8 && r is >= 5 and <= 7), Marked(fuel.Map, m => m.KnockAdaption));
                 CollectionAssert.AreEqual(Cells(fuel.Map, (r, c) => c == 15 && r is >= 6 and <= 9), Marked(fuel.Map, m => m.BoostAdaption));
@@ -43,6 +47,14 @@ namespace T5AppTest
                 var ign = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Ign_map_0!", ign.MapName);
                 Assert.AreEqual(18, ign.Map.Cols);
+                Assert.AreEqual(-1.0, ign.Map.XEasy![0], 1e-9);
+                Assert.AreEqual(1.4, ign.Map.XEasy![17], 1e-9);
+                // a "Pressure error (bar)" axis × 0.01 without the − 1; the boost regulator's maps have no marks
+                vm.OpenSymbolByName("P_fors!");
+                var pFors = (MapViewerViewModel)vm.SelectedViewer!;
+                CollectionAssert.AreEqual(pFors.Map.XAxis!.Select(v => v * 0.01).ToArray(), pFors.Map.XEasy);
+                Assert.IsNull(pFors.Map.Marks);
+                vm.SelectedViewer = ign;
                 int[] belowKnock = Cells(ign.Map, (r, c) => r <= 7 ? c <= 6 : c <= 5);
                 CollectionAssert.AreEqual(belowKnock, Marked(ign.Map, m => m.Locked));
                 CollectionAssert.AreEqual(Cells(ign.Map, (r, c) => c == 8 && r is >= 5 and <= 7), Marked(ign.Map, m => m.KnockAdaption));

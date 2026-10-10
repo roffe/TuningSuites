@@ -156,6 +156,7 @@ public partial class MapViewerViewModel : DocumentViewModel
             // TryToAddOpenLoopTables, drawn only on load
             OpenLoop = bin.OpenLoopLimits(name)?.Select(v => (double)((int)v * xScale / 100)).ToArray(),
             Marks = owner.CellMarks(bin, name),
+            XEasy = bin.XAxisEasy(name),
         };
 
         int viewType = (int)settings.DefaultViewType;

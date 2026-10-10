@@ -32,7 +32,7 @@ public partial class MainWindow : SuiteMainWindow
         {
             double[] x = vm.Binary?.GetXaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
             double[] y = vm.Binary?.GetYaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
-            return new AutotuneAcceptWindow("Insp_mat!", percent, x, y, "MAP", "RPM").ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(this);
+            return new AutotuneAcceptWindow("Insp_mat!", percent, x, y, "MAP", "RPM", vm.Binary?.XAxisEasy("Insp_mat!")).ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(this);
         };
     }
 
