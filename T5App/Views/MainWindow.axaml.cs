@@ -200,7 +200,7 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnIgnitionAutotune(object? sender, RoutedEventArgs e)
     {
         if (Vm.Realtime is T5RealtimeViewModel rt) await rt.ToggleIgnitionAutotuneAsync();
-        else await Dialogs.Info(this, "Start the realtime panel first (Online tuning → Switch mode)", Vm.Caption);
+        else await Dialogs.Info(this, "Start the realtime panel first (Realtime → Toggle realtime panel)", Vm.Caption);
     }
 
     /// <summary>Import SRAM snapshot into binary: the snapshot, then "Select merge options" (frmMergeAdaptionData).</summary>

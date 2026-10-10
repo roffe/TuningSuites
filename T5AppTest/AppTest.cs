@@ -79,6 +79,13 @@ namespace T5AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 StringAssert.StartsWith(vm.Title, "T5Suite v");
+                // the menus the three suites share: the same menus, captions and order (T5Suite's own items in their place)
+                var menu = window.GetVisualDescendants().OfType<Menu>().First();
+                CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
+                    menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
+                var fileMenu = menu.Items.OfType<MenuItem>().First().Items.OfType<MenuItem>().Select(m => m.Header as string).ToList();
+                CollectionAssert.IsSubsetOf(new[] { "_Open file...", "Save all", "Settings", "E_xit" }, fileMenu);
+                CollectionAssert.DoesNotContain(fileMenu, "Options and settings");
                 StringAssert.EndsWith(vm.Title, "[ open.BIN ]");
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
                 var bin = (T5Binary)vm.Binary!;

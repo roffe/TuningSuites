@@ -83,6 +83,9 @@ namespace T8AppTest
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
                 Assert.IsInstanceOfType<T8Binary>(vm.Binary);
 
+                // the menus the three suites share
+                CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
+                    window.GetVisualDescendants().OfType<Menu>().First().Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());
                 // T8Suite's list: only the symbols in the file at first, its own columns, numbered from 1
                 Assert.AreEqual("Only symbols within binary", vm.SymbolFilter!.Name);
                 var shown = vm.Symbols!.Cast<SymbolHelper>().ToList();
