@@ -54,8 +54,8 @@ T7App/                     Avalonia MVVM app, AssemblyName T7Suite
 T8App/                     Avalonia MVVM app, AssemblyName T8Suite, on SuiteApp's main window
 T8Core/                    net10 class library, no UI: T8Suite's file logic (symbol table, header, dictionary), T8Binary
 T8CoreTest/ T8AppTest/     golden test over T8Binaries/; T8App headless on a stock bin
-SetupT7/                   WiX MSI (chunk 8)
-packaging/linux/           udev rule, desktop entry installer and icon for the tar.gz (chunk 8)
+SetupT7/ SetupT8/          WiX MSIs (chunk 8 of each suite)
+packaging/linux/<Suite>/   udev rule, desktop entry installer and icon for each suite's tar.gz
 ```
 
 ## Dependency replacements
@@ -490,11 +490,22 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Not ported: the Debug ribbon group (registry-only DebugMode), "Tune me up™" and "Easy tune to stage III" (hidden in T8Suite)
 
 ### 8. Release
-- [ ] SetupT8 MSI replacing the old T8Suite, packages with `T8Binaries/` in `Binaries/` (T8Extras' job), T8Suite's NLog.config and manuals, the CI matrix, the updater on `T8suite_v` releases, README
+- [x] **SetupT8** (WiX 6, a copy of SetupT7): T8SuitePro's upgrade code `{D1B8E08D-7E0E-4F1D-89D4-7AA63766CCF6}` and folder `Program Files (x86)\MattiasC\T8SuitePro`, so it replaces the old T8SuitePro in place. Per machine, x86, the VC++ 2010 merge module for the Lawicel driver, desktop and Start menu shortcuts, `.bin` Open with (`T8Suite.bin`), the whole self-contained publish folder.
+- [x] **T8App's publish folder:** `Binaries/` from T8Binaries (T8Extras' job, publish only), `TuningPacks/`, T8Suite's NLog.config (its log files in `<AppData>/MattiasC/T8SuitePro`, plus the adapter drivers' loggers as in T7's), Kvaser's canlib32.dll on Windows, libusb-1.0.dll added by CI; the DTC lists, T8Pub.pem and manuals were there already.
+- [x] **CI:** the package job has a suite dimension (`T7` / `T8` × five RIDs; a `T7suite_v` / `T8suite_v` tag packages only that suite, so a release carries only its own setup, which the update check downloads). Per-suite artifacts, nightlies `T7suite_nightly` and `T8suite_nightly`.
+- [x] **Linux:** `packaging/linux/T8Suite/` (udev rule, install-desktop.sh with `StartupWMClass=T8App`, the icon); T7's files moved to `packaging/linux/T7Suite/`.
+- [x] **README** covers both suites. The updater needed nothing: T8App already checks `T8suite_v` releases.
+- Deliberate differences:
+  - The setup is called T8Suite like the program (T8SuitePro before), and so are its shortcuts; the folder keeps the old name.
+  - Not shipped from the old folder: DTCDescription.xsd (not read), ASM-Mode.xshd and the compressor maps (built in), knock.wav (sound notifications aren't ported), T8.ico, the old adapter wrapper DLLs.
+- CAN frames are logged to canLog always, as T8Suite did (T7 has the Enable CAN logging setting).
+- The nightlies move on `master` now, for both suites; they were on `net10`, which no longer exists on origin, so none was ever published.
+- Not tested yet: WiX only runs on Windows, so SetupT8 is first built by CI. The first release needs a `T8suite_v` tag above the old 0.1.57 (e.g. `T8suite_v2.0.0`): an untagged build is 0.0.0, which the MSI treats as a downgrade.
+- Known gap (T7 has it too): the old T8Extras stays installed. It owns the same `Binaries\*.BIN` paths, so uninstalling it afterwards removes the stock bins; uninstall T8Extras first, or repair T8Suite afterwards.
 
 ## After T7
 
-- **T8Suite:** in progress, see Chunks: T8Suite above.
+- **T8Suite:** ported on branch `net10-t8`, see Chunks: T8Suite above; waiting for its first CI run on Windows and a `T8suite_v` tag.
 - **T5Suite2.0:** last. It is the largest UI (Trionic5Controls alone is 63k LOC) and the oldest code. T5 support is already in the new TrionicCANLib.
 - **Realtime leftovers from chunk 6:** sound notifications (3 slots, needs a cross-platform audio player) and the Combi adapter's ADC / thermocouple channels with their settings.
 - **Dead code to delete eventually:** T7CANFlasher/ (replaced by TrionicCANFlasher), the T7Libs/ wrapper DLLs, AquaGauge, LBIndustrialCtrls, ProCharts, MouseGestures.
@@ -504,6 +515,8 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Does AvaloniaEdit support Avalonia 12? If not: an older Avalonia, a fork, or a plain read-only text view for the disassembler.
 
 ## Log
+
+- 2026-10-10: T8 chunk 8 implemented: SetupT8 replacing the old T8SuitePro, T8's publish folder (stock bins, NLog.config, Kvaser), CI packaging and nightlies for both suites, Linux packaging per suite, README. Waiting for a first CI run on Windows.
 
 - 2026-10-10: T8 chunk 7 implemented: the disassembly, hex view, vectors, axis browser and airmass result viewer moved into the shared projects; T8Suite's PID / TEM editors, bit mask viewer, map preview popup, Create binary from TIS file and Tuning Wizard (.t8x packs). Disconnect ECU with the realtime panel polling no longer ends it with an error.
 
