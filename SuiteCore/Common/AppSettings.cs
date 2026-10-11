@@ -1565,7 +1565,8 @@ namespace CommonSuite
             }
         }
 
-        private bool m_ShowMapPreviewPopup = false;
+        // on by default in every suite (T8Suite: off)
+        private bool m_ShowMapPreviewPopup = true;
 
         public bool ShowMapPreviewPopup
         {

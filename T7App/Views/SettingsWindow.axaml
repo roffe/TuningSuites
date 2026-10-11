@@ -34,6 +34,9 @@
                 <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}">
                     <ToolTip.Tip><c:SuperTip Title="Hide symbol window" Text="To save display space you can hide the symbol list to a tab at the side of the window. The tab brings the list out again, and it slides away when you open a map." /></ToolTip.Tip>
                 </CheckBox>
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="Show map preview popup" IsChecked="{Binding ShowMapPreviewPopup}">
+                    <ToolTip.Tip><c:SuperTip Title="Show map preview popup" Text="When checked, pointing at a symbol's name in the symbol list shows its map from the file as a read-only table in a popup." /></ToolTip.Tip>
+                </CheckBox>
                 <CheckBox Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}">
                     <ToolTip.Tip><c:SuperTip Title="Synchronize mapviewers" Text="When checked, mapviewers that show the same map will react to changes made in one of them. E.g. selecting cells or turning the 3D graph." /></ToolTip.Tip>
                 </CheckBox>

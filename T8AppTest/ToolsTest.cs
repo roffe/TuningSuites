@@ -152,10 +152,12 @@ namespace T8AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 CommonSuite.SymbolHelper map = vm.Binary!.Find("IgnAbsCal.fi_NormalMAP");
-                // off by default, as in T8Suite
-                Assert.IsNull(vm.MapPreview(map));
+                // on by default (T8Suite: off); off shows none
+                Assert.IsTrue(vm.Settings.ShowMapPreviewPopup);
                 try
                 {
+                    vm.Settings.ShowMapPreviewPopup = false;
+                    Assert.IsNull(vm.MapPreview(map));
                     vm.Settings.ShowMapPreviewPopup = true;
                     Assert.AreEqual(18, vm.MapPreview(map)!.Map.Cols);
                     // none for a symbol that only lives in SRAM
@@ -179,7 +181,7 @@ namespace T8AppTest
                 }
                 finally
                 {
-                    vm.Settings.ShowMapPreviewPopup = false;
+                    vm.Settings.ShowMapPreviewPopup = true;
                 }
                 window.Close();
                 return true;

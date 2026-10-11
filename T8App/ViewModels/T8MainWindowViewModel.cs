@@ -114,8 +114,6 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
 
     public override bool ColorSymbolNames => false;
 
-    public override bool ShowsMapPreview => Settings.ShowMapPreviewPopup;
-
     private static readonly SymbolFilter AllSymbols = new("All symbols", _ => true);
 
     /// <summary>SetDefaultFilters: "Only symbols within binary" after every open, or "Only live-tuneable symbols".</summary>

@@ -210,9 +210,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>T5Suite coloured the description cell by the symbol's category instead.</summary>
     public virtual bool ColorDescriptionsByCategory => false;
 
-    /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
-    public virtual bool ShowsMapPreview => false;
-
     /// <summary>The closed-loop mark: T7Suite's "Closed loop indicator" setting (none by default).</summary>
     public virtual OpenLoopMark OpenLoopMarkStyle => (OpenLoopMark)Math.Clamp(Settings.StandardFill, 0, 2);
 
@@ -223,8 +220,11 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>A map's cell marks in a bin (T5Suite's padlocks and adaption boxes); null for none, as T7Suite and T8Suite.</summary>
     public virtual Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => null;
 
-    /// <summary>The map preview popup's content: the hovered map from the file, read only; null for one that only lives in SRAM.</summary>
-    public MapViewerViewModel? MapPreview(SymbolHelper sh) => ShowsMapPreview && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
+    /// <summary>
+    /// T8Suite's map preview popup (Settings → Show map preview popup), in every suite: the hovered map from the file, read only; null
+    /// for one that only lives in SRAM.
+    /// </summary>
+    public MapViewerViewModel? MapPreview(SymbolHelper sh) => Settings.ShowMapPreviewPopup && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
 
     /// <summary>The symbol list's predefined filters; none for T7Suite.</summary>
     public virtual IReadOnlyList<SymbolFilter> SymbolFilters => [];
