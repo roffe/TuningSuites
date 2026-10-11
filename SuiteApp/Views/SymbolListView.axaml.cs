@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using CommonSuite;
 using SuiteApp.ViewModels;
 
@@ -128,9 +130,25 @@ public partial class SymbolListView : UserControl
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainWindowViewModel.Symbols)) WatchSymbols();
-        // the selected symbol (the map in front too) unfolds its category
-        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedSymbol) && m_vm?.SelectedSymbol is { } sh) SymbolGrid.ScrollIntoView(sh, null);
+        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedSymbol) && m_vm?.SelectedSymbol is { } sh) ShowSymbol(sh);
     }
+
+    private static readonly Pointer s_wheel = new(Pointer.GetNextFreeId(), PointerType.Mouse, true);
+
+    // the selected symbol (the map in front too) unfolds its category. One chosen outside the list and not in view goes to the top,
+    // where the eye looks for it (ScrollIntoView leaves a row from below at the bottom edge); a click or key in the list moves nothing
+    private void ShowSymbol(SymbolHelper sh)
+    {
+        bool inView = ShownRow(sh) is { } shown && shown.Bounds.Y >= 0 && shown.Bounds.Bottom <= ((Visual)shown.GetVisualParent()!).Bounds.Height;
+        SymbolGrid.ScrollIntoView(sh, null);
+        if (inView || SymbolGrid.IsKeyboardFocusWithin) return;
+        SymbolGrid.UpdateLayout();
+        // the grid has no offset to set: scroll on by pixels as its mouse wheel does, which stops at the list's end
+        if (ShownRow(sh) is { Bounds.Y: > 0 } row)
+            SymbolGrid.RaiseEvent(new PointerWheelEventArgs(SymbolGrid, s_wheel, SymbolGrid, default, 0, PointerPointProperties.None, KeyModifiers.None, new Avalonia.Vector(0, -row.Bounds.Y / 50)));
+    }
+
+    private DataGridRow? ShownRow(SymbolHelper sh) => SymbolGrid.GetVisualDescendants().OfType<DataGridRow>().FirstOrDefault(r => r.IsVisible && r.DataContext == sh);
 
     // a new file starts folded
     private void WatchSymbols()

@@ -14,7 +14,8 @@ namespace T7AppTest
     public partial class AppTest
     {
         /// <summary>
-        /// The symbol list opens with every category folded; the map in front is selected in it, its category unfolded. A search
+        /// The symbol list opens with every category folded; the map in front is selected in it, its category unfolded, at the top of
+        /// the list when it wasn't in view. A search
         /// unfolds every category, its end folds them again; other refreshes keep the folds. Its text size comes from Settings.
         /// </summary>
         [TestMethod]
@@ -31,6 +32,7 @@ namespace T7AppTest
                 var grid = window.GetVisualDescendants().OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
                 SymbolHelper[] Shown() => [.. grid.GetVisualDescendants().OfType<DataGridRow>().Where(r => r.IsVisible).Select(r => r.DataContext).OfType<SymbolHelper>()];
                 Assert.IsEmpty(Shown(), "folded on open");
+                DataGridRow RowOf(SymbolHelper sh) => grid.GetVisualDescendants().OfType<DataGridRow>().First(r => r.IsVisible && r.DataContext == sh);
 
                 SymbolHelper ign = vm.Binary!.Find("IgnNormCal.Map"), fuel = vm.Binary.Find("BFuelCal.Map");
                 Assert.AreNotEqual(ign.Category, fuel.Category);
@@ -43,7 +45,16 @@ namespace T7AppTest
                     Assert.AreSame(sh, vm.SelectedSymbol);
                     Assert.AreSame(sh, grid.SelectedItem);
                     CollectionAssert.Contains(Shown(), sh, sh.Varname);
+                    // at the top of the list, not at the bottom edge where ScrollIntoView leaves a row from below
+                    Assert.AreEqual(0, RowOf(sh).Bounds.Y, 1, sh.Varname);
                 }
+                // a symbol already in view stays where it is
+                vm.OpenSymbolByName("IgnNormCal.m_AirXSP");
+                window.CaptureRenderedFrame();
+                Assert.AreEqual("IgnNormCal.m_AirXSP", vm.SelectedSymbol?.Varname);
+                Assert.AreEqual(0, RowOf(ign).Bounds.Y, 1);
+                vm.SelectedViewer = ignViewer;
+                window.CaptureRenderedFrame();
                 // a search shows its matches unfolded; cleared, folded again but the selected symbol's category
                 vm.SearchText = "Cal.Map";
                 window.CaptureRenderedFrame();
@@ -82,6 +93,13 @@ namespace T7AppTest
                 }
                 window.CaptureRenderedFrame();
                 Assert.AreEqual(28, Cell().Bounds.Height, 1);
+
+                // one chosen in the list (a key, a click) only scrolls into view
+                grid.Focus();
+                SymbolHelper below = vm.Binary.Find("LambdaCal.MaxLoadNormTab");
+                vm.SelectedSymbol = below;
+                window.CaptureRenderedFrame();
+                Assert.IsGreaterThan(0, RowOf(below).Bounds.Y);
 
                 // a file opened into the shown list: folded too, nothing selected (the grid made the first row current, unfolding its category)
                 Assert.IsTrue(await vm.OpenFileAsync(Path.Combine(s_dir, "5168646.bin"), true));
