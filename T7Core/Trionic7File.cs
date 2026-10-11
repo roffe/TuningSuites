@@ -134,77 +134,28 @@ namespace T7
         }
 
         /// <summary>
-        /// 
+        /// Whether the footer has a 0x9B field (the packed symbol table's address): the file is packed. Walks the footer's
+        /// fields back from the end (length, id, data), as T7FileHeader reads them. T7Suite took any 9B byte followed by one
+        /// below 0x30 in the last 0x90 bytes, and the F2 / FB checksums a save writes there can hold that pair: an unpacked
+        /// file then reopened with no symbols.
         /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="value"></param>
-        /// <param name="filelength"></param>
-        /// <param name="length"></param>
-        /// <param name="val"></param>
-        /// <returns></returns>
-        private static int ReadMarkerAddressContent(string filename, int value, int filelength, out int length, out int val)
-        {
-            int retval = 0;
-            length = 0;
-            val = 0;
-            if (filename != string.Empty)
-            {
-                if (File.Exists(filename))
-                {
-                    // read the file footer - expect this to be 0x07FF00 - 0x07FFFF for T7 files
-                    using (FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read))
-                    {
-                        using (BinaryReader br = new BinaryReader(fs))
-                        {
-                            int fileoffset = filelength - 0x90;
-                            try
-                            {
-                                fs.Seek(fileoffset, SeekOrigin.Begin);      // 0x07FF70
-                                byte[] inb = br.ReadBytes(0x90);
-                                for (int t = 0; t < 0x90; t++)
-                                {
-                                    if (((byte)inb.GetValue(t) == (byte)value) && ((byte)inb.GetValue(t + 1) < 0x30))
-                                    {
-                                        // marker gevonden
-                                        // lees 6 terug
-                                        retval = fileoffset + t;            // 0x07FF70 + t
-                                        length = (byte)inb.GetValue(t + 1);
-                                        break;
-                                    }
-                                }
-                                fs.Seek((retval - length), SeekOrigin.Begin);
-                                byte[] info = br.ReadBytes(length);
-                                for (int bc = 0; bc < (info.Length); bc++)
-                                {
-                                    val <<= 8;
-                                    val |= Convert.ToInt32(info.GetValue(bc));
-                                }
-                            }
-                            catch (Exception E)
-                            {
-                                logger.Debug(E.Message);
-                                retval = 0;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return retval;
-
-        }
-
-        /// <summary>
-        /// Check is identifier 0x9B is present in the footer. If this is the case, the file is packed!
-        /// </summary>
-        /// <param name="m_currentfile"></param>
-        /// <returns></returns>
         public static bool IsBinaryPackedVersion(string m_currentfile, int filelength)
         {
-            int len = 0;
-            int ival = 0;
-            int value = ReadMarkerAddressContent(m_currentfile, 0x9B, filelength, out len, out ival);
-            if (value > 0 && ival < filelength && ival > 0) return true;
+            if (filelength < 0x200) return false;
+            byte[] footer = new byte[0x200];
+            using (FileStream fs = new FileStream(m_currentfile, FileMode.Open, FileAccess.Read))
+            {
+                fs.Seek(filelength - footer.Length, SeekOrigin.Begin);
+                fs.ReadExactly(footer);
+            }
+            int i = footer.Length - 1;
+            while (i > 1)
+            {
+                int fieldLength = footer[i];
+                if (fieldLength == 0x00 || fieldLength == 0xFF) break;
+                if (footer[i - 1] == 0x9B) return true;
+                i -= 2 + fieldLength;
+            }
             return false;
         }
 
