@@ -20,5 +20,7 @@
   <Project Path="T8AppTest/T8AppTest.csproj" />
   <Project Path="T8Core/T8Core.csproj" />
   <Project Path="T8CoreTest/T8CoreTest.csproj" />
+  <Project Path="TxSuite/TxSuite.csproj" />
+  <Project Path="TxSuiteTest/TxSuiteTest.csproj" />
   <Project Path="WidebandSupport/WidebandSupport.csproj" />
 </Solution>

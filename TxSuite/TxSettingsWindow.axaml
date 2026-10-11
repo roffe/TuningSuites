@@ -1,0 +1,325 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="using:System"
+        xmlns:local="using:TxSuite"
+        xmlns:svm="using:SuiteApp.ViewModels"
+        xmlns:t5="using:T5App.ViewModels"
+        xmlns:t5v="using:T5App.Views"
+        xmlns:t7="using:T7App.ViewModels"
+        xmlns:t8="using:T8App.ViewModels"
+        xmlns:c="using:SuiteApp.Controls"
+        x:Class="TxSuite.TxSettingsWindow"
+        x:DataType="local:TxSettingsViewModel"
+        Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <!-- the suites' frmSettings in one: Common holds what every suite has (T7Suite's captions and order), each ECU's tab its own
+         options in its old groups; the same three 300 px columns as the suites' dialogs -->
+    <Window.Styles>
+        <Style Selector="Grid.columns > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Grid.pair > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+    <DockPanel Margin="12">
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
+                <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
+            </StackPanel>
+        </Grid>
+        <TabControl x:Name="Tabs">
+            <TabItem Header="Common">
+                <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding Common}" x:DataType="svm:SuiteSettingsViewModel">
+                    <HeaderedContentControl Classes="group" Header="User interface settings">
+                        <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                            <CheckBox Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}">
+                                <ToolTip.Tip><c:SuperTip Title="Use red and white maps" Text="When checked, displays maps in red and transparent only. Normally green is used to display low values and red for higher values." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="1" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}">
+                                <ToolTip.Tip><c:SuperTip Title="Don't display colors in mapviewer" Text="To improve performance you can check this item and coloring of the mapviewer cells will be disabled." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="2" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}">
+                                <ToolTip.Tip><c:SuperTip Title="Show graphs in mapviewer" Text="When checked the graphical representation of the selected map will also be displayed. This consumes more system memory and cpu time." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}">
+                                <ToolTip.Tip><c:SuperTip Title="Auto load last file on startup" Text="Lets you decide whether or not the last used file should be automatically loaded when the program starts up." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}">
+                                <ToolTip.Tip><c:SuperTip Title="Hide symbol window" Text="To save display space you can hide the symbol list to a tab at the side of the window. The tab brings the list out again, and it slides away when you open a map." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="2" Grid.Column="1" Content="Show map preview popup" IsChecked="{Binding ShowMapPreviewPopup}">
+                                <ToolTip.Tip><c:SuperTip Title="Show map preview popup" Text="When checked, pointing at a symbol's name in the symbol list shows its map from the file as a read-only table in a popup." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}">
+                                <ToolTip.Tip><c:SuperTip Title="Synchronize mapviewers" Text="When checked, mapviewers that show the same map will react to changes made in one of them. E.g. selecting cells or turning the 3D graph." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="1" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}">
+                                <ToolTip.Tip><c:SuperTip Title="Show addresses and lengths in Hex" Text="When checked, addresses and lengths in the symbol list and the search results, and the lengths in the compare results, are shown in hexadecimal, otherwise in decimal. The symbol list's find box and filter row match them as shown." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="2" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}">
+                                <ToolTip.Tip><c:SuperTip Title="Auto update checksum" Text="If checked, the application will make sure that the checksum in the opened file will be updated when needed. If not checked, the suite asks before correcting a wrong checksum and before flashing; map saves always update it." /></ToolTip.Tip>
+                            </CheckBox>
+                            <Grid Grid.Row="3" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Default view type for maps" Text="Lets you choose the view type a symbol's map opens in: hexadecimal, decimal or easy view, which shows the values converted with the map's factor and offset. Each mapviewer can still be switched to another view type." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                                    <ColumnDefinition Width="280" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Default view type for maps" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <Grid Grid.Row="4" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Color blind mode" Text="Lets you choose a color scale for maps and their graphs that is easier to tell apart with color blindness, instead of the normal green, yellow and red. Open mapviewers change at once; red and white tables and maps opened while connected to the ECU keep their own colors." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                                    <ColumnDefinition Width="280" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Color blind mode" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding ColorBlindModes}" SelectedIndex="{Binding ColorBlindMode}" HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <Grid Grid.Row="5" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Symbol list font size" Text="Lets you choose the size of the text in the symbol list, in pixels (8 to 24); its rows grow and shrink with it. The list changes at once." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                                    <ColumnDefinition Width="280" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Symbol list font size" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding SymbolListFontSize}" Minimum="8" Maximum="24" Increment="1" FormatString="0" Width="120" HorizontalAlignment="Left" />
+                            </Grid>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="Project settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,616" ColumnSpacing="16">
+                            <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}">
+                                <ToolTip.Tip><c:SuperTip Title="Request project notes" Text="Determines whether TxSuite should prompt for a note when a change is made to a symbol while working in a project." /></ToolTip.Tip>
+                            </CheckBox>
+                            <Grid Grid.Column="1" Classes="pair" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Project folder" Text="Lets you choose the folder in which TxSuite creates its projects and in which Open a project looks for them, for every ECU. Each project is a subfolder there with a copy of its binary, its transaction log and its logbook." /></ToolTip.Tip>
+                                <TextBlock Text="Project folder" />
+                                <TextBox Grid.Column="1" Text="{Binding ProjectFolder}" ToolTip.Tip="{Binding ProjectFolder}">
+                                    <TextBox.InnerRightContent>
+                                        <Button Content="..." Padding="6,0" Click="OnBrowse" />
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
+                            </Grid>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="Realtime settings">
+                        <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                            <CheckBox Content="Interpolate timescale for LogWorks" IsChecked="{Binding InterpolateLogWorksTimescale}">
+                                <ToolTip.Tip><c:SuperTip Title="Interpolate timescale for LogWorks" Text="If checked, TxSuite will interpolate the measurements from the canbus to match the 0.083 second interval that LogWorks uses, when exporting a logfile to LogWorks." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="1" Content="Measure AFR in lambda" IsChecked="{Binding MeasureAFRInLambda}">
+                                <ToolTip.Tip><c:SuperTip Title="Measure AFR in lambda" Text="If you prefer AFR measurements in lambda values instead of AFR values, enable this." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}">
+                                <ToolTip.Tip><c:SuperTip Title="Auto update SRAM viewers every" Text="When checked, TxSuite reads the maps of the online map viewers (opened or read from the ECU while connected) from the ECU every given number of seconds (5 to 60) while connected. Viewers with unsaved changes are left alone." /></ToolTip.Tip>
+                            </CheckBox>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Auto update SRAM viewers every" Text="When checked, TxSuite reads the maps of the online map viewers (opened or read from the ECU while connected) from the ECU every given number of seconds (5 to 60) while connected. Viewers with unsaved changes are left alone." /></ToolTip.Tip>
+                                <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="120" />
+                                <TextBlock Text="seconds" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <CheckBox Grid.Row="1" Grid.Column="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}">
+                                <ToolTip.Tip><c:SuperTip Title="Use wideband O2 on com port" Text="When checked, TxSuite reads the wideband controller chosen under Wideband device on the Wideband com port while the realtime panel runs. Its reading is used as the realtime AFR and is shown and logged as Wideband. It turns off the wideband through a symbol on the ECU tabs." /></ToolTip.Tip>
+                            </CheckBox>
+                            <Grid Grid.Row="2" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0">
+                                <ToolTip.Tip><c:SuperTip Title="CANBus adapter type" Text="Lets you choose which CAN bus device to use for ECU interaction." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label0" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="CANBus adapter type" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <Grid Grid.Row="2" Grid.Column="1" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0">
+                                <ToolTip.Tip><c:SuperTip Title="Adapter" Text="Lets you choose which adapter of the selected type to use; for an OBDLink SX, Just4Trionic or SLCAN adapter this is its serial port. The CombiAdapter is found by itself, so the list stays empty for it." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label1" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Adapter" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch" IsEnabled="{Binding HasAdapters}"
+                                          PlaceholderText="Select an adapter" />
+                            </Grid>
+                            <Grid Grid.Row="2" Grid.Column="2" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0" IsVisible="{Binding AdapterNeedsBaudrate}">
+                                <ToolTip.Tip><c:SuperTip Title="Serial speed" Text="Lets you choose the speed of the serial connection to an OBDLink SX (it is switched to this speed after connecting) or a Just4Trionic. SLCAN adapters always use 3000000 baud." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label2" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Serial speed" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding Baudrates}" SelectedItem="{Binding Baudrate}" HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <Grid Grid.Row="3" Classes="pair" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Wideband device" Text="Lets you choose the type of wideband controller on the Wideband com port, so TxSuite reads it with that device's own protocol and speed. Only used with Use wideband O2 on com port." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label0" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Wideband device" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch"
+                                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                            </Grid>
+                            <Grid Grid.Row="3" Grid.Column="1" Classes="pair" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Wideband com port" Text="Lets you choose the serial port the wideband controller is connected to. Only used with Use wideband O2 on com port." /></ToolTip.Tip>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label1" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Wideband com port" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch"
+                                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                            </Grid>
+                        </Grid>
+                    </HeaderedContentControl>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="T5">
+                <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding T5}" x:DataType="t5:SettingsViewModel">
+                    <HeaderedContentControl Classes="group" Header="User interface settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
+                            <CheckBox Content="Auto detect mapsensor type" IsChecked="{Binding AutoDetectMapsensorType}">
+                                <ToolTip.Tip><c:SuperTip Title="Auto detect mapsensor type" Text="If checked, T5Suite will try to determine the used mapsensor type in the file by examining certain maps." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Advanced mode enabled" IsChecked="{Binding EnableAdvancedMode}">
+                                <ToolTip.Tip><c:SuperTip Title="Advanced mode enabled" Text="If checked, all advanced topics will be visible. If you are not sure whether you need this, leave it unchecked." /></ToolTip.Tip>
+                            </CheckBox>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="Realtime settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                            <CheckBox Content="Always generate AFR maps" IsChecked="{Binding AlwaysCreateAfrMaps}">
+                                <ToolTip.Tip><c:SuperTip Title="Always generate AFR maps" Text="When checked, T5Suite sets up the AFR maps (target, feedback and counter maps in an AFRMaps folder next to the file) as soon as a file is opened, instead of when they are first needed. Missing maps are created, existing ones are loaded." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="1" Content="Knock counter snapshot after disconnect" IsChecked="{Binding KnockCounterSnapshot}">
+                                <ToolTip.Tip><c:SuperTip Title="Knock counter snapshot after disconnect" Text="When checked, T5Suite saves the ECU's knock counter map (Knock_count_map) as a .KNK file in the Snapshots folder (the project's, else next to the file) when you stop the realtime panel or disconnect from the ECU. T5.5 only; Knock map snapshots lists them." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Use wideband lambda through symbol" IsChecked="{Binding UseWidebandLambda}">
+                                <ToolTip.Tip><c:SuperTip Title="Use wideband lambda through symbol" Text="Lets you select which symbol to read from the ECU's memory that should be used as wideband lambda values." /></ToolTip.Tip>
+                            </CheckBox>
+                            <ComboBox Grid.Column="2" ItemsSource="{Binding WidebandSymbols}" SelectedItem="{Binding WideBandSymbol}" HorizontalAlignment="Stretch">
+                                <ToolTip.Tip><c:SuperTip Title="Use wideband lambda through symbol" Text="Lets you select which symbol to read from the ECU's memory that should be used as wideband lambda values." /></ToolTip.Tip>
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="sys:String">
+                                        <TextBlock Text="{Binding Converter={x:Static t5v:SettingsWindow.PinCaption}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Grid Grid.Row="1" Grid.Column="1" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Low voltage (Volt)" Text="Lets you set the low end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line." /></ToolTip.Tip>
+                                <TextBlock Text="Low voltage (Volt)" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandLowVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                            <Grid Grid.Row="1" Grid.Column="2" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Low voltage (Volt)" Text="Lets you set the low end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line." /></ToolTip.Tip>
+                                <TextBlock Text="equals AFR" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandLowAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                            <Grid Grid.Row="2" Grid.Column="1" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="High voltage (Volt)" Text="Lets you set the high end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line." /></ToolTip.Tip>
+                                <TextBlock Text="High voltage (Volt)" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandHighVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                            <Grid Grid.Row="2" Grid.Column="2" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="High voltage (Volt)" Text="Lets you set the high end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line." /></ToolTip.Tip>
+                                <TextBlock Text="equals AFR" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandHighAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <Button Content="Autotune settings" Click="OnT5Autotune" Margin="0,6,0,0" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="T7">
+                <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding T7}" x:DataType="t7:SettingsViewModel">
+                    <HeaderedContentControl Classes="group" Header="User interface settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
+                            <CheckBox Content="Write timestamp marker in binary" IsChecked="{Binding WriteTimestampInBinary}">
+                                <ToolTip.Tip><c:SuperTip Title="Write timestamp marker in binary" Text="With this option on, T7Suite will write the timestamp shown in the firmware information screen into the binary. If you don't want T7Suite to do this, you can turn this function off here." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Use T7Suite AFR maps" IsChecked="{Binding AutoCreateAFRMaps}">
+                                <ToolTip.Tip><c:SuperTip Title="Use T7Suite AFR maps" Text="If you wish to use the AFR feedback maps in T7Suite, you need to have this checked: only then does the realtime panel log the wideband AFR into them, and only then can they be cleared." /></ToolTip.Tip>
+                            </CheckBox>
+                            <ComboBox Grid.Column="2" ItemsSource="{Binding ClosedLoopIndicators}" SelectedIndex="{Binding StandardFill}" HorizontalAlignment="Stretch">
+                                <ToolTip.Tip><c:SuperTip Title="Closed loop indicator" Text="Lets you choose how mg/c by rpm maps mark the cells in the closed loop area: no mark, a black square around the cell or a green triangle in its corner. The area is where the load stays below LambdaCal.MaxLoadNormTab (LambdaCal.MaxLoadE85Tab for the E85 maps)." /></ToolTip.Tip>
+                            </ComboBox>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="General settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
+                            <CheckBox Content="Auto fix footer" IsChecked="{Binding AutoFixFooter}">
+                                <ToolTip.Tip><c:SuperTip Title="Auto fix footer" Text="When checked, T7Suite repairs a broken footer when it opens a binary, on Verify checksum and whenever it updates the checksum. A footer that holds the chassis ID more than once, or lacks the chassis ID or the immobilizer code, is rebuilt with each field once (a missing chassis ID or immobilizer code as zeros)." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Enable CAN logging" IsChecked="{Binding EnableCanLog}">
+                                <ToolTip.Tip><c:SuperTip Title="Enable CAN logging" Text="If checked, a detailed log of the communication with the ECU will be written: every CAN frame sent and received goes into canLog&lt;date&gt;.txt. This downgrades performance and should only be used for debugging." /></ToolTip.Tip>
+                            </CheckBox>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="Realtime settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                            <CheckBox Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}">
+                                <ToolTip.Tip><c:SuperTip Title="Only P-bus connection" Text="When checked, T7Suite connects to the ECU on the P-bus (500 kbit/s) only. If not checked, adapters that support the slower I-bus (47.6 kbit/s) connect on it instead, and only some of them fall back to the P-bus when they find no traffic there." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Row="1" Content="Use wideband O2 (pin 16) with symbol" IsChecked="{Binding UseWidebandLambda}">
+                                <ToolTip.Tip><c:SuperTip Title="Use wideband O2 (pin 16) with symbol" Text="Lets you select which symbol to read from the ECU's memory that should be used as wideband lambda values." /></ToolTip.Tip>
+                            </CheckBox>
+                            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding WidebandSymbols}" SelectedItem="{Binding WideBandSymbol}" HorizontalAlignment="Stretch">
+                                <ToolTip.Tip><c:SuperTip Title="Use wideband O2 (pin 16) with symbol" Text="Lets you select which symbol to read from the ECU's memory that should be used as wideband lambda values." /></ToolTip.Tip>
+                            </ComboBox>
+                            <Grid Grid.Row="2" Grid.Column="1" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Low voltage (Volt)" Text="Lets you set the low end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line. DisplProt.LambdaScanner gives AFR directly." /></ToolTip.Tip>
+                                <TextBlock Text="Low voltage (Volt)" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandLowVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                            <Grid Grid.Row="2" Grid.Column="2" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Low voltage (Volt)" Text="Lets you set the low end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line. DisplProt.LambdaScanner gives AFR directly." /></ToolTip.Tip>
+                                <TextBlock Text="equals AFR" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandLowAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                            <Grid Grid.Row="3" Grid.Column="1" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="High voltage (Volt)" Text="Lets you set the high end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line. DisplProt.LambdaScanner gives AFR directly." /></ToolTip.Tip>
+                                <TextBlock Text="High voltage (Volt)" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandHighVoltage}" Minimum="0" Maximum="5" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                            <Grid Grid.Row="3" Grid.Column="2" Classes="pair" ColumnDefinitions="*,140" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="High voltage (Volt)" Text="Lets you set the high end of the wideband's voltage to AFR conversion: this voltage equals the AFR next to it, and voltages in between convert on a straight line. DisplProt.LambdaScanner gives AFR directly." /></ToolTip.Tip>
+                                <TextBlock Text="equals AFR" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding WidebandHighAFR}" Minimum="5" Maximum="30" Increment="0.1" FormatString="0.00" />
+                            </Grid>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <Button Content="Autotune settings" Click="OnT7Autotune" Margin="0,6,0,0" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="T8">
+                <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding T8}" x:DataType="t8:SettingsViewModel">
+                    <HeaderedContentControl Classes="group" Header="User interface settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
+                            <CheckBox Content="Auto mapdetection active" IsChecked="{Binding MapDetectionActive}">
+                                <ToolTip.Tip><c:SuperTip Title="Auto mapdetection active" Text="When checked, T8Suite will try to add names to symbols in binaries without symbol tables. This is a guesstimate routine." /></ToolTip.Tip>
+                            </CheckBox>
+                        </Grid>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="Realtime settings">
+                        <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
+                            <CheckBox Content="Prefer dynamic retrieval of live data" IsChecked="{Binding PreferDynamicLiveData}">
+                                <ToolTip.Tip><c:SuperTip Title="Prefer dynamic retrieval of live data" Text="Massive boost to sample rate if the binary is compatible." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="1" Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}">
+                                <ToolTip.Tip><c:SuperTip Title="Only P-bus connection" Text="When checked, T8Suite connects to the ECU on the P-bus (500 kbit/s) only. If not checked, the Lawicel CANUSB, Kvaser, Just4Trionic and SLCAN adapters connect on a slower bus instead, and only some of them fall back to the P-bus when they find no traffic there." /></ToolTip.Tip>
+                            </CheckBox>
+                            <CheckBox Grid.Column="2" Content="Use Legion Bootloader" IsChecked="{Binding UseLegionBootloader}">
+                                <ToolTip.Tip><c:SuperTip Title="Use Legion Bootloader" Text="When checked, T8Suite reads, flashes and recovers the ECU with the Legion bootloader, which only erases and writes the partitions that differ from the file. If not checked, the default bootloader is used." /></ToolTip.Tip>
+                            </CheckBox>
+                        </Grid>
+                    </HeaderedContentControl>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

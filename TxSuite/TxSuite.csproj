@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TxSuite</RootNamespace>
+    <AssemblyName>TxSuite</AssemblyName>
+    <!-- the version comes from the nearest TxSuite_vX.Y.Z tag (Directory.Build.props) -->
+    <VersionTagPrefix>TxSuite_</VersionTagPrefix>
+    <!-- ponytail: T7Suite's icon until TxSuite has its own -->
+    <ApplicationIcon>..\T7App\T7Suite.ico</ApplicationIcon>
+    <Company>MattiasC</Company>
+    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- the suites it holds are programs of their own too -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
+  </PropertyGroup>
+
+  <!-- 32-bit launcher on Windows for the x86-only adapter drivers, as the suites (T7App.csproj) -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT'">
+    <DefaultAppHostRuntimeIdentifier>win-x86</DefaultAppHostRuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- the suites' own NLog.config come along with them; publish refuses four files of one name, and TxSuite's is the one to keep -->
+  <Target Name="DropSuiteLogConfigs" AfterTargets="ComputeFilesToPublish" BeforeTargets="_HandleFileConflictsForPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="'%(RelativePath)' == 'NLog.config' and '%(FullPath)' != '$(MSBuildProjectDirectory)$([System.IO.Path]::DirectorySeparatorChar)NLog.config'" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- their manuals, canlib32.dll and the rest come along -->
+    <ProjectReference Include="..\T5App\T5App.csproj" />
+    <ProjectReference Include="..\T7App\T7App.csproj" />
+    <ProjectReference Include="..\T8App\T8App.csproj" />
+  </ItemGroup>
+
+</Project>
