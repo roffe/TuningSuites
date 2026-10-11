@@ -41,7 +41,8 @@ namespace T7AppTest
                 var one = Open("PwmLimitCal.Size");
                 Assert.AreEqual(400, one.window.Width, 1);
                 Assert.IsLessThan(450, one.window.Height);
-                Assert.AreEqual(one.natural.Height, one.table.Height, 1);
+                // about its natural height (fonts differ by machine; half the window, it was hundreds of pixels)
+                Assert.AreEqual(one.natural.Height, one.table.Height, 6);
 
                 var map = Open("IgnNormCal.Map");
                 // no wider than the table needs (narrower when the symbol list leaves less room), as high as other documents open
