@@ -234,8 +234,38 @@ public partial class SymbolListView : UserControl
 
     private void OnSymbolKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || m_editingSymbol || Vm is not { } vm) return;
-        vm.OpenSymbolCommand.Execute(vm.SelectedSymbol);
-        e.Handled = true;
+        if (m_editingSymbol || Vm is not { } vm) return;
+        if (e.Key == Key.Enter)
+        {
+            vm.OpenSymbolCommand.Execute(vm.SelectedSymbol);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Left && e.KeyModifiers == KeyModifiers.None) e.Handled = FoldUp();
+    }
+
+    // Left folds the nearest category above, as in a tree: a symbol's own, a folded subcategory's parent. An unfolded category
+    // the grid folds itself; on a symbol it moved a column to the left
+    private bool FoldUp()
+    {
+        if (m_vm?.Symbols?.Groups is not { } groups) return false;
+        var grid = SymbolGrid.GetVisualDescendants();
+        object? current = grid.OfType<DataGridRowGroupHeader>().FirstOrDefault(h => h.Classes.Contains(":current")) is { } header
+            ? header.Classes.Contains(":expanded") ? null : header.DataContext
+            : grid.OfType<DataGridCell>().FirstOrDefault(c => c.Classes.Contains(":current"))?.DataContext as SymbolHelper;
+        if (current == null || Parent(groups, current) is not { } parent) return false;
+        SymbolGrid.CollapseRowGroup(parent, false);
+        SymbolGrid.ScrollIntoView(parent, null);
+        return true;
+    }
+
+    // the category holding a symbol or a subcategory, null at the top
+    private static DataGridCollectionViewGroup? Parent(IEnumerable<object> groups, object item)
+    {
+        foreach (DataGridCollectionViewGroup g in groups.OfType<DataGridCollectionViewGroup>())
+        {
+            if (g.Items.Contains(item)) return g;
+            if (Parent(g.Items, item) is { } parent) return parent;
+        }
+        return null;
     }
 }

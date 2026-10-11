@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T5App.ViewModels;
@@ -23,29 +24,42 @@ namespace T5AppTest
             File.Copy(Path.Combine(Here(), "..", "T5Binaries", StockBin), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
-                var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
-                window.Show();
-                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-
-                vm.OpenSymbolByName("Insp_mat!");
-                Maximized(window, "mapviewer");
-
-                var settings = new SettingsViewModel(vm.Settings, vm.T5Settings);
-                // the default under the home folder, not whoever made the screenshots
-                settings.ProjectFolder = settings.ProjectFolder.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~");
-                foreach (var (w, name) in new (Window, string)[]
+                try
                 {
-                    (T5ToolWindows.Dyno(window, vm), "dyno"),
-                    (new FirmwareOptionsWindow { DataContext = vm.FirmwareOptions()! }, "firmware"),
-                    (new SettingsWindow { DataContext = settings }, "settings"),
-                })
-                {
-                    w.Show();
-                    Save(w, name);
-                    w.Close();
+                    // each shot in the light skin, then in the dark one (<name>-dark.png)
+                    foreach (var (theme, suffix) in new[] { (ThemeVariant.Light, ""), (ThemeVariant.Dark, "-dark") })
+                    {
+                        var vm = new T5MainWindowViewModel();
+                        var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
+                        window.Show();
+                        Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                        // after the window applied the skin from the settings
+                        Avalonia.Application.Current!.RequestedThemeVariant = theme;
+
+                        vm.OpenSymbolByName("Insp_mat!");
+                        Maximized(window, "mapviewer" + suffix);
+
+                        var settings = new SettingsViewModel(vm.Settings, vm.T5Settings);
+                        // the default under the home folder, not whoever made the screenshots
+                        settings.ProjectFolder = settings.ProjectFolder.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~");
+                        foreach (var (w, name) in new (Window, string)[]
+                        {
+                            (T5ToolWindows.Dyno(window, vm), "dyno"),
+                            (new FirmwareOptionsWindow { DataContext = vm.FirmwareOptions()! }, "firmware"),
+                            (new SettingsWindow { DataContext = settings }, "settings"),
+                        })
+                        {
+                            w.Show();
+                            Save(w, name + suffix);
+                            w.Close();
+                        }
+                        window.Close();
+                    }
                 }
-                window.Close();
+                finally
+                {
+                    Avalonia.Application.Current!.RequestedThemeVariant = ThemeVariant.Default;
+                }
                 return true;
             }, default).GetAwaiter().GetResult();
         }

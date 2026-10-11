@@ -628,6 +628,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-11: Left in the symbol list folds the nearest category above, as in a tree: on a symbol its own category, on a folded subcategory (T5) its parent; an unfolded category the grid folded already. On a symbol Left no longer moves to the column on its left. The README shows the suites in the light and the dark skin (`docs/screenshots/<suite>/<name>-dark.png`, from the same Screenshots tests).
 - 2026-10-11: A map opens in a window the size of its table, as T7Suite's Auto size new mapwindows sized its panels: as wide as the table (at least 400 px, T7Suite's minimum), the table at its natural height over a graph of at least eight table rows (the viewer splits its height by rows now, not in halves), at most the working size other documents open at (60 % × 80 % of the workspace, which every map took before, a single value too). In T5, T7 and T8 (issues #4, #5).
 - 2026-10-11: The category row the keyboard is on is highlighted like a selected row (Fluent's DataGrid gave a current group header no look) in every grouped list of T5, T7 and T8: the symbol list, compare results, part number lists, SID information (issue #3).
 - 2026-10-11: A save can no longer make an unpacked T7 bin look packed (it reopened with no symbols), and T8's layer-2 checksum keeps the byte sum or dword sum the file uses (TrionicCANLib `ChecksumT8`). Both found by txlogger's ecusymbol factory tests.

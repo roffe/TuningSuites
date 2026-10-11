@@ -27,6 +27,19 @@ The suites support the same interfaces as the flasher (T5Suite talks to the ECU'
 | J2534 (Beta) | vendor DLL (32-bit, from the registry) | vendor `.so` from `~/.passthru/*.json` | not supported |
 | Wideband lambda (realtime) | serial port | serial port | serial port |
 
+## Screenshots
+
+Every suite has a light and a dark skin (Skin menu, or the system's theme).
+
+| Light | Dark |
+|---|---|
+| ![T7Suite map viewer](docs/screenshots/t7/mapviewer.png) | ![T7Suite map viewer, dark](docs/screenshots/t7/mapviewer-dark.png) |
+| ![T5Suite map viewer](docs/screenshots/t5/mapviewer.png) | ![T5Suite map viewer, dark](docs/screenshots/t5/mapviewer-dark.png) |
+| ![T7Suite airmass result](docs/screenshots/t7/airmass-table.png) | ![T7Suite airmass result, dark](docs/screenshots/t7/airmass-table-dark.png) |
+| ![T8Suite dyno graph](docs/screenshots/t8/airmass-dyno.png) | ![T8Suite dyno graph, dark](docs/screenshots/t8/airmass-dyno-dark.png) |
+
+T7Suite's ignition map, T5Suite's fuel map, the airmass result of T7Suite and T8Suite's dyno graph, all on stock binaries. The firmware and settings dialogs of each suite are in [docs/screenshots](docs/screenshots); `bash docs/screenshots/generate.sh` renders them all again from the apps.
+
 ## System Requirements
 - Windows 10 or Windows 11. The setup brings its own .NET runtime and the Visual C++ 2010 runtime the Lawicel driver needs.
 - Linux x64 or arm64 with a desktop (X11 or XWayland).
