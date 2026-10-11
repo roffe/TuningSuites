@@ -459,11 +459,13 @@ public partial class SuiteMainWindow : Window
                 // by the symbol list) or floating windows that couldn't be brought back
                 dockable.CanFloat = false;
                 dockable.CanDrop = false;
-                // a new inner window opens at a working size, cascaded below the last one (Dock's default is small)
+                // a new inner window opens at a working size, a map's at the size it needs, cascaded below the last one (Dock's
+                // default is small)
                 if (dockable is Dock.Model.Controls.IMdiDocument mdi)
                 {
                     int n = Space.Documents.VisibleDockables.Count - 1;
                     double width = Math.Max(640, Space.Workspace.Bounds.Width * 0.6), height = Math.Max(460, Space.Workspace.Bounds.Height * 0.8);
+                    if (viewer is MapViewerViewModel map) (width, height) = MapWindowSize(map, width, height);
                     mdi.MdiBounds = new Dock.Model.Core.DockRect(24 * (n % 8), 24 * (n % 8), width, height);
                 }
             }
@@ -478,6 +480,24 @@ public partial class SuiteMainWindow : Window
                 m_syncingDock = false;
             }
         });
+    }
+
+    // ponytail: the title bar, toolbar and buttons as measured in the light skin; measure a laid-out viewer if they ever change
+    private const double MapWindowChrome = 155, MapWindowTabStrip = 32;
+
+    /// <summary>
+    /// T7Suite's Auto size new mapwindows: as wide as the table (at least 400), as high as the table and the graph's rows under it,
+    /// never larger than the working size other documents open at. Every map opened at that size, a single value too.
+    /// </summary>
+    private (double width, double height) MapWindowSize(MapViewerViewModel viewer, double maxWidth, double maxHeight)
+    {
+        var table = new MapControls.MapGrid { Map = viewer.Map, ViewType = viewer.ViewType, FontFamily = FontFamily, FontSize = FontSize };
+        table.Measure(Size.Infinity);
+        Size natural = table.DesiredSize;
+        double row = natural.Height / (viewer.Map.Rows + 1);
+        double height = MapWindowChrome + natural.Height + (viewer.GraphVisible ? 4 + MapControls.MapViewer.GraphRows(viewer.Map) * row : 0)
+            + (viewer.Tabs != null ? MapWindowTabStrip : 0);
+        return (Math.Clamp(natural.Width + 24, 400, maxWidth), Math.Min(height, maxHeight));
     }
 
     protected void OnCascade(object? sender, RoutedEventArgs e) => Space.Documents.CascadeDocuments?.Execute(null);
