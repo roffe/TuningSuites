@@ -87,6 +87,8 @@
                     <!-- T7Suite kept the focused row's look when the grid lost focus (EnableAppearanceHideSelection = false) -->
                     <SolidColorBrush x:Key="DataGridRowSelectedUnfocusedBackgroundBrush" Color="#CDE6F7" />
                     <SolidColorBrush x:Key="DataGridRowSelectedHoveredUnfocusedBackgroundBrush" Color="#BCDCF4" />
+                    <!-- the category row under the keyboard, as a selected row -->
+                    <SolidColorBrush x:Key="SuiteGroupHeaderCurrentBackground" Color="#CDE6F7" />
                     <!-- gridViewSymbols' FocusedRow.ForeColor, also on a coloured symbol name -->
                     <SolidColorBrush x:Key="SuiteSymbolSelectedForeground" Color="MediumBlue" />
                     <SolidColorBrush x:Key="SuiteSymbolSelectedNameForeground" Color="MediumBlue" />
@@ -100,6 +102,8 @@
                     <SolidColorBrush x:Key="SuiteMdiTitleBrush" Color="{DynamicResource SystemBaseHighColor}" />
                     <SolidColorBrush x:Key="SuiteSymbolSelectedForeground" Color="{DynamicResource SystemBaseHighColor}" />
                     <SolidColorBrush x:Key="SuiteSymbolSelectedNameForeground" Color="Black" />
+                    <!-- the DataGrid's own selected row: the accent at ListAccentLowOpacity -->
+                    <SolidColorBrush x:Key="SuiteGroupHeaderCurrentBackground" Color="{DynamicResource SystemAccentColor}" Opacity="{DynamicResource ListAccentLowOpacity}" />
                     <SolidColorBrush x:Key="SuiteMdiTitleInactiveBrush" Color="{DynamicResource SystemBaseHighColor}" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
@@ -190,6 +194,11 @@
                 </Panel>
             </ControlTemplate>
         </Setter>
+    </Style>
+    <!-- the category row the keyboard is on: Fluent's grid gives a current group header no look, so moving with the arrow keys
+         over folded categories showed nothing -->
+    <Style Selector="DataGridRowGroupHeader:current">
+        <Setter Property="Background" Value="{DynamicResource SuiteGroupHeaderCurrentBackground}" />
     </Style>
     <!-- Fluent's tab headers are sized for touch, the suite is a dense desktop tool -->
     <Style Selector="TabStripItem, TabItem">

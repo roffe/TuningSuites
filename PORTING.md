@@ -628,6 +628,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-11: The category row the keyboard is on is highlighted like a selected row (Fluent's DataGrid gave a current group header no look) in every grouped list of T5, T7 and T8: the symbol list, compare results, part number lists, SID information (issue #3).
 - 2026-10-11: A save can no longer make an unpacked T7 bin look packed (it reopened with no symbols), and T8's layer-2 checksum keeps the byte sum or dword sum the file uses (TrionicCANLib `ChecksumT8`). Both found by txlogger's ecusymbol factory tests.
 - 2026-10-11: "Show map preview popup" in T5 and T7 too, on by default in all three.
 - 2026-10-11: The map in front scrolls to the top of the symbol list when it wasn't in view.

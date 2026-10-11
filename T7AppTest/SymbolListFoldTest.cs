@@ -2,6 +2,8 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -106,6 +108,47 @@ namespace T7AppTest
                 window.CaptureRenderedFrame();
                 Assert.IsEmpty(Shown(), "folded on a second open");
                 Assert.IsNull(vm.SelectedSymbol);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// The category row the keyboard is on looks like a selected row, in the symbol list with its MediumBlue text: moving over the
+        /// folded categories with the arrow keys showed nothing (Fluent's grid gives a current group header no look). The others keep
+        /// the group header's grey.
+        /// </summary>
+        [TestMethod]
+        public void CategoryUnderTheKeyboardIsHighlighted()
+        {
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T7MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                Assert.IsTrue(await vm.OpenFileAsync(Path.Combine(s_dir, "5168646.bin"), true));
+                window.Show();
+                window.CaptureRenderedFrame();
+                var grid = window.GetVisualDescendants().OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
+                grid.Focus();
+                window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+                window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, null);
+                Save(window, "category-current");
+                var headers = grid.GetVisualDescendants().OfType<DataGridRowGroupHeader>().Where(h => h.IsVisible).ToList();
+                DataGridRowGroupHeader current = headers.Single(h => h.Classes.Contains(":current"));
+                DataGridRowGroupHeader other = headers.First(h => h != current);
+                Assert.AreEqual(Color.Parse("#CDE6F7"), ((ISolidColorBrush)current.Background!).Color);
+                Assert.AreEqual(Colors.MediumBlue, ((ISolidColorBrush)current.Foreground!).Color);
+                Assert.AreEqual(Color.Parse("#E1E1E1"), ((ISolidColorBrush)other.Background!).Color);
+                try
+                {
+                    Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+                    Save(window, "category-current-dark");
+                    Assert.AreNotEqual(((ISolidColorBrush)other.Background!).Color, ((ISolidColorBrush)current.Background!).Color);
+                }
+                finally
+                {
+                    Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
+                }
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();
