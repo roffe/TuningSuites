@@ -68,21 +68,22 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     ];
 
     /// <summary>Form1.OpenFile ends with UpdateChecksum(file, AutoChecksum): checked on every open, the result in the status bar.</summary>
-    protected override async Task OnOpenedAsync(SuiteBinary bin) => await CheckChecksumAsync(bin.FileName);
+    protected override async Task OnOpenedAsync(SuiteBinary bin) => await CheckChecksumAsync((T8Binary)bin);
 
     /// <summary>Actions → Verify checksum: the same as on open (T8Suite showed no message, only the status bar).</summary>
     protected override async Task VerifyChecksumAsync()
     {
-        if (Binary is { } bin) await CheckChecksumAsync(bin.FileName);
+        if (Binary is T8Binary bin) await CheckChecksumAsync(bin);
     }
 
     /// <summary>
     /// UpdateChecksum: with AutoChecksum (the default) a wrong checksum is corrected without asking, as T8Suite did; without it
     /// each failing layer asks (frmChecksum).
     /// </summary>
-    private async Task CheckChecksumAsync(string file)
+    private async Task CheckChecksumAsync(T8Binary bin)
     {
-        ChecksumResult result = await VerifyFileChecksumAsync(file);
+        bool correct = Settings.AutoChecksum;
+        ChecksumResult result = await Task.Run(() => bin.VerifyChecksum(correct, AskChecksumUpdate));
         ChecksumText = result switch
         {
             ChecksumResult.Ok => "Checksum: OK",
@@ -93,12 +94,15 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
         };
     }
 
+    // a file that isn't the open one (Recover ECU): its layer-2 method from its own stored value
     private Task<ChecksumResult> VerifyFileChecksumAsync(string file)
     {
         bool correct = Settings.AutoChecksum;
-        return Task.Run(() => ChecksumT8.VerifyChecksum(file, correct, (layer, inFile, real) =>
-            UserPrompt.AskYesNo($"{layer}\n\nFile checksum: {inFile}\nActual checksum: {real}\n\nUpdate the checksum?", "Trionic checksum")));
+        return Task.Run(() => ChecksumT8.VerifyChecksum(file, correct, AskChecksumUpdate));
     }
+
+    private static bool AskChecksumUpdate(string layer, string inFile, string real) =>
+        UserPrompt.AskYesNo($"{layer}\n\nFile checksum: {inFile}\nActual checksum: {real}\n\nUpdate the checksum?", "Trionic checksum");
 
     /// <summary>Create project (Form1 9132): car model = T8Header's CarDescription (empty, T8Suite never read it), "&lt;partnumber&gt; &lt;software version&gt;".</summary>
     protected override (string carModel, string projectName) ProjectDefaults(SuiteBinary bin)
@@ -178,7 +182,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
             ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
             return;
         }
-        await CheckChecksumAsync(bin.FileName);
+        await CheckChecksumAsync(bin);
     }
 
     /// <summary>Actions → Firmware information.</summary>
@@ -202,7 +206,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
             ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
             return;
         }
-        await CheckChecksumAsync(bin.FileName);
+        await CheckChecksumAsync(bin);
     }
 
     /// <summary>Actions → TEM editor: only with a TEM table of more than one entry (none of the stock bins has one).</summary>
@@ -225,7 +229,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
             ShowInfo("Failed to write to binary. Is it read-only? Details: " + e.Message);
             return;
         }
-        if (editor.Table.Count > 0) await CheckChecksumAsync(bin.FileName);
+        if (editor.Table.Count > 0) await CheckChecksumAsync(bin);
     }
 
     /// <summary>File → Create binary from TIS file: the new bin into target, "New file created"; it isn't opened.</summary>

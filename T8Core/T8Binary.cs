@@ -48,6 +48,7 @@ namespace T8SuitePro
             SecondaryOffset = file.SecondaryOffset;
             Pids = pids;
             Tems = tems;
+            m_layer2ByteSum = ChecksumT8.Layer2ByteSum(fileName);
             SymbolListLoaded = symbolListLoaded;
         }
 
@@ -93,7 +94,11 @@ namespace T8SuitePro
         }
 
         // a project's rebuild: bytes only, no symbols or header
-        private T8Binary(string fileName) : base(fileName, new SymbolCollection()) => Header = new T8Header();
+        private T8Binary(string fileName) : base(fileName, new SymbolCollection())
+        {
+            Header = new T8Header();
+            m_layer2ByteSum = ChecksumT8.Layer2ByteSum(fileName);
+        }
 
         public override SuiteBinary RawFile(string fileName) => new T8Binary(fileName);
 
@@ -113,13 +118,28 @@ namespace T8SuitePro
         /// </summary>
         public override void UpdateChecksum()
         {
-            ChecksumResult result = ChecksumT8.VerifyChecksum(FileName, true, (_, _, _) => true);
+            ChecksumResult result = VerifyChecksum(true, (_, _, _) => true);
             if (result != ChecksumResult.Ok || VerifyChecksum() != ChecksumResult.Ok)
                 throw new InvalidOperationException($"The checksum of {Path.GetFileName(FileName)} could not be updated ({result}).");
         }
 
         // never corrects; a null "should I update?" callback would crash the library on a mismatch
-        public override ChecksumResult VerifyChecksum() => ChecksumT8.VerifyChecksum(FileName, false, (_, _, _) => false);
+        public override ChecksumResult VerifyChecksum() => VerifyChecksum(false, (_, _, _) => false);
+
+        /// <summary>
+        /// The layer-2 checksum's method, byte sum or dword sum (ChecksumT8.Layer2ByteSum), read from the file before it is edited
+        /// and kept; null until the file verifies. ChecksumT8 alone guesses it from the stored value, and T8Suite turned a byte-sum
+        /// file into a dword-sum one when an edit carried the byte sum over a 1 MiB boundary.
+        /// </summary>
+        private bool? m_layer2ByteSum;
+
+        /// <summary>ChecksumT8.VerifyChecksum with this file's layer-2 method.</summary>
+        public ChecksumResult VerifyChecksum(bool autocorrect, ChecksumDelegate.ChecksumUpdate shouldUpdate)
+        {
+            ChecksumResult result = ChecksumT8.VerifyChecksum(FileName, autocorrect, shouldUpdate, m_layer2ByteSum);
+            m_layer2ByteSum ??= ChecksumT8.Layer2ByteSum(FileName);
+            return result;
+        }
 
         /// <summary>
         /// The axis symbols and units (GetAxisDescriptions / StartTableViewer): SymbolDictionary's, with the duplicate's x axis when
@@ -368,10 +388,11 @@ namespace T8SuitePro
             int a = AddressTableStart(FileName), b = AddressTableStart(target);
             if (a <= 17 || b <= 17) throw new InvalidOperationException("No address table found");
             byte[] from = File.ReadAllBytes(FileName), to = File.ReadAllBytes(target);
+            SuiteBinary written = RawFile(target); // before the copy: the target's layer-2 method
             for (int s = a - 17, d = b - 17; s + 10 <= from.Length && d + 10 <= to.Length && from[s + 9] == 0; s += 10, d += 10)
                 Array.Copy(from, s, to, d, 10);
             File.WriteAllBytes(target, to);
-            RawFile(target).UpdateChecksum();
+            written.UpdateChecksum();
         }
 
         /// <summary>
