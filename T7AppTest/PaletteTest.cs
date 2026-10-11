@@ -24,21 +24,21 @@ namespace T7AppTest
                 Assert.IsTrue(await vm.OpenPlainFileAsync(Path.Combine(s_dir, "5168646.bin"), true));
 
                 window.KeyPress(Key.P, RawInputModifiers.Control, PhysicalKey.P, "p");
-                Assert.IsNotNull(window.Palette);
+                Assert.IsNotNull(window.View.Palette);
                 window.KeyTextInput("bfu");
-                CollectionAssert.Contains(window.Palette.Shown.Select(e => e.Text).ToList(), "BFuelCal.Map");
-                Assert.IsTrue(window.Palette.Shown.All(e => e.Text.Contains("bfu", System.StringComparison.OrdinalIgnoreCase)));
-                SaveTopLevel(window.Palette, "palette-symbols");
+                CollectionAssert.Contains(window.View.Palette.Shown.Select(e => e.Text).ToList(), "BFuelCal.Map");
+                Assert.IsTrue(window.View.Palette.Shown.All(e => e.Text.Contains("bfu", System.StringComparison.OrdinalIgnoreCase)));
+                SaveTopLevel(window.View.Palette, "palette-symbols");
                 window.KeyTextInput("elcal.map");
-                Assert.AreEqual("BFuelCal.Map", window.Palette.Shown[0].Text);
+                Assert.AreEqual("BFuelCal.Map", window.View.Palette.Shown[0].Text);
                 window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
                 Dispatcher.UIThread.RunJobs();
-                Assert.IsNull(window.Palette);
+                Assert.IsNull(window.View.Palette);
                 Assert.AreEqual("BFuelCal.Map", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
 
                 // the Tuning menu is built when the bin opens; Escape runs nothing
                 window.KeyPress(Key.P, RawInputModifiers.Control | RawInputModifiers.Shift, PhysicalKey.P, "P");
-                var commands = window.Palette!.Shown.Select(e => e.Text).ToList();
+                var commands = window.View.Palette!.Shown.Select(e => e.Text).ToList();
                 CollectionAssert.Contains(commands, "Tuning > Fuel > VE map");
                 CollectionAssert.Contains(commands, "File > Project > Create a project");
                 // disabled items stay out (no project open)
@@ -46,12 +46,12 @@ namespace T7AppTest
                 int viewers = vm.Viewers.Count;
                 window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
                 Dispatcher.UIThread.RunJobs();
-                Assert.IsNull(window.Palette);
+                Assert.IsNull(window.View.Palette);
                 Assert.AreEqual(viewers, vm.Viewers.Count);
 
                 window.KeyPress(Key.P, RawInputModifiers.Control | RawInputModifiers.Shift, PhysicalKey.P, "P");
                 window.KeyTextInput("VIEW FILE IN");
-                Assert.AreEqual("Actions > View file in hex", window.Palette!.Shown.Single().Text);
+                Assert.AreEqual("Actions > View file in hex", window.View.Palette!.Shown.Single().Text);
                 window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
                 Dispatcher.UIThread.RunJobs();
                 Assert.IsInstanceOfType<HexViewerViewModel>(vm.SelectedViewer);

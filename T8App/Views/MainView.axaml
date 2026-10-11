@@ -1,19 +1,15 @@
-<sv:SuiteMainWindow xmlns="https://github.com/avaloniaui"
+<sv:SuiteMainView xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T8App.ViewModels"
         xmlns:svm="using:SuiteApp.ViewModels"
         xmlns:sv="using:SuiteApp.Views"
-        x:Class="T8App.Views.MainWindow"
-        x:DataType="vm:T8MainWindowViewModel"
-        Title="{Binding Title}"
-        Icon="/T8Suite.ico"
-        Width="1400" Height="900"
-        WindowStartupLocation="CenterScreen">
-    <Window.KeyBindings>
+        x:Class="T8App.Views.MainView"
+        x:DataType="vm:T8MainWindowViewModel">
+    <UserControl.KeyBindings>
         <KeyBinding Gesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" />
         <KeyBinding Gesture="F6" Command="{Binding WriteLogMarkerCommand}" />
-    </Window.KeyBindings>
-    <Window.Resources>
+    </UserControl.KeyBindings>
+    <UserControl.Resources>
         <!-- the symbol list's row menu (gridViewSymbols' context menu), the ported items -->
         <ContextMenu x:Key="SymbolListMenu" x:DataType="vm:T8MainWindowViewModel">
             <MenuItem Header="Add to realtime list" Click="OnAddToRealtime" />
@@ -25,7 +21,7 @@
             <MenuItem Header="Edit a tuning package" Command="{Binding EditTuningPackageCommand}" />
             <MenuItem Header="Export symbollist as CSV" Click="OnExportSymbolCsv" />
         </ContextMenu>
-    </Window.Resources>
+    </UserControl.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <!-- T8Suite's ribbon: its pages as menus, a page's groups between separators, buttons column by column; the ported ones so far -->
@@ -150,4 +146,4 @@
         <sv:StatusBar DockPanel.Dock="Bottom" />
         <sv:SuiteWorkspace />
     </DockPanel>
-</sv:SuiteMainWindow>
+</sv:SuiteMainView>

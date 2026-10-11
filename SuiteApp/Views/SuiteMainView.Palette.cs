@@ -17,10 +17,8 @@ namespace SuiteApp.Views;
 /// The commands are read from the menus each time, so whatever a menu holds now (the Tuning and My Maps menus are built at run
 /// time, a new item in an app's MainWindow.axaml) is in the palette without a list to keep.
 /// </summary>
-public partial class SuiteMainWindow
+public partial class SuiteMainView
 {
-    private void InitPalette() => AddHandler(KeyDownEvent, OnPaletteKey, RoutingStrategies.Tunnel);
-
     private void OnPaletteKey(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.P || (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Meta)) == 0) return;
@@ -73,7 +71,7 @@ public partial class SuiteMainWindow
             Child = palette, PlacementTarget = Space, Placement = PlacementMode.AnchorAndGravity,
             PlacementAnchor = PopupAnchor.Top, PlacementGravity = PopupGravity.Bottom, VerticalOffset = 8, IsLightDismissEnabled = true,
         };
-        IInputElement? before = FocusManager?.GetFocusedElement();
+        IInputElement? before = Host.FocusManager?.GetFocusedElement();
         PaletteEntry? picked = null;
         palette.Done += entry =>
         {

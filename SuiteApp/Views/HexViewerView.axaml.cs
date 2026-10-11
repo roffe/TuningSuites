@@ -40,7 +40,7 @@ public partial class HexViewerView : UserControl
     // Copy or None, never the source's Move, as the main window's
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        e.DragEffects = SuiteMainWindow.DroppedFiles(e) is [_] ? DragDropEffects.Copy : DragDropEffects.None;
+        e.DragEffects = SuiteMainView.DroppedFiles(e) is [_] ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
@@ -48,7 +48,7 @@ public partial class HexViewerView : UserControl
     {
         OnDragOver(sender, e);
         // once the drop returns, as the main window's
-        if (SuiteMainWindow.DroppedFiles(e) is [var file] && DataContext is HexViewerViewModel vm && Main is { } main)
+        if (SuiteMainView.DroppedFiles(e) is [var file] && DataContext is HexViewerViewModel vm && Main is { } main)
             Dispatcher.UIThread.Post(() => _ = main.OpenInHexViewerAsync(vm, file));
     }
 }

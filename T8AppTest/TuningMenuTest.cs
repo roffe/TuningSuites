@@ -41,7 +41,7 @@ namespace T8AppTest
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(old, true));
-                var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var tuning = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 CollectionAssert.AreEqual(new[] { "Tuning Wizard", "Airmass", "Torque", "Injectors", "Fuel", "Boost", "Ignition", "Pedal" }, Headers(tuning));
                 string Opened(MenuItem item)
                 {

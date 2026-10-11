@@ -79,7 +79,7 @@ namespace T5AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 StringAssert.StartsWith(vm.Title, "T5SuitePro v");
-                var about = window.NewAboutWindow("2.5.0");
+                var about = window.View.NewAboutWindow("2.5.0");
                 about.Show();
                 about.CaptureRenderedFrame();
                 // About in the same words for every suite; Roffe among the thanks

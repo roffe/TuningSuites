@@ -1,8 +1,13 @@
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
+using Avalonia.Input;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SuiteApp;
@@ -57,40 +62,54 @@ namespace TxSuiteTest
                 {
                     var desktop = new ClassicDesktopStyleApplicationLifetime();
                     var vm = new T7App.ViewModels.T7MainWindowViewModel();
-                    var window = new T7App.Views.MainWindow { Width = 1200, Height = 800 };
+                    var window = TxSuite.App.NewWindow(new T7App.Views.MainView());
+                    window.Width = 1200;
+                    window.Height = 800;
                     SuiteStartup.Attach(desktop, vm, window);
                     window.Show();
                     TxSuite.App.Combine(desktop);
 
                     Assert.IsTrue(await vm.OpenPlainFileAsync(t7, true));
-                    Assert.AreSame(window, desktop.MainWindow);
 
-                    // T8: its own window in place of T7's, with the file open
+                    // T8: its view and view model in the same window, with the file open
+                    var t7view = window.View;
                     Assert.IsFalse(await vm.OpenPlainFileAsync(t8, true));
-                    Assert.IsInstanceOfType<T8App.Views.MainWindow>(desktop.MainWindow);
-                    var t8vm = (MainWindowViewModel)desktop.MainWindow.DataContext!;
+                    Assert.AreSame(window, desktop.MainWindow);
+                    Assert.IsTrue(window.IsVisible);
+                    Assert.IsInstanceOfType<T8App.Views.MainView>(window.View);
+                    var t8vm = (MainWindowViewModel)window.DataContext!;
+                    Assert.AreSame(t8vm, window.View.DataContext);
                     Assert.AreEqual(t8, t8vm.Binary?.FileName);
-                    Assert.IsFalse(window.IsVisible);
+                    // the T7 view let go of the window: its key bindings and view model stay its own
+                    Assert.AreSame(vm, t7view.DataContext);
+                    Assert.IsFalse(window.KeyBindings.Intersect(t7view.KeyBindings).Any());
+                    // T8's keys work with nothing focused: Shift+F1 opens its realtime panel
+                    window.Focus();
+                    window.KeyPress(Key.F1, RawInputModifiers.Shift, PhysicalKey.F1, null);
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                    Assert.IsNotNull(t8vm.Realtime);
+                    await t8vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
 
                     // and on to T5, then back to T7
                     Assert.IsFalse(await t8vm.OpenPlainFileAsync(t5, true));
-                    var t5vm = (MainWindowViewModel)desktop.MainWindow!.DataContext!;
+                    var t5vm = (MainWindowViewModel)window.DataContext!;
                     Assert.IsInstanceOfType<T5App.ViewModels.T5MainWindowViewModel>(t5vm);
                     Assert.AreEqual(t5, t5vm.Binary?.FileName);
                     Assert.IsFalse(await t5vm.OpenPlainFileAsync(t7, true));
-                    Assert.IsInstanceOfType<T7App.ViewModels.T7MainWindowViewModel>(desktop.MainWindow!.DataContext);
+                    Assert.IsInstanceOfType<T7App.ViewModels.T7MainWindowViewModel>(window.DataContext);
+                    Assert.AreSame(window, desktop.MainWindow);
 
-                    // its own kind stays in the window
-                    var t7vm = (MainWindowViewModel)desktop.MainWindow.DataContext!;
-                    var t7window = desktop.MainWindow;
+                    // its own kind stays
+                    var t7vm = (MainWindowViewModel)window.DataContext!;
+                    var t7again = window.View;
                     Assert.IsTrue(await t7vm.OpenPlainFileAsync(t7, true));
-                    Assert.AreSame(t7window, desktop.MainWindow);
-                    t7window.Close();
+                    Assert.AreSame(t7again, window.View);
+                    window.Close();
                 }
                 finally
                 {
                     MainWindowViewModel.Handoff = null;
-                    SuiteApp.Views.SuiteMainWindow.SettingsDialog = null;
+                    SuiteApp.Views.SuiteMainView.SettingsDialog = null;
                 }
                 return true;
             }, default).GetAwaiter().GetResult();

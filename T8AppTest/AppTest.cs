@@ -83,7 +83,7 @@ namespace T8AppTest
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
                 Assert.IsInstanceOfType<T8Binary>(vm.Binary);
 
-                var about = window.NewAboutWindow("2.5.0");
+                var about = window.View.NewAboutWindow("2.5.0");
                 about.Show();
                 about.CaptureRenderedFrame();
                 // About in the same words for every suite; Roffe among the thanks
@@ -188,7 +188,7 @@ namespace T8AppTest
                 Save(window, "search");
 
                 // the Tuning menu (txlogger's T8 menu) opening the maps of an old calibration
-                var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var quick = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 // after the Tuning Wizard
                 var airmass = (MenuItem)quick.Items[1]!;
                 Assert.AreEqual("Airmass", airmass.Header);
@@ -200,7 +200,7 @@ namespace T8AppTest
                 // My Maps: T8Suite's defaults for a new file, Add to MyMaps under "Directly added"
                 Assert.AreEqual("BFuelCal.LambdaOneFacMap", vm.MyMapsToEdit()[0].Symbol);
                 vm.AddToMyMaps(vm.Binary!.Find("IgnAbsCal.fi_NormalMAP"));
-                var my = window.FindControl<MenuItem>("MyMapsMenu")!;
+                var my = window.View.FindControl<MenuItem>("MyMapsMenu")!;
                 var directly = my.Items.OfType<MenuItem>().Single(i => (string?)i.Header == "Directly added");
                 // escaped: a menu header's single underscore marks the access key
                 Assert.AreEqual("IgnAbsCal.fi__NormalMAP", ((MenuItem)directly.Items[0]!).Header);

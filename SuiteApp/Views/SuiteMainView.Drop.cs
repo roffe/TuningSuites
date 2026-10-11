@@ -13,7 +13,7 @@ namespace SuiteApp.Views;
 /// Files dropped anywhere on the main window load the way their menu command loads them: a binary as Open file, an SRAM dump
 /// as Import SRAM snapshot, a logfile as Load logfile. A hex view takes a dropped file itself (HexViewerView).
 /// </summary>
-public partial class SuiteMainWindow
+public partial class SuiteMainView
 {
     private enum DropKind { None, Binary, Sram, Log }
 

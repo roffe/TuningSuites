@@ -199,7 +199,7 @@ namespace T8AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 // the wizard first in the Tuning menu, txlogger's menu after it
-                var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var tuning = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 Assert.AreEqual("Tuning Wizard", ((MenuItem)tuning.Items[0]!).Header);
                 Assert.AreEqual("Airmass", ((MenuItem)tuning.Items[1]!).Header);
 

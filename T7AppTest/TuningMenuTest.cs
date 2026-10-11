@@ -35,7 +35,7 @@ namespace T7AppTest
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var tuning = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 // no Myrtilos maps in a stock bin
                 CollectionAssert.AreEqual(new[] { "Diagnostics", "Calibration", "Injectors", "Airmass", "Fuel", "Ignition", "Boost", "Knock", "Limiters", "Adaption" },
                     Headers(tuning));
@@ -63,7 +63,7 @@ namespace T7AppTest
 
                 // BioPower: its E85 VE map in place of the startup VE map, the E85 maps there
                 Assert.IsTrue(await vm.OpenPlainFileAsync(bio, true));
-                tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                tuning = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 Assert.AreEqual("BFuelCal.E85Map", Opened(TuningEntry(tuning, "Fuel", "Startup / E85 VE map")));
                 Assert.AreEqual("IgnE85Cal.fi_AbsMap", Opened(TuningEntry(tuning, "Ignition", "Ignition for E85")));
                 CollectionAssert.AreEqual(new[] { "Max load norm", "Max load E85" }, Headers(TuningEntry(tuning, "Fuel", "Closed Loop")));

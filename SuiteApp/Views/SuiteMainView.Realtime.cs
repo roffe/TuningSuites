@@ -6,11 +6,11 @@ using SuiteApp.ViewModels;
 namespace SuiteApp.Views;
 
 /// <summary>The Realtime menu's log tools both suites have, and the symbol list's Add to realtime list.</summary>
-public partial class SuiteMainWindow
+public partial class SuiteMainView
 {
     // the suites' "Open CAN bus logfile" (View matrix from logfile's had no title)
     private Task<string?> OpenLogFile(string title = "Open CAN bus logfile") =>
-        Dialogs.OpenFile(this, title, Vm.LogFilesName, ["*." + Vm.RealtimeRules.LogExtension]);
+        Dialogs.OpenFile(Host, title, Vm.LogFilesName, ["*." + Vm.RealtimeRules.LogExtension]);
 
     protected async void OnOpenLog(object? sender, RoutedEventArgs e)
     {
@@ -19,13 +19,13 @@ public partial class SuiteMainWindow
 
     // Load logfile, also for a dropped log
     private Task LoadLog(string file) =>
-        Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(this));
+        Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(Host));
 
     private async Task<(string file, LogSelectionViewModel selection)?> ChooseLogData()
     {
         if (await OpenLogFile() is not { } file) return null;
         LogSelectionViewModel selection = Vm.LogSelection(file);
-        return await new LogSelectionWindow { DataContext = selection }.ShowDialog<bool>(this) ? (file, selection) : null;
+        return await new LogSelectionWindow { DataContext = selection }.ShowDialog<bool>(Host) ? (file, selection) : null;
     }
 
     protected async void OnExportLogCsv(object? sender, RoutedEventArgs e)
@@ -42,19 +42,19 @@ public partial class SuiteMainWindow
     {
         if (await OpenLogFile("View matrix from logfile") is not { } file) return;
         var (lines, selection) = Vm.MatrixSelection(file);
-        if (await new MatrixSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) Vm.ShowMatrix(lines, selection);
+        if (await new MatrixSelectionWindow { DataContext = selection }.ShowDialog<bool>(Host)) Vm.ShowMatrix(lines, selection);
     }
 
     protected async void OnLogFilters(object? sender, RoutedEventArgs e)
     {
         var filters = new LogFiltersViewModel(Vm.LoadLogFilters(), Vm.LogFilterSymbols);
-        if (await new LogFiltersWindow { DataContext = filters }.ShowDialog<bool>(this)) Vm.SaveLogFilters(filters.ToCollection());
+        if (await new LogFiltersWindow { DataContext = filters }.ShowDialog<bool>(Host)) Vm.SaveLogFilters(filters.ToCollection());
     }
 
     protected async void OnSymbolColors(object? sender, RoutedEventArgs e)
     {
         SymbolColorsViewModel colors = Vm.SymbolColorChoices();
-        if (await new SymbolColorsWindow { DataContext = colors }.ShowDialog<bool>(this)) colors.Save();
+        if (await new SymbolColorsWindow { DataContext = colors }.ShowDialog<bool>(Host)) colors.Save();
     }
 
     protected void OnAddToRealtime(object? sender, RoutedEventArgs e)

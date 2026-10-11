@@ -5,15 +5,15 @@ using SuiteApp.Services;
 namespace SuiteApp.Views;
 
 /// <summary>The Information tools both suites have: interrupt vectors, disassembly, the symbol list's Browse axis info.</summary>
-public partial class SuiteMainWindow
+public partial class SuiteMainView
 {
     protected async void OnVectors(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin) await new VectorsWindow(bin.InterruptVectors()).ShowDialog(this);
+        if (Vm.Binary is { } bin) await new VectorsWindow(bin.InterruptVectors()).ShowDialog(Host);
     }
 
     protected async void OnDisassembly(object? sender, RoutedEventArgs e) =>
-        await Vm.ShowDisassemblyAsync(false, text => Dialogs.YesNo(this, text, "Question"));
+        await Vm.ShowDisassemblyAsync(false, text => Dialogs.YesNo(Host, text, "Question"));
 
     // the full sweep is reused when it exists, as the suites did
     protected async void OnFullDisassembly(object? sender, RoutedEventArgs e) =>

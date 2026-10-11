@@ -31,7 +31,7 @@ namespace T5AppTest
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(t55, true));
-                var tuning = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var tuning = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 CollectionAssert.AreEqual(new[] { "Tuning wizards", "Injection [Fuel]", "Ignition", "Turbo control [M]", "Turbo control [A]",
                     "Knock detection", "Warmup", "Idle" }, Headers(tuning));
                 string Opened(MenuItem item)

@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
 using CommonSuite;
 using SuiteApp;
 using SuiteApp.Services;
@@ -19,7 +20,7 @@ namespace TxSuite;
 
 /// <summary>
 /// T5Suite, T7Suite and T8Suite as one program: the suite of the open binary is the one in front. A file or project of another ECU
-/// opens in that suite's main window, which takes the place of the one before (MainWindowViewModel.Handoff).
+/// opens in that suite's view, which takes the place of the one before in the one window (MainWindowViewModel.Handoff).
 /// </summary>
 public partial class App : Application
 {
@@ -27,17 +28,17 @@ public partial class App : Application
     public const string SettingsName = "TxSuite";
     private const string SuiteKey = "Suite";
 
-    private sealed record Suite(string Name, Func<string, bool> Opens, Type ViewModel, Func<MainWindowViewModel> NewViewModel, Func<SuiteMainWindow> NewWindow);
+    private sealed record Suite(string Name, Func<string, bool> Opens, Type ViewModel, Func<MainWindowViewModel> NewViewModel, Func<SuiteMainView> NewView);
 
-    private static Suite Of<TVm, TWindow>(string name, Func<string, bool> opens) where TVm : MainWindowViewModel, new() where TWindow : SuiteMainWindow, new() =>
-        new(name, opens, typeof(TVm), () => new TVm(), () => new TWindow());
+    private static Suite Of<TVm, TView>(string name, Func<string, bool> opens) where TVm : MainWindowViewModel, new() where TView : SuiteMainView, new() =>
+        new(name, opens, typeof(TVm), () => new TVm(), () => new TView());
 
     // by size first: T8Suite's own check tells the user about any file that isn't a T8 binary
     private static readonly Suite[] Suites =
     [
-        Of<T5MainWindowViewModel, T5App.Views.MainWindow>("T5", Trionic5Tools.T5Binary.IsValidFile),
-        Of<T7MainWindowViewModel, T7App.Views.MainWindow>("T7", T7.T7Binary.IsValidFile),
-        Of<T8MainWindowViewModel, T8App.Views.MainWindow>("T8", p => File.Exists(p) && new FileInfo(p).Length == TrionicCANLib.Firmware.FileT8.Length
+        Of<T5MainWindowViewModel, T5App.Views.MainView>("T5", Trionic5Tools.T5Binary.IsValidFile),
+        Of<T7MainWindowViewModel, T7App.Views.MainView>("T7", T7.T7Binary.IsValidFile),
+        Of<T8MainWindowViewModel, T8App.Views.MainView>("T8", p => File.Exists(p) && new FileInfo(p).Length == TrionicCANLib.Firmware.FileT8.Length
             && T8SuitePro.T8Binary.IsValidFile(p)),
     ];
 
@@ -51,26 +52,31 @@ public partial class App : Application
             string? last;
             using (var settings = SettingsKey.Open(SettingsName)) last = settings.GetValue(SuiteKey) as string;
             Suite suite = (desktop.Args is [var arg, ..] ? SuiteFor(arg) : null) ?? Suites.FirstOrDefault(s => s.Name == last) ?? Suites[1];
+            Combine(desktop);
             var vm = suite.NewViewModel();
             Logging.ApplyCanLogging(vm.Settings.EnableCanLog);
-            SuiteStartup.Start(desktop, vm, suite.NewWindow());
+            SuiteStartup.Start(desktop, vm, NewWindow(suite.NewView()));
             Remember(suite);
-            Combine(desktop);
         }
         base.OnFrameworkInitializationCompleted();
     }
 
+    /// <summary>TxSuite's window, the one the suites' views take turns in.</summary>
+    public static SuiteWindow NewWindow(SuiteMainView view) =>
+        // ponytail: T7Suite's icon until TxSuite has its own
+        new(view) { Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://T7Suite/T7Suite.ico"))) };
+
     /// <summary>
-    /// The suites as one: another suite's file or project opens in that suite's window, the main window from then on, and Settings
-    /// shows every suite's settings (TxSettingsWindow).
+    /// The suites as one: another suite's file or project opens in that suite's view in the same window, and Settings shows every
+    /// suite's settings (TxSettingsWindow).
     /// </summary>
     public static void Combine(IClassicDesktopStyleApplicationLifetime desktop)
     {
         MainWindowViewModel.Handoff = (from, path, project) => SwitchAsync(desktop, from, path, project);
-        SuiteMainWindow.SettingsDialog = async owner =>
+        SuiteMainView.SettingsDialog = async owner =>
         {
             var settings = new TxSettingsViewModel((MainWindowViewModel)owner.DataContext!);
-            if (!await new TxSettingsWindow { DataContext = settings }.ShowDialog<bool>(owner)) return false;
+            if (!await new TxSettingsWindow { DataContext = settings }.ShowDialog<bool>((Window)TopLevel.GetTopLevel(owner)!)) return false;
             settings.Apply();
             return true;
         };
@@ -84,11 +90,11 @@ public partial class App : Application
         settings.SetValue(SuiteKey, suite.Name);
     }
 
-    // the other suite's window in place of this one, where it was and as big: unsaved maps asked about first, nothing while flashing
+    // the other suite's view in place of this one: unsaved maps asked about first, nothing while flashing
     private static async Task<bool> SwitchAsync(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel from, string path, string? project)
     {
         if (await Task.Run(() => SuiteFor(path)) is not { } suite || suite.ViewModel == from.GetType()
-            || desktop.MainWindow is not SuiteMainWindow old || old.DataContext != from) return false;
+            || desktop.MainWindow is not SuiteWindow window || window.DataContext != from) return false;
         if (from.CloseBlocker is { } blocker)
         {
             from.ShowInfo(blocker);
@@ -97,16 +103,9 @@ public partial class App : Application
         if (!await from.CloseMutatedViewersAsync()) return true;
 
         var vm = suite.NewViewModel();
-        var window = suite.NewWindow();
-        window.WindowStartupLocation = WindowStartupLocation.Manual;
-        window.Position = old.Position;
-        window.Width = old.Width;
-        window.Height = old.Height;
-        window.WindowState = old.WindowState;
         Logging.ApplyCanLogging(vm.Settings.EnableCanLog);
+        window.Show(suite.NewView(), vm);
         SuiteStartup.Attach(desktop, vm, window);
-        window.Show();
-        old.Close();
         Remember(suite);
         if (project != null) await vm.OpenProjectAsync(project);
         else await vm.OpenPlainFileAsync(path, true);

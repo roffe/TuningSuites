@@ -24,7 +24,7 @@ public static class SuiteStartup
         CultureInfo.CurrentCulture = CultureInfo.DefaultThreadCurrentCulture = culture;
     }
 
-    public static void Start(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteMainWindow window)
+    public static void Start(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteWindow window)
     {
         Attach(desktop, vm, window);
 
@@ -42,12 +42,12 @@ public static class SuiteStartup
         window.Opened += async (_, _) =>
         {
             await vm.StartupAsync(args);
-            await window.CheckForUpdatesAsync(true);
+            await window.View.CheckForUpdatesAsync(true);
         };
     }
 
     /// <summary>The suite's window as the main one, the library's questions asked in it (also TxSuite's switch to another suite).</summary>
-    public static void Attach(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteMainWindow window)
+    public static void Attach(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteWindow window)
     {
         SymbolNumberConverter.Hex = vm.Settings.ShowAddressesInHex;
         window.DataContext = vm;

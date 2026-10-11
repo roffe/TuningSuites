@@ -341,13 +341,13 @@ namespace T7AppTest
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
-                var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
+                var quick = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 var ve = TuningEntry(quick, "Fuel", "VE map");
                 ve.Command!.Execute(ve.CommandParameter);
                 Assert.AreEqual("BFuelCal.Map", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
 
                 vm.AddToMyMaps(vm.Binary!.Find("IgnNormCal.Map"));
-                var my = window.FindControl<MenuItem>("MyMapsMenu")!;
+                var my = window.View.FindControl<MenuItem>("MyMapsMenu")!;
                 var directly = my.Items.OfType<MenuItem>().Single(i => (string?)i.Header == "Directly added");
                 Assert.AreEqual("IgnNormCal.Map", ((MenuItem)directly.Items[0]!).Header);
 
@@ -833,7 +833,7 @@ namespace T7AppTest
                 vm.SelectedViewer = axes;
                 Save(window, "axisbrowser");
 
-                var about = window.NewAboutWindow("2.5.0");
+                var about = window.View.NewAboutWindow("2.5.0");
                 about.Show();
                 Save(about, "about");
                 // About in the same words for every suite; Roffe among the thanks
@@ -991,8 +991,8 @@ namespace T7AppTest
                 Assert.IsGreaterThanOrEqualTo(0, recentIndex);
 
                 // the menus open (a bad style once bound Recent itself to the open-recent command)
-                var file = window.FindControl<MenuItem>("FileMenu")!;
-                var recent = window.FindControl<MenuItem>("RecentMenu")!;
+                var file = window.View.FindControl<MenuItem>("FileMenu")!;
+                var recent = window.View.FindControl<MenuItem>("RecentMenu")!;
                 file.Open();
                 recent.Open();
                 var entry = (MenuItem)recent.ContainerFromIndex(recentIndex)!;

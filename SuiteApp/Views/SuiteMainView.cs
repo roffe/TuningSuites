@@ -18,11 +18,12 @@ using SuiteApp.ViewModels;
 namespace SuiteApp.Views;
 
 /// <summary>
-/// The main window the suites share (frmMain / Form1): the workspace with the symbol list and the documents, and the menu actions
-/// every suite has. Each app's MainWindow.axaml derives from it with its own menus (its ribbon's order and captions), a StatusBar,
-/// a SuiteWorkspace, and the symbol list's row menu as the window resource "SymbolListMenu"; menu items can name the handlers here.
+/// The main window's content the suites share (frmMain / Form1): the workspace with the symbol list and the documents, and the menu
+/// actions every suite has. Each app's MainView.axaml derives from it with its own menus (its ribbon's order and captions), a
+/// StatusBar, a SuiteWorkspace, and the symbol list's row menu as the resource "SymbolListMenu"; menu items can name the handlers
+/// here. A SuiteWindow holds it: the app's MainWindow, or TxSuite's one window, which swaps the suites' views.
 /// </summary>
-public partial class SuiteMainWindow : Window
+public partial class SuiteMainView : UserControl
 {
     private const string SymbolListKey = "SymbolListWidth";
     // the share of the window the port saved before it kept a width
@@ -38,6 +39,31 @@ public partial class SuiteMainWindow : Window
     private SuiteWorkspace Space => m_workspace ??= this.GetLogicalDescendants().OfType<SuiteWorkspace>().First();
 
     protected MainWindowViewModel Vm => (MainWindowViewModel)DataContext!;
+
+    /// <summary>The window the view is in: the owner of its dialogs and floating windows.</summary>
+    protected Window Host => (Window)TopLevel.GetTopLevel(this)!;
+
+    // the window takes the view's key bindings and Ctrl+P / Ctrl+Shift+P: Avalonia looks for bindings from the focused element up,
+    // and with nothing focused that is the window itself
+    private TopLevel? m_keyHost;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (TopLevel.GetTopLevel(this) is not { } top) return;
+        m_keyHost = top;
+        top.KeyBindings.AddRange(KeyBindings);
+        top.AddHandler(KeyDownEvent, OnPaletteKey, RoutingStrategies.Tunnel);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        if (m_keyHost == null) return;
+        foreach (KeyBinding binding in KeyBindings) m_keyHost.KeyBindings.Remove(binding);
+        m_keyHost.RemoveHandler(KeyDownEvent, OnPaletteKey);
+        m_keyHost = null;
+    }
 
     /// <summary>Open file's filter name ("Trionic 7 binary or Motorola S19").</summary>
     protected virtual string BinaryFilesName => "Binary or Motorola S19";
@@ -59,7 +85,6 @@ public partial class SuiteMainWindow : Window
         m_workspaceReady = true;
         InitWorkspace();
         InitDrop();
-        InitPalette();
         Space.Workspace.SizeChanged += (_, e) =>
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
@@ -145,34 +170,34 @@ public partial class SuiteMainWindow : Window
         vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.SelectedViewer)) ActivateDocument(vm.SelectedViewer); };
         ApplyHideSymbolTable();
         WatchMapMenus(vm);
-        vm.Info += text => _ = Dialogs.Info(this, text, vm.Caption);
-        vm.AskYesNoCancel = text => Dialogs.YesNoCancel(this, text, "Question");
-        vm.AskButtons = (text, caption, labels) => Dialogs.Buttons(this, text, caption, labels);
-        vm.AskText = caption => Dialogs.Prompt(this, caption);
-        vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
+        vm.Info += text => _ = Dialogs.Info(Host, text, vm.Caption);
+        vm.AskYesNoCancel = text => Dialogs.YesNoCancel(Host, text, "Question");
+        vm.AskButtons = (text, caption, labels) => Dialogs.Buttons(Host, text, caption, labels);
+        vm.AskText = caption => Dialogs.Prompt(Host, caption);
+        vm.AskOkCancel = text => Dialogs.OkCancel(Host, text, "Transaction log size warning...");
     }
 
     /// <summary>
     /// TxSuite: its settings dialog (what every suite shares, then each ECU's own) in place of the suite's; true when its Ok saved
     /// them. Null in the single suites.
     /// </summary>
-    public static Func<SuiteMainWindow, Task<bool>>? SettingsDialog { get; set; }
+    public static Func<SuiteMainView, Task<bool>>? SettingsDialog { get; set; }
 
     // Open file's types, also what a dropped file opens as
     private static readonly string[] BinaryPatterns = ["*.bin", "*.s19"];
 
     protected async void OnOpenFile(object? sender, RoutedEventArgs e)
     {
-        string? path = await Dialogs.OpenFile(this, OpenFileTitle, BinaryFilesName, BinaryPatterns);
+        string? path = await Dialogs.OpenFile(Host, OpenFileTitle, BinaryFilesName, BinaryPatterns);
         if (path != null) await Vm.OpenPlainFileAsync(path, true);
     }
 
     protected async void OnSaveAs(object? sender, RoutedEventArgs e)
     {
         if (Vm.Binary is not { } bin
-            || await Dialogs.SaveFile(this, "Save current file as...", "Binary files", "bin", Path.GetFileName(bin.FileName)) is not { } target) return;
+            || await Dialogs.SaveFile(Host, "Save current file as...", "Binary files", "bin", Path.GetFileName(bin.FileName)) is not { } target) return;
         File.Copy(bin.FileName, target, true);
-        if (await Dialogs.YesNo(this, "Do you want to open the newly saved file?", "Question")) await Vm.OpenPlainFileAsync(target, true);
+        if (await Dialogs.YesNo(Host, "Do you want to open the newly saved file?", "Question")) await Vm.OpenPlainFileAsync(target, true);
     }
 
     /// <summary>A write the user asked for; a failure (read-only file) says so.</summary>
@@ -184,7 +209,7 @@ public partial class SuiteMainWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            await Dialogs.Info(this, "Failed to write to binary. Is it read-only? Details: " + ex.Message);
+            await Dialogs.Info(Host, "Failed to write to binary. Is it read-only? Details: " + ex.Message);
         }
     }
 
@@ -222,7 +247,7 @@ public partial class SuiteMainWindow : Window
         }
         catch (Exception)
         {
-            await Dialogs.Info(this, $"{name} could not be found or opened!");
+            await Dialogs.Info(Host, $"{name} could not be found or opened!");
         }
     }
 
@@ -237,7 +262,7 @@ public partial class SuiteMainWindow : Window
     {
         if (startup && Vm.BuildVersion == new Version(0, 0, 0, 0)) return;
         if (await Vm.CheckForUpdatesAsync() is not { } release) return;
-        if (await new UpdateAvailableWindow(release, Vm.Suite).ShowDialog<bool>(this))
+        if (await new UpdateAvailableWindow(release, Vm.Suite).ShowDialog<bool>(Host))
             Dialogs.OpenWithShell(OperatingSystem.IsWindows() && release.Msi != null ? release.Msi : release.Page);
     }
 
@@ -248,14 +273,14 @@ public partial class SuiteMainWindow : Window
 
     // Actions → VIN decoder: the open file's VIN decoded, or one typed in
     protected async void OnVinDecoder(object? sender, RoutedEventArgs e) =>
-        await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.BinaryVin) }.ShowDialog(this);
+        await new VinDecoderWindow { DataContext = new VinDecoderViewModel(Vm.BinaryVin) }.ShowDialog(Host);
 
     protected async void OnAbout(object? sender, RoutedEventArgs e)
     {
         string version = Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
         // the build metadata (+commit) doesn't belong in the title
         int plus = version.IndexOf('+');
-        await NewAboutWindow(plus > 0 ? version[..plus] : version).ShowDialog(this);
+        await NewAboutWindow(plus > 0 ? version[..plus] : version).ShowDialog(Host);
     }
 
     /// <summary>The suite's About... for a version.</summary>
@@ -266,7 +291,7 @@ public partial class SuiteMainWindow : Window
     protected async void OnCreateProject(object? sender, RoutedEventArgs e)
     {
         ProjectPropertiesViewModel p = Vm.NewProjectProperties();
-        if (await new ProjectPropertiesWindow { DataContext = p }.ShowDialog<bool>(this)) await Vm.CreateProjectAsync(p);
+        if (await new ProjectPropertiesWindow { DataContext = p }.ShowDialog<bool>(Host)) await Vm.CreateProjectAsync(p);
     }
 
     protected async void OnOpenProject(object? sender, RoutedEventArgs e)
@@ -274,72 +299,57 @@ public partial class SuiteMainWindow : Window
         var projects = SuiteProject.List(Vm.Settings.ProjectFolder);
         if (projects.Count == 0)
         {
-            await Dialogs.Info(this, "No projects were found, please create one first!", Vm.Caption);
+            await Dialogs.Info(Host, "No projects were found, please create one first!", Vm.Caption);
             return;
         }
-        if (await new ProjectSelectionWindow(projects).ShowDialog<string?>(this) is { Length: > 0 } name) await Vm.OpenProjectAsync(name);
+        if (await new ProjectSelectionWindow(projects).ShowDialog<string?>(Host) is { Length: > 0 } name) await Vm.OpenProjectAsync(name);
     }
 
     protected async void OnEditProject(object? sender, RoutedEventArgs e)
     {
         if (Vm.Project is not { } project) return;
         var p = ProjectPropertiesViewModel.From(project.Properties);
-        if (await new ProjectPropertiesWindow { DataContext = p }.ShowDialog<bool>(this)) await Vm.EditProjectAsync(p);
+        if (await new ProjectPropertiesWindow { DataContext = p }.ShowDialog<bool>(Host)) await Vm.EditProjectAsync(p);
     }
 
     protected void OnShowTransactionLog(object? sender, RoutedEventArgs e) =>
-        new TransactionLogWindow { DataContext = new TransactionLogViewModel(Vm) }.Show(this);
+        new TransactionLogWindow { DataContext = new TransactionLogViewModel(Vm) }.Show(Host);
 
     protected void OnShowLogbook(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Project is { } project) new LogbookWindow { DataContext = new LogbookViewModel(project) }.Show(this);
+        if (Vm.Project is { } project) new LogbookWindow { DataContext = new LogbookViewModel(project) }.Show(Host);
     }
 
     protected async void OnRebuild(object? sender, RoutedEventArgs e)
     {
         var p = new RebuildViewModel();
-        if (!await new RebuildWindow { DataContext = p }.ShowDialog<bool>(this)) return;
+        if (!await new RebuildWindow { DataContext = p }.ShowDialog<bool>(Host)) return;
         // the date picker gives midnight; the whole chosen day counts
         DateTime upTo = (p.UpTo ?? DateTime.Now).Date.AddDays(1).AddTicks(-1);
         if (Vm.Rebuild(upTo, p.StoreAsCurrent) is not { } rebuilt) return;
-        if (await Dialogs.SaveFile(this, "Save rebuild file as...", "Binary files", "bin", "rebuild.bin") is { } dest) File.Copy(rebuilt, dest, true);
+        if (await Dialogs.SaveFile(Host, "Save rebuild file as...", "Binary files", "bin", "rebuild.bin") is { } dest) File.Copy(rebuilt, dest, true);
         File.Delete(rebuilt);
     }
 
     protected async void OnProduceLatest(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Produce latest binary", "Binary files", "bin", Path.GetFileName(bin.FileName)) is { } dest)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(Host, "Produce latest binary", "Binary files", "bin", Path.GetFileName(bin.FileName)) is { } dest)
             File.Copy(bin.FileName, dest, true);
     }
 
     // ---- closing ----
 
-    // unsaved maps ask before the app closes; Cancel keeps it open
-    private bool m_closeConfirmed;
-
-    protected override async void OnClosing(WindowClosingEventArgs e)
+    /// <summary>
+    /// The window closed, or TxSuite put another suite's view in its place: the symbol list's width saved, the floating windows
+    /// closed, the ECU let go.
+    /// </summary>
+    public void Closed()
     {
-        base.OnClosing(e);
-        if (DataContext is MainWindowViewModel { CloseBlocker: { } blocker } busy)
-        {
-            // stopping a flash halfway leaves the ECU without a working program
-            e.Cancel = true;
-            busy.ShowInfo(blocker);
-            return;
-        }
-        if (m_closeConfirmed || DataContext is not MainWindowViewModel vm || !vm.Viewers.OfType<MapViewerViewModel>().Any(v => v.Map.Mutated)) return;
-        e.Cancel = true;
-        if (!await vm.CloseMutatedViewersAsync()) return;
-        m_closeConfirmed = true;
-        Close();
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        base.OnClosed(e);
         if (DataContext is not MainWindowViewModel vm) return;
         if (!double.IsNaN(m_symbolWidth))
             using (var settings = SettingsKey.Open(vm.Suite)) settings.SetValue(SymbolListKey, Math.Round(m_symbolWidth));
+        foreach (FloatingDocumentWindow w in m_floating.Values.ToList()) w.CloseQuietly();
+        m_floating.Clear();
         vm.Shutdown();
     }
 
@@ -434,9 +444,9 @@ public partial class SuiteMainWindow : Window
         if (e.PropertyName != nameof(DocumentViewModel.IsFloating)) return;
         if (doc.IsFloating && !m_floating.ContainsKey(doc))
         {
-            var window = new FloatingDocumentWindow(Vm, doc) { WindowStartupLocation = WindowStartupLocation.Manual, Position = m_floatAt, Icon = Icon };
+            var window = new FloatingDocumentWindow(Vm, doc) { WindowStartupLocation = WindowStartupLocation.Manual, Position = m_floatAt, Icon = Host.Icon };
             m_floating[doc] = window;
-            window.Show(this);
+            window.Show(Host);
         }
         else if (!doc.IsFloating && m_floating.Remove(doc, out var window))
         {
