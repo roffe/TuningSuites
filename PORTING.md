@@ -590,6 +590,19 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - **Realtime leftovers from chunk 6:** sound notifications (3 slots, needs a cross-platform audio player) and the Combi adapter's ADC / thermocouple channels with their settings.
 - **Dead code to delete eventually:** T7CANFlasher/ (replaced by TrionicCANFlasher), the T7Libs/ wrapper DLLs, AquaGauge, LBIndustrialCtrls, ProCharts, MouseGestures.
 
+## TxSuite (branch `combine`)
+
+One program for the three suites, MattiasC's TxSuite: the suites are unified enough (one main window, one menu layout, shared settings and ECU thread) that TxSuite only has to pick the suite for the file. Built on branch `combine` as a trial; it can be dropped without touching the suites.
+
+- [x] `TxSuite/` (AssemblyName TxSuite, `TxSuite_v` tags) references T5App, T7App and T8App, which stay programs of their own. It starts the suite of the file it's given, else the one used last (`<AppData>/MattiasC/TxSuite/settings.json`), else T7.
+- [x] A file or project of another ECU opens in that suite's main window, which takes the place of the one before, where it was and as big (`MainWindowViewModel.Handoff`; T5 / T7 by size and ident, T8 by size first, its own check prompts). Unsaved maps are asked about first; nothing switches while the ECU is being flashed; the old suite's ECU connection closes with its window. An S19 stays with the suite it's opened in.
+- [x] Settings (user, 2026-10-11): one dialog with the tabs Common, T5, T7 and T8 (`TxSettingsWindow`). Common holds what every suite has (user interface, projects, the connection, the serial wideband), each ECU tab its own options in their old groups (T5: map sensor, advanced mode, AFR maps, knock snapshot, wideband through a symbol, Autotune settings; T7: timestamp, AFR maps, closed loop indicator, footer, CAN log, P-bus, wideband on pin 16, Autotune settings; T8: map detection, dynamic live data, P-bus, Legion). Ok writes Common into all three suites' settings and each tab into its suite's; the suite in front takes them at once. The dialog keeps the size of its biggest tab. A com port wideband turns the wideband through a symbol off in every suite.
+- [x] One NLog.config (T7Suite's plus the T5 and T8 cores' loggers) logging to `<AppData>/MattiasC/TxSuite`.
+- [ ] Packaging: one MSI that replaces T5SuiteII, T7Suite and T8SuitePro (their upgrade codes), one Linux tar.gz with one udev rule and desktop entry, one macOS bundle; `.bin` Open with names TxSuite. The three Extras unpack into one `Binaries` folder (no file names clash).
+- [ ] Update check and About: TxSuite's version and `TxSuite_v` releases instead of the suite in front's; one About with the three thanks lists; a TxSuite icon (T7Suite's for now).
+- [ ] What is still per suite and should be shared: Recent (each suite lists its own files), the skin and the symbol list width (switching can flip light / dark), the window title's version. The common options are copied into each suite's settings file; a shared store would keep them once.
+- [ ] Switching in place (menus and workspace swapped inside one window) if the window swap shows.
+
 ## Open questions
 
 - Decided (user, 2026-10-10): About uses the same words in all three suites ("<suite> was created with the help of lots of people on ecuproject.com and trionictuning.com", the support line naming both sites, "Just4pLeisure ;-)"); only the special thanks are the suite's own list, and Roffe is in all three (T5Suite's and T8Suite's lists lacked him; T5Suite and T7Suite said "<suite> Pro").
@@ -629,6 +642,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - Decided (user, 2026-10-11): VS Code's quick open and command palette, in all three suites (new, the old suites had neither): Ctrl+P (Cmd+P on macOS) lists the open bin's symbols a double click opens, by the name the list shows; Ctrl+Shift+P lists every enabled menu command as "Menu > Submenu > Item". Both filter on the typed text anywhere in the line, any case; Up / Down / Page Up / Page Down move, Enter or a click runs, Escape or a click outside closes. The commands are read from the menus each time the palette opens, so the run-time Tuning and My Maps menus and any new menu item are in it with no list to keep; disabled items and Recent's files are left out.
 ## Log
 
+- 2026-10-11: TxSuite on branch `combine`: the three suites in one program, switching to the suite of the file opened; one settings dialog with Common, T5, T7 and T8 tabs.
 - 2026-10-11: Ctrl+P opens a symbol by part of its name, Ctrl+Shift+P runs any menu command (`CommandPalette`, `SuiteMainWindow.Palette`), all three suites.
 - 2026-10-11: Left in the symbol list folds the nearest category above, as in a tree: on a symbol its own category, on a folded subcategory (T5) its parent; an unfolded category the grid folded already. On a symbol Left no longer moves to the column on its left. The README shows the suites in the light and the dark skin (`docs/screenshots/<suite>/<name>-dark.png`, from the same Screenshots tests).
 - 2026-10-11: A map opens in a window the size of its table, as T7Suite's Auto size new mapwindows sized its panels: as wide as the table (at least 400 px, T7Suite's minimum), the table at its natural height over a graph of at least eight table rows (the viewer splits its height by rows now, not in halves), at most the working size other documents open at (60 % × 80 % of the workspace, which every map took before, a single value too). In T5, T7 and T8 (issues #4, #5).
