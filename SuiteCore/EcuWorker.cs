@@ -33,8 +33,20 @@ namespace CommonSuite
             t.Latency = latency;
             if (NeedsBaudrate(adapter)) t.ForcedBaudrate = settings.Baudrate;
             t.setCANDevice(adapter);
-            if (!string.IsNullOrEmpty(settings.Adapter)) t.SetSelectedAdapter(settings.Adapter);
-            else if (adapter != CANBusAdapter.COMBI) throw new InvalidOperationException("Check settings, no CAN adapter has been selected!");
+            if (string.IsNullOrEmpty(settings.Adapter))
+            {
+                if (adapter != CANBusAdapter.COMBI) throw new InvalidOperationException("Check settings, no CAN adapter has been selected!");
+                return;
+            }
+            try
+            {
+                t.SetSelectedAdapter(settings.Adapter);
+            }
+            catch (Exception e) when (e is not InvalidOperationException)
+            {
+                // a saved adapter that isn't there: Kvaser throws "Channel x cannot be selected", the callers show this message
+                throw new InvalidOperationException(e.Message, e);
+            }
         }
     }
 

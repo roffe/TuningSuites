@@ -41,6 +41,12 @@ namespace T8CoreTest
                 await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => ecu.ReadFlashAsync(settings, Path.Combine(dir, "read.bin")));
                 Assert.IsFalse(ecu.IsFlashing);
                 await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => ecu.ReadFaultCodesAsync(settings));
+
+                // a saved Kvaser channel that isn't there: the driver's complaint as the same message, not an exception that ends the app
+                settings.AdapterType = "Kvaser HS";
+                settings.Adapter = "Kvaser Leaf Light v2 (0)";
+                e = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => ecu.ConnectAsync(settings));
+                Assert.AreEqual("Channel Kvaser Leaf Light v2 (0) cannot be selected", e.Message);
             }
             finally
             {
