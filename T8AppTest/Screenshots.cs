@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -40,6 +41,7 @@ namespace T8AppTest
 
                         vm.OpenSymbolByName("IgnAbsCal.fi_NormalMAP");
                         Maximized(window, "mapviewer" + suffix);
+                        Palettes(window, "bfuelcal", suffix);
 
                         vm.ShowAirmassResultCommand.Execute(null);
                         Maximized(window, "airmass-table" + suffix);
@@ -81,6 +83,19 @@ namespace T8AppTest
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             window.CaptureRenderedFrame();
             Save(window, name);
+        }
+
+        // Ctrl+P and Ctrl+Shift+P with something typed, over the map
+        private static void Palettes(Window window, string symbols, string suffix)
+        {
+            foreach (var (shift, text, name) in new[] { (false, symbols, "palette-symbols"), (true, "compare", "palette-commands") })
+            {
+                window.KeyPress(Key.P, RawInputModifiers.Control | (shift ? RawInputModifiers.Shift : 0), PhysicalKey.P, "p");
+                window.KeyTextInput(text);
+                Save(window, name + suffix);
+                window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            }
         }
     }
 }

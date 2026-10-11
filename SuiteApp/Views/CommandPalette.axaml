@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SuiteApp.Views.CommandPalette"
+             Width="600">
+    <UserControl.Styles>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+    </UserControl.Styles>
+    <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="1" CornerRadius="4" Padding="4" BoxShadow="0 4 12 0 #40000000">
+        <DockPanel>
+            <TextBox x:Name="Filter" DockPanel.Dock="Top" Margin="0,0,0,4" />
+            <ListBox x:Name="Results" MaxHeight="420" Background="Transparent" Tapped="OnResultTapped" />
+        </DockPanel>
+    </Border>
+</UserControl>

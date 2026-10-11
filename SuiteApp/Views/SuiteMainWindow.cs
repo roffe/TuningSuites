@@ -59,6 +59,7 @@ public partial class SuiteMainWindow : Window
         m_workspaceReady = true;
         InitWorkspace();
         InitDrop();
+        InitPalette();
         Space.Workspace.SizeChanged += (_, e) =>
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
