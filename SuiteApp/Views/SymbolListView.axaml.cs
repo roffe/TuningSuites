@@ -252,19 +252,19 @@ public partial class SymbolListView : UserControl
         object? current = grid.OfType<DataGridRowGroupHeader>().FirstOrDefault(h => h.Classes.Contains(":current")) is { } header
             ? header.Classes.Contains(":expanded") ? null : header.DataContext
             : grid.OfType<DataGridCell>().FirstOrDefault(c => c.Classes.Contains(":current"))?.DataContext as SymbolHelper;
-        if (current == null || Parent(groups, current) is not { } parent) return false;
+        if (current == null || GroupOf(groups, current) is not { } parent) return false;
         SymbolGrid.CollapseRowGroup(parent, false);
         SymbolGrid.ScrollIntoView(parent, null);
         return true;
     }
 
     // the category holding a symbol or a subcategory, null at the top
-    private static DataGridCollectionViewGroup? Parent(IEnumerable<object> groups, object item)
+    private static DataGridCollectionViewGroup? GroupOf(IEnumerable<object> groups, object item)
     {
         foreach (DataGridCollectionViewGroup g in groups.OfType<DataGridCollectionViewGroup>())
         {
             if (g.Items.Contains(item)) return g;
-            if (Parent(g.Items, item) is { } parent) return parent;
+            if (GroupOf(g.Items, item) is { } parent) return parent;
         }
         return null;
     }
