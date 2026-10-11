@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
@@ -188,3 +189,11 @@ public class NotEqualConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
+/// <summary>True when both bindings give the same object (a tabbed window shows its selected tab's page).</summary>
+public class SameConverter : IMultiValueConverter
+{
+    public static readonly SameConverter Instance = new();
+
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture) =>
+        values.Count == 2 && ReferenceEquals(values[0], values[1]);
+}

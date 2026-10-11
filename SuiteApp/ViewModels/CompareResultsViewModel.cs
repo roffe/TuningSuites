@@ -11,21 +11,18 @@ using MapControls;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>One side of a compare: a file's bytes for a symbol name, and how its viewer opens.</summary>
-public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<string> Open)
+/// <summary>One side of a compare: a file's bytes for a symbol name, and how its viewer opens (the viewer shown, null for none).</summary>
+public record CompareSide(string FileName, Func<string, byte[]?> Read, Func<string, DocumentViewModel?> Open)
 {
     /// <summary>The open bin: its own viewer, the one that edits.</summary>
     public static CompareSide Bin(MainWindowViewModel owner, SuiteBinary bin) =>
         new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
-            name => { if (bin.FindAny(name) is { } sh) owner.OpenSymbolByName(sh.SmartVarname); });
+            name => bin.FindAny(name) is { } sh ? owner.OpenSymbolByName(sh.SmartVarname) : null);
 
     /// <summary>Another bin: a read-only compare viewer.</summary>
     public static CompareSide OtherBin(MainWindowViewModel owner, SuiteBinary bin) =>
         new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
-            name =>
-            {
-                if (bin.FindAny(name) is { } sh && MapViewerViewModel.Create(owner, bin, sh, readOnly: true) is { } viewer) owner.ShowDocument(viewer);
-            });
+            name => bin.FindAny(name) is { } sh && MapViewerViewModel.Create(owner, bin, sh, readOnly: true) is { } viewer ? owner.ShowDocument(viewer) : null);
 }
 
 /// <summary>
@@ -71,12 +68,13 @@ public partial class CompareResultsViewModel : DocumentViewModel
         new(owner, current, CompareSide.Bin(owner, current), CompareSide.OtherBin(owner, other), rows,
             $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]") { Other = other };
 
-    /// <summary>Double-click / Enter (tabdet_onSymbolSelect): both sides' viewers.</summary>
+    /// <summary>Double-click / Enter (tabdet_onSymbolSelect): both sides' viewers, as tabs of one window.</summary>
     public void Open(CompareRow? row)
     {
         if (row == null) return;
-        First.Open(row.SymbolName);
-        Second.Open(row.SymbolName);
+        DocumentViewModel? mine = First.Open(row.SymbolName), theirs = Second.Open(row.SymbolName);
+        // T7Suite docked the compare viewer as a tab at index 0 onto the open file's: the compare side first and selected
+        m_owner.ShowAsTabs(theirs, mine);
     }
 
     /// <summary>"Show differences map": |second − first| per value, no offset, read-only, axes from the open file (T5: the compare file).</summary>

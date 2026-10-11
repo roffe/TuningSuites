@@ -125,7 +125,7 @@ public abstract partial class MainWindowViewModel
     {
         byte[] ram = File.ReadAllBytes(file);
         return new(file, name => bin.FindAny(name) is { } sh ? SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length) : null,
-            name => { if (bin.FindAny(name) is { } sh) OpenFromSramFile(sh, file); });
+            name => bin.FindAny(name) is { } sh ? OpenFromSramFile(sh, file) : null);
     }
 
     /// <summary>Compare to SRAM snapshot: "SRAM &lt;&gt; BIN Compare results", the bin's map and the snapshot's per symbol.</summary>
@@ -307,19 +307,17 @@ public abstract partial class MainWindowViewModel
 
     public void ImportSramSnapshot(string file) => SramFile = file;
 
-    /// <summary>Read from SRAM file: the symbol's bytes at its SRAM address in the snapshot, as "SRAM Symbol: name [file]".</summary>
-    public void OpenFromSramFile(SymbolHelper sh, string? file = null)
+    /// <summary>Read from SRAM file: the symbol's bytes at its SRAM address in the snapshot, as "SRAM Symbol: name [file]"; the viewer shown.</summary>
+    public DocumentViewModel? OpenFromSramFile(SymbolHelper sh, string? file = null)
     {
         file ??= SramFile;
-        if (Binary is not { } bin || file == null || !File.Exists(file)) return;
+        if (Binary is not { } bin || file == null || !File.Exists(file)) return null;
         byte[] ram = File.ReadAllBytes(file);
-        if (ram.Length == 0) return;
+        if (ram.Length == 0) return null;
         byte[] data = SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length);
         string title = $"SRAM Symbol: {sh.SmartVarname} [{Path.GetFileName(file)}]";
-        if (MapViewerViewModel.Create(this, bin, sh, data, sram: true, title: title) is { } viewer)
-        {
-            viewer.OnlineMode = true;
-            ShowDocument(viewer);
-        }
+        if (MapViewerViewModel.Create(this, bin, sh, data, sram: true, title: title) is not { } viewer) return null;
+        viewer.OnlineMode = true;
+        return ShowDocument(viewer);
     }
 }

@@ -16,6 +16,9 @@ public abstract partial class DocumentViewModel : ObservableObject
     [ObservableProperty]
     private bool _isFloating;
 
+    /// <summary>The window this document is a tab of (a compare's maps), null in a window of its own.</summary>
+    public DocumentTabsViewModel? Tabs { get; internal set; }
+
     /// <summary>Asked before the document closes (unsaved changes); false keeps it open.</summary>
     public virtual Task<bool> CanCloseAsync(MainWindowViewModel owner) => Task.FromResult(true);
 

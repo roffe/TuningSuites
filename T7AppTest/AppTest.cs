@@ -933,7 +933,8 @@ namespace T7AppTest
                 CollectionAssert.AreEqual(Enumerable.Range(0, sh.Length).Select(i => (byte)(i % 7)).ToArray(), viewer.Map.ToBytes());
                 Save(window, "sram-viewer");
 
-                // compare snapshots: one row, both snapshots' viewers
+                // compare snapshots: one row, both snapshots' viewers as tabs of one window, the second snapshot's first and selected (the
+                // compare side, as T7Suite's DockAsTab at index 0), the first's (open already) moved in after it
                 ram[start]++;
                 string ramFile2 = Path.Combine(s_dir, "snap2.RAM");
                 File.WriteAllBytes(ramFile2, ram);
@@ -942,7 +943,9 @@ namespace T7AppTest
                 Assert.AreEqual("SRAM compare results: snap.RAM snap2.RAM", results.Title);
                 var row = results.Rows.SourceCollection.Cast<CommonSuite.CompareRow>().Single(r => r.SymbolName == "IgnNormCal.Map");
                 results.Open(row);
-                Assert.AreEqual("SRAM Symbol: IgnNormCal.Map [snap2.RAM]", vm.SelectedViewer!.Title);
+                CollectionAssert.AreEqual(new[] { "SRAM Symbol: IgnNormCal.Map [snap2.RAM]", "SRAM Symbol: IgnNormCal.Map [snap.RAM]" },
+                    viewer.Tabs!.Items.Select(t => t.Title).ToArray());
+                Assert.AreSame(viewer.Tabs.Items[0], vm.SelectedViewer);
                 results.ShowDifferenceMap(row);
                 Assert.AreEqual("SRAM symbol difference: IgnNormCal.Map [snap.RAM vs snap2.RAM]", vm.SelectedViewer!.Title);
 
