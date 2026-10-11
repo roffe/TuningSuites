@@ -1,0 +1,46 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+	<!-- a suite's stock bins (and T7's symbol files) in Binaries in the suite's folder, where the suite looks for them (PartInfo.StockBinary).
+	     T7 / T8: the old T7Extras / T8Extras setups' (OldSuites/SetupT7Extras, SetupT8Extras) upgrade codes and folders, installing this replaces them.
+	     T5: new, the old T5Suite setup installed its bins itself -->
+	<?if $(var.Suite) = "T5"?>
+		<?define UpgradeCode="{2868A0CB-81E5-4498-9451-6F7C26EAA448}"?>
+		<?define SuiteFolder="T5SuiteII"?>
+	<?elseif $(var.Suite) = "T7"?>
+		<?define UpgradeCode="{3603838F-42F3-4759-A64E-2E54296F3DE4}"?>
+		<?define SuiteFolder="T7Suite"?>
+	<?elseif $(var.Suite) = "T8"?>
+		<?define UpgradeCode="{E6E167DD-63A6-40D6-B034-7A2BD4E98290}"?>
+		<?define SuiteFolder="T8SuitePro"?>
+	<?else?>
+		<?error Suite must be T5, T7 or T8?>
+	<?endif?>
+	<?define Manufacturer="MattiasC"?>
+
+	<!-- Version from the <suite>extras_v git tag, passed by the workflow; MSI uses its first three fields -->
+	<Package Name="$(var.Suite)Extras" Language="1033" Version="$(var.Version)" Codepage="1252" Manufacturer="$(var.Manufacturer)" UpgradeCode="$(var.UpgradeCode)" InstallerVersion="300" ProductCode="*">
+		<SummaryInformation Manufacturer="$(var.Manufacturer)" />
+		<MediaTemplate EmbedCab="yes" />
+
+
+		<!-- the folder the suite went into, changeable for a suite installed elsewhere -->
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		<ui:WixUI Id="WixUI_InstallDir" />
+		<WixVariable Id="WixUILicenseRtf" Value="$(sys.SOURCEFILEDIR)..\Setup$(var.Suite)\disclaimer.rtf" />
+
+
+		<Feature Id="DefaultFeature" ConfigurableDirectory="INSTALLFOLDER" Level="1">
+			<Files Directory="BinariesFolder" Include="$(sys.SOURCEFILEDIR)..\$(var.Suite)Binaries\*" />
+		</Feature>
+
+		<MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+
+		<StandardDirectory Id="ProgramFilesFolder">
+			<Directory Id="ManufacturerFolder" Name="!(bind.property.Manufacturer)">
+				<Directory Id="INSTALLFOLDER" Name="$(var.SuiteFolder)">
+					<Directory Id="BinariesFolder" Name="Binaries" />
+				</Directory>
+			</Directory>
+		</StandardDirectory>
+	</Package>
+</Wix>

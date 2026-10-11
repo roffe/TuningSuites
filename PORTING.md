@@ -501,7 +501,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 - CAN frames are logged to canLog always, as T8Suite did (T7 has the Enable CAN logging setting).
 - The nightlies move on `master` now, for both suites; they were on `net10`, which no longer exists on origin, so none was ever published.
 - Not tested yet: WiX only runs on Windows, so SetupT8 is first built by CI. The first release needs a `T8suite_v` tag above the old 0.1.57 (e.g. `T8suite_v2.0.0`): an untagged build is 0.0.0, which the MSI treats as a downgrade.
-- Known gap (T7 has it too): the old T8Extras stays installed. It owns the same `Binaries\*.BIN` paths, so uninstalling it afterwards removes the stock bins; uninstall T8Extras first, or repair T8Suite afterwards.
+- ~~Known gap (T7 has it too): the old T8Extras stays installed.~~ Gone since the stock bins ship as T8Extras again (2026-10-11): the new T8Extras replaces the old one.
 
 ## Chunks: T5Suite
 
@@ -623,6 +623,7 @@ Behaviour follows T7Suite's MapViewerEx and the DevExpress grid it used; only re
 
 ## Log
 
+- 2026-10-11: The stock bins are out of the suites' packages and ship as T5Extras / T7Extras / T8Extras again, on their own tags (`T5extras_v`, `T7extras_v`, `T8extras_v`, `.github/workflows/extras.yml`): an MSI into `Binaries` in the suite's folder (`SetupExtras/`, T7 / T8 with the old Extras' upgrade codes, so they replace them) and a zip of `Binaries` for Linux / macOS. The library hasn't changed in a decade; T7Suite's packages were about half stock bins. Every plain suite or Extras tag also updates the `latest` release, so github.com/roffe/TuningSuites/releases/latest has every suite's newest files. Updating from a suite MSI that carried the bins itself (T7Suite 2.0.0) removes them: install (or repair) the Extras after the suite.
 - 2026-10-11: Connect with a saved adapter the driver can't find (Kvaser HS: "Channel x cannot be selected", Settings showing none) shows that message instead of ending the app: `CanAdapters.Setup` passes the driver's exception on as the message every caller shows, in T5, T7 and T8. An exception nothing else catches on the UI thread is logged to uiLog and shown, and the app carries on, as WinForms' exception dialog did (Avalonia ended the app and every unsaved map).
 - 2026-10-11: A Compare results double-click opens both maps in one inner window with tabs along the bottom, the compare side's first and selected and the caption following the selected tab (T7Suite's AutoDockSameSymbol / DockAsTab), in T5, T7 and T8 and for the SRAM compares; a map already open on its own moves in; closing the window asks each tab first and Cancel keeps them all; a tab's × closes it alone.
 - 2026-10-11: The Tuning menus without txlogger's tool entries (T5 Diagnostics / Options, T7 Actions / DTC Reader / ESP Calibration, T8 Diagnostics) and T7's Boost regulation overview / Common for tuning; T8's Tuning Wizard directly under Tuning.

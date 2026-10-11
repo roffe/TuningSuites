@@ -41,7 +41,7 @@
 		<Feature Id="DefaultFeature" ConfigurableDirectory="INSTALLFOLDER" Level="1">
 			<ComponentRef Id="T8SuiteExeComponent" Primary="yes" />
 			<ComponentRef Id="BinOpenWith" />
-			<!-- the rest of the self-contained publish folder (runtime, Avalonia, manuals, Binaries, TuningPacks, NLog.config, libusb-1.0.dll) -->
+			<!-- the rest of the self-contained publish folder (runtime, Avalonia, manuals, TuningPacks, NLog.config, libusb-1.0.dll) -->
 			<Files Directory="INSTALLFOLDER" Include="$(var.PublishDir)\**">
 				<Exclude Files="$(var.PublishDir)\T8Suite.exe" />
 				<!-- native SkiaSharp/HarfBuzz symbols, ~100 MB -->

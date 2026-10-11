@@ -26,8 +26,6 @@
     <!-- Help → User manual (T5Suite 2.0's, shipped under T5SuitePro's name) / Trionic 5 documentation -->
     <None Include="..\reference files\T5Suite2 User Manual.pdf" Link="T5SuitePro User Manual.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\reference files\Trionic 5.pdf" Link="Trionic 5.pdf" CopyToOutputDirectory="PreserveNewest" />
-    <!-- the stock bins the setup installed into Binaries (Compare to original file, Lookup partnumber); only published -->
-    <None Include="..\T5Binaries\*" Link="Binaries\%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" Visible="false" />
     <!-- Kvaser's CANlib for TrionicCANLib on Windows, as the flasher ships it -->
     <None Include="$(TrionicDir)\Libs\canlib32.dll" Link="canlib32.dll" CopyToOutputDirectory="PreserveNewest"
           Condition="$(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')" />

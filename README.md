@@ -36,7 +36,7 @@ The adapters still need their own drivers, see [Adapter setup](https://github.co
 
 ## Installation
 
-The downloads are on the [releases page](https://github.com/roffe/TuningSuites/releases): the `T5suite_v…`, `T7suite_v…` and `T8suite_v…` releases, and `T5suite_nightly` / `T7suite_nightly` / `T8suite_nightly` with the latest build. Every package has the stock binaries in `Binaries` (Compare to original file, Lookup partnumber, Create binary from TIS file), which the separate T7Extras and T8Extras setups used to install. T8Suite's packages also carry the Tuning Wizard's packs in `TuningPacks`.
+The newest release of every suite is on [one page](https://github.com/roffe/TuningSuites/releases/latest). All downloads are on the [releases page](https://github.com/roffe/TuningSuites/releases): the `T5suite_v…`, `T7suite_v…` and `T8suite_v…` releases, and `T5suite_nightly` / `T7suite_nightly` / `T8suite_nightly` with the latest build. The stock binaries (Compare to original file, Lookup partnumber, Create binary from TIS file) are separate downloads again, as T7Extras and T8Extras were: the `T5extras_v…`, `T7extras_v…` and `T8extras_v…` releases. On Windows `T7Extras.msi` installs them into the suite's folder; elsewhere unpack `T7Extras.zip` (a `Binaries` folder) into the folder the suite runs from. T5 / T8 alike. T8Suite's packages also carry the Tuning Wizard's packs in `TuningPacks`.
 
 Below, T7Suite stands for any of the suites: the T5Suite and T8Suite files are named the same way (T8Suite.msi, T8Suite-linux-x64.tar.gz, `./T8Suite/T8Suite`, `70-t8suite.rules`).
 

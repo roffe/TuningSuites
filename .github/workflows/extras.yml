@@ -1,0 +1,52 @@
+name: Extras
+on:
+  push:
+    tags:
+    - 'T5extras_v*' # T5Extras, T5Suite's stock bins, e.g. T5extras_v1.0.0
+    - 'T7extras_v*' # T7Extras, e.g. T7extras_v2.0.0
+    - 'T8extras_v*' # T8Extras, e.g. T8extras_v2.0.0
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # the stock bins on their own track, as upstream's T7Extras / T8Extras: they hardly change, the suites' packages leave them out
+  extras:
+    runs-on: windows-latest
+    env:
+      SUITE: ${{ startsWith(github.ref_name, 'T5') && 'T5' || startsWith(github.ref_name, 'T7') && 'T7' || 'T8' }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0 # every suite's tags, for the notes of releases/latest
+
+    - uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: 10.x
+
+    # T7Extras.msi installs into the suite's folder; T7Extras.zip holds the Binaries folder to unpack into it (Linux, macOS)
+    - name: Build
+      run: |
+        v=${GITHUB_REF_NAME#*_v}
+        dotnet build SetupExtras/SetupExtras.wixproj -c Release -p:Platform=x86 -p:Suite=$SUITE -p:Version=${v%%-*}
+        mkdir -p dist/Binaries
+        cp SetupExtras/bin/x86/Release/${SUITE}Extras.msi dist/
+        cp ${SUITE}Binaries/* dist/Binaries/
+        cd dist && 7z a ${SUITE}Extras.zip Binaries > /dev/null && rm -r Binaries
+
+    - name: Release
+      uses: softprops/action-gh-release@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        make_latest: "false"
+        files: dist/*
+
+    - name: Latest of every suite
+      if: ${{ !contains(github.ref_name, '-') }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: bash packaging/latest-release.sh dist/*

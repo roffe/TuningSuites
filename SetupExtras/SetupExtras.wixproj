@@ -1,0 +1,10 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+  <PropertyGroup>
+    <!-- T5Extras / T7Extras / T8Extras: dotnet build SetupExtras -p:Platform=x86 -p:Suite=T7 -p:Version=2.0.0, see .github/workflows/extras.yml -->
+    <OutputName>$(Suite)Extras</OutputName>
+    <DefineConstants>$(DefineConstants);Suite=$(Suite);Version=$(Version)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+</Project>
