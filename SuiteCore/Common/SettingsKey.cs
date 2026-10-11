@@ -29,16 +29,37 @@ namespace CommonSuite
         public static string BaseFolder { get; set; } =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MattiasC");
 
-        public static string Folder(string suite) => Path.Combine(BaseFolder, suite);
+        /// <summary>The suite's settings folder; a folder under its former name (<see cref="FormerFolders"/>) is moved there first.</summary>
+        public static string Folder(string suite)
+        {
+            string folder = Path.Combine(BaseFolder, suite);
+            if (FormerFolders.TryGetValue(suite, out string former) && !Directory.Exists(folder) && Directory.Exists(Path.Combine(BaseFolder, former)))
+            {
+                try
+                {
+                    Directory.Move(Path.Combine(BaseFolder, former), folder);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    // the settings then come from the registry again (Windows) or start over
+                    logger.Warn(e, "Could not move the settings folder {0} to {1}", former, suite);
+                }
+            }
+            return folder;
+        }
 
         /// <summary>
-        /// The registry key a suite kept its own settings under besides HKCU\Software\MattiasC\&lt;suite&gt; (T5Suite: Software\T5Suite2;
-        /// its log filters, channels and symbol colours went through CommonSuite to the MattiasC key). Its values win.
+        /// The registry keys a suite kept its settings under besides HKCU\Software\MattiasC\&lt;suite&gt;, imported in this order, so the
+        /// later ones win (T5SuitePro: T5Suite 2.0's MattiasC\T5Suite2 for log filters, channels and symbol colours, then its own
+        /// Software\T5Suite2).
         /// </summary>
-        public static Dictionary<string, string> RegistryPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public static Dictionary<string, string[]> RegistryPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>A settings folder's name before the suite was renamed (T5SuitePro: T5Suite2).</summary>
+        public static Dictionary<string, string> FormerFolders { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public static SettingsKey Open(string suite, string subkey = null) =>
-            new SettingsKey(Path.Combine(Folder(suite), "settings.json"), [@"Software\MattiasC\" + suite, RegistryPaths.GetValueOrDefault(suite)], subkey);
+            new SettingsKey(Path.Combine(Folder(suite), "settings.json"), [@"Software\MattiasC\" + suite, .. RegistryPaths.GetValueOrDefault(suite) ?? []], subkey);
 
         internal SettingsKey(string file, string[] registryPaths, string subkey = null)
         {

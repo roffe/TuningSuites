@@ -121,6 +121,9 @@ public partial class HexViewerViewModel : DocumentViewModel
         Document.Changed += (_, _) => IsModified = true;
     }
 
+    /// <summary>Another file in a view like this one: the same bin's symbols, flash or SRAM addresses.</summary>
+    public HexViewerViewModel WithFile(string file) => new(file, m_bin, m_sram);
+
     /// <summary>The caret moved: "Ln / Col" and the symbol there (addresses wrap at the file size; SRAM files go by SRAM address).</summary>
     public void CaretAt(ulong offset) => Status = HexStatus(m_bin, offset, Document.Length, m_sram);
 

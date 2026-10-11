@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommonSuite;
 using CommunityToolkit.Mvvm.Input;
+using MapControls;
 using SuiteApp.ViewModels;
 using Trionic5Tools;
 using TrionicCANLib.API;
@@ -133,6 +134,9 @@ public partial class T5MainWindowViewModel
     protected override string ConnectFailedText => "Not connected";
 
     protected override bool OnlineMapsFromEcu => true;
+
+    // T5Suite opened the SRAM-Flash symbol difference in Decimal
+    protected override MapViewType? SramToBinDifferenceView => MapViewType.Decimal;
 
     /// <summary>StartTableViewer for a map only in SRAM: from the ECU when connected, else from the loaded snapshot, else T5Suite's message.</summary>
     protected override Task OpenSramOnlyAsync(SuiteBinary bin, SymbolHelper sh)

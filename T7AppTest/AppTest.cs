@@ -342,9 +342,7 @@ namespace T7AppTest
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
                 var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
-                Assert.AreEqual("Fuel", ((MenuItem)quick.Items[0]!).Header);
-                var ve = (MenuItem)((MenuItem)quick.Items[0]!).Items[0]!;
-                Assert.AreEqual("VE map", ve.Header);
+                var ve = TuningEntry(quick, "Fuel", "VE map");
                 ve.Command!.Execute(ve.CommandParameter);
                 Assert.AreEqual("BFuelCal.Map", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
 
@@ -358,6 +356,8 @@ namespace T7AppTest
                 var settingsWindow = new SettingsWindow { DataContext = settings };
                 settingsWindow.Show();
                 Save(settingsWindow, "settings");
+                // every option says what it does: the old dialogs' SuperTips, the same style for the rest
+                CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
                 settingsWindow.Close();
                 settings.Apply(vm.Settings);
                 vm.SettingsChanged();
@@ -366,6 +366,22 @@ namespace T7AppTest
                 var settings2 = new SettingsViewModel(vm.Settings) { ShowAddressesInHex = true, SynchronizeMapviewers = true };
                 settings2.Apply(vm.Settings);
                 vm.SettingsChanged();
+
+                // the autotune options behind Settings' button, saved by their own Ok
+                var autotune = new AutotuneSettingsViewModel(vm.Settings) { CellStableTime = 1500, AutoTuneFuelMap = "BFuelCal.E85Map" };
+                var autotuneWindow = new AutotuneSettingsWindow { DataContext = autotune };
+                autotuneWindow.Show();
+                Save(autotuneWindow, "autotunesettings");
+                autotuneWindow.Close();
+                // what Settings' button edits: a copy, so a cancelled dialog leaves the values kept so far
+                var copy = autotune.Clone();
+                copy.CellStableTime = 2000;
+                Assert.AreEqual(1500m, autotune.CellStableTime);
+                autotune.Apply(vm.Settings);
+                Assert.AreEqual(1500, vm.Settings.CellStableTime_ms);
+                Assert.AreEqual("BFuelCal.E85Map", vm.Settings.AutoTuneFuelMap);
+                vm.Settings.CellStableTime_ms = 1000;
+                vm.Settings.AutoTuneFuelMap = "BFuelCal.Map";
 
                 var myMapsWindow = new MyMapsWindow { DataContext = new MyMapsViewModel(CommonSuite.MapMenus.LoadMyMaps(vm.MyMapsFile)) };
                 myMapsWindow.Show();
@@ -664,6 +680,8 @@ namespace T7AppTest
                 Assert.AreEqual("245", am.Texts![wot, c2400]);
                 Assert.AreEqual(4, am.Series.Count);                           // power, torque, injector DC, lambda
                 Assert.AreEqual(3, am.CompressorPoints!.Length);
+                // the dyno graph's value axis steps
+                CollectionAssert.AreEqual(new[] { 30.0, 20, 10, 0.5 }, new[] { 24, 20, 7, 0.4 }.Select(SuiteApp.Controls.LineChart.NiceStep).ToArray());
                 Save(window, "airmass-table");
                 var tabs = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<AirmassResultView>().Single()
                     .GetLogicalDescendants().OfType<TabControl>().First();
@@ -892,6 +910,11 @@ namespace T7AppTest
                 CollectionAssert.Contains(infos, "Check settings, no CAN adapter has been selected!");
                 Assert.IsFalse(vm.IsConnected);
                 Assert.AreEqual("Connect ECU", vm.ConnectCaption);
+                // and Settings shows none chosen (it showed the first adapter found, which wasn't saved); choosing a type picks its first
+                var unset = new SettingsViewModel(vm.Settings);
+                Assert.IsNull(unset.Adapter);
+                unset.AdapterType = unset.AdapterTypes.First(t => t != unset.AdapterType);
+                Assert.AreEqual(unset.Adapters.FirstOrDefault(), unset.Adapter);
 
                 // an SRAM snapshot: the symbol's bytes at its SRAM address
                 var sh = vm.Binary!.Find("IgnNormCal.Map");
@@ -910,7 +933,8 @@ namespace T7AppTest
                 CollectionAssert.AreEqual(Enumerable.Range(0, sh.Length).Select(i => (byte)(i % 7)).ToArray(), viewer.Map.ToBytes());
                 Save(window, "sram-viewer");
 
-                // compare snapshots: one row, both snapshots' viewers
+                // compare snapshots: one row, both snapshots' viewers as tabs of one window, the second snapshot's first and selected (the
+                // compare side, as T7Suite's DockAsTab at index 0), the first's (open already) moved in after it
                 ram[start]++;
                 string ramFile2 = Path.Combine(s_dir, "snap2.RAM");
                 File.WriteAllBytes(ramFile2, ram);
@@ -919,7 +943,9 @@ namespace T7AppTest
                 Assert.AreEqual("SRAM compare results: snap.RAM snap2.RAM", results.Title);
                 var row = results.Rows.SourceCollection.Cast<CommonSuite.CompareRow>().Single(r => r.SymbolName == "IgnNormCal.Map");
                 results.Open(row);
-                Assert.AreEqual("SRAM Symbol: IgnNormCal.Map [snap2.RAM]", vm.SelectedViewer!.Title);
+                CollectionAssert.AreEqual(new[] { "SRAM Symbol: IgnNormCal.Map [snap2.RAM]", "SRAM Symbol: IgnNormCal.Map [snap.RAM]" },
+                    viewer.Tabs!.Items.Select(t => t.Title).ToArray());
+                Assert.AreSame(viewer.Tabs.Items[0], vm.SelectedViewer);
                 results.ShowDifferenceMap(row);
                 Assert.AreEqual("SRAM symbol difference: IgnNormCal.Map [snap.RAM vs snap2.RAM]", vm.SelectedViewer!.Title);
 

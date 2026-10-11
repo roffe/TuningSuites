@@ -137,9 +137,14 @@
     <Style Selector="MdiDocumentWindow /template/ Border#PART_DragHandle">
         <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
-    <!-- the light skin's MDI workspace, window titles and map headers (resources above, unset in Dark) -->
+    <!-- the light skin's MDI workspace, window titles and map headers (resources above, unset in Dark); the workspace's embossed
+         logo, in both, between its background and the inner windows: the windows' items control's background, and Dock's empty
+         content host's while no document is open (it hides the items control) -->
     <Style Selector="MdiDocumentControl /template/ Border#PART_Root > Grid">
         <Setter Property="Background" Value="{DynamicResource SuiteMdiWorkspaceBrush}" />
+    </Style>
+    <Style Selector="MdiDocumentControl /template/ ItemsControl#PART_ItemsControl, MdiDocumentControl /template/ ContentControl#PART_EmptyContentHost">
+        <Setter Property="Background" Value="{x:Static c:WorkspaceLogo.Brush}" />
     </Style>
     <Style Selector="MdiDocumentWindow /template/ Border#PART_Header">
         <Setter Property="TextElement.Foreground" Value="{DynamicResource SuiteMdiTitleBrush}" />
@@ -152,9 +157,39 @@
         <Setter Property="HeaderForeground" Value="{DynamicResource SuiteMapHeaderForeground}" />
         <Setter Property="HeaderLines" Value="{DynamicResource SuiteMapHeaderLines}" />
         <Setter Property="GridLines" Value="{DynamicResource SuiteMapGridLines}" />
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+    </Style>
+    <!-- the settings' color blind mode (MainWindowViewModel puts it in the application's resources): every open map, its 3D view and
+         graph, docked, floating or in a dialog, repaints when it changes -->
+    <Style Selector="mc|Surface3D">
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+    </Style>
+    <Style Selector="mc|Graph2D">
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+    </Style>
+    <Style Selector="c|AirmassGrid">
+        <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
     </Style>
     <Style Selector="DockControl">
         <Setter Property="(ControlRecyclingDataTemplate.ControlRecycling)" Value="{StaticResource DocumentRecycling}" />
+    </Style>
+    <!-- a group box (the old suites' DevExpress GroupControls): the title in a gap of the frame's top line, on any background -->
+    <Style Selector="HeaderedContentControl.group">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border Margin="0,10,0,0" Padding="10,14,10,6" BorderThickness="1,0,1,1"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                        <ContentPresenter Content="{TemplateBinding Content}" />
+                    </Border>
+                    <Grid ColumnDefinitions="8,Auto,*" VerticalAlignment="Top">
+                        <Border Height="1" Margin="0,10,0,0" VerticalAlignment="Top" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                        <ContentPresenter Grid.Column="1" Content="{TemplateBinding Header}" Padding="4,0" FontWeight="SemiBold" />
+                        <Border Grid.Column="2" Height="1" Margin="0,10,0,0" VerticalAlignment="Top" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+                    </Grid>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
     </Style>
     <!-- Fluent's tab headers are sized for touch, the suite is a dense desktop tool -->
     <Style Selector="TabStripItem, TabItem">

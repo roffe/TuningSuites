@@ -13,7 +13,7 @@ namespace T5CoreTest
         [TestMethod]
         public void ConversionsStatusAndCells()
         {
-            var bin = T5Binary.Open(BinGoldenTest.StockBins().First(b => b.EndsWith("4239273.BIN")));
+            var bin = T5Binary.Open(BinGoldenTest.StockBins().First(b => b.EndsWith("4239273.bin")));
             string before = SettingsKey.BaseFolder;
             SettingsKey.BaseFolder = System.IO.Directory.CreateTempSubdirectory("t5settings").FullName;
             try { Run(bin, new AppSettings(new T5SuiteRegistry())); }

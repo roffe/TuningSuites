@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MapControls;
 using TrionicCANLib.Checksum;
 
 namespace SuiteApp.ViewModels;
@@ -124,7 +125,7 @@ public abstract partial class MainWindowViewModel
     {
         byte[] ram = File.ReadAllBytes(file);
         return new(file, name => bin.FindAny(name) is { } sh ? SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length) : null,
-            name => { if (bin.FindAny(name) is { } sh) OpenFromSramFile(sh, file); });
+            name => bin.FindAny(name) is { } sh ? OpenFromSramFile(sh, file) : null);
     }
 
     /// <summary>Compare to SRAM snapshot: "SRAM &lt;&gt; BIN Compare results", the bin's map and the snapshot's per symbol.</summary>
@@ -134,7 +135,7 @@ public abstract partial class MainWindowViewModel
         List<CompareRow> rows = await Task.Run(() => SuiteCompare.CompareToSram(bin, File.ReadAllBytes(file)));
         string name = Path.GetFileName(file);
         ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), SramSide(bin, file), rows,
-            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]"));
+            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]") { DifferenceView = SramToBinDifferenceView });
     }
 
     /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
@@ -145,8 +146,12 @@ public abstract partial class MainWindowViewModel
             SuiteCompare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2)));
         string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
         ShowDocument(new CompareResultsViewModel(this, bin, SramSide(bin, file1), SramSide(bin, file2), rows,
-            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]"));
+            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]") { DifferenceView = SramDifferenceView });
     }
+
+    /// <summary>The view the SRAM compares' difference maps open in (snapshot to bin, two snapshots), null for the default one.</summary>
+    protected virtual MapViewType? SramToBinDifferenceView => null;
+    protected virtual MapViewType? SramDifferenceView => null;
 
     // ---- SRAM maps ----
 
@@ -302,19 +307,17 @@ public abstract partial class MainWindowViewModel
 
     public void ImportSramSnapshot(string file) => SramFile = file;
 
-    /// <summary>Read from SRAM file: the symbol's bytes at its SRAM address in the snapshot, as "SRAM Symbol: name [file]".</summary>
-    public void OpenFromSramFile(SymbolHelper sh, string? file = null)
+    /// <summary>Read from SRAM file: the symbol's bytes at its SRAM address in the snapshot, as "SRAM Symbol: name [file]"; the viewer shown.</summary>
+    public DocumentViewModel? OpenFromSramFile(SymbolHelper sh, string? file = null)
     {
         file ??= SramFile;
-        if (Binary is not { } bin || file == null || !File.Exists(file)) return;
+        if (Binary is not { } bin || file == null || !File.Exists(file)) return null;
         byte[] ram = File.ReadAllBytes(file);
-        if (ram.Length == 0) return;
+        if (ram.Length == 0) return null;
         byte[] data = SuiteCompare.ReadSram(ram, sh.Start_address, sh.Length);
         string title = $"SRAM Symbol: {sh.SmartVarname} [{Path.GetFileName(file)}]";
-        if (MapViewerViewModel.Create(this, bin, sh, data, sram: true, title: title) is { } viewer)
-        {
-            viewer.OnlineMode = true;
-            ShowDocument(viewer);
-        }
+        if (MapViewerViewModel.Create(this, bin, sh, data, sram: true, title: title) is not { } viewer) return null;
+        viewer.OnlineMode = true;
+        return ShowDocument(viewer);
     }
 }

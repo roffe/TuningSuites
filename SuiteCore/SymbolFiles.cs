@@ -137,8 +137,8 @@ namespace CommonSuite
         }
 
         /// <summary>
-        /// "Export map to Excel", as CSV: "Data for &lt;map&gt;", the X axis (with its factor) across, the Y axis down (reversed, raw)
-        /// and the values with the map's factor, 2 decimals, data rows flipped like the sheet.
+        /// "Export map to Excel", as CSV: "Data for &lt;map&gt;", the X axis (signed, with its factor and offset) across, the Y axis
+        /// down (reversed, raw) and the values with the map's factor, 2 decimals, data rows flipped like the sheet.
         /// </summary>
         public static void ExportMapCsv(SuiteBinary bin, SymbolHelper sh, string target)
         {
@@ -149,13 +149,15 @@ namespace CommonSuite
             double factor = bin.GetMapCorrectionFactor(name), offset = bin.GetMapCorrectionOffset(name);
             int size = sixteen ? 2 : 1, values = data.Length / size, rows = (values + cols - 1) / cols;
             int[] x = bin.GetXaxisValues(name), y = bin.GetYaxisValues(name);
-            double xfactor = bin.AxisFactor(bin.AxisSymbols(name).xAxis);
+            var (xfactor, xoffset) = bin.XAxisExportScale(name);
             string F(double d) => Math.Round(d, 2).ToString(CultureInfo.InvariantCulture);
+            // the sheet's sign rule (ConvertSignedValue) on the X axis: negative only when the high byte is 0xFF
+            static int XSigned(int v) => v is >= 0xFF00 and <= 0xFFFF ? v - 0x10000 : v;
             // two decimals lose raw steps below a factor of 0.01 (T5's Insp_mat! is 1/256): enough for the import to read them back
             int decimals = factor is > 0 and < 0.01 ? (int)Math.Ceiling(-Math.Log10(factor)) + 1 : 2;
             string Cell(double d) => Math.Round(d, decimals).ToString(CultureInfo.InvariantCulture);
             var sb = new StringBuilder().Append("Data for ").Append(name).Append('\n');
-            sb.Append(';').AppendJoin(';', Enumerable.Range(0, cols).Select(c => c < x.Length ? F(x[c] * xfactor) : c.ToString(CultureInfo.InvariantCulture))).Append('\n');
+            sb.Append(';').AppendJoin(';', Enumerable.Range(0, cols).Select(c => c < x.Length ? F(XSigned(x[c]) * xfactor + xoffset) : c.ToString(CultureInfo.InvariantCulture))).Append('\n');
             for (int r = rows - 1; r >= 0; r--)
             {
                 sb.Append(r < y.Length ? y[r].ToString(CultureInfo.InvariantCulture) : "");

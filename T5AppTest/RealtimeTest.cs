@@ -145,12 +145,21 @@ namespace T5AppTest
                 CollectionAssert.Contains(rt.PolledNames.ToList(), "AD_EGR");
                 for (int i = 0; i < 3; i++)
                     rt.Apply(new RealtimeSample(DateTime.Now, [("Rpm", 3000), ("P_medel", 0.8), ("AD_EGR", 12.5), ("Pgm_status", 0)], 20, null));
+                // T5Suite's User defined grid: F2, Pgm_status in 16 hex digits
+                Assert.AreEqual(3000.ToString("F2", System.Globalization.CultureInfo.CurrentCulture), rt.Rows.Single(r => r.Name == "Rpm").ValueText);
+                Assert.AreEqual("0000000000000000", rt.Rows.Single(r => r.Name == "Pgm_status").ValueText);
                 vm.ShowAfrCommand.Execute("FeedbackAFR");
                 var feedback = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("FeedbackAFR", feedback.MapName);
                 Assert.IsTrue(feedback.IsReadOnly);
                 Assert.AreEqual(1, Enumerable.Range(0, feedback.Map.Count).Count(i => feedback.Map[i] != 0));
                 Assert.AreEqual(12.5, Enumerable.Range(0, feedback.Map.Count).Select(feedback.Map.Physical).Max(), 0.1);
+                // T5Suite's sample box on that cell, its count read as the passes come
+                int sampled = Enumerable.Range(0, feedback.Map.Count).Single(i => feedback.Map[i] != 0);
+                CollectionAssert.AreEqual(new[] { sampled }, Enumerable.Range(0, feedback.Map.Count).Where(i => feedback.Map.Marks!(i).Samples > 0).ToArray());
+                int samples = feedback.Map.Marks!(sampled).Samples;
+                rt.Apply(new RealtimeSample(DateTime.Now, [("Rpm", 3000), ("P_medel", 0.8), ("AD_EGR", 12.5), ("Pgm_status", 0)], 20, null));
+                Assert.AreEqual(samples + 1, feedback.Map.Marks!(sampled).Samples);
                 vm.ShowAfrCommand.Execute("TargetAFR");
                 var target = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.IsFalse(target.IsReadOnly);
@@ -161,11 +170,9 @@ namespace T5AppTest
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "afrtarget");
 
-                // the ignition autotune's lock map (nothing locked yet) and the autotune settings
+                // the ignition autotune's lock map (Ign_map_0!'s padlocks, see CellMarksTest) and the autotune settings
                 vm.ShowIgnitionLocksCommand.Execute(null);
-                var locks = (MapViewerViewModel)vm.SelectedViewer!;
-                Assert.AreEqual("IgnitionLockMap", locks.MapName);
-                Assert.IsTrue(Enumerable.Range(0, locks.Map.Count).All(i => locks.Map[i] == 0));
+                Assert.AreEqual("Ign_map_0!", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
                 var autotune = new AutotuneSettingsViewModel(vm.Settings, vm.T5Settings);
                 Assert.AreEqual(35m, autotune.GlobalMaximumAdvance);
                 autotune.GlobalMaximumAdvance = 33.5m;

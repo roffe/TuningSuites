@@ -25,11 +25,11 @@
             <DataGridTextColumn x:DataType="cs:CompareRow" Header="Symbol" Binding="{Binding SymbolName, Mode=OneWay}" Width="200" />
             <DataGridTextColumn x:DataType="cs:CompareRow" Header="Description" Binding="{Binding Description, Mode=OneWay}" Width="260" />
             <DataGridTextColumn x:DataType="cs:CompareRow" Header="Length (bytes)" Binding="{Binding LengthBytes, Mode=OneWay, Converter={x:Static sv:SymbolNumberConverter.Instance}}" />
-            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Percentage of values different" Binding="{Binding Percentage, Mode=OneWay, StringFormat='{}{0:F1}'}" />
+            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Percentage of values different" Binding="{Binding Percentage, Mode=OneWay, Converter={x:Static sv:F1Converter.Instance}}" />
             <DataGridTextColumn x:DataType="cs:CompareRow" Header="Number of values different" Binding="{Binding Differences, Mode=OneWay}" />
-            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Average difference" Binding="{Binding AverageDifference, Mode=OneWay, StringFormat='{}{0:F1}'}" />
-            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Symbolnumber #1" Binding="{Binding SymbolNumber1, Mode=OneWay}" />
-            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Symbolnumber #2" Binding="{Binding SymbolNumber2, Mode=OneWay}" />
+            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Average difference" Binding="{Binding AverageDifference, Mode=OneWay, Converter={x:Static sv:F1Converter.Instance}}" />
+            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Symbolnumber #1" Binding="{Binding SymbolNumber1, Mode=OneWay, Converter={x:Static sv:SymbolNumberConverter.Instance}}" />
+            <DataGridTextColumn x:DataType="cs:CompareRow" Header="Symbolnumber #2" Binding="{Binding SymbolNumber2, Mode=OneWay, Converter={x:Static sv:SymbolNumberConverter.Instance}}" />
             <DataGridTextColumn x:DataType="cs:CompareRow" Header="User description" Binding="{Binding Userdescription, Mode=OneWay}" />
             <DataGridCheckBoxColumn x:DataType="cs:CompareRow" Header="Missing in original file" Binding="{Binding MissingInOriFile, Mode=OneWay}" />
             <DataGridCheckBoxColumn x:DataType="cs:CompareRow" Header="Missing in compare file" Binding="{Binding MissingInCompareFile, Mode=OneWay}" />

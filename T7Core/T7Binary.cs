@@ -201,6 +201,9 @@ namespace T7
             return retval;
         }
 
+        // the other X axes MapViewerEx signed itself, after the factor (TorqueCal.M_EngXSP's 65496 showed as -40)
+        public override bool SignsXAxis => true;
+
         public override int[] GetYaxisValues(string symbolname)
         {
             int[] retval = new int[SymbolLength(symbolname)];
@@ -250,7 +253,7 @@ namespace T7
                 case "AftSt2ExtraCal.EnrFacMap": case "AftSt1ExtraCal.EnrFacMap": case "StartCal.HighAltFacMap":
                     return 15;
                 case "AirComp.LimPresComp": case "TCompCal.EnrFacMap": case "TCompCal.EnrFacE85Map": case "TCompCal.EnrFacAutMap":
-                case "StartCal.ScaleFacRpmE85Map": case "StartCal.ScaleFacRpmMap":
+                case "StartCal.ScaleFacRpmE85Map": case "StartCal.ScaleFacRpmMap": case "BoostCal.PWMTempMap":
                     return 8;
                 case "AftSt2ExtraCal.EnrMapE85":
                     return 7;
@@ -295,7 +298,15 @@ namespace T7
             double returnvalue = 1;
             try
             {
-                string text = SymbolTranslator.ToHelpText(symbolname, language);
+                // the newer maps without a help text of their own take their sibling's resolution
+                string helpName = symbolname switch
+                {
+                    "BoostCal.PWMTempMap" => "BoostCal.PWMTempTab",
+                    "StartCal.EnrFacManTAB" or "StartCal.EnrFacAutTAB" => "StartCal.EnrFacTab",
+                    "IgnStartCal.fi_StartTab" => "IgnStartCal.fi_StartMap",
+                    _ => symbolname,
+                };
+                string text = SymbolTranslator.ToHelpText(helpName, language);
                 int idx = text.IndexOf("Resolution is", StringComparison.Ordinal);
                 if (idx >= 0)
                 {
@@ -358,66 +369,156 @@ namespace T7
         public override ChecksumResult VerifyChecksum() => ChecksumT7.VerifyChecksum(FileName, false, false, (_, _, _) => false);
 
         /// <summary>
-        /// The Tuning page's map buttons in its group and button order, with DynamicTuningMenu's rules (BioPower names and E85
-        /// maps, B308 second maps, gas maps, boost control and cab gear limit only when the bin has them).
+        /// The Tuning menu: txlogger's T7 menu, the maps by the name the bin has: BioPower's E85 VE map, Myrtilos' gas VE map first
+        /// (T7Suite), the start enrichment per gearbox (EH0B, EI0x, EJ06), the start ignition by air temperature only (EA1x, E92x),
+        /// the boost temperature compensation over load (EB2x, EC0x and others). txlogger's tools without a T7Suite feature are
+        /// left out: Import address table (Copy address table goes the other way), Seed/Key patcher, Boost Auto-Tuner, J1979,
+        /// PI area editor, Gear calculator, MBT ignition analyser and Register EU0D.
         /// </summary>
-        public override List<MapShortcut> QuickMaps()
-        {
-            bool bio = IsBioPower, b308 = Has("IgnNormCal2.Map");
-            var m = new List<MapShortcut>
-            {
-                new("Fuel", bio ? "Petrol VE Map" : "VE map", "BFuelCal.Map"),
-                new("Fuel", bio ? "E85 VE Map" : "Startup VE map", bio ? "BFuelCal.E85Map" : "BFuelCal.StartMap"),
-                new("Fuel", "Injector constant", "InjCorrCal.InjectorConst"),
-            };
-            if (b308)
-            {
-                m.Add(new("Fuel", "VE map2", "BFuelCal2.Map"));
-                m.Add(new("Fuel", "Startup VE map2", "BFuelCal2.StartMap"));
-            }
-            if (Has("MyrtilosCal.Fuel_GasMap")) m.Add(new("Fuel", "Gas VE map", "MyrtilosCal.Fuel_GasMap"));
-            else if (Has("BFuelCal.GasMap")) m.Add(new("Fuel", "Gas VE map", "BFuelCal.GasMap"));
+        public override IReadOnlyList<TuningItem> TuningMenu() => s_tuningMenu;
 
-            m.Add(new("Ignition", "Ignition map", "IgnNormCal.Map"));
-            if (b308) m.Add(new("Ignition", "Ignition map2", "IgnNormCal2.Map"));
-            if (bio) m.Add(new("Ignition", "Ignition for E85", "IgnE85Cal.fi_AbsMap"));
-            if (Has("IgnNormCal.GasMap")) m.Add(new("Ignition", "Ignition for gas", "IgnNormCal.GasMap"));
-            m.Add(new("Ignition", "Knock pull map", "IgnKnkCal.IndexMap"));
-            m.Add(new("Ignition", "Max knock pull", "KnkFuelCal.fi_MapMaxOff"));
-
-            m.Add(new("Airmass request", "Pedal request map", "PedalMapCal.m_RequestMap"));
-            m.Add(new("Airmass request", "Air/torque calibration", "TorqueCal.m_AirTorqMap"));
-            m.Add(new("Airmass request", "Nom. torque map", "TorqueCal.M_NominalMap"));
-            m.Add(new("Airmass request", "Pedal request airmass (Y)", "TorqueCal.m_PedYSP"));
-            m.Add(new("Airmass request", "Air/torque (X)", "TorqueCal.M_EngXSP"));
-            m.Add(new("Airmass request", "Nom. torque map (X)", "TorqueCal.m_AirXSP"));
-
-            if (Has("BoostCal.RegMap"))
-            {
-                m.Add(new("Boost control", "Boost calibr.", "BoostCal.RegMap"));
-                m.Add(new("Boost control", "P factors", "BoostCal.PMap"));
-                m.Add(new("Boost control", "I factors", "BoostCal.IMap"));
-                m.Add(new("Boost control", "D factors", "BoostCal.DMap"));
-            }
-
-            m.Add(new("Knock", "Knock enrichment", "KnkFuelCal.EnrichmentMap"));
-            m.Add(new("Knock", "Knock sensitivity", "KnkDetCal.RefFactorMap"));
-
-            m.Add(new("Limiters", "Airmass (M)", "BstKnkCal.MaxAirmass"));
-            m.Add(new("Limiters", "Airmass (A)", "BstKnkCal.MaxAirmassAu"));
-            m.Add(new("Limiters", "RPM limiter", "MaxSpdCal.n_EngLimAir"));
-            m.Add(new("Limiters", "Engine trq (M)", "TorqueCal.M_EngMaxTab"));
-            m.Add(new("Limiters", "Engine trq (A)", "TorqueCal.M_EngMaxAutTab"));
-            m.Add(new("Limiters", "Fuel cut", "FCutCal.m_AirInletLimit"));
-            if (bio) m.Add(new("Limiters", "Engine trq for E85", "TorqueCal.M_EngMaxE85Tab"));
-            if (bio && Has("TorqueCal.M_EngMaxE85TabAut")) m.Add(new("Limiters", "Engine trq for E85 (A)", "TorqueCal.M_EngMaxE85TabAut"));
-            m.Add(new("Limiters", "Speed limiter", "MaxVehicCal.v_MaxSpeed"));
-            m.Add(new("Limiters", "Gear trq (M)", "TorqueCal.M_ManGearLim"));
-            m.Add(new("Limiters", "Gear trq (5th)", "TorqueCal.M_5GearLimTab"));
-            if (Has("TorqueCal.M_CabGearLim")) m.Add(new("Limiters", "Gear trq (cab)", "TorqueCal.M_CabGearLim"));
-            m.Add(new("Limiters", "Overboost", "TorqueCal.M_OverBoostTab"));
-            return m;
-        }
+        private static readonly TuningItem[] s_tuningMenu =
+        [
+            new("Diagnostics", Children:
+            [
+                new("F_KnkDetAdap.FKnkCntMap", Ecu: true),
+                new("F_KnkDetAdap.RKnkCntMap", Ecu: true),
+                new("KnkDetAdap.KnkCntMap", Ecu: true),
+                new("MissfAdap.MissfCntMap", Ecu: true),
+            ]),
+            new("Calibration", Children:
+            [
+                new("AirCompCal.PressMap"),
+                new("AirCtrlCal.map"),
+                new("AreaCal.Area"),
+                new("AreaCal.Table"),
+                new("Ethanol adaption value", ["E85.X_EthAct_Tech2"], Ecu: true),
+                new("MAFCal.m_RedundantAirMap"),
+                new("TCompCal.EnrFacE85Tab"),
+                new("TCompCal.EnrFacTab"),
+                new("VIOSMAFCal.FreqSP"),
+                new("VIOSMAFCal.Q_AirInletTab2"),
+            ]),
+            new("Injectors", Children:
+            [
+                new("Injector dead time", ["InjCorrCal.BattCorrTab"]),
+                new("Injector dead time (Y)", ["InjCorrCal.BattCorrSP"]),
+                new("Injector constant", ["InjCorrCal.InjectorConst"]),
+            ]),
+            new("Airmass", Children:
+            [
+                new("Pedal request map", ["PedalMapCal.m_RequestMap"]),
+                new("Pedal request airmass (Y)", ["TorqueCal.m_PedYSP"]),
+                new("Air/Torque calibration", ["TorqueCal.m_AirTorqMap"]),
+                new("Air/Torque (X)", ["TorqueCal.M_EngXSP"]),
+                new("Nom. torque map", ["TorqueCal.M_NominalMap"]),
+                new("Nom. torque map (X)", ["TorqueCal.m_AirXSP"]),
+            ]),
+            new("Fuel", Children:
+            [
+                new("Fuel cut", Children:
+                [
+                    new("FCutCal.ST_Enable"),
+                    new("FCutCal.FuelFactor"),
+                    new("FCutCal.n_CombSP (Y)", ["FCutCal.n_CombSP"]),
+                ]),
+                new("Closed Loop", Children:
+                [
+                    new("Max load norm", ["LambdaCal.MaxLoadNormTab"]),
+                    new("Max load E85", ["LambdaCal.MaxLoadE85Tab"]),
+                ]),
+                new("TransCal", Children:
+                [
+                    new("TransCal.ST_Enable"),
+                    new("TransCal.ST_DecNoLim"),
+                    new("TransCal.AccRampFac"),
+                    new("TransCal.DecRampFac"),
+                    new("TransCal.AccFacMap"),
+                    new("TransCal.DecFacMap"),
+                    new("TransCal.RpmSP (Y)", ["TransCal.RpmSP"]),
+                    new("TransCal.AccSP (X)", ["TransCal.AccSP"]),
+                    new("TransCal.DecSP (X)", ["TransCal.DecSP"]),
+                    new("TransCal.RetMul"),
+                    new("TransCal.AccMul"),
+                    new("TransCal.RetMulConst"),
+                    new("TransCal.AccMulConst"),
+                    new("TransCal.Delay1"),
+                    new("TransCal.Delay2"),
+                    new("TransCal.m_TriggMaxTab"),
+                    new("TransCal.FilterConstAir"),
+                ]),
+                new("VE map", ["BFuelCal.Map"]),
+                new("Startup / E85 VE map", ["BFuelCal.StartMap", "BFuelCal.E85Map"]),
+                new("Gas VE map", ["MyrtilosCal.Fuel_GasMap", "BFuelCal.GasMap"]),
+                new("Enrichment factor during starting", ["StartCal.EnrFacTab", "StartCal.EnrFacManTAB|StartCal.EnrFacAutTAB"]),
+                new("Enrichment factor during starting E85", ["StartCal.EnrFacE85Tab"]),
+                new("Enable closed loop regulation", ["LambdaCal.ST_Enable"]),
+                new("Injection end angles", ["InjAnglCal.Map"]),
+            ]),
+            new("Ignition", Children:
+            [
+                new("Ignition map", ["IgnNormCal.Map"]),
+                new("Ignition for E85", ["IgnE85Cal.fi_AbsMap"]),
+                new("Ignition for Gas", ["IgnNormCal.GasMap"]),
+                new("Ignition Idle", ["IgnIdleCal.fi_IdleMap"]),
+                new("Ignition Start", ["IgnStartCal.fi_StartMap", "IgnStartCal.fi_StartTab"]),
+                new("Knock pull map", ["IgnKnkCal.IndexMap"]),
+                new("Max knock pull", ["KnkFuelCal.fi_MapMaxOff"]),
+            ]),
+            new("Boost", Children:
+            [
+                new("Boost calibration", ["BoostCal.RegMap"]),
+                new("P factor", ["BoostCal.PMap"]),
+                new("I factor", ["BoostCal.IMap"]),
+                new("D factor", ["BoostCal.DMap"]),
+                new("Boost Temp Compensation", ["BoostCal.PWMTempTab", "BoostCal.PWMTempMap"]),
+                new("Boost Temp Compensation (Y)", ["BoostCal.PWMTempSP"]),
+            ]),
+            new("Knock", Children:
+            [
+                new("Knock enrichment", ["KnkFuelCal.EnrichmentMap"]),
+                new("Knock sensitivity", ["KnkDetCal.RefFactorMap"]),
+            ]),
+            new("Limiters", Children:
+            [
+                new("Manual", Children:
+                [
+                    new("Airmass (M)", ["BstKnkCal.MaxAirmass"]),
+                    new("Engine torque (M)", ["TorqueCal.M_EngMaxTab"]),
+                    new("Engine torque for E85 (M)", ["TorqueCal.M_EngMaxE85Tab"]),
+                    new("Gear Torque (M)", ["TorqueCal.M_ManGearLim"]),
+                    new("Gear Torque (5th)", ["TorqueCal.M_5GearLimTab"]),
+                ]),
+                new("Automatic", Children:
+                [
+                    new("Airmass (A)", ["BstKnkCal.MaxAirmassAu"]),
+                    new("Engine torque (A)", ["TorqueCal.M_EngMaxAutTab"]),
+                    new("Engine torque for E85 (A)", ["TorqueCal.M_EngMaxE85TabAut"]),
+                ]),
+                new("RPM limiter", ["MaxSpdCal.n_EngLimAir"]),
+                new("Fuel cut", ["FCutCal.m_AirInletLimit"]),
+                new("Speed limiter", ["MaxVehicCal.v_MaxSpeed"]),
+                new("Overboost", ["TorqueCal.M_OverBoostTab"]),
+            ]),
+            new("Adaption", Children:
+            [
+                new("Temp limit for adaption", ["AdpFuelCal.T_AdaptLim"]),
+                new("Fuelcut enabled", ["FCutCal.ST_Enable"]),
+                new("Closed loop regulation", ["LambdaCal.ST_Enable"]),
+                new("Purge enabled", ["PurgeCal.ST_PurgeEnable"]),
+                new("Biopower enabled", ["E85Cal.ST_Enable"]),
+            ]),
+            new("Myrtilos", Children:
+            [
+                new("MyrtilosCal.Launch_DisableSpeed"),
+                new("MyrtilosCal.Launch_Ign_fi_Min"),
+                new("MyrtilosCal.Launch_RPM"),
+                new("MyrtilosCal.Launch_InjFac_at_rpm"),
+                new("MyrtilosCal.Launch_PWM_max_at_stand"),
+                new("MyrtilosAdap.WBLambda_FeedbackMap"),
+                new("MyrtilosAdap.WBLambda_FFMap"),
+            ]),
+        ];
 
         /// <summary>Export fixed tuning package: the maps a stage tune touches.</summary>
         public override IReadOnlyList<string> FixedPackageSymbols { get; } =

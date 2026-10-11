@@ -7,29 +7,27 @@ using System.Text;
 using Avalonia.Collections;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MapControls;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>One side of a compare: a file's bytes for a symbol name, and how its viewer opens.</summary>
-public record CompareSide(string FileName, Func<string, byte[]?> Read, Action<string> Open)
+/// <summary>One side of a compare: a file's bytes for a symbol name, and how its viewer opens (the viewer shown, null for none).</summary>
+public record CompareSide(string FileName, Func<string, byte[]?> Read, Func<string, DocumentViewModel?> Open)
 {
     /// <summary>The open bin: its own viewer, the one that edits.</summary>
     public static CompareSide Bin(MainWindowViewModel owner, SuiteBinary bin) =>
         new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
-            name => { if (bin.FindAny(name) is { } sh) owner.OpenSymbolByName(sh.SmartVarname); });
+            name => bin.FindAny(name) is { } sh ? owner.OpenSymbolByName(sh.SmartVarname) : null);
 
     /// <summary>Another bin: a read-only compare viewer.</summary>
     public static CompareSide OtherBin(MainWindowViewModel owner, SuiteBinary bin) =>
         new(bin.FileName, name => bin.FindAny(name) is { } sh ? bin.ReadSymbol(sh) : null,
-            name =>
-            {
-                if (bin.FindAny(name) is { } sh && MapViewerViewModel.Create(owner, bin, sh, readOnly: true) is { } viewer) owner.ShowDocument(viewer);
-            });
+            name => bin.FindAny(name) is { } sh && MapViewerViewModel.Create(owner, bin, sh, readOnly: true) is { } viewer ? owner.ShowDocument(viewer) : null);
 }
 
 /// <summary>
 /// CompareResults / SRAMCompareResults: the symbols that differ between two sides (bin and bin, bin and SRAM snapshot, two
-/// snapshots), grouped by category. Viewers use the open bin's symbols and axes.
+/// snapshots), grouped by category. Viewers use the open bin's symbols and axes; T5's difference map the compare file's.
 /// </summary>
 public partial class CompareResultsViewModel : DocumentViewModel
 {
@@ -40,6 +38,12 @@ public partial class CompareResultsViewModel : DocumentViewModel
     public CompareSide First { get; }
     public CompareSide Second { get; }
     public DataGridCollectionView Rows { get; }
+
+    /// <summary>The other bin of a bin compare.</summary>
+    public SuiteBinary? Other { get; init; }
+
+    /// <summary>The view the difference map opens in, null for the default one.</summary>
+    public MapViewType? DifferenceView { get; init; }
 
     [ObservableProperty]
     private CompareRow? _selected;
@@ -62,17 +66,18 @@ public partial class CompareResultsViewModel : DocumentViewModel
     /// <summary>Compare with another bin: "Compare results: other.bin".</summary>
     public static CompareResultsViewModel Binaries(MainWindowViewModel owner, SuiteBinary current, SuiteBinary other, List<CompareRow> rows) =>
         new(owner, current, CompareSide.Bin(owner, current), CompareSide.OtherBin(owner, other), rows,
-            $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]");
+            $"Compare results: {Path.GetFileName(other.FileName)}", $"Symbol difference: {{0}} [{Path.GetFileName(other.FileName)}]") { Other = other };
 
-    /// <summary>Double-click / Enter (tabdet_onSymbolSelect): both sides' viewers.</summary>
+    /// <summary>Double-click / Enter (tabdet_onSymbolSelect): both sides' viewers, as tabs of one window.</summary>
     public void Open(CompareRow? row)
     {
         if (row == null) return;
-        First.Open(row.SymbolName);
-        Second.Open(row.SymbolName);
+        DocumentViewModel? mine = First.Open(row.SymbolName), theirs = Second.Open(row.SymbolName);
+        // T7Suite docked the compare viewer as a tab at index 0 onto the open file's: the compare side first and selected
+        m_owner.ShowAsTabs(theirs, mine);
     }
 
-    /// <summary>"Show differences map": |second − first| per value, read-only, axes from the open file.</summary>
+    /// <summary>"Show differences map": |second − first| per value, no offset, read-only, axes from the open file (T5: the compare file).</summary>
     public void ShowDifferenceMap(CompareRow? row)
     {
         if (row == null || Current.FindAny(row.SymbolName) is not { } mine) return;
@@ -84,7 +89,13 @@ public partial class CompareResultsViewModel : DocumentViewModel
             return;
         }
         string title = string.Format(m_differenceTitle, mine.SmartVarname);
-        if (MapViewerViewModel.Create(m_owner, Current, mine, diff, readOnly: true, title: title) is { } viewer) m_owner.ShowDocument(viewer);
+        var (bin, sh) = Current.DifferenceAxesFromCompareFile && Other is { } other && other.FindAny(row.SymbolName) is { } theirs
+            ? (other, theirs) : (Current, mine);
+        if (MapViewerViewModel.Create(m_owner, bin, sh, diff, readOnly: true, title: title) is not { } viewer) return;
+        // T5Suite's compare viewers left the offset out (T7 / T8 have none): an unchanged cell reads 0
+        viewer.Map.Offset = 0;
+        if (DifferenceView is { } view) viewer.ViewType = view;
+        m_owner.ShowDocument(viewer);
     }
 
     /// <summary>"Export to Excel" becomes CSV: the grid's columns, one row per result.</summary>
@@ -93,8 +104,8 @@ public partial class CompareResultsViewModel : DocumentViewModel
         var sb = new StringBuilder("Symbol;Description;Length (bytes);Percentage of values different;Number of values different;Average difference;Symbolnumber #1;Symbolnumber #2;User description;Missing in original file;Missing in compare file;Category\n");
         foreach (CompareRow r in Rows.SourceCollection.Cast<CompareRow>())
         {
-            sb.AppendJoin(';', r.SymbolName, r.Description.Replace(';', ','), r.LengthBytes, r.Percentage.ToString("F1", CultureInfo.InvariantCulture),
-                r.Differences, r.AverageDifference.ToString("F1", CultureInfo.InvariantCulture), r.SymbolNumber1, r.SymbolNumber2, r.Userdescription.Replace(';', ','),
+            sb.AppendJoin(';', r.SymbolName, r.Description.Replace(';', ','), r.LengthBytes, Views.F1Converter.Text(r.Percentage, CultureInfo.InvariantCulture),
+                r.Differences, Views.F1Converter.Text(r.AverageDifference, CultureInfo.InvariantCulture), r.SymbolNumber1, r.SymbolNumber2, r.Userdescription.Replace(';', ','),
                 r.MissingInOriFile, r.MissingInCompareFile, r.Category).Append('\n');
         }
         File.WriteAllText(file, sb.ToString());

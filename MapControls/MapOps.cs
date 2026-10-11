@@ -16,30 +16,50 @@ public enum MapMath { Add = 0, Multiply = 1, Divide = 2, Fill = 3 }
 /// </summary>
 public static class MapOps
 {
-    /// <summary>Keyboard steps: ±1, PgUp/PgDn ±10 (±0x10 in hex view), Home = max, End = 0.</summary>
+    /// <summary>
+    /// Keyboard steps: ±1, PgUp/PgDn ±10 (±0x10 in hex view), Home = max, End = 0. A sensor-scaled map (T5Suite's 3.0 to
+    /// 5.0 bar views) steps the shown value in the Decimal and Easy views, back to raw rounded up.
+    /// </summary>
     public static void Step(MapData map, IReadOnlyCollection<int> cells, MapViewType view, MapStep step)
     {
         int page = view == MapViewType.Hex ? 0x10 : 10;
+        bool scaled = map.ScalePercent != 100 && view is MapViewType.Decimal or MapViewType.Easy;
         map.Set(cells.Select(i => (i, step switch
         {
-            MapStep.Up => map[i] + 1,
-            MapStep.Down => map[i] - 1,
-            MapStep.PageUp => map[i] + page,
-            MapStep.PageDown => map[i] - page,
+            MapStep.Up => Move(map[i], 1),
+            MapStep.Down => Move(map[i], -1),
+            MapStep.PageUp => Move(map[i], page),
+            MapStep.PageDown => Move(map[i], -page),
             MapStep.Max => map.MaxRaw,
             _ => 0,
         })));
+
+        int Move(int raw, int d)
+        {
+            if (!scaled) return raw + d;
+            // T5Suite's minus could round back up to the same raw value on save; here it always moves
+            int r = map.Unscale(map.Scaled(raw) + d);
+            return d < 0 ? Math.Min(r, raw - 1) : r;
+        }
     }
 
     /// <summary>
     /// Add / multiply / divide / fill the selection with w. In Easy view on the physical value (raw*factor+offset, result
-    /// back to raw truncated), otherwise on the raw value with w rounded half to even (fill truncates). ASCII does nothing.
+    /// back to raw truncated), otherwise on the raw value with w rounded half to even (fill truncates); T5Suite's rules with
+    /// <see cref="MapData.FractionalMath"/>. A sensor-scaled map works on the shown value in the Decimal and Easy views, back
+    /// to raw rounded up. ASCII does nothing.
     /// </summary>
     public static void Apply(MapData map, IReadOnlyCollection<int> cells, MapViewType view, MapMath op, double w)
     {
         if (view == MapViewType.Ascii) return;
         double f = map.Factor, o = map.Offset;
-        map.Set(cells.Select(i => (i, view == MapViewType.Easy ? Easy(map[i]) : Raw(map[i]))));
+        bool scaled = map.ScalePercent != 100 && view is MapViewType.Decimal or MapViewType.Easy;
+        map.Set(cells.Select(i =>
+        {
+            int v = scaled ? map.Scaled(map[i]) : map[i];
+            int result = view == MapViewType.Easy ? Easy(v) : Raw(v);
+            return (i, scaled ? map.Unscale(result) : result);
+        }));
 
         int Raw(int v)
         {
@@ -47,6 +67,9 @@ public static class MapOps
             return op switch
             {
                 MapMath.Add => v + rw,
+                // T5Suite multiplied by w to two decimals and divided by w as is ("was (int)Math.Round(_workvalue)")
+                MapMath.Multiply when map.FractionalMath => v * (int)(100 * w) / 100,
+                MapMath.Divide when map.FractionalMath => w == 0 ? v : (int)(v / w),
                 MapMath.Multiply => v * rw,
                 MapMath.Divide => rw == 0 ? v : v / rw,
                 _ => (int)w,
@@ -63,7 +86,9 @@ public static class MapOps
                 MapMath.Divide => (w == 0 ? phys : phys / w) - o,
                 _ => w - o,
             };
-            return (int)(f == 0 ? result : result / f);
+            double back = f == 0 ? result : result / f;
+            // T5Suite rounded the result back to raw, T7Suite truncated it
+            return map.FractionalMath ? (int)Math.Round(back) : (int)back;
         }
     }
 

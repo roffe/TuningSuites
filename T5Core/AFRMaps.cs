@@ -2015,8 +2015,10 @@ namespace Trionic5Tools
                     foreach (float f in orginalmap)
                     {
                         int val = (int)(Math.Ceiling(f * 10));
-                        byte b1 = (byte)(val / 256);
-                        byte b2 = (byte)(val - (int)b1 * 256);
+                        // 16-bit two's complement: T5Suite wrote a rich error as its low byte only (-1.5 as 00F1) and the viewer
+                        // read 201..255 back as negative, which failed below -5.5 AFR; the viewers read FFF1 as -15 as is
+                        byte b1 = (byte)(val >> 8);
+                        byte b2 = (byte)val;
                         map.SetValue(b1, idx++);
                         map.SetValue(b2, idx++);
                     }

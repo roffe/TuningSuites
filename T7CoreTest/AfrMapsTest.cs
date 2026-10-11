@@ -42,8 +42,8 @@ namespace T7CoreTest
 
                 // rich against 14.7: the fuel cell comes down by the error, the others stay
                 byte[] fuel = bin.ReadSymbol(bin.FindAny("BFuelCal.Map")!);
-                byte[] tuned = AfrFeedback.ApplyFeedback(fuel, afr.Target, afr.Feedback, afr.Counter, false);
-                double tgt = (afr.Target[cell * 2] << 8 | afr.Target[cell * 2 + 1]) / 10.0;
+                byte[] tuned = afr.ApplyFeedback(fuel, false);
+                double tgt = afr.Map.GetTargetMap()[cell];
                 Assert.AreEqual((byte)System.Math.Round(fuel[cell] * (100 - (tgt - 12.5) / tgt * 100) / 100), tuned[cell]);
                 Assert.AreEqual(fuel.Length - 1, fuel.Zip(tuned).Count(p => p.First == p.Second));
 

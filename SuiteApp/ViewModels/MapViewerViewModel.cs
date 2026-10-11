@@ -138,15 +138,17 @@ public partial class MapViewerViewModel : DocumentViewModel
         if ((address < 0 && !sram) || content == null || content.Length == 0) return null;
 
         var (xAxis, yAxis, xDescr, yDescr, zDescr) = bin.AxisSymbols(name);
-        // T5's MAP axes follow the sensor (integer math, as T5Suite)
+        // T5's MAP axes follow the sensor (integer math, as T5Suite); T7Suite and T8Suite signed the X axis first
         int xScale = bin.AxisScalePercent(xDescr), yScale = bin.AxisScalePercent(yDescr);
-        double[] x = bin.GetXaxisValues(name).Select(v => (double)(v * xScale / 100)).ToArray();
+        int[] stored = [.. bin.GetXaxisValues(name).Select(v => bin.SignsXAxis && v > 0xF000 ? v - 0x10000 : v)];
+        double[] x = [.. stored.Select(v => (double)(v * xScale / 100))];
         double[] y = bin.GetYaxisValues(name).Select(v => (double)(v * yScale / 100)).ToArray();
         var map = new MapData(name, content, bin.TableWidth(name), bin.IsSixteenBitTable(name), bin.SignAbove(name))
         {
             Factor = bin.GetMapCorrectionFactor(name),
             Offset = bin.GetMapCorrectionOffset(name),
             ScalePercent = bin.ScalePercent(name),
+            FractionalMath = bin.FractionalMath,
             UpsideDown = true,
             XAxis = x,
             YAxis = y,
@@ -155,9 +157,11 @@ public partial class MapViewerViewModel : DocumentViewModel
             ZName = zDescr,
             // TryToAddOpenLoopTables, drawn only on load
             OpenLoop = bin.OpenLoopLimits(name)?.Select(v => (double)((int)v * xScale / 100)).ToArray(),
+            Marks = owner.CellMarks(bin, name),
+            XEasy = bin.XAxisEasy(name),
+            XHex = xScale == 100 ? null : [.. stored.Select(v => (double)v)],
         };
 
-        int viewType = (int)settings.DefaultViewType;
         return new MapViewerViewModel
         {
             Owner = owner,
@@ -168,11 +172,11 @@ public partial class MapViewerViewModel : DocumentViewModel
             Address = address,
             IsReadOnly = readOnly,
             TitleOverride = title,
-            ViewType = viewType <= (int)MapViewType.Ascii ? (MapViewType)viewType : MapViewType.Easy,
+            ViewType = owner.DefaultMapView,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
-            OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
+            OpenLoopMark = owner.OpenLoopMarkStyle,
             XAxisSymbol = xAxis != "" && bin.Find(xAxis) != null ? xAxis : null,
             YAxisSymbol = yAxis != "" && bin.Find(yAxis) != null ? yAxis : null,
         };

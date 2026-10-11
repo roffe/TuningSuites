@@ -56,27 +56,72 @@ public partial class T5MainWindowViewModel
     [RelayCommand]
     private void ReleaseIgnitionLocks() => IgnitionMaps?.ClearIgnitionLockedMap();
 
-    /// <summary>Ignition lock map: the cells the ignition autotune locked (1) on Ign_map_0!'s axes, read-only.</summary>
+    /// <summary>Ignition lock map: Ign_map_0!, whose padlocks show the locked cells (T5Suite: "adds lock map automatically").</summary>
     [RelayCommand]
     private void ShowIgnitionLocks()
     {
-        if (T5 is not { } bin || IgnitionMaps is not { } maps || bin.Find("Ign_map_0!") is not { } ign) return;
-        int[] locks = maps.GetIgnitionLockedMap();
-        var (_, _, xDescr, yDescr, _) = bin.AxisSymbols("Ign_map_0!");
-        var map = new MapData("IgnitionLockMap", locks.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray(), bin.TableWidth("Ign_map_0!"), false)
+        _ = IgnitionMaps;
+        OpenSymbolByName("Ign_map_0!");
+    }
+
+    /// <summary>T5Suite drew the closed-loop box always (it had no "Closed loop indicator" setting).</summary>
+    public override OpenLoopMark OpenLoopMarkStyle => OpenLoopMark.Box;
+
+    /// <summary>MapViewerFactory.Get(settings, file): Decimal when that is the default, Easy for any other (a Hex or ASCII default never opened).</summary>
+    public override MapViewType DefaultMapView => Settings.DefaultViewType == SuiteViewType.Decimal ? MapViewType.Decimal : MapViewType.Easy;
+
+    /// <summary>
+    /// TryToAddOpenLoopTables' marks, compared raw as T5Suite did:
+    /// - a padlock below the knock pressure (Knock_press_tab! by row, T5.2's single Knock_press!) and on the ignition autotune's locked
+    ///   cells on Ign_map_0! and Knock_count_map, on the AFR lock map's cells on the fuel and AFR maps, the idle one's on the idle maps;
+    /// - the knock adaption area (Kadapt_load_low/high!, Kadapt_rpm_low/high! × 10) and, last column only, the boost adaption rpm range
+    ///   (the automatic or manual one) on Insp_mat!, Inj_map_0!, Ign_map_0! and the AFR maps;
+    /// - the AFR samples per cell on the feedback maps (T5Suite's idle ones had them but didn't draw them).
+    /// Lock and sample maps by data index, read at every paint; T5Suite drew the lock maps by display row, upside down.
+    /// </summary>
+    public override Func<int, CellMarks>? CellMarks(SuiteBinary suiteBinary, string mapName)
+    {
+        if (suiteBinary is not T5Binary bin) return null;
+        bool ignition = mapName is "Ign_map_0!" or "Knock_count_map";
+        bool idle = mapName is "Idle_fuel_korr!" or "IdleTargetAFR" or "IdleFeedbackAFR" or "IdleFeedbackvsTargetAFR";
+        if (!ignition && !idle && mapName is not ("Insp_mat!" or "Inj_map_0!" or "TargetAFR" or "FeedbackAFR" or "FeedbackvsTargetAFR")) return null;
+        string axes = mapName.EndsWith('!') ? mapName : ignition ? "Ign_map_0!" : idle ? "Idle_fuel_korr!" : "Insp_mat!";
+        int[] x = bin.GetXaxisValues(axes), y = bin.GetYaxisValues(axes);
+        if (x.Length == 0) return null;
+
+        int[] knock = [];
+        if (ignition && bin.Find("Knock_press_tab!") is { } tab && bin.ReadSymbol(tab) is { } words)
+            knock = [.. Enumerable.Range(0, words.Length / 2).Select(i => words[2 * i] << 8 | words[2 * i + 1])];
+        else if (ignition && bin.Find("Knock_press!") is { } press && bin.ReadSymbol(press) is [var p, ..])
+            knock = [.. Enumerable.Repeat((int)p, y.Length)];
+        // the ignition autotune's locks of an earlier session, without making the folder for a map only looked at
+        // (the open bin's only: IgnitionMaps loads that one, and a compare file's viewer shows no locks)
+        if (ignition && bin.FileName == T5?.FileName && System.IO.Directory.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(bin.FileName) ?? "", "IgnitionMaps"))) _ = IgnitionMaps;
+
+        bool boxes = !idle && mapName != "Knock_count_map";
+        int Symbol(string name) => bin.Find(name) != null ? bin.File.GetSymbolAsInt(name) : 0;
+        int loadLow = Symbol("Kadapt_load_low!"), loadHigh = Symbol("Kadapt_load_high!");
+        int rpmLow = Symbol("Kadapt_rpm_low!") * 10, rpmHigh = Symbol("Kadapt_rpm_high!") * 10;
+        bool knockArea = boxes && (loadLow != 0 || loadHigh != 0 || rpmLow != 0 || rpmHigh != 0);
+        bool automatic = bin.File.GetTrionicProperties().AutomaticTransmission;
+        int boostLow = automatic ? bin.File.GetAutoRpmLow() : bin.File.GetManualRpmLow();
+        int boostHigh = automatic ? bin.File.GetAutoRpmHigh() : bin.File.GetManualRpmHigh();
+        bool feedback = mapName.Contains("Feedback");
+
+        return i =>
         {
-            UpsideDown = true,
-            XAxis = bin.GetXaxisValues("Ign_map_0!").Select(v => (double)v).ToArray(),
-            YAxis = bin.GetYaxisValues("Ign_map_0!").Select(v => (double)v).ToArray(),
-            XName = xDescr,
-            YName = yDescr,
-            ZName = "locked",
+            int row = i / x.Length, col = i % x.Length, rpm = row < y.Length ? y[row] : -1;
+            // the open bin's lock and sample maps only (not on another file's viewer)
+            AFRMaps? afr = m_afrFile == bin.FileName ? m_afr : null;
+            int[]? locks = ignition ? (m_ignitionFile == bin.FileName ? m_ignition?.GetIgnitionLockedMap() : null)
+                : idle ? afr?.GetIdleAFRLockedMap() : afr?.GetAFRLockedMap();
+            int[]? samples = !feedback ? null : idle ? afr?.GetIdleAFRCountermap() : afr?.GetAFRCountermap();
+            return new CellMarks(
+                Locked: row < knock.Length && knock[row] > x[col] || locks != null && i < locks.Length && locks[i] > 0,
+                KnockAdaption: knockArea && rpm >= rpmLow && rpm <= rpmHigh && x[col] >= loadLow && x[col] <= loadHigh,
+                BoostAdaption: boxes && col == x.Length - 1 && rpm >= boostLow && rpm <= boostHigh,
+                Samples: samples != null && i < samples.Length ? samples[i] : 0);
         };
-        ShowDocument(new MapViewerViewModel
-        {
-            Owner = this, Binary = bin, Symbol = ign, MapName = "IgnitionLockMap", Map = map, Address = -1, IsReadOnly = true,
-            ViewType = MapViewType.Decimal, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = false,
-        });
     }
 
     protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) => new T5RealtimeViewModel(this, (T5Binary)bin);
@@ -197,19 +242,25 @@ public partial class T5MainWindowViewModel
             title = $"Knock counter difference: {System.IO.Path.GetFileName(file)} vs {System.IO.Path.GetFileName(compare)}";
         }
         var (_, _, xDescr, yDescr, _) = bin.AxisSymbols("Ign_map_0!");
+        // the MAP axis follows the sensor as on the other maps (T5Suite's Decimal3Bar etc. views, integer math)
+        int xScale = bin.AxisScalePercent(xDescr);
+        int[] stored = bin.GetXaxisValues("Ign_map_0!");
         var map = new MapData("Knock_count_map", data, bin.TableWidth("Ign_map_0!"), true, 0xFFFF)
         {
             UpsideDown = true,
-            XAxis = bin.GetXaxisValues("Ign_map_0!").Select(v => (double)v).ToArray(),
+            XAxis = stored.Select(v => (double)(v * xScale / 100)).ToArray(),
             YAxis = bin.GetYaxisValues("Ign_map_0!").Select(v => (double)v).ToArray(),
             XName = xDescr,
             YName = yDescr,
             ZName = "knocks",
+            Marks = CellMarks(bin, "Knock_count_map"),
+            XEasy = bin.XAxisEasy("Ign_map_0!"),
+            XHex = xScale == 100 ? null : [.. stored.Select(v => (double)v)],
         };
         ShowDocument(new MapViewerViewModel
         {
             Owner = this, Binary = bin, Symbol = sh, MapName = "Knock_count_map", Map = map, Address = -1, IsReadOnly = true, TitleOverride = title,
-            ViewType = MapViewType.Decimal, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = Settings.ShowGraphs,
+            ViewType = DefaultMapView, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = Settings.ShowGraphs,
         });
     }
 
@@ -250,16 +301,24 @@ public partial class T5MainWindowViewModel
         string fuelName = idle ? "Idle_fuel_korr!" : "Insp_mat!";
         if (bin.Find(fuelName) is not { } fuel) return null;
         var (_, _, xDescr, yDescr, _) = bin.AxisSymbols(fuelName);
+        // the MAP axis follows the sensor as the fuel map's viewer does (T5Suite's Decimal3Bar headers)
+        int xScale = bin.AxisScalePercent(xDescr);
+        int[] stored = bin.GetXaxisValues(fuelName);
         var map = new MapData(kind, AfrContent(afr, kind), bin.TableWidth(fuelName), true)
         {
             Factor = 0.1,
+            BlankZero = !target,
+            FractionalMath = bin.FractionalMath,
             UpsideDown = true,
-            XAxis = bin.GetXaxisValues(fuelName).Select(v => (double)v).ToArray(),
+            XAxis = [.. stored.Select(v => (double)(v * xScale / 100))],
             YAxis = bin.GetYaxisValues(fuelName).Select(v => (double)v).ToArray(),
             XName = xDescr,
             YName = yDescr,
             ZName = "AFR",
-            OpenLoop = idle ? null : bin.OpenLoopLimits(fuelName),
+            OpenLoop = idle ? null : bin.OpenLoopLimits(fuelName)?.Select(v => (double)((int)v * xScale / 100)).ToArray(),
+            Marks = CellMarks(bin, kind),
+            XEasy = bin.XAxisEasy(fuelName),
+            XHex = xScale == 100 ? null : [.. stored.Select(v => (double)v)],
         };
         AppSettings settings = Settings;
         return new MapViewerViewModel
@@ -286,11 +345,11 @@ public partial class T5MainWindowViewModel
                 }
             },
             ReadFrom = target ? () => AfrContent(afr, kind) : null,
-            ViewType = MapViewType.Easy,
+            ViewType = DefaultMapView,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
-            OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
+            OpenLoopMark = OpenLoopMarkStyle,
         };
     }
 

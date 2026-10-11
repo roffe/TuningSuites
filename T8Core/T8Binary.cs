@@ -180,6 +180,9 @@ namespace T8SuitePro
             return retval;
         }
 
+        // MapViewerEx signed them (BstKnkCal.OffsetXSP's 65336 showed as -200)
+        public override bool SignsXAxis => true;
+
         /// <summary>Form1.GetYaxisValues: raw, above 0x8000 negative; "N : v1 v2 …" axes from the dictionary as they are.</summary>
         public override int[] GetYaxisValues(string symbolname)
         {
@@ -371,8 +374,12 @@ namespace T8SuitePro
             RawFile(target).UpdateChecksum();
         }
 
-        /// <summary>The viewer shows T8's axes raw; the Excel export applied the axis' dictionary factor.</summary>
-        public override double AxisFactor(string axisSymbol) => GetMapCorrectionFactor(axisSymbol);
+        /// <summary>
+        /// The viewer shows T8's axes without a factor; the Excel export applied the dictionary factor of the listed axis, not of the
+        /// duplicate AxisSymbols swaps in (BstKnkCal.MaxAirmass: fi_offsetXSP's 0.1 on OffsetXSP's values). T8Suite's offset was 0.
+        /// </summary>
+        public override (double factor, double offset) XAxisExportScale(string symbolname) =>
+            (GetMapCorrectionFactor(new SymbolAxesTranslator().GetXaxisSymbol(symbolname)), 0);
 
         /// <summary>Export fixed tuning package (Form1's list).</summary>
         public override IReadOnlyList<string> FixedPackageSymbols { get; } =
@@ -386,75 +393,92 @@ namespace T8SuitePro
         ];
 
         /// <summary>
-        /// The Tuning page's map buttons in ribbon order, with DynamicTuningMenu's rules: software before FC (and FC01 open) has
-        /// the old calibration's captions and maps, BioPower software (not FA / FC / FE) the E85 limiters, and the gas and jerk
-        /// maps show only when the bin has them. T8Suite left the captions of a bin without a software version alone and threw
-        /// on the tagged buttons; that counts as old here.
+        /// The Tuning menu: txlogger's T8 menu, the maps by the name the bin has: the newer calibration (FC and later) has one
+        /// torque limiter and max airmass map for both gearboxes, FF0C / FF0L / FF0M jerk enrichment by engine temperature.
+        /// The E85 torque limiters only on BioPower software (not FA / FC / FE: FE has them with FlexFuel off), as DynamicTuningMenu.
+        /// txlogger's Edit Parameters, NVDM editor and Rescale AccPedalMap have no T8Suite feature and are left out.
         /// </summary>
-        public override List<MapShortcut> QuickMaps()
+        public override IReadOnlyList<TuningItem> TuningMenu()
         {
             string sw = SoftwareVersion.Trim();
             bool old = sw.Length <= 2 || sw[1] < 'C' || sw.StartsWith("FC01_O");
             bool e85 = !old && !(sw.StartsWith("FA") || sw.StartsWith("FC") || sw.StartsWith("FE"));
-            var m = new List<MapShortcut>();
-            void Add(string group, string caption, string symbol, bool show = true)
-            {
-                if (show) m.Add(new MapShortcut(group, caption, symbol));
-            }
-            void IfHas(string group, string caption, string symbol) => Add(group, caption, symbol, Has(symbol));
-
-            const string air = "Airmass controller", trq = "Torque controller", fuel = "Fuel controller", boost = "Boost controller",
-                ign = "Ignition controller", pedal = "Pedal controller";
-            Add(air, old ? "Max airmass map (manual)" : "Max air Petrol", "BstKnkCal.MaxAirmass");
-            Add(air, old ? "Max airmass map (auto)" : "Max air E85", old ? "BstKnkCal.MaxAirmassAu" : "FFAirCal.m_maxAirmass");
-            Add(air, "Airmass Fuelcut", "FCutCal.m_AirInletLimit");
-
-            Add(trq, "Nominal torque map", "TrqMastCal.Trq_NominalMap");
-            IfHas(trq, "Nominal Gas torque map", "TrqMastCal.Trq_NominalGasMap");
-            Add(trq, "Airmass torque map", "TrqMastCal.m_AirTorqMap");
-            IfHas(trq, "Airmass Gas torque map", "TrqMastCal.m_AirTorqGasMap");
-            Add(trq, "Ambient pressure trq limiter", "TrqLimCal.Trq_CompressorNoiseRedLimMAP");
-            Add(trq, "Trq limit in overboost", "TrqLimCal.Trq_OverBoostTab");
-            Add(trq, old ? "Trq limit auto 150 hp" : "Trq limit 150hp", old ? "TrqLimCal.Trq_MaxEngineAutTab2" : "TrqLimCal.Trq_MaxEngineTab2");
-            Add(trq, old ? "Trq limit auto 175+ hp" : "Trq limit 175/200hp", old ? "TrqLimCal.Trq_MaxEngineAutTab1" : "TrqLimCal.Trq_MaxEngineTab1");
-            Add(trq, old ? "Trq limit manual 150 hp" : "Trq limit E85 150hp", old ? "TrqLimCal.Trq_MaxEngineManTab2" : "FFTrqCal.FFTrq_MaxEngineTab2", old || e85);
-            Add(trq, old ? "Trq limit manual 175+ hp" : "Trq limit E85 175/200hp", old ? "TrqLimCal.Trq_MaxEngineManTab1" : "FFTrqCal.FFTrq_MaxEngineTab1", old || e85);
-            Add(trq, "Manual gear trq limit", "TrqLimCal.Trq_ManGear");
-            Add(trq, "FlexFuel torque limit", "FFTrqCal.M_maxMAP", e85);
-            Add(trq, "Max torque 150hp", "TMCCal.Trq_MaxEngineLowTab", !old);
-            Add(trq, "Max torque 175/200hp", "TMCCal.Trq_MaxEngineTab", !old);
-            Add(trq, "RPM limiter", "MaxEngSpdCal.n_EngLimTab");
-
-            Add(fuel, "Fuel correction map", "BFuelCal.LambdaOneFacMap");
-            Add(fuel, "Fuel knock map", "KnkFuelCal.EnrichmentMap");
-            Add(fuel, "Injection end angle map", "InjAnglCal.Map");
-            Add(fuel, "Enrichment Petrol", "BFuelCal.TempEnrichFacMap");
-            IfHas(fuel, "Enrichment E85", "FFFuelCal.TempEnrichFacMAP");
-            Add(fuel, "Inj. Constant", "InjCorrCal.InjectorConst");
-            Add(fuel, "Dead times", "InjCorrCal.BattCorrTab");
-            IfHas(fuel, "Enrichment Petrol", "BFuelCal.Lambda1FacMap");
-            IfHas(fuel, "Jerk Enrichment Petrol", "BFuelCal.m_AirJerkTab");
-            IfHas(fuel, "Jerk Enrichment Fuelmaster", "BFuelCal.JerkEnrichFacTab");
-
-            Add(boost, "P of PID controller", "AirCtrlCal.Ppart_BoostMap");
-            Add(boost, "I of PID Controller", "AirCtrlCal.Ipart_BoostMap");
-            Add(boost, "D of PID controller", "AirCtrlCal.Dpart_BoostMap");
-            Add(boost, "Boost regulation map", "AirCtrlCal.RegMap");
-
-            Add(ign, "Normal ignition map", "IgnAbsCal.fi_NormalMAP");
-            Add(ign, "High octane map", "IgnAbsCal.fi_highOctanMAP");
-            Add(ign, "Low octane map", "IgnAbsCal.fi_lowOctanMAP");
-            IfHas(ign, "Normal Gas ignition map", "IgnAbsCal.fi_NormalGasMAP");
-            Add(ign, "MBT ignition map", "IgnAbsCal.fi_IgnMBTMAP");
-            IfHas(ign, "MBT Gas ignition map", "IgnAbsCal.fi_IgnMBTGasMAP");
-            Add(ign, "Fuel cut ignition map", "IgnAbsCal.fi_FuelCutMAP");
-            Add(ign, "Startup map", "IgnAbsCal.fi_StartMAP");
-
-            Add(pedal, "Pedal position map", "TrqMastCal.X_AccPedalMAP");
-            Add(pedal, "Torque request map", "PedalMapCal.Trq_RequestMap");
-
-            Add("General", "EGT estimate map", "ExhaustCal.T_Lambda1Map");
-            return m;
+            TuningItem[] e85Limits = e85 ? [new("FFTrqCal.FFTrq_MaxEngineTab1"), new("FFTrqCal.FFTrq_MaxEngineTab2")] : [];
+            return
+            [
+                new("Airmass", Children:
+                [
+                    new("Max airmass map (manual)", ["BstKnkCal.MaxAirmass"]),
+                    new("Max airmass map (auto)", ["BstKnkCal.MaxAirmassAu", "BstKnkCal.MaxAirmass"]),
+                    new("Airmass Fuelcut", ["FCutCal.m_AirInletLimit"]),
+                    new("AirCtrlCal.AirmassLimiter"),
+                    new("AirCtrlCal.PRatioMaxTab"),
+                ]),
+                new("Torque", Children:
+                [
+                    new("Nominal torque map", ["TrqMastCal.Trq_NominalMap"]),
+                    new("Airmass torque map", ["TrqMastCal.m_AirTorqMap"]),
+                    new("Ambient pressure trq limiter", ["TrqLimCal.Trq_CompressorNoiseRedLimMAP"]),
+                    new("Trq limit in overboost", ["TrqLimCal.Trq_OverBoostTab"]),
+                    new("Trq limit manual 150hp", ["TrqLimCal.Trq_MaxEngineManTab2", "TrqLimCal.Trq_MaxEngineTab2"]),
+                    new("Trq limit manual 175+hp", ["TrqLimCal.Trq_MaxEngineManTab1", "TrqLimCal.Trq_MaxEngineTab1"]),
+                    new("Trq limit auto 150hp", ["TrqLimCal.Trq_MaxEngineAutTab2", "TrqLimCal.Trq_MaxEngineTab2"]),
+                    new("Trq limit auto 175+hp", ["TrqLimCal.Trq_MaxEngineAutTab1", "TrqLimCal.Trq_MaxEngineTab1"]),
+                    new("Manual gear trq limit", ["TrqLimCal.Trq_ManGear"]),
+                    new("RPM limiter", ["MaxEngSpdCal.n_EngLimTab"]),
+                    new("TrqLimCal.Trq_MaxEngineTab1"),
+                    new("TrqLimCal.Trq_MaxEngineTab2"),
+                    .. e85Limits,
+                ]),
+                new("Injectors", Children:
+                [
+                    new("Inj. Constant", ["InjCorrCal.InjectorConst"]),
+                    new("Inj. dead time", ["InjCorrCal.BattCorrTab"]),
+                    new("Inj. dead time (Y)", ["InjCorrCal.BattCorrSP"]),
+                ]),
+                new("Fuel", Children:
+                [
+                    new("Fuel correction map", ["BFuelCal.LambdaOneFacMap"]),
+                    new("Enrichment Petrol", ["BFuelCal.TempEnrichFacMap"]),
+                    new("Enrichment E85", ["FFFuelCal.TempEnrichFacMAP"]),
+                    new("Knock fuel map", ["KnkFuelCal.EnrichmentMap"]),
+                    new("Injection end angle map", ["InjAnglCal.Map"]),
+                    new("Jerk enrichment petrol", ["BFuelCal.m_AirJerkTab", "BFuelCal.m_AirJerkMAP"]),
+                    new("Jerk enrichment Fuelmaster", ["BFuelCal.JerkEnrichFacTab", "BFuelCal.JerkEnrichFacTAB"]),
+                    new("PurgeCal.ST_PurgeEnable"),
+                    new("LambdaCal.ST_Enable"),
+                    new("FCutCal.ST_Enable"),
+                    new("FFFuelCal.ST_enable"),
+                    new("FuelDynCal.ST_Enable"),
+                    new("TCompCal.ST_Enable"),
+                ]),
+                new("Boost", Children:
+                [
+                    new("Boost regulation map", ["AirCtrlCal.RegMap"]),
+                    new("P factor", ["AirCtrlCal.Ppart_BoostMap"]),
+                    new("I factor", ["AirCtrlCal.Ipart_BoostMap"]),
+                    new("D factor", ["AirCtrlCal.Dpart_BoostMap"]),
+                    new("AirCtrlCal.ST_BoostEnable"),
+                    new("BoostAdapCal.ST_enable"),
+                    new("FrompAdapCal.ST_enable"),
+                    new("AreaAdapCal.ST_enable"),
+                ]),
+                new("Ignition", Children:
+                [
+                    new("Normal ignition map", ["IgnAbsCal.fi_NormalMAP"]),
+                    new("High octane map", ["IgnAbsCal.fi_highOctanMAP"]),
+                    new("Low octane map", ["IgnAbsCal.fi_lowOctanMAP"]),
+                    new("MBT ignition map", ["IgnAbsCal.fi_IgnMBTMAP"]),
+                    new("Fuel cut ignition map", ["IgnAbsCal.fi_FuelCutMAP"]),
+                    new("Startup map", ["IgnAbsCal.fi_StartMAP"]),
+                    new("IgnAbsCal.ST_EnableOctanMaps"),
+                ]),
+                new("Pedal", Children:
+                [
+                    new("Pedal position map", ["TrqMastCal.X_AccPedalMAP"]),
+                    new("Torque request map", ["PedalMapCal.Trq_RequestMap"]),
+                ]),
+            ];
         }
     }
 }

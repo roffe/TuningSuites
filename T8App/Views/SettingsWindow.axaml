@@ -2,71 +2,165 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:T8App.ViewModels"
         xmlns:sv="using:SuiteApp.Views"
+        xmlns:c="using:SuiteApp.Controls"
         x:Class="T8App.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
-    <!-- T8Suite's groups and columns, the settings that do something here; the rest of the realtime group comes with realtime -->
-    <StackPanel Margin="16" Spacing="12">
-        <HeaderedContentControl Header="User interface settings">
-            <StackPanel Spacing="4">
-                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="24" RowSpacing="2">
-                    <CheckBox Grid.Row="0" Grid.Column="0" Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}" />
-                    <CheckBox Grid.Row="1" Grid.Column="0" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}" />
-                    <CheckBox Grid.Row="2" Grid.Column="0" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}" />
-                    <CheckBox Grid.Row="0" Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}" />
-                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}" />
-                    <CheckBox Grid.Row="0" Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}" />
-                    <CheckBox Grid.Row="1" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}" />
-                    <CheckBox Grid.Row="2" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}" />
-                    <CheckBox Grid.Row="3" Grid.Column="2" Content="Show map preview popup" IsChecked="{Binding ShowMapPreviewPopup}" />
-                    <CheckBox Grid.Row="4" Grid.Column="2" Content="Auto mapdetection active" IsChecked="{Binding MapDetectionActive}"
-                              ToolTip.Tip="When checked, T8Suite will try to add names to symbols in binaries without symboltables. This is a guesstimate routine." />
+    <!-- T8Suite's frmSettings: its three groups, three columns each, its captions in their places; the options not ported are left
+         out, the columns close up -->
+    <Window.Styles>
+        <Style Selector="Grid.columns > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Grid.pair > TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Styles>
+    <StackPanel Margin="12" Spacing="6">
+        <HeaderedContentControl Classes="group" Header="User interface settings">
+            <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                <CheckBox Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}">
+                    <ToolTip.Tip><c:SuperTip Title="Use red and white maps" Text="When checked, displays maps in red and transparent only. Normally green is used to display low values and red for higher values." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="1" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}">
+                    <ToolTip.Tip><c:SuperTip Title="Don't display colors in mapviewer" Text="To improve performance you can check this item and coloring of the mapviewer cells will be disabled." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="2" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}">
+                    <ToolTip.Tip><c:SuperTip Title="Show graphs in mapviewer" Text="When checked the graphical representation of the selected map will also be displayed. This consumes more system memory and cpu time." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}">
+                    <ToolTip.Tip><c:SuperTip Title="Auto load last file on startup" Text="Lets you decide whether or not the last used file should be automatically loaded when the program starts up." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}">
+                    <ToolTip.Tip><c:SuperTip Title="Hide symbol window" Text="To save display space you can hide the symbol list to a tab at the side of the window. The tab brings the list out again, and it slides away when you open a map." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}">
+                    <ToolTip.Tip><c:SuperTip Title="Synchronize mapviewers" Text="When checked, mapviewers that show the same map will react to changes made in one of them. E.g. selecting cells or turning the 3D graph." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="1" Grid.Column="2" Content="Auto update checksum" IsChecked="{Binding AutoChecksum}">
+                    <ToolTip.Tip><c:SuperTip Title="Auto update checksum" Text="If checked, the application will make sure that the checksum in the opened file will be updated when needed. If not checked, T8Suite asks before correcting a wrong checksum it finds when opening the file, on Verify checksum, after editing the firmware information, PIDs, TEMs or a bitmask, and before flashing; map saves always update it." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="2" Grid.Column="2" Content="Show addresses and lengths in Hex" IsChecked="{Binding ShowAddressesInHex}">
+                    <ToolTip.Tip><c:SuperTip Title="Show addresses and lengths in Hex" Text="When checked, addresses and lengths in the symbol list and the search results, and the lengths in the compare results, are shown in hexadecimal, otherwise in decimal. The symbol list's find box and filter row match them as shown." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="3" Grid.Column="2" Content="Show map preview popup" IsChecked="{Binding ShowMapPreviewPopup}">
+                    <ToolTip.Tip><c:SuperTip Title="Show map preview popup" Text="When checked, pointing at a symbol's name in the symbol list shows its map from the file as a read-only table in a popup." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="4" Grid.Column="2" Content="Auto mapdetection active" IsChecked="{Binding MapDetectionActive}">
+                    <ToolTip.Tip><c:SuperTip Title="Auto mapdetection active" Text="When checked, T8Suite will try to add names to symbols in binaries without symbol tables. This is a guesstimate routine." /></ToolTip.Tip>
+                </CheckBox>
+                <Grid Grid.Row="3" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Default view type for maps" Text="Lets you choose the view type a symbol's map opens in: hexadecimal, decimal or easy view, which shows the values converted with the map's factor and offset. Each mapviewer can still be switched to another view type." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                        <ColumnDefinition Width="280" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Default view type for maps" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" HorizontalAlignment="Stretch" />
                 </Grid>
-                <TextBlock Text="Default view type for maps" Margin="0,8,0,0" />
-                <ComboBox ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" MinWidth="220" />
-            </StackPanel>
-        </HeaderedContentControl>
-        <HeaderedContentControl Header="Realtime settings">
-            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4" ColumnSpacing="12">
-                <TextBlock Grid.Row="0" Text="CANBus adapter type" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
-                <TextBlock Grid.Row="1" Text="Adapter" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch"
-                          IsEnabled="{Binding HasAdapters}" />
-                <TextBlock Grid.Row="2" Text="Serial speed" VerticalAlignment="Center" IsVisible="{Binding AdapterNeedsBaudrate}" />
-                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Baudrates}" SelectedItem="{Binding Baudrate}" HorizontalAlignment="Stretch"
-                          IsVisible="{Binding AdapterNeedsBaudrate}" />
-                <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="24">
-                    <CheckBox Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}" />
-                    <CheckBox Content="Use Legion Bootloader" IsChecked="{Binding UseLegionBootloader}" />
-                    <CheckBox Content="Prefer dynamic retrieval of live data" IsChecked="{Binding PreferDynamicLiveData}"
-                              ToolTip.Tip="Massive boost to sample rate if the binary is compatible" />
-                </StackPanel>
-                <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
-                    <CheckBox Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}" />
-                    <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="110" />
-                    <TextBlock Text="seconds" VerticalAlignment="Center" />
-                </StackPanel>
-                <CheckBox Grid.Row="5" Grid.ColumnSpan="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}" />
-                <TextBlock Grid.Row="6" Text="Wideband device" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch"
-                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
-                <TextBlock Grid.Row="7" Text="Wideband port" VerticalAlignment="Center" />
-                <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch"
-                          IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                <Grid Grid.Row="4" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Color blind mode" Text="Lets you choose a color scale for maps and their graphs that is easier to tell apart with color blindness, instead of the normal green, yellow and red. Open mapviewers change at once; red and white tables and maps opened while connected to the ECU keep their own colors." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                        <ColumnDefinition Width="280" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Color blind mode" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding ColorBlindModes}" SelectedIndex="{Binding ColorBlindMode}" HorizontalAlignment="Stretch" />
+                </Grid>
             </Grid>
         </HeaderedContentControl>
-        <HeaderedContentControl Header="Project settings">
-            <StackPanel Spacing="2">
-                <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}" />
-                <TextBlock Text="Project folder" Margin="0,8,0,0" />
-                <DockPanel>
-                    <Button DockPanel.Dock="Right" Content="..." Margin="4,0,0,0" Click="OnBrowse" />
-                    <TextBox Text="{Binding ProjectFolder}" MinWidth="420" />
-                </DockPanel>
-            </StackPanel>
+        <HeaderedContentControl Classes="group" Header="Realtime settings">
+            <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                <CheckBox Content="Prefer dynamic retrieval of live data" IsChecked="{Binding PreferDynamicLiveData}">
+                    <ToolTip.Tip><c:SuperTip Title="Prefer dynamic retrieval of live data" Text="Massive boost to sample rate if the binary is compatible." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Column="1" Content="Interpolate timescale for LogWorks" IsChecked="{Binding InterpolateLogWorksTimescale}">
+                    <ToolTip.Tip><c:SuperTip Title="Interpolate timescale for LogWorks" Text="If checked, T8Suite will interpolate the measurements from the canbus to match the 0.083 second interval that LogWorks uses, when exporting a logfile to LogWorks." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="1" Grid.Column="1" Content="Only P-bus connection" IsChecked="{Binding OnlyPBus}">
+                    <ToolTip.Tip><c:SuperTip Title="Only P-bus connection" Text="When checked, T8Suite connects to the ECU on the P-bus (500 kbit/s) only. If not checked, the Lawicel CANUSB, Kvaser, Just4Trionic and SLCAN adapters connect on a slower bus instead, and only some of them fall back to the P-bus when they find no traffic there." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="Auto update SRAM viewers every" IsChecked="{Binding AutoUpdateSRAMViewers}">
+                    <ToolTip.Tip><c:SuperTip Title="Auto update SRAM viewers every" Text="When checked, T8Suite reads the maps of the online map viewers (opened or read from the ECU while connected) that live only in SRAM, not in the flash, from the ECU again every given number of seconds (5 to 60). Viewers with unsaved changes are left alone." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Column="2" Content="Use Legion Bootloader" IsChecked="{Binding UseLegionBootloader}">
+                    <ToolTip.Tip><c:SuperTip Title="Use Legion Bootloader" Text="When checked, T8Suite reads, flashes and recovers the ECU with the Legion bootloader, which only erases and writes the partitions that differ from the file. If not checked, the default bootloader is used." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="1" Grid.Column="2" Content="Use wideband O2 on com port" IsChecked="{Binding UseDigitalWidebandLambda}">
+                    <ToolTip.Tip><c:SuperTip Title="Use wideband O2 on com port" Text="When checked, T8Suite reads the wideband controller chosen under Wideband device on the Wideband com port while the realtime panel runs. Its reading is used as the realtime AFR and is shown and logged as Wideband." /></ToolTip.Tip>
+                </CheckBox>
+                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Auto update SRAM viewers every" Text="When checked, T8Suite reads the maps of the online map viewers (opened or read from the ECU while connected) that live only in SRAM, not in the flash, from the ECU again every given number of seconds (5 to 60). Viewers with unsaved changes are left alone." /></ToolTip.Tip>
+                    <NumericUpDown Value="{Binding AutoUpdateInterval}" Minimum="5" Maximum="60" Increment="1" FormatString="0" Width="120" />
+                    <TextBlock Text="seconds" VerticalAlignment="Center" />
+                </StackPanel>
+                <Grid Grid.Row="3" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0">
+                    <ToolTip.Tip><c:SuperTip Title="CANBus adapter type" Text="Lets you choose which CAN bus device to use for ECU interaction." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Label0" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="CANBus adapter type" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
+                </Grid>
+                <Grid Grid.Row="3" Grid.Column="1" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0">
+                    <ToolTip.Tip><c:SuperTip Title="Adapter" Text="Lets you choose which adapter of the selected type to use; for an OBDLink SX, Just4Trionic or SLCAN adapter this is its serial port. The CombiAdapter is found by itself, so the list stays empty for it." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Label1" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Adapter" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Adapters}" SelectedItem="{Binding Adapter}" HorizontalAlignment="Stretch" IsEnabled="{Binding HasAdapters}"
+                              PlaceholderText="Select an adapter" />
+                </Grid>
+                <Grid Grid.Row="3" Grid.Column="2" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0" IsVisible="{Binding AdapterNeedsBaudrate}">
+                    <ToolTip.Tip><c:SuperTip Title="Serial speed" Text="Lets you choose the speed of the serial connection to an OBDLink SX (it is switched to this speed after connecting) or a Just4Trionic. SLCAN adapters always use 3000000 baud." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Label2" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Serial speed" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Baudrates}" SelectedItem="{Binding Baudrate}" HorizontalAlignment="Stretch" />
+                </Grid>
+                <Grid Grid.Row="4" Classes="pair" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Wideband device" Text="Lets you choose the type of wideband controller on the Wideband com port, so T8Suite reads it with that device's own protocol and speed. Only used with Use wideband O2 on com port." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Label0" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Wideband device" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding WidebandDevices}" SelectedItem="{Binding WidebandDevice}" HorizontalAlignment="Stretch"
+                              IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                </Grid>
+                <Grid Grid.Row="4" Grid.Column="1" Classes="pair" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Wideband com port" Text="Lets you choose the serial port the wideband controller is connected to. Only used with Use wideband O2 on com port." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Label1" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Wideband com port" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding SerialPorts}" SelectedItem="{Binding WbPort}" HorizontalAlignment="Stretch"
+                              IsEnabled="{Binding UseDigitalWidebandLambda}" />
+                </Grid>
+            </Grid>
         </HeaderedContentControl>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <HeaderedContentControl Classes="group" Header="Project settings">
+            <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
+                <CheckBox Content="Request project notes" IsChecked="{Binding RequestProjectNotes}">
+                    <ToolTip.Tip><c:SuperTip Title="Request project notes" Text="Determines whether T8Suite should prompt for a note when a change is made to a symbol while working in a project." /></ToolTip.Tip>
+                </CheckBox>
+                <Grid Grid.Column="1" Classes="pair" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Project folder" Text="Lets you choose the folder in which T8Suite creates its projects and in which Open a project looks for them. Each project is a subfolder there with a copy of its binary, its transaction log and its logbook." /></ToolTip.Tip>
+                    <TextBlock Text="Project folder" />
+                    <TextBox Grid.Column="1" Text="{Binding ProjectFolder}" ToolTip.Tip="{Binding ProjectFolder}">
+                        <TextBox.InnerRightContent>
+                            <Button Content="..." Padding="6,0" Click="OnBrowse" />
+                        </TextBox.InnerRightContent>
+                    </TextBox>
+                </Grid>
+            </Grid>
+        </HeaderedContentControl>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
             <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
             <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
         </StackPanel>

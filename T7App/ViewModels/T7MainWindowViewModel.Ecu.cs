@@ -44,6 +44,9 @@ public partial class T7MainWindowViewModel
 
     protected override string WriteRefusedText(string map) => base.WriteRefusedText(map) + " Writing to SRAM needs an open binary in the ECU.";
 
+    // T7Suite opened the SRAM snapshots' symbol difference in Easy
+    protected override MapViewType? SramDifferenceView => MapViewType.Easy;
+
     // ---- realtime ----
 
     public override RealtimeRules RealtimeRules => T7Realtime.Rules;
@@ -113,11 +116,12 @@ public partial class T7MainWindowViewModel
             IsAfrMap = true,
             SaveTo = target ? afr.SaveTarget : null,
             ReadFrom = target ? () => afr.Target : null,
-            ViewType = MapViewType.Easy,
+            // MapViewerFactory.Get(settings): the default view, as every other map
+            ViewType = DefaultMapView,
             IsRedWhite = settings.ShowRedWhite,
             DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
-            OpenLoopMark = (OpenLoopMark)Math.Clamp(settings.StandardFill, 0, 2),
+            OpenLoopMark = OpenLoopMarkStyle,
         };
     }
 
@@ -143,7 +147,7 @@ public partial class T7MainWindowViewModel
     private void ImportAfrFeedback()
     {
         if (Binary is not T7Binary bin || AfrMaps is not { } afr || bin.FindAny("BFuelCal.Map") is not { } fuel || bin.ReadSymbol(fuel) is not { } map) return;
-        byte[] data = AfrFeedback.ApplyFeedback(map, afr.Target, afr.Feedback, afr.Counter, Settings.MeasureAFRInLambda);
+        byte[] data = afr.ApplyFeedback(map, Settings.MeasureAFRInLambda);
         int before = TransactionLog?.TransCollection.Count ?? 0;
         try
         {

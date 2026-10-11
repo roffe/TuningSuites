@@ -54,9 +54,6 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
     /// </summary>
     public T5AppSettings T5Settings { get; }
 
-    // T5Suite's title was "T5Suite Professional 2.0 [file]"; the settings keep T5Suite 2.0's name
-    protected override string TitleName => "T5Suite";
-
     // the larger of the two; S19 files go through T5Suite's own converter
     protected override uint FileLength => 0x40000;
 

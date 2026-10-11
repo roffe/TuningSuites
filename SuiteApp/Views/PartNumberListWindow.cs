@@ -13,7 +13,8 @@ namespace SuiteApp.Views;
 /// <summary>Partnumber list window for all suites: browse the stock binaries in Binaries folder.</summary>
 public static class PartNumberListWindow
 {
-    private sealed record PartNumberRow(string Partnumber, string CarModel, string EngineType, string Bhp, string Torque);
+    // no power / torque: T7's and T8's partnumber tables have none
+    private sealed record PartNumberRow(string Partnumber, string CarModel, string EngineType);
 
     private static List<PartNumberRow> GetPartNumbers(Func<string, PartInfo?> lookup)
     {
@@ -26,7 +27,7 @@ public static class PartNumberListWindow
             var name = Path.GetFileNameWithoutExtension(file);
             if (string.IsNullOrEmpty(name)) continue;
             if (lookup(name) is not { } info) continue;
-            rows.Add(new PartNumberRow(name, info.CarModel, info.EngineType, info.Bhp.ToString(), info.Torque.ToString()));
+            rows.Add(new PartNumberRow(name, info.CarModel, info.EngineType));
         }
         return rows;
     }
@@ -50,8 +51,6 @@ public static class PartNumberListWindow
             Columns =
             {
                 new DataGridTextColumn { Header = "Partnumber", Binding = new Avalonia.Data.Binding(nameof(PartNumberRow.Partnumber)) },
-                new DataGridTextColumn { Header = "Power", Binding = new Avalonia.Data.Binding(nameof(PartNumberRow.Bhp)) },
-                new DataGridTextColumn { Header = "Torque", Binding = new Avalonia.Data.Binding(nameof(PartNumberRow.Torque)) },
             }
         };
 

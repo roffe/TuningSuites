@@ -17,6 +17,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 7 binary or Motorola S19";
 
+    protected override string OpenFileTitle => "Open a binary Trionic 7 file...";
+
     protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
 
     protected override void OnDataContextChanged(System.EventArgs e)
@@ -55,12 +57,12 @@ public partial class MainWindow : SuiteMainWindow
 
     private async void OnUploadPackage(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Trionic 7 packages", "*.t7p") is { } file) await Vm.UploadPackageAsync(file);
+        if (await Dialogs.OpenFile(this, "Upload tuning package to ECU", "Trionic 7 packages", ["*.t7p"]) is { } file) await Vm.UploadPackageAsync(file);
     }
 
     private async void OnGeneratePackage(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.SaveFile(this, "Trionic 7 packages", "t7p") is { } file) await Vm.GeneratePackageAsync(file);
+        if (await Dialogs.SaveFile(this, "Generate tuning package from ECU", "Trionic 7 packages", "t7p", null) is { } file) await Vm.GeneratePackageAsync(file);
     }
 
     private async void OnReadSymbolFromEcu(object? sender, RoutedEventArgs e)
@@ -128,11 +130,29 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings);
-        if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
+        // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T7Suite)
+        AutotuneSettingsViewModel? autotune = null;
+        var window = new SettingsWindow
+        {
+            DataContext = settings,
+            AutotuneSettings = async owner =>
+            {
+                var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings);
+                if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
+            },
+        };
+        if (!await window.ShowDialog<bool>(this)) return;
         settings.Apply(Vm.Settings);
+        autotune?.Apply(Vm.Settings);
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
         Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);
     }
 
+    // File → Autotune settings (as T5): no Settings dialog around it, so its Ok saves at once
+    private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
+    {
+        var autotune = new AutotuneSettingsViewModel(Vm.Settings);
+        if (await new AutotuneSettingsWindow { DataContext = autotune }.ShowDialog<bool>(this)) autotune.Apply(Vm.Settings);
+    }
 }

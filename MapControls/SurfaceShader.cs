@@ -366,12 +366,15 @@ internal static class SurfaceShader
         return null;
     }
 
-    private static readonly Lazy<SKImage> s_offline = new(() => Colormap(k => HeatColor.Interpolate(0, 255, k)));
+    // one palette per colour blind mode, never disposed: a frame still drawing on the render thread may hold the old one
+    private static readonly Lazy<SKImage>[] s_offline = Array.ConvertAll(Enum.GetValues<ColorBlindMode>(),
+        mode => new Lazy<SKImage>(() => Colormap(k => HeatColor.Interpolate(0, 255, k, false, mode))));
     private static readonly Lazy<SKImage> s_online = new(() => Colormap(k => HeatColor.Interpolate(0, 255, k, true)));
-    // a flat map: HeatColor resolves 0/0 to grey, the fallback draws it that way too
+    // a flat map: HeatColor resolves 0/0 to grey in every mode, the fallback draws it that way too
     private static readonly Lazy<SKImage> s_grey = new(() => Colormap(_ => Avalonia.Media.Color.FromRgb(128, 128, 128)));
 
-    public static SKImage ColormapImage(bool online, bool flat) => (flat ? s_grey : online ? s_online : s_offline).Value;
+    public static SKImage ColormapImage(bool online, bool flat, ColorBlindMode mode = ColorBlindMode.Normal) =>
+        (flat ? s_grey : online ? s_online : s_offline[(int)mode]).Value;
 
     private static SKImage Colormap(Func<int, Avalonia.Media.Color> color)
     {

@@ -117,10 +117,11 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
             (file, options) => new T7AirmassResult(T7Binary.Open(file, Settings.ApplicationLanguage, false), options),
             T7Binary.IsValidFile, "File is not a Trionic 7 binary file!", "Car is a convertible", false,
             ["Reverse", "First gear", "Second gear", "Third gear", "Fourth gear", "Fifth gear"],
+            // ctrlAirmassResult's legend columns, top to bottom
             [
-                (AirmassLimitType.TorqueLimiterEngine, "Engine torque limiter"), (AirmassLimitType.AirmassLimiter, "Airmass limiter"),
-                (AirmassLimitType.TurboSpeedLimiter, "Turbospeed limiter"), (AirmassLimitType.TorqueLimiterEngineE85, "E85 engine torque limiter"),
-                (AirmassLimitType.TorqueLimiterEngineE85Auto, "E85Auto engine torque limiter"), (AirmassLimitType.TorqueLimiterGear, "Gear torque limiter"),
+                (AirmassLimitType.TurboSpeedLimiter, "Turbospeed limiter"), (AirmassLimitType.AirmassLimiter, "Airmass limiter"),
+                (AirmassLimitType.TorqueLimiterEngineE85, "E85 engine torque limiter"), (AirmassLimitType.TorqueLimiterEngineE85Auto, "E85Auto engine torque limiter"),
+                (AirmassLimitType.TorqueLimiterEngine, "Engine torque limiter"), (AirmassLimitType.TorqueLimiterGear, "Gear torque limiter"),
                 (AirmassLimitType.FuelCutLimiter, "Fuelcut limiter"), (AirmassLimitType.OverBoostLimiter, "Overboost limiter"),
             ],
             compressor)));

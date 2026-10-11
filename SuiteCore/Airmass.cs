@@ -165,13 +165,13 @@ namespace CommonSuite
             return dc;
         }
 
-        /// <summary>CalculateTargetLambda: 1 / VE, richer by the injector overrun above 100 % duty.</summary>
+        /// <summary>CalculateTargetLambda: 1 / VE, richer by the injector overrun above 100 % duty, then rounded to 0.01.</summary>
         public double? TargetLambda(int airmass, int rpm)
         {
             if (Ve(airmass, rpm) is not { } ve) return null;
-            double lambda = Convert.ToInt32(1 / (ve / VeOne) * 100);
-            if (InjectorDc(airmass, rpm) is { } dc && dc > 100) lambda *= dc / 100;
-            return lambda / 100;
+            double lambda = 1 / (ve / VeOne) * 100;
+            if (InjectorDc(airmass, rpm) is { } dc && dc > 100) lambda = lambda * dc / 100;
+            return Convert.ToInt32(lambda) / 100.0;
         }
 
         public double? TargetAfr(int airmass, int rpm) => TargetLambda(airmass, rpm) * (Options.E85 ? 9.76 : 14.7);
@@ -186,13 +186,13 @@ namespace CommonSuite
             return egt;
         }
 
-        /// <summary>CalculateFuelFlow: litres per hour.</summary>
+        /// <summary>CalculateFuelFlow: litres per hour, whole ones as both suites returned (the cells' F2 shows ".00").</summary>
         public double? FuelFlow(int airmass, int rpm)
         {
             if (TargetLambda(airmass, rpm) is not { } lambda || lambda == 0) return null;
             double gramsPerCombustion = airmass / ((Options.E85 ? 9.84 : 14.65) * 1000) / lambda;
             double perSecond = gramsPerCombustion * (rpm * 2 / 60);
-            return perSecond * 3600 / (1000 * (Options.E85 ? 0.775 : 0.742));
+            return Convert.ToInt32(perSecond * 3600 / (1000 * (Options.E85 ? 0.775 : 0.742)));
         }
     }
 

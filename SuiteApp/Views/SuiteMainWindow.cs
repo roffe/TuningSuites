@@ -42,6 +42,9 @@ public partial class SuiteMainWindow : Window
     /// <summary>Open file's filter name ("Trionic 7 binary or Motorola S19").</summary>
     protected virtual string BinaryFilesName => "Binary or Motorola S19";
 
+    /// <summary>Open file's picker title, as T7Suite's and T8Suite's "Open a binary Trionic 7 file...".</summary>
+    protected virtual string OpenFileTitle => "Open file";
+
     /// <summary>About...: the thanks, support and closing lines of the suite's frmAbout (T7Suite's by default).</summary>
     /// <summary>About's special thanks, the suite's own list (Roffe in every suite's); the rest of About is the same for all.</summary>
     protected virtual string AboutThanks =>
@@ -55,6 +58,7 @@ public partial class SuiteMainWindow : Window
         if (m_workspaceReady) return;
         m_workspaceReady = true;
         InitWorkspace();
+        InitDrop();
         Space.Workspace.SizeChanged += (_, e) =>
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
@@ -130,10 +134,10 @@ public partial class SuiteMainWindow : Window
         Space.Documents.ItemsSource = vm.DockedViewers;
         vm.Viewers.CollectionChanged += (_, e) =>
         {
-            foreach (DocumentViewModel d in e.NewItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged += OnFloatingChanged;
+            foreach (DocumentViewModel d in e.NewItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged += OnDocumentChanged;
             foreach (DocumentViewModel d in e.OldItems?.OfType<DocumentViewModel>() ?? [])
             {
-                d.PropertyChanged -= OnFloatingChanged;
+                d.PropertyChanged -= OnDocumentChanged;
                 if (m_floating.Remove(d, out var w)) w.CloseQuietly();
             }
         };
@@ -147,15 +151,19 @@ public partial class SuiteMainWindow : Window
         vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
     }
 
+    // Open file's types, also what a dropped file opens as
+    private static readonly string[] BinaryPatterns = ["*.bin", "*.s19"];
+
     protected async void OnOpenFile(object? sender, RoutedEventArgs e)
     {
-        string? path = await Dialogs.OpenFile(this, BinaryFilesName, "*.bin", "*.s19");
+        string? path = await Dialogs.OpenFile(this, OpenFileTitle, BinaryFilesName, BinaryPatterns);
         if (path != null) await Vm.OpenPlainFileAsync(path, true);
     }
 
     protected async void OnSaveAs(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.SaveFile(this, "Binary files", "bin", Path.GetFileName(bin.FileName)) is not { } target) return;
+        if (Vm.Binary is not { } bin
+            || await Dialogs.SaveFile(this, "Save current file as...", "Binary files", "bin", Path.GetFileName(bin.FileName)) is not { } target) return;
         File.Copy(bin.FileName, target, true);
         if (await Dialogs.YesNo(this, "Do you want to open the newly saved file?", "Question")) await Vm.OpenPlainFileAsync(target, true);
     }
@@ -287,13 +295,13 @@ public partial class SuiteMainWindow : Window
         // the date picker gives midnight; the whole chosen day counts
         DateTime upTo = (p.UpTo ?? DateTime.Now).Date.AddDays(1).AddTicks(-1);
         if (Vm.Rebuild(upTo, p.StoreAsCurrent) is not { } rebuilt) return;
-        if (await Dialogs.SaveFile(this, "Binary files", "bin", "rebuild.bin") is { } dest) File.Copy(rebuilt, dest, true);
+        if (await Dialogs.SaveFile(this, "Save rebuild file as...", "Binary files", "bin", "rebuild.bin") is { } dest) File.Copy(rebuilt, dest, true);
         File.Delete(rebuilt);
     }
 
     protected async void OnProduceLatest(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Binary files", "bin", Path.GetFileName(bin.FileName)) is { } dest)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Produce latest binary", "Binary files", "bin", Path.GetFileName(bin.FileName)) is { } dest)
             File.Copy(bin.FileName, dest, true);
     }
 
@@ -378,7 +386,19 @@ public partial class SuiteMainWindow : Window
         m_titleDrag = null;
         if (e.Source is not Visual source) return;
         bool header = source.GetSelfAndVisualAncestors().OfType<Control>().Any(c => c.Name == "PART_Header");
-        if (header && source.FindAncestorOfType<Dock.Avalonia.Controls.MdiDocumentWindow>()?.DataContext is Dock.Model.Core.IDockable { Context: DocumentViewModel doc })
+        var window = source.FindAncestorOfType<Dock.Avalonia.Controls.MdiDocumentWindow>();
+        // a double click on the title bar maximizes. Dock's own double tap handler sits on the header, but in the normal state its
+        // press starts a window drag that captures the pointer, so the double tap went to the window and never reached it (a
+        // maximized window has no drag, which is why restoring worked). Its maximize button does it here, before the drag starts.
+        if (header && e.ClickCount == 2 && window?.DataContext is Dock.Model.Controls.IMdiDocument { MdiState: Dock.Model.Core.MdiWindowState.Normal }
+            && source.FindAncestorOfType<Button>() == null
+            && window.GetVisualDescendants().OfType<Button>().FirstOrDefault(b => b.Name == "PART_MaximizeRestoreButton") is { } maximize)
+        {
+            maximize.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            e.Handled = true;
+            return;
+        }
+        if (header && window?.DataContext is Dock.Model.Core.IDockable { Context: DocumentViewModel doc })
             m_titleDrag = doc;
     }
 
@@ -398,9 +418,13 @@ public partial class SuiteMainWindow : Window
         doc.IsFloating = true;
     }
 
-    private void OnFloatingChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnDocumentChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(DocumentViewModel.IsFloating) || sender is not DocumentViewModel doc) return;
+        if (sender is not DocumentViewModel doc) return;
+        // Dock copies a document's title once: a tabbed window's caption follows its selected tab
+        if (e.PropertyName == nameof(DocumentViewModel.Title) && Space.Documents.VisibleDockables?.FirstOrDefault(d => d.Context == doc) is { } dockable)
+            dockable.Title = doc.Title;
+        if (e.PropertyName != nameof(DocumentViewModel.IsFloating)) return;
         if (doc.IsFloating && !m_floating.ContainsKey(doc))
         {
             var window = new FloatingDocumentWindow(Vm, doc) { WindowStartupLocation = WindowStartupLocation.Manual, Position = m_floatAt, Icon = Icon };
@@ -414,19 +438,21 @@ public partial class SuiteMainWindow : Window
         }
     }
 
-    // a document shown from the view model comes to the front (the dock's own document appears after the collection change)
+    // a document shown from the view model comes to the front (the dock's own document appears after the collection change); a tab
+    // brings its window
     private void ActivateDocument(DocumentViewModel? viewer)
     {
         if (viewer == null) return;
         if (Vm.Settings.HideSymbolTable && Space.Workspace.Layout is Dock.Model.Controls.IRootDock root) DockFactory!.HidePreviewingDockables(root);
-        if (m_floating.TryGetValue(viewer, out var floating))
+        if (m_floating.TryGetValue(viewer.Tabs ?? viewer, out var floating))
         {
             floating.Activate();
             return;
         }
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            if (Space.Documents.VisibleDockables?.FirstOrDefault(d => d.Context == viewer) is not { } dockable) return;
+            DocumentViewModel shown = viewer.Tabs ?? viewer;
+            if (Space.Documents.VisibleDockables?.FirstOrDefault(d => d.Context == shown) is not { } dockable) return;
             if (m_sized.Add(dockable))
             {
                 // documents stay inner windows: dropping them on dock targets turned them into tabs, splits (an empty strip

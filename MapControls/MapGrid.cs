@@ -9,6 +9,8 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace MapControls;
 
@@ -16,8 +18,8 @@ public enum OpenLoopMark { None = 0, Box = 1, Corner = 2 }
 
 /// <summary>
 /// The map table, replacing MapViewerEx's DevExpress grid: X axis values as column headers, Y axis values as row headers,
-/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's red-white variant and online tint kept), open-loop marks
-/// and the yellow live cell. Behaves like the DevExpress grid T7Suite used: click/drag selects a block, Shift extends, Ctrl
+/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's red-white variant and online tint kept), open-loop marks,
+/// T5Suite's padlocks and adaption / sample boxes (<see cref="MapData.Marks"/>) and the yellow live cell. Behaves like the DevExpress grid T7Suite used: click/drag selects a block, Shift extends, Ctrl
 /// toggles, arrows move (Shift extends); typing, F2 or Enter edits the focused cell (Easy view starts from the value with two
 /// decimals) and Enter commits it; +/- step by one, PgUp/PgDn by ten (0x10 in hex), Home sets max, End zero, on every
 /// selected cell. Ctrl+C copies the shown text tab separated like DevExpress did; the context menu has T7Suite's copy/paste
@@ -30,6 +32,7 @@ public class MapGrid : Control
     public static readonly StyledProperty<bool> IsRedWhiteProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(IsRedWhite));
     public static readonly StyledProperty<bool> OnlineModeProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(OnlineMode));
     public static readonly StyledProperty<bool> DisableColorsProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(DisableColors));
+    public static readonly StyledProperty<ColorBlindMode> ColorModeProperty = AvaloniaProperty.Register<MapGrid, ColorBlindMode>(nameof(ColorMode));
     public static readonly StyledProperty<OpenLoopMark> OpenLoopMarkProperty = AvaloniaProperty.Register<MapGrid, OpenLoopMark>(nameof(OpenLoopMark));
     public static readonly StyledProperty<bool> IsReadOnlyProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(IsReadOnly));
     public static readonly StyledProperty<IBrush?> ForegroundProperty = TextElement.ForegroundProperty.AddOwner<MapGrid>();
@@ -45,6 +48,8 @@ public class MapGrid : Control
     public bool IsRedWhite { get => GetValue(IsRedWhiteProperty); set => SetValue(IsRedWhiteProperty, value); }
     public bool OnlineMode { get => GetValue(OnlineModeProperty); set => SetValue(OnlineModeProperty, value); }
     public bool DisableColors { get => GetValue(DisableColorsProperty); set => SetValue(DisableColorsProperty, value); }
+    /// <summary>The value scale's colour blind mode (not the red-white or online tints, which are T7Suite's).</summary>
+    public ColorBlindMode ColorMode { get => GetValue(ColorModeProperty); set => SetValue(ColorModeProperty, value); }
     public OpenLoopMark OpenLoopMark { get => GetValue(OpenLoopMarkProperty); set => SetValue(OpenLoopMarkProperty, value); }
     public bool IsReadOnly { get => GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
     public IBrush? Foreground { get => GetValue(ForegroundProperty); set => SetValue(ForegroundProperty, value); }
@@ -67,6 +72,7 @@ public class MapGrid : Control
     private static readonly IBrush SelectionLine = new ImmutableSolidColorBrush(Color.FromRgb(0x33, 0x66, 0xFF));
     private static readonly IBrush FocusLine = new ImmutableSolidColorBrush(Color.FromRgb(0x10, 0x30, 0xC0));
     private static readonly IBrush OpenLoopCorner = new ImmutableSolidColorBrush(Colors.SeaGreen);
+    private static readonly Lazy<Bitmap> Padlock = new(() => new Bitmap(AssetLoader.Open(new Uri("avares://MapControls/Assets/lock.png"))));
 
     private readonly HashSet<int> m_selected = new();
     private int m_anchorRow, m_anchorCol, m_focusRow, m_focusCol;
@@ -79,7 +85,7 @@ public class MapGrid : Control
     static MapGrid()
     {
         FocusableProperty.OverrideDefaultValue<MapGrid>(true);
-        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, OpenLoopMarkProperty, ForegroundProperty,
+        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, ColorModeProperty, OpenLoopMarkProperty, ForegroundProperty,
             HeaderBackgroundProperty, HeaderForegroundProperty, HeaderLinesProperty, GridLinesProperty);
         AffectsMeasure<MapGrid>(MapProperty, ViewTypeProperty, FontSizeProperty, FontFamilyProperty);
     }
@@ -145,17 +151,24 @@ public class MapGrid : Control
         MapData map = Map!;
         if (map.XAxis == null || col >= map.XAxis.Length) return col.ToString(CultureInfo.CurrentCulture);
         double x = map.XAxis[col];
+        if (ViewType == MapViewType.Easy && map.XEasy is { } easy && col < easy.Length) return MapData.Fixed((float)easy[col], "F2");
         if (ViewType == MapViewType.Hex)
-            return ((int)x & 0xFFFF).ToString(map.XAxis.Max() <= 255 ? "X2" : "X4", CultureInfo.InvariantCulture);
+        {
+            double[] hex = map.XHex ?? map.XAxis;
+            return ((int)hex[col] & 0xFFFF).ToString(hex.Max() <= 255 ? "X2" : "X4", CultureInfo.InvariantCulture);
+        }
         return x.ToString(CultureInfo.CurrentCulture);
     }
 
-    private string YLabel(int displayRow)
+    // MapViewerEx's row indicator (all three suites): the axis's last value on the top row whatever the row count, so a shorter
+    // axis leaves the bottom rows blank, and a map without one has no row labels
+    internal string YLabel(int displayRow)
     {
         MapData map = Map!;
-        int row = map.DataRow(displayRow);
-        if (map.YAxis == null || row >= map.YAxis.Length) return row.ToString(CultureInfo.CurrentCulture);
-        double y = map.YAxis[row];
+        int i = map.UpsideDown ? (map.YAxis?.Length ?? 0) - 1 - displayRow : displayRow;
+        if (map.YAxis == null || i < 0 || i >= map.YAxis.Length) return "";
+        if (ViewType == MapViewType.Easy && map.YEasy is { } easy && i < easy.Length) return MapData.Fixed((float)easy[i], "F2");
+        double y = map.YAxis[i];
         return ViewType == MapViewType.Hex ? ((int)y & 0xFFFF).ToString("X4", CultureInfo.InvariantCulture) : y.ToString(CultureInfo.CurrentCulture);
     }
 
@@ -183,8 +196,9 @@ public class MapGrid : Control
         for (int c = 0; c < map.Cols; c++) widest = Math.Max(widest, Text(XLabel(c), b).Width);
         double rowHeader = 0;
         for (int r = 0; r < map.Rows; r++) rowHeader = Math.Max(rowHeader, Text(YLabel(r), b).Width);
-        // the open-loop box takes 3 px on each side of the text
-        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (OpenLoopMark == OpenLoopMark.Box ? 10 : 4);
+        // the open-loop box (and T5Suite's boxes inside it) take 3 px on each side of the text, on a map that can have them
+        bool boxes = OpenLoopMark == OpenLoopMark.Box && map.OpenLoop != null || map.Marks != null;
+        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (boxes ? 10 : 4);
         if (widest > 0 && room < widest) m_textScale = Math.Clamp(room / widest, 0.6, 1);
         double headerW = 0;
         for (int r = 0; r < map.Rows; r++) headerW = Math.Max(headerW, Text(YLabel(r), b).Width);
@@ -228,7 +242,7 @@ public class MapGrid : Control
     private Color CellColor(int raw, int min, int max)
     {
         // txlogger's green → yellow → red over min..max; T7Suite's raw*255/max made a fuel map red from its lowest cell
-        if (!OnlineMode && !IsRedWhite) return HeatColor.Interpolate(min, max, raw);
+        if (!OnlineMode && !IsRedWhite) return HeatColor.Interpolate(min, max, raw, false, ColorMode);
         // T7Suite: b = raw*255/max (integer), alpha red, or a white→red tint online
         int b = raw * 255;
         if (max != 0) b /= max;
@@ -275,12 +289,22 @@ public class MapGrid : Control
                 if (i < 0) continue;
                 Rect rect = CellRect(r, c);
                 IBrush textBrush = fg;
+                IPen? markOutline = null;
                 if (colors)
                 {
                     Color col = CellColor(map[i], min, max);
                     context.FillRectangle(new ImmutableSolidColorBrush(col), rect);
-                    if (!IsRedWhite) textBrush = Brushes.Black;
+                    if (!IsRedWhite) textBrush = HeatColor.TextOn(col);
+                    // a colour blind scale can wear the corner mark's own colour (Tritanopia's teal is SeaGreen to a tritanope):
+                    // outline the mark like the text; the green → red scale keeps T7Suite's plain corner
+                    if (ColorMode != ColorBlindMode.Normal && !OnlineMode && !IsRedWhite) markOutline = new Pen(HeatColor.TextOn(col), 1);
                 }
+                // T5Suite's marks, none in the ASCII view as there; its padlock first, 10 × 10 at the right ending where the closed-loop box
+                // begins, which goes over it like the 1 px boxes (left out of a cell too narrow for it)
+                CellMarks marks = ViewType != MapViewType.Ascii ? map.Marks?.Invoke(i) ?? default : default;
+                bool padlock = marks.Locked && rect.Width >= 12;
+                if (padlock)
+                    context.DrawImage(Padlock.Value, new Rect(Snap(rect.Right - Pixels(3)) - 10, Snap(rect.Center.Y - 5), 10, 10));
                 if (OpenLoopMark != OpenLoopMark.None && map.IsOpenLoop(i))
                 {
                     if (OpenLoopMark == OpenLoopMark.Box)
@@ -298,8 +322,18 @@ public class MapGrid : Control
                             g.LineTo(new Point(rect.Right, rect.Top + rect.Height / 2));
                             g.EndFigure(true);
                         }
-                        context.DrawGeometry(OpenLoopCorner, null, tri);
+                        context.DrawGeometry(OpenLoopCorner, markOutline, tri);
                     }
+                }
+                // T5Suite's 1 px boxes just inside the closed-loop box: the knock adaption area blue, the boost adaption range white,
+                // the AFR samples from red (1) to green (255 and up)
+                Rect inner = rect.Deflate(Pixels(3));
+                if (marks.KnockAdaption) Frame(context, Brushes.Blue, inner, 1);
+                if (marks.BoostAdaption) Frame(context, Brushes.White, inner, 1);
+                if (marks.Samples > 0)
+                {
+                    byte n = (byte)Math.Min(marks.Samples, 255);
+                    Frame(context, new ImmutableSolidColorBrush(Color.FromRgb((byte)(255 - n), n, 0)), inner, 1);
                 }
                 if (i == m_highlight)
                 {
@@ -312,8 +346,11 @@ public class MapGrid : Control
                 if (editing) context.FillRectangle(Brushes.White, rect.Deflate(1));
                 if (editing) textBrush = Brushes.Black;
                 var t = Text(editing ? m_input : map.FormatCell(i, ViewType), textBrush);
-                // an edit wider than the cell keeps its end, where the typing is, in view
-                double x = editing && t.Width > rect.Width - 2 ? rect.Right - 1 - t.Width : rect.X + Math.Max(1, (rect.Width - t.Width) / 2);
+                // an edit wider than the cell keeps its end, where the typing is, in view; a value centred left of its padlock (T5Suite's
+                // text was left aligned) but clear of the closed-loop box, over the padlock in a narrow cell; the live cell hides the padlock
+                bool besidePadlock = padlock && !editing && i != m_highlight;
+                double x = editing && t.Width > rect.Width - 2 ? rect.Right - 1 - t.Width
+                    : rect.X + Math.Max(besidePadlock ? 3 : 1, (rect.Width - (besidePadlock ? 13 : 0) - t.Width) / 2);
                 using (context.PushClip(rect))
                     context.DrawText(t, new Point(x, rect.Y + (rect.Height - t.Height) / 2));
             }
@@ -520,7 +557,7 @@ public class MapGrid : Control
         if (map == null || i < 0 || IsReadOnly || ViewType == MapViewType.Ascii) return;
         m_editing = true;
         m_input = typed ?? (ViewType == MapViewType.Easy
-            ? ((float)map[i] * (float)map.Factor + (float)map.Offset).ToString("F2", CultureInfo.CurrentCulture)
+            ? MapData.Fixed((float)map.Scaled(map[i]) * (float)map.Factor + (float)map.Offset, "F2")
             : map.FormatCell(i, ViewType));
         InvalidateVisual();
     }

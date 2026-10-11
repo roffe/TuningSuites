@@ -16,7 +16,7 @@ public partial class FirmwareInfoWindow : Window
 
     private async void OnImport(object? sender, RoutedEventArgs e)
     {
-        string? file = await Dialogs.OpenFile(this, "Select a file to extract VIN and Immobilizer code from", "*.bin");
+        string? file = await Dialogs.OpenFile(this, "Select a file to extract VIN and Immobilizer code from", "Binary files", ["*.bin"]);
         if (file != null) ((FirmwareInfoViewModel)DataContext!).Import(file);
     }
 

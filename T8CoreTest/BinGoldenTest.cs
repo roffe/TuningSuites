@@ -28,7 +28,7 @@ namespace T8CoreTest
         private static readonly string BinDir = Path.Combine(Here(), "..", "T8Binaries");
         private static readonly string GoldenFile = Path.Combine(Here(), "golden.txt");
 
-        /// <summary>69 of the 72 stock bins end in .BIN: "*.bin" alone finds 3 of them on Linux.</summary>
+        /// <summary>Case-insensitive, so a stock bin added as *.BIN isn't skipped on Linux.</summary>
         internal static string[] StockBins() =>
             Directory.GetFiles(BinDir, "*.bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive });
 

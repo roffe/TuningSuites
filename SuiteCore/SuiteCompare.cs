@@ -49,7 +49,7 @@ namespace CommonSuite
                 if (cur.Length == comp.Length)
                 {
                     if (cur.AsSpan().SequenceEqual(comp)) continue;
-                    (differences, percentage, average) = Differences(cur, comp, current.IsSixteenBitTable(name));
+                    (differences, percentage, average) = Differences(cur, comp, current.IsSixteenBitTable(name), current.AbsoluteCompareAverage);
                 }
                 rows.Add(new CompareRow(name, current.Describe(name), c.Length, percentage, differences, average,
                     o.Symbol_number, c.Symbol_number, o.Userdescription, false, false, CategoryOf(o), caddr, c.Start_address));
@@ -74,13 +74,14 @@ namespace CommonSuite
         }
 
         // values, not bytes: both suites halved the differing bytes of 16-bit tables (one changed byte showed 0) and took the
-        // percentage over bytes (a 16-bit map changed everywhere showed 50)
-        private static (int differences, double percentage, double average) Differences(byte[] a, byte[] b, bool sixteenBit)
+        // percentage over bytes (a 16-bit map changed everywhere showed 50); the average is signed or absolute as the suite showed it
+        private static (int differences, double percentage, double average) Differences(byte[] a, byte[] b, bool sixteenBit, bool absolute)
         {
             int size = sixteenBit ? 2 : 1, values = a.Length / size, differences = 0;
             for (int v = 0; v < values; v++)
                 if (!a.AsSpan(v * size, size).SequenceEqual(b.AsSpan(v * size, size))) differences++;
             double average = a.Length == 0 ? 0 : a.Average(x => (double)x) - b.Average(x => (double)x);
+            if (absolute) average = Math.Abs(average);
             return (differences, values == 0 ? 0 : differences * 100.0 / values, average);
         }
 
@@ -113,7 +114,7 @@ namespace CommonSuite
                 if (sh.Start_address <= 0 || !bin.InSramCompare(sh) || first(sh) is not { } a) continue;
                 byte[] b = ReadSram(ram, sh.Start_address, sh.Length);
                 if (a.AsSpan().SequenceEqual(b)) continue;
-                var (differences, percentage, average) = Differences(a, b, bin.IsSixteenBitTable(name));
+                var (differences, percentage, average) = Differences(a, b, bin.IsSixteenBitTable(name), bin.AbsoluteCompareAverage);
                 rows.Add(new CompareRow(name, bin.Describe(name), sh.Length, percentage, differences, average,
                     sh.Symbol_number, sh.Symbol_number, sh.Userdescription, false, false, CategoryOf(sh), sh.Flash_start_address, sh.Start_address));
             }

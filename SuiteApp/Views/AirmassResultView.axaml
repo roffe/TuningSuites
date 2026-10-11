@@ -4,46 +4,64 @@
              xmlns:c="using:SuiteApp.Controls"
              x:Class="SuiteApp.Views.AirmassResultView"
              x:DataType="vm:AirmassResultViewModel">
+    <UserControl.DataTemplates>
+        <!-- a legend entry: its name, then its colour; a click opens the limiter's maps -->
+        <DataTemplate DataType="vm:LimiterLegend">
+            <Button Classes="legend" HorizontalAlignment="Right" ToolTip.Tip="Open the limiter's maps"
+                    Command="{Binding $parent[UserControl].((vm:AirmassResultViewModel)DataContext).OpenLimiterCommand}" CommandParameter="{Binding Type}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Border Grid.Column="1" Width="15" Height="13" Background="{Binding Brush}" BorderBrush="Gray" BorderThickness="1" />
+                </Grid>
+            </Button>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+    <UserControl.Styles>
+        <Style Selector="Button.legend">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,3" />
+        </Style>
+    </UserControl.Styles>
+    <!-- ctrlAirmassResult: the tabs, the Options group under them, its buttons at the bottom -->
     <DockPanel>
-        <!-- Options and the limiter legend -->
-        <ScrollViewer DockPanel.Dock="Right" Width="260" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="8" Spacing="4">
-                <TextBlock Text="Options" FontWeight="SemiBold" />
-                <CheckBox Content="Car has automatic gearbox" IsChecked="{Binding Automatic}" />
-                <CheckBox Content="Car runs E85" IsChecked="{Binding E85}" IsEnabled="{Binding CanE85}" />
-                <CheckBox Content="{Binding VariantCaption}" IsChecked="{Binding Variant}" IsEnabled="{Binding CanVariant}" />
-                <CheckBox Content="View in overboost" IsChecked="{Binding Overboost}" IsEnabled="{Binding CanOverboost}" />
-                <CheckBox Content="Use trionic calculation for torque" IsChecked="{Binding TrionicTorque}" />
-                <CheckBox Content="Firmware limited" IsChecked="{Binding FirmwareLimited}" />
-                <CheckBox Content="power in kW" IsChecked="{Binding PowerInKw}" />
-                <CheckBox Content="torque in lbft" IsChecked="{Binding TorqueInLbft}" />
-                <TextBlock Text="Ambient pressure [kPa]" />
-                <NumericUpDown Value="{Binding AmbientKpa}" Minimum="50" Maximum="150" Increment="1" FormatString="0" />
-                <ComboBox ItemsSource="{Binding Gears}" SelectedIndex="{Binding Gear}" HorizontalAlignment="Stretch" />
-                <ComboBox ItemsSource="{Binding DisplayModes}" SelectedIndex="{Binding DisplayMode}" HorizontalAlignment="Stretch" />
-                <TextBlock Text="Limiters (click to open)" FontWeight="SemiBold" Margin="0,8,0,0" />
-                <ItemsControl ItemsSource="{Binding Legend}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:LimiterLegend">
-                            <Button Background="Transparent" Padding="0,2" HorizontalContentAlignment="Left"
-                                    Command="{Binding $parent[UserControl].((vm:AirmassResultViewModel)DataContext).OpenLimiterCommand}" CommandParameter="{Binding Type}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Border Width="15" Height="13" Background="{Binding Brush}" BorderBrush="Gray" BorderThickness="1" />
-                                    <TextBlock Text="{Binding Name}" />
-                                </StackPanel>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-                    <Button Content="Compare to another file" Click="OnCompare" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Content="Refresh" Command="{Binding CalculateCommand}" />
-                    <Button Content="Close" Command="{Binding CloseCommand}" />
-                </StackPanel>
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,*,Auto" Margin="8,6,8,8">
+            <Button Content="Compare to another file" Click="OnCompare" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                <Button Content="Refresh" MinWidth="80" Command="{Binding CalculateCommand}" />
+                <Button Content="Close" MinWidth="80" Command="{Binding CloseCommand}" />
             </StackPanel>
-        </ScrollViewer>
+        </Grid>
+        <HeaderedContentControl DockPanel.Dock="Bottom" Classes="group" Header="Options" Margin="8,4,8,0">
+            <!-- a narrow window cuts the legend's names short, as ctrlAirmassResult did -->
+            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="20">
+                <StackPanel>
+                    <CheckBox Content="Car has automatic gearbox" IsChecked="{Binding Automatic}" />
+                    <CheckBox Content="Car runs E85" IsChecked="{Binding E85}" IsEnabled="{Binding CanE85}" />
+                    <CheckBox Content="{Binding VariantCaption}" IsChecked="{Binding Variant}" IsEnabled="{Binding CanVariant}" />
+                    <CheckBox Content="View in overboost" IsChecked="{Binding Overboost}" IsEnabled="{Binding CanOverboost}" />
+                    <CheckBox Content="Use trionic calculation for torque" IsChecked="{Binding TrionicTorque}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Width="280" Spacing="4">
+                    <CheckBox Content="Firmware limited" IsChecked="{Binding FirmwareLimited}" />
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="Ambient pressure" VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1" Value="{Binding AmbientKpa}" Minimum="50" Maximum="150" Increment="1" FormatString="0" />
+                        <TextBlock Grid.Column="2" Text="kPa" VerticalAlignment="Center" />
+                    </Grid>
+                    <ComboBox ItemsSource="{Binding DisplayModes}" SelectedIndex="{Binding DisplayMode}" HorizontalAlignment="Stretch" />
+                    <ComboBox ItemsSource="{Binding Gears}" SelectedIndex="{Binding Gear}" HorizontalAlignment="Stretch" />
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <CheckBox Content="power in kW" IsChecked="{Binding PowerInKw}" />
+                        <CheckBox Content="torque in lbft" IsChecked="{Binding TorqueInLbft}" />
+                    </StackPanel>
+                </StackPanel>
+                <Grid Grid.Column="2" ColumnDefinitions="*,Auto" ColumnSpacing="16" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <ItemsControl ItemsSource="{Binding LegendLeft}" />
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding LegendRight}" />
+                </Grid>
+            </Grid>
+        </HeaderedContentControl>
 
         <TabControl>
             <TabItem Header="Table view">

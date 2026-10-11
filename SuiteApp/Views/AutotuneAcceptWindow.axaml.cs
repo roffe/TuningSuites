@@ -8,8 +8,8 @@ using MapControls;
 namespace SuiteApp.Views;
 
 /// <summary>
-/// frmFuelMapAccept: the proposed change per fuel map cell in percent (0.1 % steps), rows as the fuel map; returns the cells to
-/// take, all changed ones, or null.
+/// frmFuelMapAccept: the proposed change per fuel map cell in percent (0.01 % steps, the old grid's F2), rows as the fuel map;
+/// returns the cells to take, all changed ones, or null.
 /// </summary>
 public partial class AutotuneAcceptWindow : Window
 {
@@ -17,20 +17,22 @@ public partial class AutotuneAcceptWindow : Window
 
     public AutotuneAcceptWindow() => InitializeComponent();
 
-    public AutotuneAcceptWindow(string fuelMap, double[] percent, double[] xAxis, double[] yAxis, string xName = "mg/c", string yName = "rpm") : this()
+    public AutotuneAcceptWindow(string fuelMap, double[] percent, double[] xAxis, double[] yAxis, string xName = "mg/c", string yName = "rpm",
+        double[]? xEasy = null) : this()
     {
         m_percent = percent;
         Title = "Select percent mutations to accept for map " + fuelMap;
         var data = new byte[percent.Length * 2];
         for (int i = 0; i < percent.Length; i++)
         {
-            int v = double.IsNaN(percent[i]) ? 0 : (int)Math.Round(Math.Clamp(percent[i], -400, 400) * 10);
+            int v = double.IsNaN(percent[i]) ? 0 : (int)Math.Round(Math.Clamp(percent[i], -327.67, 327.67) * 100, MidpointRounding.AwayFromZero);
             data[i * 2] = (byte)(v >> 8);
             data[i * 2 + 1] = (byte)v;
         }
-        Grid.Map = new MapData(fuelMap, data, xAxis.Length > 0 ? xAxis.Length : 18, true)
+        // signed 16-bit: a leaner cell goes down to -100 %
+        Grid.Map = new MapData(fuelMap, data, xAxis.Length > 0 ? xAxis.Length : 18, true, 0x7FFF)
         {
-            Factor = 0.1, UpsideDown = true, XAxis = xAxis, YAxis = yAxis, XName = xName, YName = yName, ZName = "%",
+            Factor = 0.01, UpsideDown = true, XAxis = xAxis, XEasy = xEasy, YAxis = yAxis, XName = xName, YName = yName, ZName = "%",
         };
         Grid.ViewType = MapViewType.Easy;
     }

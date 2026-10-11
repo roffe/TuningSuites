@@ -16,8 +16,8 @@ namespace T8CoreTest
         private static T8Binary OpenCopy(out string dir)
         {
             dir = Directory.CreateTempSubdirectory("t8binary").FullName;
-            string file = Path.Combine(dir, "55353231_FA56_C_FME2_37_FIEF_81c.BIN");
-            File.Copy(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == "55353231_FA56_C_FME2_37_FIEF_81c.BIN"), file);
+            string file = Path.Combine(dir, "55353231_FA56_C_FME2_37_FIEF_81c.bin");
+            File.Copy(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == "55353231_FA56_C_FME2_37_FIEF_81c.bin"), file);
             return T8Binary.Open(file, false, NoSymbolLists);
         }
 

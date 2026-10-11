@@ -129,7 +129,7 @@ There is no Ctrl+O.
 |---|---|
 | X/Y axis values | `GetX/YaxisValues`: the axis symbol as 16-bit BE × the axis symbol's correction factor, truncated |
 | Y sign | values > 0x8000 negative (after the factor) |
-| X sign | > 32000 negative only for BstKnkCal.MaxAirmass(Au) |
+| X sign | > 32000 negative only for BstKnkCal.MaxAirmass(Au); the viewer (MapViewerEx) shows every value above 0xF000 negative in the headers, 3D labels and slider caption, and the Excel export runs ConvertSignedValue (0xFF00..0xFFFF negative) over the x row |
 | Fixed Y axes | gear maps and BoostMeter |
 | Width | `GetTableMatrixWitdhByName` |
 | 16-bit | `isSixteenBitTable` |
@@ -146,7 +146,8 @@ There is no Ctrl+O.
 
 **Cells:**
 - 16-bit cells are big-endian. Values 0xF001–0xFFFF read as negative. 8-bit cells are unsigned.
-- Cells hold raw integers in every view. Easy view is display only: `(float)raw*factor+offset`, formatted F2. T5 names: `Ign_map_0!`/`Ign_map_4!` use F1 plus "°", `Reg_kon_mat` uses F0 plus "%".
+- Cells hold raw integers in every view. Easy view is display only: `(float)raw*factor+offset`, formatted F2. T5 names: `Ign_map_0!`/`Ign_map_4!` use F1 plus "°", `Reg_kon_mat` uses F0 plus "%". On .NET Framework a float is formatted from 7 significant digits with a half rounded up, so 0.625 shows 0.63 and 14.5 with F0 shows 15.
+- 3D graph: FillData (385-404) applies factor and offset only in the Easy view, so Decimal, Hex and ASCII plot the grid's raw values (Hex misparses its X4 text); it is refilled on every view change, the Z scale uses AutoLabels. The 2D slice (UpdateChartControlSlice 1436-1454) applies factor and offset in every view.
 - Hex view: X4 / X2.
 
 **Editing:**
@@ -445,7 +446,7 @@ There is no checksum update of the result.
 - Visible columns: Symbol, Description, Length (bytes), Percentage of values different (F1), Number of values different, Average difference (F1), Symbolnumber #1, Symbolnumber #2, User description, Missing in original file, Missing in compare file.
 - Grouped by category, with a count.
 - Rows coloured Salmon (missing in original) or CornflowerBlue (missing in compare).
-- AutoFilterRow; X6 in hex mode.
+- AutoFilterRow; X6 in hex mode (the SRAM <> BIN compare never called SetFilterMode, so its lengths and symbol numbers stayed decimal).
 
 **Double-click / Enter:**
 - If the symbol exists in the current file, open its normal viewer (StartTableViewer(name, number1)).
@@ -701,7 +702,7 @@ All of this ran on the GUI thread in T7Suite, except flash read/write and the ke
 - Dashboard: 3 × 3 seven-segment displays: km/h (1 dec), I offset (1, red when negative: `RGB(-Ioff·12, 0, 0)`), Req. airmass (0) / Calculated torque (0), Calculated power (0), Boost (2) / Duty cycle % (1), Degrees BTDC (1), TPS % (0). Linear gauges: AFR 10..20 (λ 0.5..1.5, click toggles) and Airmass mg/c 0..1600, with a fading peak line.
 - Bottom: RPM, Water °C, Air °C, EGT °C, ActiveAirDem, L/100km, AFR/λ; decoded "Airmass limiter", "Lambda status", "Fuelcut status"; Night/Day; Eco/Norm/Sport when `Performance.Mode` exists (last byte 0/'E', 1/'N', 2/'S'; written with WriteMapToSRAM); AutoTune.
 - Night: black background, digits RGB(234,77,0), labels RGB(0,192,0).
-- Free logging grid: Symbol, Description, Value (with a min..max bar), Peak, Symbolnumber (ECU), SRAM address. Save layout / Load layout (.t7rtl), Add / Remove / Edit symbol (name, description, min, max, offset, correction), Del removes, Ctrl+Up/Down moves rows (poll order). The peak reset is hidden.
+- Free logging grid: Symbol, Description, Value (with a min..max bar), Peak, Symbolnumber (ECU), SRAM address (Value and Peak without a display format: a double's ToString, G15). Save layout / Load layout (.t7rtl), Add / Remove / Edit symbol (name, description, min, max, offset, correction), Del removes, Ctrl+Up/Down moves rows (poll order). The peak reset is hidden.
 - "Add to realtime list" in the symbol list (presets by name; length 1 → 0..255, else 0..65535).
 - Sound notifications: 3 slots (symbol, condition 0 = / 1 > / 2 <, value, wav), at most one per 2 s, also set the log marker.
 - Ribbon: View knock count map (`KnkDetAdap.KnkCntMap`), false knock (`F_KnkDetAdap.FKnkCntMap`), real knock (`F_KnkDetAdap.RKnkCntMap`), misfire (`MissfAdap.MissfCntMap`), read from SRAM.
@@ -780,7 +781,7 @@ All of this ran on the GUI thread in T7Suite, except flash read/write and the ke
 - Start: optionally writes 0 to `LambdaCal.ST_Enable`, `E85Cal.ST_Enable` (BioPower) and `FCutCal.ST_Enable` in SRAM (restored on stop); reads `AutoTuneFuelMap` (BFuelCal.Map / E85Map / StartMap) from SRAM.
 - Per sample: nearest cell; a new cell restarts the stopwatch. After `CellStableTime_ms` in one cell: `err% = |tgt − avg|/tgt·100`; above `AcceptableTargetErrorPercentage`: `corr = min(err% × CorrectionPercentage/100, MaximumAdjustmentPerCyclePercentage)`, `v = v·(int)(100 ± corr)/100` (lean up), 1..254.
   - `AutoUpdateFuelMap`: the byte is written to SRAM at once (ping.wav when `PlayCellProcessedSound`).
-  - Otherwise the proposals are averaged per cell and shown on stop in "Select percent mutations to accept for map <map>" (Accept selected / Accept all / Cancel).
+  - Otherwise the proposals are averaged per cell and shown on stop in "Select percent mutations to accept for map <map>" (Accept selected / Accept all / Cancel), the exact percentages as float F2, non-zero cells orange.
 - Stop: hides the realtime panel; with auto update asks "Keep adjusted fuel map?" (No writes the original back to SRAM, Yes reads SRAM into the file and updates the checksum).
 - Settings (defaults): CellStableTime_ms 1000, CorrectionPercentage 50, AcceptableTargetErrorPercentage 2, MaximumAdjustmentPerCyclePercentage 10, AutoUpdateFuelMap false, DisableClosedLoopOnStartAutotune true, PlayCellProcessedSound false. FuelCutDecayTime, AreaCorrection, EnrichmentFilter, MinimumAFRMeasurements, MaximumAFRDeviance, discard fuel cut / closed throttle and AllowIdleAutoTune are stored but unused.
 
@@ -797,7 +798,7 @@ All of this ran on the GUI thread in T7Suite, except flash read/write and the ke
 
 **Display.** Grid: one column per rpm, WOT on top, row headers pedal %, cells green→red by value / max, a triangle in the corner in the limiter's colour: engine torque Yellow, airmass Blue, turbo speed Black, E85 Purple, E85 automatic White, gear SaddleBrown, fuel cut DarkGray, overboost CornflowerBlue. Double-clicking a legend entry opens its maps.
 - Torque: airmass / 3.1 (×1.07 E85) × rpm correction (≥6000 0.85, ≥5820 0.94, ≥5440 0.95, ≥5060 0.99, else 1), or M_NominalMap with "Trionic calculation". Power bhp = Nm × rpm / 7121 (kW × 0.73549875), lbft = Nm / 1.3558.
-- Injector DC: fuel g = air / 14.65 (9.84 E85) / 1000, ÷ (InjectorConst / 60000), × VE (BFuelCal.Map / E85Map) / 100, DC = pw × rpm / 1200; below 100 % the battery correction at 13.0 V is added. Target λ = 1 / VE (× DC/100 above 100 %). AFR λ × 14.7 (9.76 E85). EGT from ExhaustCal.T_Lambda1Map × 1/VE above LambdaCal.MaxLoad(Norm|E85)Tab. Fuel flow l/h.
+- Injector DC: fuel g = air / 14.65 (9.84 E85) / 1000, ÷ (InjectorConst / 60000), × VE (BFuelCal.Map / E85Map) / 100, DC = pw × rpm / 1200; below 100 % the battery correction at 13.0 V is added. Target λ = 100 / VE, × DC/100 above 100 %, then Convert.ToInt32 (0.01 steps); λ and AFR (λ × 14.7, 9.76 E85) shown F2 from float. EGT from ExhaustCal.T_Lambda1Map × 1/VE above LambdaCal.MaxLoad(Norm|E85)Tab. Fuel flow l/h as an int (Convert.ToInt32), shown F2 (always .00), the dyno series too.
 - Dyno graph from the WOT row: power (Red), torque (Blue), injector DC (GreenYellow), target lambda ×100 (DarkGreen), EGT (Plum, off), fuel flow (Black, off); compare file adds power (Orange) and torque (LightBlue).
 
 **Compressor map** (third tab). Turbo images with calibration (x offset, y offset, px per lb/min, px per PR): GT17 42/539/10.67/166, T25-55 64/865/20/396, T25-60 60/867/17.28/398, TD04-15G 66/576/10.45/234.5, TD04-16T 64/573/8.27/233, TD04-18T 65/576/8.27/234, TD04-19T 65/576/8.27/234, TD06-20G 58/577/8.30/235, GT2871R 50/595/9.56/276.5, GT28RS 55/460/8/211, GT3071R 42/556/6.67/171, GT3076R 50/463/6.4/158, GT40R 54/482/5.31/171, HX40w 35/762/5.03/167 (offsets scale with the image). Default turbo TD04-15G for Aero part numbers, else GT17; 2.3 l unless B204/B205.
@@ -827,5 +828,5 @@ Actions → "SID information": `T7SidEdit` finds the SID tables ("AdpN\0\0\0" �
 - **Show disassembly:** `<bin>.asm` (asked to redo when it exists) from `Disassembler.DisassembleFile`: functions from the 256 vectors, labels `Function_` / `LBL_` / vector names, operands as `ROM_` / `RAM_` symbols or 68332 registers; shown in an editor with ASM highlighting, find / replace and a hex view of the bin side by side (caret ↔ selection).
 - **Show full disassembly:** a linear sweep as RTF (`<bin>_full.asm`), scrolled to the reset vector. **Show interrupt vectors:** the 256 vectors and their names.
 - **View file in hex:** a hex editor on the bin (and the imported SRAM file) with the symbol under the caret; saving writes the bin in place after a `-backup<ticks>` copy, without checksum or transaction entry.
-- **View matrix from logfile:** X, Y, Z symbols from a `.t7l` and Mean / Minimum / Maximum; both axes split into 16 even breakpoints between the logged min and max, every line's held values into the nearest cell (0 means empty for min / max); a table (y descending) and a 3D surface.
+- **View matrix from logfile:** X, Y, Z symbols from a `.t7l` and Mean / Minimum / Maximum; both axes split into 16 even breakpoints between the logged min and max, every line's held values into the nearest cell (0 means empty for min / max); a table (y descending) and a 3D surface. Cells show F2 with 0 blank (frmMatrixResult 479-486), the row indicator and column headers F2 (528-558), the 3D X / Y labels F2 (277, 303), Z AutoLabels; T5 (FM:9219) and T8 (13407) the same.
 - **ESP calibration** (`T7EspEdit`: the byte after `F0 03 34 4E 75`: 0x82 15" B205, 0x90 15/16" B235E MY07- / B235R MY00-01, 0x91 16" B235L, 0x92 16"+ B235R MY02-), **TCM limit** (`TCMLimitEdit`: firmware mod v1 with 0/285/295/305/325/345 Nm or v2 per gear, the limit into VIOSCal.M_TCMOffset), **Copy address table to another binary**, **Import map from Excel** (CSV here), **Browse axis information** (every symbol with its axes), **Lookup partnumber** (car, engine, power, torque; open / compare / create new from Binaries), **Save all**, **Create backup file**, **Set symbol colors**, **Set ethanol content**, help (manuals).

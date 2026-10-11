@@ -83,16 +83,18 @@ namespace T7
 
         /// <summary>
         /// Import AFR feedback data: every measured cell of the fuel map moved by the full error, lean up, rich down, 1..254.
-        /// In lambda mode the feedback is λ and is compared as AFR (T7Suite compared λ to the AFR target).
+        /// From the float maps as T7Suite did (the ×10 bytes are rounded up to 0.1). In lambda mode the feedback is λ and is
+        /// compared as AFR (T7Suite compared λ to the AFR target).
         /// </summary>
-        public static byte[] ApplyFeedback(byte[] fuel, byte[] target, byte[] feedback, byte[] counter, bool inLambda)
+        public byte[] ApplyFeedback(byte[] fuel, bool inLambda)
         {
+            float[] target = Map.GetTargetMap(), feedback = Map.GetFeedbackMap();
+            int[] counter = Map.GetAFRCountermap();
             var result = (byte[])fuel.Clone();
-            for (int i = 0; i < fuel.Length && i * 2 + 1 < target.Length; i++)
+            for (int i = 0; i < fuel.Length && i < target.Length && i < counter.Length; i++)
             {
-                int count = counter[i * 2] << 8 | counter[i * 2 + 1];
-                double tgt = (target[i * 2] << 8 | target[i * 2 + 1]) / 10.0, fb = (feedback[i * 2] << 8 | feedback[i * 2 + 1]) / 10.0;
-                if (count == 0 || tgt == 0) continue;
+                double tgt = target[i], fb = feedback[i];
+                if (counter[i] == 0 || tgt == 0) continue;
                 if (inLambda) fb *= Stoich;
                 double d = Math.Abs(tgt - fb) / tgt * 100;
                 double v = fb > tgt ? fuel[i] * (100 + d) / 100 : fuel[i] * (100 - d) / 100;

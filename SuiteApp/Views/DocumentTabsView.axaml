@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SuiteApp.ViewModels"
+             xmlns:v="using:SuiteApp.Views"
+             x:Class="SuiteApp.Views.DocumentTabsView"
+             x:DataType="vm:DocumentTabsViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.closeTab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+    <DockPanel>
+        <!-- the tabs along the bottom, as the suites' tab containers; a single tab left shows as a plain window -->
+        <TabStrip DockPanel.Dock="Bottom" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}"
+                  IsVisible="{Binding Items.Count, Converter={x:Static v:NotEqualConverter.Instance}, ConverterParameter=1}">
+            <TabStrip.ItemTemplate>
+                <DataTemplate x:DataType="vm:DocumentViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                        <Button Classes="closeTab" ToolTip.Tip="Close" CommandParameter="{Binding}"
+                                Command="{Binding $parent[v:DocumentTabsView].((vm:DocumentTabsViewModel)DataContext).CloseTabCommand}">
+                            <Path Data="M0,0 L8,8 M8,0 L0,8" StrokeThickness="1.4" Stroke="{Binding $parent[Button].Foreground}" Width="8" Height="8" />
+                        </Button>
+                    </StackPanel>
+                </DataTemplate>
+            </TabStrip.ItemTemplate>
+        </TabStrip>
+        <!-- every tab's viewer is built and laid out, the selected one shows: the others are disabled, transparent and let input through
+             (an invisible control isn't measured, its viewer wouldn't be built until shown, nor follow the synchronized viewers) -->
+        <ItemsControl ItemsSource="{Binding Items}">
+            <ItemsControl.Styles>
+                <Style Selector="ContentControl.page[IsEnabled=False]">
+                    <Setter Property="Opacity" Value="0" />
+                    <Setter Property="IsHitTestVisible" Value="False" />
+                </Style>
+            </ItemsControl.Styles>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Panel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DocumentViewModel">
+                    <ContentControl Classes="page" Content="{Binding}">
+                        <ContentControl.IsEnabled>
+                            <MultiBinding Converter="{x:Static v:SameConverter.Instance}">
+                                <Binding />
+                                <Binding Path="$parent[v:DocumentTabsView].((vm:DocumentTabsViewModel)DataContext).Selected" />
+                            </MultiBinding>
+                        </ContentControl.IsEnabled>
+                    </ContentControl>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </DockPanel>
+</UserControl>

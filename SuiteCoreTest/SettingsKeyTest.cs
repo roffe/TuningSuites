@@ -46,6 +46,36 @@ namespace SuiteCoreTest
         }
 
         [TestMethod]
+        public void ARenamedSuiteTakesItsFormerFolder()
+        {
+            string old = SettingsKey.BaseFolder, dir = Directory.CreateTempSubdirectory("suiterename").FullName;
+            try
+            {
+                SettingsKey.BaseFolder = dir;
+                SettingsKey.FormerFolders["RenamedSuite"] = "FormerSuite";
+                Directory.CreateDirectory(Path.Combine(dir, "FormerSuite"));
+                File.WriteAllText(Path.Combine(dir, "FormerSuite", "settings.json"), """{ "Lastfilename": "a.bin" }""");
+                File.WriteAllText(Path.Combine(dir, "FormerSuite", "UserLib.json"), "[]");
+
+                using (var key = SettingsKey.Open("RenamedSuite"))
+                    Assert.AreEqual("a.bin", key.GetValue("Lastfilename"));
+                Assert.IsFalse(Directory.Exists(Path.Combine(dir, "FormerSuite")));
+                Assert.IsTrue(File.Exists(Path.Combine(dir, "RenamedSuite", "UserLib.json")), "the whole folder moves");
+
+                // once there, a folder under the former name is left alone
+                Directory.CreateDirectory(Path.Combine(dir, "FormerSuite"));
+                Assert.AreEqual(Path.Combine(dir, "RenamedSuite"), SettingsKey.Folder("RenamedSuite"));
+                Assert.IsTrue(Directory.Exists(Path.Combine(dir, "FormerSuite")));
+            }
+            finally
+            {
+                SettingsKey.FormerFolders.Remove("RenamedSuite");
+                SettingsKey.BaseFolder = old;
+                Directory.Delete(dir, true);
+            }
+        }
+
+        [TestMethod]
         public void SubkeysShareOneFileLikeLogFilters()
         {
             string dir = Directory.CreateTempSubdirectory("t7settings").FullName;

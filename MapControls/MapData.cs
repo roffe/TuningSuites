@@ -9,6 +9,12 @@ namespace MapControls;
 public enum MapViewType { Hex = 0, Decimal = 1, Easy = 2, Ascii = 3 }
 
 /// <summary>
+/// T5Suite's marks on a cell: a padlock (locked, or below the knock pressure), in the knock adaption area, in the boost adaption
+/// rpm range, and the AFR samples taken in it (0: none).
+/// </summary>
+public readonly record struct CellMarks(bool Locked, bool KnockAdaption, bool BoostAdaption, int Samples);
+
+/// <summary>
 /// One map (calibration table) as T7Suite's MapViewerEx holds it: raw integers decoded from the symbol's bytes (8-bit
 /// unsigned, or 16-bit big-endian where 0xF001..0xFFFF read as negative), shown and edited as raw values; "Easy" view only
 /// changes the display to raw*factor+offset. Data index i is cell (row i / Cols, col i % Cols) in byte order; with
@@ -29,6 +35,18 @@ public sealed class MapData
 
     /// <summary>One value per column / data row (the corrected axis symbol values), null if unknown.</summary>
     public double[]? XAxis { get; set; }
+
+    /// <summary>The X axis in the Easy view's units where they aren't its values (T5Suite's MAP axis in bar) or want two decimals (the log
+    /// matrix's), two decimals: the Easy view's column headers and the 3D graph's axis; null where they are.</summary>
+    public double[]? XEasy { get; set; }
+
+    /// <summary>The Y axis as <see cref="XEasy"/> (the log matrix's breakpoints): the Easy view's row headers, the 3D graph's and the 2D
+    /// graph's axis with two decimals; null: its values.</summary>
+    public double[]? YEasy { get; set; }
+
+    /// <summary>The X axis as stored where its values are sensor scaled (T5's 3.0 to 5.0 bar MAP axis): the Hex view's headers, as
+    /// T5Suite's; null where they are the values.</summary>
+    public double[]? XHex { get; set; }
     public double[]? YAxis { get; set; }
     public string XName { get; set; } = "";
     public string YName { get; set; } = "";
@@ -36,6 +54,9 @@ public sealed class MapData
 
     /// <summary>Open-loop load limit per data row in X-axis units; a cell is open loop when the limit is above its X value.</summary>
     public double[]? OpenLoop { get; set; }
+
+    /// <summary>T5Suite's marks of a data index, asked at every paint (autotune locks and the AFR samples come while logging); null: none.</summary>
+    public Func<int, CellMarks>? Marks { get; set; }
 
     /// <summary>
     /// Raw values above it read as negative (two's complement). 16-bit cells: 0xF000 (T7 / T8), so only -0xFFF..0xF000 survive a
@@ -51,7 +72,23 @@ public sealed class MapData
     /// <summary>T5Suite's 3.0 to 5.0 bar sensor views: the Decimal and Easy values are raw × percent / 100 (100 shows them raw).</summary>
     public int ScalePercent { get; set; } = 100;
 
-    private int Scaled(int raw) => ScalePercent == 100 ? raw : raw * ScalePercent / 100;
+    /// <summary>
+    /// T5Suite's math toolbar: Multiply by w to two decimals and Divide by w as is in the Decimal and Hex views, Easy results
+    /// rounded back to raw. Off, it is T7Suite's: w rounded to an integer, Easy results truncated.
+    /// </summary>
+    public bool FractionalMath { get; set; }
+
+    /// <summary>The value the Decimal and Easy views show for a raw value (before factor and offset).</summary>
+    public int Scaled(int raw) => ScalePercent == 100 ? raw : raw * ScalePercent / 100;
+
+    /// <summary>The Easy view's number format when there is a factor or offset (T5Suite's realtime AFR feedback grid: F1).</summary>
+    public string EasyFormat { get; set; } = "F2";
+
+    /// <summary>The Easy view shows such a value of 0 as empty: T5Suite's feedback and error AFR maps, where 0 is a cell without samples.</summary>
+    public bool BlankZero { get; set; }
+
+    /// <summary>The Easy view's text of a data index where the raw value can't hold it (the log matrix's means with two decimals); null: from raw.</summary>
+    public Func<int, string>? EasyText { get; set; }
 
     /// <summary>True once anything changed since load or <see cref="MarkSaved"/>.</summary>
     public bool Mutated { get; private set; }
@@ -198,7 +235,16 @@ public sealed class MapData
 
     // ---- text, as MapViewerEx shows and parses cells ----
 
-    public string FormatCell(int index, MapViewType view) => Format(m_raw[index], view);
+    public string FormatCell(int index, MapViewType view) =>
+        view == MapViewType.Easy && EasyText != null ? EasyText(index) : Format(m_raw[index], view);
+
+    /// <summary>
+    /// A float as the old suites printed it on .NET Framework: 7 significant digits, a half rounded away from zero (.NET 10 gives
+    /// 0.625f "0.62" and 14.5f "14" with F2 / F0, T5Suite showed 0.63 and 15). Decimal keeps the 7 digits and rounds that way.
+    /// </summary>
+    public static string Fixed(float v, string format) => float.IsFinite(v) && Math.Abs(v) < 1e28f
+        ? ((decimal)v).ToString(format, CultureInfo.CurrentCulture)
+        : v.ToString(format, CultureInfo.CurrentCulture);
 
     public string Format(int raw, MapViewType view)
     {
@@ -214,9 +260,10 @@ public sealed class MapData
                 if (Factor != 1 || Offset != 0)
                 {
                     float v = (float)raw * (float)Factor + (float)Offset;
-                    if (Name.StartsWith("Ign_map_0!") || Name.StartsWith("Ign_map_4!")) return v.ToString("F1", CultureInfo.CurrentCulture) + "°";
-                    if (Name.StartsWith("Reg_kon_mat")) return v.ToString("F0", CultureInfo.CurrentCulture) + "%";
-                    return v.ToString("F2", CultureInfo.CurrentCulture);
+                    if (Name.StartsWith("Ign_map_0!") || Name.StartsWith("Ign_map_4!")) return Fixed(v, "F1") + "°";
+                    if (Name.StartsWith("Reg_kon_mat")) return Fixed(v, "F0") + "%";
+                    if (BlankZero && v == 0) return "";
+                    return Fixed(v, EasyFormat);
                 }
                 if (Name.StartsWith("Reg_kon_mat")) return raw.ToString("F0", CultureInfo.CurrentCulture) + "%";
                 return raw.ToString(CultureInfo.CurrentCulture);
@@ -244,7 +291,7 @@ public sealed class MapData
                 if (!double.TryParse(text.TrimEnd('°', '%'), NumberStyles.Float, CultureInfo.CurrentCulture, out double d)
                     && !double.TryParse(text.TrimEnd('°', '%'), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) { error = "Not a number"; return false; }
                 double unscaled = Factor == 0 ? d - Offset : (d - Offset) / Factor;
-                // a scaled view rounds up, as T5Suite's 3 bar views did
+                // a scaled view rounds up, 16-bit cells too (T5Suite's 3 bar views truncated those, losing a count)
                 raw = ScalePercent == 100 ? (int)Math.Round(unscaled, MidpointRounding.ToEven) : Unscale(unscaled);
                 break;
             case MapViewType.Decimal:
@@ -259,5 +306,6 @@ public sealed class MapData
         return true;
     }
 
-    private int Unscale(double v) => (int)Math.Ceiling(Math.Round(v * 100 / ScalePercent, 6));
+    /// <summary>A shown (scaled) value back to raw, rounded up.</summary>
+    public int Unscale(double v) => (int)Math.Ceiling(Math.Round(v * 100 / ScalePercent, 6));
 }

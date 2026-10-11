@@ -39,6 +39,10 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     /// <summary>T5Suite's dock caption.</summary>
     public override string Title => "Realtime monitor";
 
+    /// <summary>T5Suite's User defined grid: F2 from the float, Pgm_status as 16 hex digits.</summary>
+    protected override string CellText(string name, double value) =>
+        name == "Pgm_status" ? ((ulong)Math.Max(0, value)).ToString("X16") : MapControls.MapData.Fixed((float)value, "F2");
+
     /// <summary>The Engine status tab's LEDs, Pgm_status bit 0 first.</summary>
     public ObservableCollection<StatusLed> StatusLeds { get; } = [];
 

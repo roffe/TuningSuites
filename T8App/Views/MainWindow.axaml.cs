@@ -15,6 +15,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 8 binary files";
 
+    protected override string OpenFileTitle => "Open a binary Trionic 8 file...";
+
     protected override string CompareFilesName => "Trionic 8 binaries";
 
     protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(this, Vm.LookupPartNumber);
@@ -31,7 +33,7 @@ public partial class MainWindow : SuiteMainWindow
 
     private async void OnRecoverEcu(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Binary files", "*.bin") is { } file) await Vm.RecoverEcuAsync(file);
+        if (await Dialogs.OpenFile(this, "Recover ECU", "Binary files", ["*.bin"]) is { } file) await Vm.RecoverEcuAsync(file);
     }
 
     private async void OnEcuInformation(object? sender, RoutedEventArgs e)
@@ -47,6 +49,8 @@ public partial class MainWindow : SuiteMainWindow
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
     }
+
+    // txlogger's Firmware info edit: T8Suite's Firmware information (VIN, immobilizer code and software version)
 
     private async void OnFirmwareInformation(object? sender, RoutedEventArgs e)
     {
@@ -69,10 +73,10 @@ public partial class MainWindow : SuiteMainWindow
     private async void OnCreateFromTis(object? sender, RoutedEventArgs e)
     {
         string binaries = System.IO.Path.Combine(System.AppContext.BaseDirectory, "Binaries");
-        if (await Dialogs.OpenFileIn(this, "Select a binary file to base the new file on", binaries, "Binary files", "*.bin") is not { } baseBin
+        if (await Dialogs.OpenFileIn(this, "Select a binary file to base the new file on", binaries, "Binary files", ["*.bin"]) is not { } baseBin
             || !T8SuitePro.T8Binary.IsValidFile(baseBin)) return;
-        string? tis = await Dialogs.OpenFileIn(this, "Choose a TIS T8 file to build the new file with", null, "TIS T8 files", "*.gbf", "*.s19");
-        if (await Dialogs.SaveFile(this, "Binary files", "bin", title: "Choose a filename for the new binary file") is { } target) Vm.CreateFromTis(baseBin, tis, target);
+        string? tis = await Dialogs.OpenFile(this, "Choose a TIS T8 file to build the new file with", "TIS T8 files", ["*.gbf", "*.s19"]);
+        if (await Dialogs.SaveFile(this, "Choose a filename for the new binary file", "Binary files", "bin", null) is { } target) Vm.CreateFromTis(baseBin, tis, target);
     }
 
     // Tuning → Tuning wizards → Tuning Wizard

@@ -23,7 +23,7 @@ public partial class SuiteMainWindow
 
     private void WatchMapMenus(MainWindowViewModel vm)
     {
-        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildQuickMaps(); };
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildTuningMenu(); };
         vm.MyMapsChanged += BuildMyMaps;
         BuildMyMaps();
     }
@@ -35,8 +35,9 @@ public partial class SuiteMainWindow
 
     protected async void OnCompareToFile(object? sender, RoutedEventArgs e)
     {
-        if (CompareSeveralFiles) await Vm.CompareToFilesAsync(await Dialogs.OpenFiles(this, CompareFilesName, "*.bin"));
-        else if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is { } file) await Vm.CompareToFileAsync(file);
+        const string title = "Compare symbols with other binary";
+        if (CompareSeveralFiles) await Vm.CompareToFilesAsync(await Dialogs.OpenFiles(this, title, CompareFilesName, ["*.bin"]));
+        else if (await Dialogs.OpenFile(this, title, CompareFilesName, ["*.bin"]) is { } file) await Vm.CompareToFileAsync(file);
     }
 
     protected void OnBinaryCompare(object? sender, RoutedEventArgs e) => BinaryCompare(false);
@@ -46,7 +47,8 @@ public partial class SuiteMainWindow
 
     private async void BinaryCompare(bool outsideSymbols)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } file) return;
+        string title = outsideSymbols ? "Compare binary outside symbolrange" : "Compare binary with other binary";
+        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, title, CompareFilesName, ["*.bin"]) is not { } file) return;
         var lines = SuiteCompare.BinaryDiff(bin.FileName, file, outsideSymbols ? bin.Symbols : null);
         var text = new StringBuilder($"{Path.GetFileName(bin.FileName)} / {Path.GetFileName(file)}: {lines.Count} lines differ\n\n");
         foreach (var (mine, theirs) in lines) text.Append(mine).Append('\n').Append(theirs).Append("\n\n");
@@ -65,7 +67,7 @@ public partial class SuiteMainWindow
         if (Vm.Binary is not { } bin) return;
         var (caption, text) = TransferWizard;
         if (!await Dialogs.YesNo(this, text, caption)) return;
-        if (await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } target) return;
+        if (await Dialogs.OpenFile(this, "Transfer maps to another binary", CompareFilesName, ["*.bin"]) is not { } target) return;
         var selection = new TransferSelectionViewModel(SuiteCompare.TransferCandidates(bin), Vm.LastTransferSelection());
         if (!await new TransferSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) return;
         var report = Vm.TransferMaps(target, selection.Selection);
@@ -74,7 +76,8 @@ public partial class SuiteMainWindow
 
     protected async void OnCopyAddressTable(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, CompareFilesName, "*.bin") is not { } target) return;
+        if (Vm.Binary is not { } bin
+            || await Dialogs.OpenFile(this, "Select binary file to transfer the address table to...", CompareFilesName, ["*.bin"]) is not { } target) return;
         if (bin.AddressTableStart(bin.FileName) != bin.AddressTableStart(target)
             && !await Dialogs.YesNo(this, "Address table start addresses are not equal, continue anyway?", "Attention!"))
         {
@@ -103,9 +106,21 @@ public partial class SuiteMainWindow
 
     protected async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
     {
-        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption) { Browse = BrowsePartNumbers };
-        string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(this);
-        if (action == null || lookup.Info?.Binary is not { } stock) return;
+        if (await ShowPartLookupAsync(this) is { } pick) await RunPartLookupAsync(pick.action, pick.stock);
+    }
+
+    /// <summary>Lookup partnumber over owner, looked up at once when a partnumber is given: the action picked on its stock file, or null.</summary>
+    protected async Task<(string action, string stock)?> ShowPartLookupAsync(Window owner, string partNumber = "")
+    {
+        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption) { Browse = BrowsePartNumbers, PartNumber = partNumber };
+        if (partNumber != "") lookup.Lookup();
+        string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(owner);
+        return action != null && lookup.Info?.Binary is { } stock ? (action, stock) : null;
+    }
+
+    /// <summary>The lookup's Open this file, Compare to this file or Create new from original ("create:&lt;file&gt;").</summary>
+    protected async Task RunPartLookupAsync(string action, string stock)
+    {
         if (action == "open") await Vm.OpenFileAsync(stock, true);
         else if (action == "compare") await Vm.CompareToFileAsync(stock);
         else if (action.StartsWith("create:"))
@@ -120,22 +135,23 @@ public partial class SuiteMainWindow
 
     protected async void OnImportXml(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "XML documents", "*.xml") is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportXml(bin, file));
+        if (await Dialogs.OpenFile(this, "Import XML descriptor", "XML documents", ["*.xml"]) is { } file) ImportSymbols(bin => SymbolFiles.ImportXml(bin, file));
     }
 
     protected async void OnImportCsv(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "CSV documents", "*.csv") is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportCsv(bin, file));
+        if (await Dialogs.OpenFile(this, "Import CSV descriptor", "CSV documents", ["*.csv"]) is { } file) ImportSymbols(bin => SymbolFiles.ImportCsv(bin, file));
     }
 
     protected async void OnImportAs2(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "AS2 documents", "*.as2") is { } file) Vm.ImportSymbols(bin => SymbolFiles.ImportAs2(bin, file));
+        if (await Dialogs.OpenFile(this, "Import AS2 descriptor", "AS2 documents", ["*.as2"]) is { } file) ImportSymbols(bin => SymbolFiles.ImportAs2(bin, file));
     }
 
     protected async void OnExportS19(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "S19 files", "S19", Path.ChangeExtension(Path.GetFileName(bin.FileName), ".S19")) is { } target)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Export file to motorola S19 format...", "S19 files", "S19",
+                Path.ChangeExtension(Path.GetFileName(bin.FileName), ".S19")) is { } target)
             SymbolFiles.ExportS19(bin, target);
     }
 
@@ -148,13 +164,13 @@ public partial class SuiteMainWindow
             return;
         }
         string name = Path.GetFileName(bin.FileName) + "~" + sh.SmartVarname + ".csv";
-        if (await Dialogs.SaveFile(this, "CSV files", "csv", name) is { } target) SymbolFiles.ExportMapCsv(bin, sh, target);
+        if (await Dialogs.SaveFile(this, "Export map to CSV", "CSV files", "csv", name) is { } target) SymbolFiles.ExportMapCsv(bin, sh, target);
     }
 
     /// <summary>T5Suite's Import map from Excel: the map from the name after the last '~', else the selected symbol.</summary>
     protected async void OnImportMapCsv(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, "CSV files", "*.csv") is not { } file) return;
+        if (Vm.Binary is not { } bin || await Dialogs.OpenFile(this, "Import map from CSV", "CSV files", ["*.csv"]) is not { } file) return;
         string stem = Path.GetFileNameWithoutExtension(file);
         if (stem.Contains('~') && bin.Find(stem[(stem.LastIndexOf('~') + 1)..]) is { } named)
         {
@@ -176,7 +192,7 @@ public partial class SuiteMainWindow
 
     protected async void OnExportSymbolCsv(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "CSV files", "csv") is { } target)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Select a filename to save the symbollist", "CSV files", "csv", null) is { } target)
         {
             SymbolFiles.ExportSymbolCsv(bin, target, Vm.SymbolCsvUserDescription);
             await Dialogs.Info(this, "Export done", Vm.Caption);
@@ -187,20 +203,22 @@ public partial class SuiteMainWindow
 
     protected async void OnImportTuningPackage(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, Vm.PackageFilesName, "*." + Vm.PackageExtension) is { } file && Vm.ImportTuningPackage(file) is { } results)
+        if (await Dialogs.OpenFile(this, "Import tuning package", Vm.PackageFilesName, ["*." + Vm.PackageExtension]) is { } file
+            && Vm.ImportTuningPackage(file) is { } results)
             await new ImportResultsWindow(results).ShowDialog(this);
     }
 
     protected async void OnExportPackage(object? sender, RoutedEventArgs e)
     {
         var selected = Vm.SelectedSymbols.ToList();
-        if (Vm.Binary is { } bin && selected.Count > 0 && await Dialogs.SaveFile(this, Vm.PackageFilesName, Vm.PackageExtension) is { } target)
+        if (Vm.Binary is { } bin && selected.Count > 0
+            && await Dialogs.SaveFile(this, "Export as tuning package", Vm.PackageFilesName, Vm.PackageExtension, null) is { } target)
             SymbolFiles.ExportPackage(bin, selected, target);
     }
 
     protected async void OnExportFixedPackage(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, Vm.PackageFilesName, Vm.PackageExtension) is { } target)
+        if (Vm.Binary is { } bin && await Dialogs.SaveFile(this, "Export fixed tuning package", Vm.PackageFilesName, Vm.PackageExtension, null) is { } target)
             SymbolFiles.ExportPackage(bin, SymbolFiles.FixedPackage(bin), target);
     }
 
@@ -209,21 +227,53 @@ public partial class SuiteMainWindow
     private MenuItem Shortcut(MapShortcut m) =>
         new() { Header = MenuTextConverter.Escape(m.Caption), Command = Vm.OpenShortcutCommand, CommandParameter = m, [ToolTip.TipProperty] = m.Symbol };
 
+    // a descriptor import names symbols: the Tuning menu then shows the maps that have their names now
+    private void ImportSymbols(Action<SuiteBinary> import)
+    {
+        Vm.ImportSymbols(import);
+        BuildTuningMenu();
+    }
+
     private List<object?>? m_tuningItems;
 
-    // the ribbon's map buttons, grouped as the ribbon was, the ones this bin has (DynamicTuningMenu), after the menu's own items
-    private void BuildQuickMaps()
+    // the menu's own items (the tuning wizards), then txlogger's menu for the ECU with what this bin and suite have
+    private void BuildTuningMenu()
     {
         if (this.FindControl<MenuItem>("QuickMapsMenu") is not { } menu) return;
         m_tuningItems ??= menu.Items.ToList();
         menu.Items.Clear();
         foreach (object? item in m_tuningItems) menu.Items.Add(item);
-        foreach (var group in (Vm.Binary?.QuickMaps() ?? []).GroupBy(m => m.Group))
+        if (Vm.Binary is { } bin)
+            foreach (MenuItem item in TuningItems(bin, bin.TuningMenu())) menu.Items.Add(item);
+    }
+
+    // left out: a map the bin has under none of its names, one opening what an entry above it does, an empty submenu
+    private List<MenuItem> TuningItems(SuiteBinary bin, IEnumerable<TuningItem> entries)
+    {
+        var items = new List<MenuItem>();
+        var opened = new HashSet<string>();
+        foreach (TuningItem entry in entries)
         {
-            var item = new MenuItem { Header = MenuTextConverter.Escape(group.Key) };
-            foreach (var m in group) item.Items.Add(Shortcut(m));
-            menu.Items.Add(item);
+            var item = new MenuItem { Header = MenuTextConverter.Escape(entry.Caption) };
+            if (entry.Children != null)
+            {
+                foreach (MenuItem child in TuningItems(bin, entry.Children)) item.Items.Add(child);
+                if (item.Items.Count == 0) continue;
+            }
+            else
+            {
+                string[] maps = entry.Maps(bin);
+                if (maps.Length == 0 || !opened.Add(string.Join('|', maps))) continue;
+                // named by its symbol: the name it opens
+                if (entry.Symbols?[0] == entry.Caption) item.Header = MenuTextConverter.Escape(string.Join(" + ", maps));
+                // a map that lives in the ECU (an adaption or counter): read from SRAM as the Realtime menu does, never the file
+                item.Command = entry.Ecu ? Vm.ShowEcuMapCommand : Vm.OpenMapsCommand;
+                item.CommandParameter = entry.Ecu ? maps[0] : maps;
+                ToolTip.SetTip(item, string.Join('\n', maps));
+            }
+            items.Add(item);
         }
+        return items;
     }
 
     private void BuildMyMaps()

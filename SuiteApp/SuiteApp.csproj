@@ -30,6 +30,7 @@
     <!-- the compressor maps of the airmass result viewer, the disassembly's highlighting -->
     <AvaloniaResource Include="Assets\Compressormaps\*" />
     <AvaloniaResource Include="Assets\ASM-Mode.xshd" />
+    <AvaloniaResource Include="Assets\workspace-logo.svg" />
   </ItemGroup>
 
   <ItemGroup>

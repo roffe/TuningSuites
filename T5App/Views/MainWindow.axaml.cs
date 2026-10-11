@@ -16,6 +16,8 @@ public partial class MainWindow : SuiteMainWindow
 
     protected override string BinaryFilesName => "Trionic 5 files";
 
+    protected override string OpenFileTitle => "Open a binary Trionic 5 file...";
+
     protected override string CompareFilesName => "Trionic 5 binary files";
 
     // T5Suite 2.0's frmAbout list
@@ -26,28 +28,56 @@ public partial class MainWindow : SuiteMainWindow
     {
         base.OnDataContextChanged(e);
         if (DataContext is not T5MainWindowViewModel vm) return;
-        vm.ShowFirmwareOptions = options => new FirmwareOptionsWindow { DataContext = options }.ShowDialog<bool>(this);
+        vm.ShowFirmwareOptions = ShowFirmwareOptions;
         // "Select mutations to accept" on Insp_mat!'s axes
         vm.AcceptAutotune = percent =>
         {
             double[] x = vm.Binary?.GetXaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
             double[] y = vm.Binary?.GetYaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
-            return new AutotuneAcceptWindow("Insp_mat!", percent, x, y, "MAP", "RPM").ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(this);
+            return new AutotuneAcceptWindow("Insp_mat!", percent, x, y, "MAP", "RPM", vm.Binary?.XAxisEasy("Insp_mat!")).ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(this);
         };
     }
 
     private async void OnFirmwareOptions(object? sender, RoutedEventArgs e) => await Vm.EditFirmwareAsync();
 
+    // an action picked in the partnumber's lookup closes the dialog unchanged first (frmEasyFirmwareSettings' Abort)
+    private async System.Threading.Tasks.Task<bool> ShowFirmwareOptions(FirmwareOptionsViewModel options)
+    {
+        var dialog = new FirmwareOptionsWindow { DataContext = options };
+        (string action, string stock)? pick = null;
+        dialog.LookupPartnumber = async () =>
+        {
+            pick = await ShowPartLookupAsync(dialog, options.Partnumber.Trim());
+            if (pick != null) dialog.Close(false);
+        };
+        bool ok = await dialog.ShowDialog<bool>(this);
+        if (pick is { } p) await RunPartLookupAsync(p.action, p.stock);
+        return ok;
+    }
+
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new SettingsViewModel(Vm.Settings, Vm.T5Settings);
-        if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
+        // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T5Suite)
+        AutotuneSettingsViewModel? autotune = null;
+        var window = new SettingsWindow
+        {
+            DataContext = settings,
+            AutotuneSettings = async owner =>
+            {
+                var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);
+                if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
+            },
+        };
+        if (!await window.ShowDialog<bool>(this)) return;
+        autotune?.Apply(Vm.Settings, Vm.T5Settings);
         settings.Apply(Vm.Settings, Vm.T5Settings);
         Vm.SettingsChanged();
         Vm.T5SettingsChanged();
         ApplyHideSymbolTable();
     }
 
+    // File → Autotune settings: no Settings dialog around it, so its Ok saves at once
     private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
     {
         var settings = new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);
@@ -104,9 +134,9 @@ public partial class MainWindow : SuiteMainWindow
             Vm.ShowInfo("This file has no 16-bit boost bias map, its range can't be changed");
             return;
         }
-        if (await Dialogs.Numbers(this, "Boost bias RPM range wizard",
-                "Please note that this wizard will adjust the actual code in your binary! The boost bias map then runs from 2500 rpm up to 2500 + step × 300 rpm.",
-                ("Axis step range", step, 5, 20, 1)) is { } v)
+        // frmBoostBiasWizard recalculated the range on every step: 2500 + step × 30 × 10
+        if (await Dialogs.Numbers(this, "Boost bias RPM range wizard", "Please note that this wizard will adjust the actual code in your binary!",
+                s => $"Result rpm from 2500 rpm upto {2500 + (int)s[0] * 300}", ("Axis step range", step, 5, 20, 1)) is { } v)
             await Vm.SetBoostBiasStepAsync((int)v[0]);
     }
 
@@ -136,15 +166,15 @@ public partial class MainWindow : SuiteMainWindow
     /// <summary>Open a saved report: T5Suite read DevExpress .prnx files, the reports here are saved as text.</summary>
     private async void OnOpenReport(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFile(this, "Reports", "*.txt") is { } file)
+        if (await Dialogs.OpenFile(this, "Open a saved report", "Reports", ["*.txt"]) is { } file)
             await Dialogs.Report(this, System.IO.Path.GetFileNameWithoutExtension(file), await System.IO.File.ReadAllLinesAsync(file));
     }
 
     private async void OnMergeFiles(object? sender, RoutedEventArgs e)
     {
-        if (await Dialogs.OpenFileIn(this, "First part of binary", null, "Binary files", "*.bin") is not { } first
-            || await Dialogs.OpenFileIn(this, "Second part of binary", System.IO.Path.GetDirectoryName(first), "Binary files", "*.bin") is not { } second
-            || await Dialogs.SaveFile(this, "Binary files", "bin", "merged.bin") is not { } output) return;
+        if (await Dialogs.OpenFile(this, "First part of binary", "Binary files", ["*.bin"]) is not { } first
+            || await Dialogs.OpenFileIn(this, "Second part of binary", System.IO.Path.GetDirectoryName(first), "Binary files", ["*.bin"]) is not { } second
+            || await Dialogs.SaveFile(this, "Save merged binary to...", "Binary files", "bin", "merged.bin") is not { } output) return;
         if (Trionic5Tools.T5Binary.Merge(await System.IO.File.ReadAllBytesAsync(first), await System.IO.File.ReadAllBytesAsync(second)) is not { } merged)
         {
             await Dialogs.Info(this, "File lengths don't match, unable to merge!");
@@ -175,12 +205,13 @@ public partial class MainWindow : SuiteMainWindow
             await Dialogs.Info(this, "A canbus connection is needed to create a SRAM snapshot");
             return;
         }
-        if ((Vm.ProjectSnapshotFile() ?? await Dialogs.SaveFile(this, "SRAM snapshots", "RAM", Vm.SnapshotName)) is { } file) await Vm.DownloadSramAsync(file);
+        if ((Vm.ProjectSnapshotFile() ?? await Dialogs.SaveFile(this, "Get SRAM snapshot", "SRAM snapshots", "RAM", Vm.SnapshotName)) is { } file)
+            await Vm.DownloadSramAsync(file);
     }
 
     private async void OnUploadSram(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is null || !Vm.IsConnected || await Dialogs.OpenFile(this, "SRAM snapshots", "*.ram") is not { } file) return;
+        if (Vm.Binary is null || !Vm.IsConnected || await Dialogs.OpenFile(this, "Upload SRAM to ECU", "SRAM snapshots", ["*.ram"]) is not { } file) return;
         bool toFile = await Dialogs.YesNo(this, "Do you want to write to the current binary file as well?", "Question");
         await Vm.UploadSramAsync(file, toFile);
     }
@@ -202,7 +233,7 @@ public partial class MainWindow : SuiteMainWindow
     /// <summary>Import SRAM snapshot into binary: the snapshot, then "Select merge options" (frmMergeAdaptionData).</summary>
     private async void OnMergeAdaption(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary is null || await Dialogs.OpenFileIn(this, "Select SRAM file...", null, "SRAM dumps", "*.ram") is not { } file) return;
+        if (Vm.Binary is null || await Dialogs.OpenFile(this, "Select SRAM file...", "SRAM dumps", ["*.ram"]) is not { } file) return;
         if (await Dialogs.Checks(this, "Select merge options", "Select items to merge from adaption data",
                 ("Fuel adaption (spot adaption)", true), ("Long term fuel trim", true), ("Idle fuel trim", true),
                 ("Cylinder fuel correction from knock information", false)) is { } o)

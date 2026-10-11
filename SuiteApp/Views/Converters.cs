@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
@@ -41,6 +42,20 @@ public class SymbolColorConverter : IValueConverter
                 if (name.StartsWith(p, StringComparison.Ordinal)) return brush;
         return null;
     }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
+}
+
+/// <summary>A double as F1 the way the old suites' .NET Framework printed it: a half rounded away from zero.</summary>
+public class F1Converter : IValueConverter
+{
+    public static readonly F1Converter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is double d ? Text(d, CultureInfo.CurrentCulture) : value;
+
+    public static string Text(double d, IFormatProvider culture) =>
+        double.IsFinite(d) && Math.Abs(d) < 1e28 ? ((decimal)d).ToString("F1", culture) : d.ToString("F1", culture);
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
@@ -174,3 +189,11 @@ public class NotEqualConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
+/// <summary>True when both bindings give the same object (a tabbed window shows its selected tab's page).</summary>
+public class SameConverter : IMultiValueConverter
+{
+    public static readonly SameConverter Instance = new();
+
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture) =>
+        values.Count == 2 && ReferenceEquals(values[0], values[1]);
+}

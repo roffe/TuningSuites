@@ -217,54 +217,75 @@ namespace Trionic5Tools
 
         public override double GetMapCorrectionOffset(string symbolname) => File.GetOffsetForMap(symbolname);
 
+        // ExportToExcel wrote the X axis in its symbol's units (MAP axes in bar), with no sensor scaling
+        public override (double factor, double offset) XAxisExportScale(string symbolname)
+        {
+            string x = new SymbolAxesTranslator().GetXaxisSymbol(symbolname);
+            return (GetMapCorrectionFactor(x), GetMapCorrectionOffset(x));
+        }
+
         public override IReadOnlyList<string> FixedPackageSymbols { get; } = [];
 
         /// <summary>
-        /// The "Manual tuning" ribbon page's map buttons in their groups and order (Trionic5FileInformation's getters). Captions
-        /// never change; T5.2 lacks the manual 1st / 2nd gear boost limits and the ignition retard limit, and some symbols differ.
+        /// The Tuning menu: txlogger's T5 menu. T5.2 names the automatic 1st gear limit and the knock sensitivity map differently
+        /// and lacks the manual gear limits and the ignition retard limit; LOLA's VE map goes first (Trionic5FileInformation's getters).
         /// </summary>
-        public override List<MapShortcut> QuickMaps()
-        {
-            bool t55 = IsTrionic55;
-            var m = new List<MapShortcut>();
-            void Add(string group, string caption, string symbol, bool show = true)
-            {
-                if (show) m.Add(new MapShortcut(group, caption, symbol));
-            }
-            const string fuel = "Injection [ Fuel ]", ign = "Ignition", man = "Turbo control - manual gearbox", aut = "Turbo control - automatic gearbox",
-                knock = "Knock detection", warm = "Engine warmup", idle = "Idle control";
-            Add(fuel, "VE map - normal", Has("Inj_map_0!") ? "Inj_map_0!" : "Insp_mat!");
-            Add(fuel, "VE map - knock", "Fuel_knock_mat!");
-            Add(fuel, "Injector scaling", "Inj_konst!");
-            Add(fuel, "Battery correction map", "Batt_korr_tab!");
-            Add(ign, "Ignition map - normal", "Ign_map_0!");
-            Add(ign, "Ignition map - knock", "Ign_map_2!");
-            Add(ign, "Ignition map - warmup", "Ign_map_4!");
-            Add(man, "Boost request map", "Tryck_mat!");
-            Add(man, "Boost control bias", "Reg_kon_mat!");
-            Add(man, "Fuel cut in overboost", "Tryck_vakt_tab!");
-            Add(man, "P factors (PID)", "P_fors!");
-            Add(man, "I factors (PID)", "I_fors!");
-            Add(man, "D factors (PID)", "D_fors!");
-            Add(man, "Boost limit in 1st gear", "Regl_tryck_fgm!", t55);
-            Add(man, "Boost limit in 2nd gear", "Regl_tryck_sgm!", t55);
-            Add(aut, "Boost request map", "Tryck_mat_a!");
-            Add(aut, "Boost control bias", "Reg_kon_mat_a!");
-            Add(aut, "Boost limit in 1st gear", t55 ? "Regl_tryck_fgaut!" : "Regl_tryck_fga!");
-            Add(aut, "P factors (PID)", "P_fors_a!");
-            Add(aut, "I factors (PID)", "I_fors_a!");
-            Add(aut, "D factors (PID)", "D_fors_a!");
-            Add(knock, "Knock sensitivity map", t55 ? "Knock_ref_matrix!" : "Knock_ref_tab!");
-            Add(knock, "Ignition retard limit", "Knock_lim_tab!", t55);
-            Add(knock, "Boost reduction map", "Apc_knock_tab!");
-            Add(warm, "Afterstart enrichment (1)", "Eftersta_fak!");
-            Add(warm, "Afterstart enrichment (2)", "Eftersta_fak2!");
-            Add(idle, "Idle target RPM", "Idle_rpm_tab!");
-            Add(idle, "Idle ignition", "Ign_idle_angle!");
-            Add(idle, "Idle ignition correction", "Ign_map_1!");
-            Add(idle, "Idle fuel map", "Idle_fuel_korr!");
-            return m;
-        }
+        public override IReadOnlyList<TuningItem> TuningMenu() => s_tuningMenu;
+
+        private static readonly TuningItem[] s_tuningMenu =
+        [
+            new("Injection [Fuel]", Children:
+            [
+                new("VE map - normal", ["Inj_map_0!", "Insp_mat!"]),
+                new("VE map - knock", ["Fuel_knock_mat!"]),
+                new("Injector scaling", ["Inj_konst!"]),
+                new("Battery correction map", ["Batt_korr_tab!"]),
+                new("Fuel cut in overboost", ["Tryck_vakt_tab!"]),
+            ]),
+            new("Ignition", Children:
+            [
+                new("Ignition normal", ["Ign_map_0!"]),
+                new("Ignition knock", ["Ign_map_2!"]),
+                new("Ignition warmup", ["Ign_map_4!"]),
+            ]),
+            new("Turbo control [M]", Children:
+            [
+                new("Boost request map", ["Tryck_mat!"]),
+                new("Boost control bias", ["Reg_kon_mat!"]),
+                new("P factors", ["P_fors!"]),
+                new("I factors", ["I_fors!"]),
+                new("D factors", ["D_fors!"]),
+                new("Boost limit in 1st gear", ["Regl_tryck_fgm!"]),
+                new("Boost limit in 2nd gear", ["Regl_tryck_sgm!"]),
+            ]),
+            new("Turbo control [A]", Children:
+            [
+                new("Boost request map", ["Tryck_mat_a!"]),
+                new("Boost control bias", ["Reg_kon_mat_a!"]),
+                new("P factors", ["P_fors_a!"]),
+                new("I factors", ["I_fors_a!"]),
+                new("D factors", ["D_fors_a!"]),
+                new("Boost limit in 1st gear", ["Regl_tryck_fgaut!", "Regl_tryck_fga!"]),
+            ]),
+            new("Knock detection", Children:
+            [
+                new("Knock sensitivity map", ["Knock_ref_matrix!", "Knock_ref_tab!"]),
+                new("Ignition retard limit", ["Knock_lim_tab!"]),
+                new("Boost reduction map", ["Apc_knock_tab!"]),
+            ]),
+            new("Warmup", Children:
+            [
+                new("Afterstart enrichment (1)", ["Eftersta_fak!"]),
+                new("Afterstart enrichment (2)", ["Eftersta_fak2!"]),
+            ]),
+            new("Idle", Children:
+            [
+                new("Idle target RPM", ["Idle_rpm_tab!"]),
+                new("Idle ignition", ["Ign_idle_angle!"]),
+                new("Idle ignition correction", ["Ign_map_1!"]),
+                new("Idle fuel map", ["Idle_fuel_korr!"]),
+            ]),
+        ];
 
         // ---- map viewer rules (MapViewerEx) ----
 
@@ -292,6 +313,26 @@ namespace Trionic5Tools
         public override int ScalePercent(string symbolname) => Scalable.Any(symbolname.StartsWith) ? SensorPercent : 100;
 
         public override int AxisScalePercent(string caption) => caption is "MAP" or "Pressure error (bar)" ? SensorPercent : 100;
+
+        public override bool DifferenceAxesFromCompareFile => true;
+
+        /// <summary>CompareSymbolToCurrentFile: Math.Abs of the averages' difference.</summary>
+        public override bool AbsoluteCompareAverage => true;
+
+        /// <summary>
+        /// MapViewerEx's Easy view column headers and 3D graph: a "MAP" axis in bar (× the sensor scale × 0.01 − 1), a "Pressure error
+        /// (bar)" one × the sensor scale × 0.01, both with two decimals (the Decimal view shows the scaled values, the Hex view the raw ones).
+        /// </summary>
+        public override double[] XAxisEasy(string symbolname)
+        {
+            string caption = AxisSymbols(symbolname).xDescr;
+            if (caption is not ("MAP" or "Pressure error (bar)")) return null;
+            double offset = caption == "MAP" ? -1 : 0;
+            return GetXaxisValues(symbolname).Select(v => v * SensorPercent / 100.0 * 0.01 + offset).ToArray();
+        }
+
+        /// <summary>MapViewerEx's Execute: Multiply by (int)(100*w)/100, Divide by w as a double, Easy results Math.Round.</summary>
+        public override bool FractionalMath => true;
 
         /// <summary>
         /// MapViewerEx's signs: 16-bit values above 32000 are negative, I_kyl_st! / I_luft_st! / Last_temp_st! above 128; the

@@ -11,7 +11,8 @@ public partial class AirmassResultView : UserControl
 
     private async void OnCompare(object? sender, RoutedEventArgs e)
     {
-        if (TopLevel.GetTopLevel(this) is Window w && DataContext is AirmassResultViewModel vm && await Dialogs.OpenFile(w, "binary files", "*.bin") is { } file)
+        if (TopLevel.GetTopLevel(this) is Window w && DataContext is AirmassResultViewModel vm
+            && await Dialogs.OpenFile(w, "Compare to another file", "binary files", ["*.bin"]) is { } file)
             vm.Compare(file);
     }
 }

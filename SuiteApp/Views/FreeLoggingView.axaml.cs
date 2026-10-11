@@ -23,12 +23,12 @@ public partial class FreeLoggingView : UserControl
 
     private async void OnSaveLayout(object? sender, RoutedEventArgs e)
     {
-        if (Owner is { } w && await Dialogs.SaveFile(w, "Realtime layout files", Vm.LayoutExtension) is { } file) Vm.SaveLayout(file);
+        if (Owner is { } w && await Dialogs.SaveFile(w, "Save layout", "Realtime layout files", Vm.LayoutExtension, null) is { } file) Vm.SaveLayout(file);
     }
 
     private async void OnLoadLayout(object? sender, RoutedEventArgs e)
     {
-        if (Owner is { } w && await Dialogs.OpenFile(w, "Realtime layout files", "*." + Vm.LayoutExtension) is { } file) Vm.LoadLayout(file);
+        if (Owner is { } w && await Dialogs.OpenFile(w, "Load layout", "Realtime layout files", ["*." + Vm.LayoutExtension]) is { } file) Vm.LoadLayout(file);
     }
 
     private async void OnAdd(object? sender, RoutedEventArgs e)

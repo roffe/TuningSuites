@@ -124,6 +124,8 @@ namespace T5AppTest
                 var settingsWindow = new SettingsWindow { DataContext = settings };
                 settingsWindow.Show();
                 Save(settingsWindow, "settings");
+                // every option says what it does: the old dialogs' SuperTips, the same style for the rest
+                CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
                 settingsWindow.Close();
                 window.Close();
                 return true;
@@ -139,7 +141,7 @@ namespace T5AppTest
                 string library = Path.Combine(System.AppContext.BaseDirectory, "Binaries");
                 Directory.CreateDirectory(library);
                 foreach (string pn in new[] { "4239273", "4781035" })
-                    File.Copy(Path.Combine(Here(), "..", "T5Binaries", pn + ".BIN"), Path.Combine(library, pn + ".BIN"), true);
+                    File.Copy(Path.Combine(Here(), "..", "T5Binaries", pn + ".bin"), Path.Combine(library, pn + ".bin"), true);
                 var rows = T5ToolWindows.PartNumbers();
                 Assert.IsTrue(rows.Count > 100, "rows " + rows.Count);
                 Assert.AreEqual("16 MHz", rows.First(r => r.Partnumber == "4239273").Library);

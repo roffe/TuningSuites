@@ -29,7 +29,7 @@ namespace T8AppTest
 
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
-        private const string StockBin = "55353231_FA56_C_FME2_37_FIEF_81c.BIN";
+        private const string StockBin = "55353231_FA56_C_FME2_37_FIEF_81c.bin";
 
         private static HeadlessUnitTestSession? s_session;
         private static string s_dir = "";
@@ -187,11 +187,11 @@ namespace T8AppTest
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "search");
 
-                // the Tuning menu with DynamicTuningMenu's captions for an old calibration, opening its maps
+                // the Tuning menu (txlogger's T8 menu) opening the maps of an old calibration
                 var quick = window.FindControl<MenuItem>("QuickMapsMenu")!;
                 // after the Tuning Wizard
                 var airmass = (MenuItem)quick.Items[1]!;
-                Assert.AreEqual("Airmass controller", airmass.Header);
+                Assert.AreEqual("Airmass", airmass.Header);
                 var manual = (MenuItem)airmass.Items[0]!;
                 Assert.AreEqual("Max airmass map (manual)", manual.Header);
                 manual.Command!.Execute(manual.CommandParameter);
@@ -209,6 +209,8 @@ namespace T8AppTest
                 var settingsWindow = new SettingsWindow { DataContext = settings };
                 settingsWindow.Show();
                 Save(settingsWindow, "settings");
+                // every option says what it does: the old dialogs' SuperTips, the same style for the rest
+                CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
                 settingsWindow.Close();
                 settings.Apply(vm.Settings);
                 Assert.IsTrue(vm.Settings.MapDetectionActive);

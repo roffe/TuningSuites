@@ -11,7 +11,7 @@ namespace T8CoreTest
     [TestClass]
     public class ToolsTest
     {
-        private const string Old = "55353231_FA56_C_FME2_37_FIEF_81c.BIN";
+        private const string Old = "55353231_FA56_C_FME2_37_FIEF_81c.bin";
 
         private static string NoSymbolLists => Path.Combine(Path.GetTempPath(), "t8golden-no-symbol-lists");
 

@@ -50,8 +50,8 @@ public partial class T5MainWindowViewModel
         [("Normal", "Insp_mat!"), ("Idle", "Idle_fuel_korr!"), ("Knocking", "Fuel_knock_mat!")];
 
     /// <summary>
-    /// Fuel injection timing (frmInjectionTiming): per cell of the chosen map the injection time (ms, 0.01) or duty cycle (%, 0.1) at
-    /// the cell's load and rpm, the chosen intake temperature, battery voltage and injector constant; the load axis in bar.
+    /// Fuel injection timing (frmInjectionTiming): per cell of the chosen map the injection time (ms) or duty cycle (%) at the cell's
+    /// load and rpm, the chosen intake temperature, battery voltage and injector constant, to two decimals; the load axis in bar.
     /// Nothing is written.
     /// </summary>
     public MapData? InjectionTiming(string mapName, int iatAd, int volt, int injectorConstant, bool dutyCycle)
@@ -62,19 +62,30 @@ public partial class T5MainWindowViewModel
         var model = new T5InjectionModel(bin) { IatAd = iatAd, BatteryVolt = volt, InjectorConstant = injectorConstant };
         int percent = bin.SensorPercent;
         var data = new byte[x.Length * y.Length * 2];
+        var text = new string[x.Length * y.Length];
         for (int r = 0; r < y.Length; r++)
             for (int c = 0; c < x.Length; c++)
             {
                 double ms = model.Milliseconds(x[c] * percent / 100, y[r], map, x, y);
-                int v = (int)System.Math.Round(dutyCycle ? T5InjectionModel.DutyCycle(ms, y[r]) * 10 : ms * 100);
+                // T5Suite printed the float with F2: seven digits, halves away from zero, as decimal rounds it; the text keeps
+                // duty cycles above 655.35 % that the 16-bit cell (the colour scale) caps
+                float value = (float)(dutyCycle ? T5InjectionModel.DutyCycle(ms, y[r]) : ms);
+                decimal hundredths = System.Math.Round((decimal)value * 100, System.MidpointRounding.AwayFromZero);
+                text[r * x.Length + c] = (hundredths / 100).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
+                int v = (int)System.Math.Clamp(hundredths, 0, 0xFFFF);
                 data[(r * x.Length + c) * 2] = (byte)(v >> 8);
                 data[(r * x.Length + c) * 2 + 1] = (byte)v;
             }
         return new MapData(mapName, data, x.Length, true, 0xFFFF)
         {
-            Factor = dutyCycle ? 0.1 : 0.01,
+            Factor = 0.01,
+            // CustomDrawCell showed that text parsed back, without trailing zeros (40.8, 1)
+            EasyFormat = "0.##",
+            EasyText = i => text[i],
             UpsideDown = true,
-            XAxis = x.Select(v => System.Math.Round(v * percent / 100 * 0.01 - 1, 2)).ToArray(),
+            // the headers in bar from the float MAP value (× 1.2 for 3.0 bar), F2 (frmInjectionTiming's CustomDrawColumnHeader)
+            XAxis = x.Select(v => (double)(v * percent / 100)).ToArray(),
+            XEasy = bin.XAxisEasy(mapName),
             YAxis = y.Select(v => (double)v).ToArray(),
             XName = "bar",
             YName = "rpm",

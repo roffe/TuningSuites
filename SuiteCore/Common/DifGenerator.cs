@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using NLog;
 
@@ -19,6 +20,13 @@ namespace CommonSuite
             get { return m_appSettings; }
             set { m_appSettings = value; }
         }
+
+        /// <summary>A channel's number format: T7Suite and T8Suite wrote three decimals, T5Suite chose per channel.</summary>
+        public Func<string, string> ValueFormat { get; set; } = _ => "F3";
+
+        // as .NET Framework wrote a double: 15 significant digits, halves away from zero (decimal does both), with a '.'
+        private static string Text(double value, string format) => Math.Abs(value) < 1e15
+            ? ((decimal)value).ToString(format, CultureInfo.InvariantCulture) : value.ToString(format, CultureInfo.InvariantCulture);
 
         private double ConvertToDouble(string v)
         {
@@ -47,10 +55,6 @@ namespace CommonSuite
                         if (varname == varnametofetch)
                         {
                             retval = (float)ConvertToDouble((string)subvals.GetValue(1));
-                            if (varname == "AD_sond")
-                            {
-                                retval = (float)ConvertToLambda(retval);
-                            }
                             if (varname == _widebandSymbol)
                             {
                                 if (varname == "DisplProt.AD_Scanner")
@@ -148,20 +152,6 @@ namespace CommonSuite
         public void SetFilters(LogFilterCollection filters)
         {
             _filters = filters;
-        }
-
-
-        private double ConvertToLambda(double value)
-        {
-            // converteer naar lambda waarden
-            // 23 = lambda = 1
-            // daarboven = rijk (lambda<1)
-            // daaronder = arm  (lambda>1)
-            value = Math.Abs(value - 125); // value - 125 means range -125 to -75 
-            // abs value means range 125 to 75 in which 125 = lean and 75 = rich
-            value /= 100;
-            return (value);
-
         }
 
 
@@ -494,10 +484,7 @@ namespace CommonSuite
                                                         {
                                                             double value = ConvertToDouble((string)subvals.GetValue(1));
 
-                                                            if (varname == "AD_sond")
-                                                            {
-                                                                value = ConvertToLambda(value);
-                                                            }
+                                                            // AD_sond is logged as λ already (T5Suite converted the raw A/D value here, |raw − 125| / 100)
                                                             if (varname == _widebandSymbol)
                                                             {
                                                                 if (varname == "DisplProt.AD_Scanner")
@@ -564,7 +551,7 @@ namespace CommonSuite
                                                                     }
                                                                 }
                                                             }
-                                                            sw.WriteLine("0," + value.ToString("F3").Replace(',', '.'));
+                                                            sw.WriteLine("0," + Text(value, ValueFormat(varname)));
                                                             sw.WriteLine("V");
 
                                                         }
@@ -597,7 +584,7 @@ namespace CommonSuite
 
                                                     double regkonmat = (pwmut * 10) - pfak - ifak - dfak;
                                                     regkonmat /= 10;
-                                                    sw.WriteLine("0," + regkonmat.ToString("F3").Replace(',', '.'));
+                                                    sw.WriteLine("0," + Text(regkonmat, "F3"));
                                                     sw.WriteLine("V");
                                                 }
                                                 else

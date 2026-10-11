@@ -213,11 +213,18 @@ public abstract partial class MainWindowViewModel
         MyMapsChanged?.Invoke();
     }
 
-    /// <summary>A map button (quick maps / My Maps).</summary>
+    /// <summary>A My Maps entry.</summary>
     [RelayCommand]
     private void OpenShortcut(MapShortcut shortcut)
     {
         if (!OpenSpecialShortcut(shortcut)) OpenSymbolByName(shortcut.Symbol);
+    }
+
+    /// <summary>A Tuning menu entry (txlogger's menu): each of its maps in its own viewer.</summary>
+    [RelayCommand]
+    private void OpenMaps(string[] maps)
+    {
+        foreach (string map in maps) OpenSymbolByName(map);
     }
 
     /// <summary>A My Maps entry that isn't a symbol (T7Suite's AFR maps); true when handled.</summary>

@@ -412,6 +412,7 @@ public partial class T5RealtimeViewModel
             Offset = offset,
             UpsideDown = true,
             XAxis = [.. m_bin.GetXaxisValues(axesOf).Select(v => (double)v)],
+            XEasy = m_bin.XAxisEasy(axesOf),
             YAxis = [.. m_bin.GetYaxisValues(axesOf).Select(v => (double)v)],
             XName = xDescr,
             YName = yDescr,
@@ -435,7 +436,13 @@ public partial class T5RealtimeViewModel
             byte[] mutated = maps.GetCurrentlyMutatedFuelMap();
             double factor = LambdaMode ? 0.1 / WidebandAfr.Stoich : 0.1;
             if (FeedbackGrid is { } f && f.Count * 2 == feedback.Length && f.Factor == factor) f.Load(feedback);
-            else FeedbackGrid = Grid("FeedbackAFR", fuel.SmartVarname, feedback, true, factor, 0);
+            else
+            {
+                MapData grid = Grid("FeedbackAFR", fuel.SmartVarname, feedback, true, factor, 0);
+                // T5Suite filled it with F1 text, λ in F2
+                grid.EasyFormat = LambdaMode ? "F2" : "F1";
+                FeedbackGrid = grid;
+            }
             if (FuelGrid is { } g && g.Count == mutated.Length) g.Load(mutated);
             else FuelGrid = Grid(fuel.SmartVarname, fuel.SmartVarname, mutated, false, 1 / 256.0, 0.5);
         }

@@ -107,7 +107,7 @@ namespace SuiteApp.Services
             var save = new Button { Content = "Save...", MinWidth = 80 };
             save.Click += async (_, _) =>
             {
-                if (await SaveFile(dlg, "Reports", "txt", caption) is { } file) System.IO.File.WriteAllText(file, text);
+                if (await SaveFile(dlg, "Save report", "Reports", "txt", caption) is { } file) System.IO.File.WriteAllText(file, text);
             };
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
             buttons.Children.Add(save);
@@ -121,7 +121,12 @@ namespace SuiteApp.Services
         }
 
         /// <summary>A wizard page of numbers (label, value, minimum, maximum, step) under an introduction; the values on OK, null on Cancel.</summary>
-        public static async Task<decimal[]?> Numbers(Window owner, string caption, string intro, params (string label, decimal value, decimal min, decimal max, decimal step)[] fields)
+        public static Task<decimal[]?> Numbers(Window owner, string caption, string intro, params (string label, decimal value, decimal min, decimal max, decimal step)[] fields) =>
+            Numbers(owner, caption, intro, null, fields);
+
+        /// <summary>The same with a line under the numbers that follows them (T5Suite's boost bias wizard: "Result rpm from 2500 rpm upto 5500").</summary>
+        public static async Task<decimal[]?> Numbers(Window owner, string caption, string intro, Func<decimal[], string>? result,
+            params (string label, decimal value, decimal min, decimal max, decimal step)[] fields)
         {
             var dlg = new Window { Title = caption, Width = 560, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
             var boxes = fields.Select(f => new NumericUpDown { Value = f.value, Minimum = f.min, Maximum = f.max, Increment = f.step, FormatString = f.step < 1 ? "0.00" : "0", Width = 160 }).ToArray();
@@ -136,6 +141,10 @@ namespace SuiteApp.Services
                 grid.Children.Add(label);
                 grid.Children.Add(boxes[i]);
             }
+            decimal[] Values() => boxes.Select(b => b.Value ?? 0).ToArray();
+            var resultText = new TextBlock { Margin = new Thickness(0, 6, 0, 0), IsVisible = result != null, Text = result?.Invoke(Values()) };
+            if (result != null)
+                foreach (NumericUpDown box in boxes) box.ValueChanged += (_, _) => resultText.Text = result(Values());
             bool ok = false;
             var okButton = new Button { Content = "Ok", MinWidth = 80, IsDefault = true };
             okButton.Click += (_, _) => { ok = true; dlg.Close(); };
@@ -147,10 +156,11 @@ namespace SuiteApp.Services
             var body = new StackPanel { Margin = new Thickness(16) };
             body.Children.Add(new TextBlock { Text = intro, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
             body.Children.Add(grid);
+            body.Children.Add(resultText);
             body.Children.Add(buttons);
             dlg.Content = body;
             await dlg.ShowDialog(owner);
-            return ok ? boxes.Select(b => b.Value ?? 0).ToArray() : null;
+            return ok ? Values() : null;
         }
 
         /// <summary>A group of check boxes with Ok / Cancel (T5Suite's "Select merge options"); the states, or null when cancelled.</summary>
@@ -231,18 +241,21 @@ namespace SuiteApp.Services
             return await dlg.ShowDialog<bool>(owner);
         }
 
-        /// <param name="patterns">e.g. "*.bin"</param>
-        /// <returns>local path, or null when cancelled</returns>
-        public static Task<string?> OpenFile(Window owner, string filterName, params string[] patterns) => OpenFileIn(owner, null, null, filterName, patterns);
+        // Every picker has a title (the Linux portal's is "xdg-desktop-portal-kde" without one): the caption of what opens it, without "...",
+        // or the suite's own dialog title. patterns is not params, so a call without the title doesn't compile.
 
-        /// <summary>OpenFile with the picker's title and first folder, where the suite's dialog had them.</summary>
-        public static async Task<string?> OpenFileIn(Window owner, string? title, string? folder, string filterName, params string[] patterns) =>
+        /// <param name="patterns">e.g. ["*.bin"]</param>
+        /// <returns>local path, or null when cancelled</returns>
+        public static Task<string?> OpenFile(Window owner, string title, string filterName, string[] patterns) => OpenFileIn(owner, title, null, filterName, patterns);
+
+        /// <summary>OpenFile starting in a folder, where the suite's dialog had one.</summary>
+        public static async Task<string?> OpenFileIn(Window owner, string title, string? folder, string filterName, string[] patterns) =>
             (await OpenFiles(owner, title, folder, false, filterName, patterns)).FirstOrDefault();
 
         /// <summary>Several files at once (T5Suite's Compare with another binary); empty when cancelled.</summary>
-        public static Task<string[]> OpenFiles(Window owner, string filterName, params string[] patterns) => OpenFiles(owner, null, null, true, filterName, patterns);
+        public static Task<string[]> OpenFiles(Window owner, string title, string filterName, string[] patterns) => OpenFiles(owner, title, null, true, filterName, patterns);
 
-        private static async Task<string[]> OpenFiles(Window owner, string? title, string? folder, bool multiple, string filterName, string[] patterns)
+        private static async Task<string[]> OpenFiles(Window owner, string title, string? folder, bool multiple, string filterName, string[] patterns)
         {
             // GTK / portal globs are case-sensitive (Windows' aren't): *.bin must also list FOO.BIN
             // ponytail: mixed case like *.Bin still hidden
@@ -267,8 +280,9 @@ namespace SuiteApp.Services
         }
 
         /// <param name="extension">default extension without dot, e.g. "bin"</param>
+        /// <param name="suggestedName">null for none; no default, so a call without the title doesn't compile</param>
         /// <returns>local path, or null when cancelled</returns>
-        public static async Task<string?> SaveFile(Window owner, string filterName, string extension, string? suggestedName = null, string? title = null)
+        public static async Task<string?> SaveFile(Window owner, string title, string filterName, string extension, string? suggestedName)
         {
             owner.IsEnabled = false; // see OpenFile
             try

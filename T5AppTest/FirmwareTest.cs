@@ -22,7 +22,15 @@ namespace T5AppTest
 
                 FirmwareOptionsViewModel options = vm.FirmwareOptions()!;
                 Assert.AreEqual("4239273", options.Partnumber.Trim());
-                OptionFlag fuelcut = options.FlagGroups.SelectMany(g => g.Flags).Single(f => f.Caption == "Fuelcut in engine brake");
+                OptionFlag fuelcut = options.Fuelling.Single(f => f.Caption == "Fuelcut in engine brake");
+                // frmEasyFirmwareSettings' captions, turbo by name (its list was one off)
+                CollectionAssert.AreEqual(new[] { "Stock", "Green giants", "Siemens 630cc/min", "Siemens 875cc/min", "Siemens 1000cc/min" },
+                    FirmwareOptionsViewModel.Injectors.Select(i => FirmwareOptionsViewModel.Caption(i)).ToArray());
+                Assert.AreEqual("5.0 bar sensor", FirmwareOptionsViewModel.Caption(MapSensorType.MapSensor50));
+                Assert.AreEqual("TD04-15T", FirmwareOptionsViewModel.Caption(CommonSuite.TurboType.TD0415T));
+                Assert.AreEqual("GT17", FirmwareOptionsViewModel.Caption(CommonSuite.TurboType.GT17));
+                Assert.AreEqual("Stock|Stage 1|Stage 8|Stage X", string.Join("|", new[] { TuningStage.Stock, TuningStage.Stage1, TuningStage.Stage8, TuningStage.StageX }
+                    .Select(s => FirmwareOptionsViewModel.Caption(s))));
                 bool was = fuelcut.IsChecked;
                 fuelcut.IsChecked = !was;
                 options.Injector = InjectorType.Siemens630Dekas;

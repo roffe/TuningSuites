@@ -8,13 +8,18 @@ namespace SuiteApp.Views;
 /// <summary>The Realtime menu's log tools both suites have, and the symbol list's Add to realtime list.</summary>
 public partial class SuiteMainWindow
 {
-    private Task<string?> OpenLogFile() => Dialogs.OpenFile(this, Vm.LogFilesName, "*." + Vm.RealtimeRules.LogExtension);
+    // the suites' "Open CAN bus logfile" (View matrix from logfile's had no title)
+    private Task<string?> OpenLogFile(string title = "Open CAN bus logfile") =>
+        Dialogs.OpenFile(this, title, Vm.LogFilesName, ["*." + Vm.RealtimeRules.LogExtension]);
 
     protected async void OnOpenLog(object? sender, RoutedEventArgs e)
     {
-        if (await OpenLogFile() is not { } file) return;
-        await Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(this));
+        if (await OpenLogFile() is { } file) await LoadLog(file);
     }
+
+    // Load logfile, also for a dropped log
+    private Task LoadLog(string file) =>
+        Vm.OpenLogAsync(file, sections => new ChoiceWindow("Select logfile section to display", sections).ShowDialog<int?>(this));
 
     private async Task<(string file, LogSelectionViewModel selection)?> ChooseLogData()
     {
@@ -35,7 +40,7 @@ public partial class SuiteMainWindow
 
     protected async void OnLogMatrix(object? sender, RoutedEventArgs e)
     {
-        if (await OpenLogFile() is not { } file) return;
+        if (await OpenLogFile("View matrix from logfile") is not { } file) return;
         var (lines, selection) = Vm.MatrixSelection(file);
         if (await new MatrixSelectionWindow { DataContext = selection }.ShowDialog<bool>(this)) Vm.ShowMatrix(lines, selection);
     }

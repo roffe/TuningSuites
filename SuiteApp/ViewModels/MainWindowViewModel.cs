@@ -11,6 +11,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MapControls;
 
 namespace SuiteApp.ViewModels;
 
@@ -37,9 +38,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>The open file's VIN for Actions → VIN decoder; "" where the files carry none (T5).</summary>
     public virtual string BinaryVin => "";
 
-    /// <summary>The window title's name; the settings name unless the suite says otherwise (T5: settings "T5Suite2", title "T5Suite").</summary>
-    protected virtual string TitleName => Suite;
-
     // the app's own version, not this library's
     protected string Version =>
         GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
@@ -62,8 +60,23 @@ public abstract partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private SymbolHelper? _selectedSymbol;
 
-    [ObservableProperty]
-    private DocumentViewModel? _selectedViewer;
+    private DocumentViewModel? m_selectedViewer;
+
+    /// <summary>The document in front; a tabbed window stands for its selected tab, and a tab selected shows in its window.</summary>
+    public DocumentViewModel? SelectedViewer
+    {
+        get => m_selectedViewer;
+        set
+        {
+            if (value is DocumentTabsViewModel { Selected: { } tab }) value = tab;
+            if (value == m_selectedViewer) return;
+            if (m_selectedViewer != null) m_selectedViewer.IsSelected = false;
+            m_selectedViewer = value;
+            if (value != null) value.IsSelected = true;
+            if (value?.Tabs is { } window) window.Selected = value;
+            OnPropertyChanged();
+        }
+    }
 
     [ObservableProperty]
     private string _title = "";
@@ -138,7 +151,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Caption = caption;
         Registry = registry;
         Settings = new AppSettings(registry);
-        Title = $"{TitleName} v{Version}";
+        ApplyColorBlindMode();
+        Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
         WatchFloating();
@@ -195,6 +209,16 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
     public virtual bool ShowsMapPreview => false;
+
+    /// <summary>The closed-loop mark: T7Suite's "Closed loop indicator" setting (none by default).</summary>
+    public virtual OpenLoopMark OpenLoopMarkStyle => (OpenLoopMark)Math.Clamp(Settings.StandardFill, 0, 2);
+
+    /// <summary>The view a map opens in: "Default view type for maps" as it is (T7Suite's and T8Suite's MapViewerFactory).</summary>
+    public virtual MapViewType DefaultMapView =>
+        (int)Settings.DefaultViewType is var v && v <= (int)MapViewType.Ascii ? (MapViewType)v : MapViewType.Easy;
+
+    /// <summary>A map's cell marks in a bin (T5Suite's padlocks and adaption boxes); null for none, as T7Suite and T8Suite.</summary>
+    public virtual Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => null;
 
     /// <summary>The map preview popup's content: the hovered map from the file, read only; null for one that only lives in SRAM.</summary>
     public MapViewerViewModel? MapPreview(SymbolHelper sh) => ShowsMapPreview && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
@@ -258,7 +282,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             {
                 Binary = null;
                 Symbols = null;
-                Title = $"{TitleName} v{Version} [ none ]";
+                Title = $"{Suite} v{Version} [ none ]";
                 if (showMessage && InvalidFileMessage is { } message) Info?.Invoke(message);
                 return false;
             }
@@ -275,7 +299,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
             Binary = bin;
             Symbols = view;
-            Title = $"{TitleName} v{Version} [ {Path.GetFileName(path)} ]";
+            Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
             FileNameText = Path.GetFileNameWithoutExtension(path);
             OpenClosedText = bin.IsSoftwareOpen ? "Open/dev binary" : "Normal binary";
             await OnOpenedAsync(bin);
@@ -406,39 +430,76 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Double-click / Enter on a symbol (gridViewSymbols_DoubleClick → StartTableViewer).</summary>
     [RelayCommand]
-    private void OpenSymbol(SymbolHelper? sh)
+    private void OpenSymbol(SymbolHelper? sh) => OpenMap(sh);
+
+    /// <summary>StartTableViewer: the symbol's viewer, opened or the open one; null when none shows (yet).</summary>
+    private MapViewerViewModel? OpenMap(SymbolHelper? sh)
     {
-        if (Binary is not { } bin || sh == null) return;
-        if (sh.Flash_start_address == 0 && sh.Start_address == 0) return;
-        if (OpenOther(bin, sh)) return;
+        if (Binary is not { } bin || sh == null) return null;
+        if (sh.Flash_start_address == 0 && sh.Start_address == 0) return null;
+        if (OpenOther(bin, sh)) return null;
         string title = $"Symbol: {sh.SmartVarname} [{Path.GetFileName(bin.FileName)}]";
         if (Viewers.OfType<MapViewerViewModel>().FirstOrDefault(v => v.Title == title && v.FileName == bin.FileName) is { } open)
         {
             SelectedViewer = open;
-            return;
+            return open;
         }
         if (MapViewerViewModel.Create(this, bin, sh) is not { } viewer)
         {
             // only in SRAM (not in the file): read it from the ECU
             _ = OpenSramOnlyAsync(bin, sh);
-            return;
+            return null;
         }
         viewer.OnlineMode = EcuConnected;
         Viewers.Add(viewer);
         SelectedViewer = viewer;
         if (OnlineMapsFromEcu && EcuConnected && sh.Start_address > 0) _ = ReadMapFromEcuAsync(viewer);
+        return viewer;
     }
 
-    /// <summary>Shows a document, or the open one with the same title (the suites reused dock panels by title).</summary>
-    public void ShowDocument(DocumentViewModel document)
+    /// <summary>Shows a document, or the open one with the same title (the suites reused dock panels by title); the one shown.</summary>
+    public DocumentViewModel ShowDocument(DocumentViewModel document)
     {
-        if (Viewers.FirstOrDefault(v => v.Title == document.Title) is { } open)
+        // a tabbed window carries its selected tab's title, the tab is the document
+        if (Viewers.FirstOrDefault(v => v is not DocumentTabsViewModel && v.Title == document.Title) is { } open)
         {
             SelectedViewer = open;
-            return;
+            return open;
         }
         Viewers.Add(document);
         SelectedViewer = document;
+        return document;
+    }
+
+    /// <summary>
+    /// tabdet_onSymbolSelect: a compare's two maps as tabs along the bottom of one window, first first and selected (the compare side,
+    /// T7Suite's DockAsTab at index 0). It docked the compare viewer as a tab onto the visible panel of the same
+    /// symbol (AutoDockSameSymbol), so a map open on its own moves into the window, and one that already has a window takes the
+    /// other in. One side alone keeps its own window.
+    /// </summary>
+    public void ShowAsTabs(DocumentViewModel? first, DocumentViewModel? second)
+    {
+        if (first == null || second == null || first == second) return;
+        DocumentTabsViewModel window = first.Tabs ?? second.Tabs ?? new DocumentTabsViewModel(this);
+        foreach (DocumentViewModel d in new[] { first, second }.Where(d => d.Tabs != window))
+        {
+            LeaveTabs(d);
+            window.Insert(d == first ? 0 : window.Items.Count, d);
+            d.IsFloating = false;
+        }
+        // the caption before the window shows: Dock reads it when it makes the window
+        window.Selected = first;
+        if (!Viewers.Contains(window)) Viewers.Add(window);
+        SyncDocked();
+        SelectedViewer = first;
+    }
+
+    // a tab out of its window; the window goes with its last tab
+    private void LeaveTabs(DocumentViewModel d)
+    {
+        if (d.Tabs is not { } window) return;
+        window.Remove(d);
+        if (window.Items.Count == 0) Viewers.Remove(window);
     }
 
     /// <summary>File → Save all: every viewer with changes saved; T7Suite's two messages.</summary>
@@ -468,10 +529,10 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>The documents inside the main window (the workspace's inner windows); floating ones are left out.</summary>
     public ObservableCollection<DocumentViewModel> DockedViewers { get; } = [];
 
-    // DockedViewers follows Viewers and each document's IsFloating, keeping Viewers' order
+    // DockedViewers follows Viewers and each document's IsFloating, keeping Viewers' order; tabs show in their window
     private void SyncDocked()
     {
-        var wanted = Viewers.Where(v => !v.IsFloating).ToList();
+        var wanted = Viewers.Where(v => !v.IsFloating && v.Tabs == null).ToList();
         foreach (DocumentViewModel gone in DockedViewers.Except(wanted).ToList()) DockedViewers.Remove(gone);
         for (int i = 0; i < wanted.Count; i++)
             if (!DockedViewers.Contains(wanted[i])) DockedViewers.Insert(Math.Min(i, DockedViewers.Count), wanted[i]);
@@ -502,23 +563,17 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>The symbol list's selected rows (Export as tuning package).</summary>
     public IReadOnlyList<SymbolHelper> SelectedSymbols { get; set; } = [];
 
-    partial void OnSelectedViewerChanged(DocumentViewModel? oldValue, DocumentViewModel? newValue)
-    {
-        if (oldValue != null) oldValue.IsSelected = false;
-        if (newValue != null) newValue.IsSelected = true;
-    }
-
-    /// <summary>StartTableViewer(name): clear the search, select the symbol and open it (axis editing, My Maps).</summary>
-    public void OpenSymbolByName(string name)
+    /// <summary>StartTableViewer(name): clear the search, select the symbol and open it (axis editing, My Maps); the viewer shown.</summary>
+    public MapViewerViewModel? OpenSymbolByName(string name)
     {
         if (Binary?.Find(name) is not { } sh)
         {
             ShowInfo($"Symbol {name} does not exist in this file");
-            return;
+            return null;
         }
         SearchText = "";
         SelectedSymbol = sh;
-        OpenSymbol(sh);
+        return OpenMap(sh);
     }
 
     [RelayCommand]
@@ -527,12 +582,29 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Closes a document once it agrees (unsaved changes ask Yes / No / Cancel). False when cancelled.</summary>
     public async Task<bool> CloseViewerAsync(DocumentViewModel viewer)
     {
+        // a tabbed window asks each tab about its own changes first and closes them all only then: Cancel on one keeps every tab
+        if (viewer is DocumentTabsViewModel window)
+        {
+            foreach (DocumentViewModel tab in window.Items.ToList())
+                if (!await tab.CanCloseAsync(this)) return false;
+            foreach (DocumentViewModel tab in window.Items.ToList()) Close(tab);
+            return true;
+        }
         if (!await viewer.CanCloseAsync(this)) return false;
+        Close(viewer);
+        return true;
+    }
+
+    private void Close(DocumentViewModel viewer)
+    {
         viewer.Closed();
+        LeaveTabs(viewer);
         int i = Viewers.IndexOf(viewer);
         Viewers.Remove(viewer);
-        if (SelectedViewer == viewer) SelectedViewer = Viewers.Count == 0 ? null : Viewers[Math.Min(i, Viewers.Count - 1)];
-        return true;
+        if (SelectedViewer != viewer) return;
+        // the neighbour as it shows: a tab's window keeps its selected tab
+        DocumentViewModel? next = Viewers.Count == 0 ? null : Viewers[Math.Min(i, Viewers.Count - 1)];
+        SelectedViewer = next?.Tabs ?? next;
     }
 
     /// <summary>Before the app closes: every viewer with unsaved changes gets the same question. False when cancelled.</summary>
@@ -573,12 +645,22 @@ public abstract partial class MainWindowViewModel : ObservableObject
         return ok;
     }
 
-    /// <summary>After the settings dialog: what applies at once (SetupDisplayOptions); viewer settings apply to new viewers.</summary>
+    /// <summary>
+    /// After the settings dialog: what applies at once (SetupDisplayOptions) and the colour blind mode, which open viewers take
+    /// too; the other viewer settings apply to new viewers.
+    /// </summary>
     public virtual void SettingsChanged()
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
+        ApplyColorBlindMode();
         RefreshSymbols();
         RestartSramTimer();
+    }
+
+    /// <summary>The colour blind mode into the application's resources, where SuiteTheme.axaml's styles hand it to every map control.</summary>
+    private void ApplyColorBlindMode()
+    {
+        if (Application.Current is { } app) app.Resources["SuiteColorBlindMode"] = MapControls.HeatColor.ParseMode(Settings.ColorBlindMode);
     }
 
     // ---- projects ----
@@ -598,7 +680,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         project.CreateBackup();
         Project = project;
         Settings.Lastprojectname = name;
-        Title = $"{TitleName} [Project: {name}]";
+        Title = $"{Suite} [Project: {name}]";
         UpdateRollControls();
         return true;
     }
@@ -612,7 +694,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Symbols = null;
         FileNameText = "No file";
         Settings.Lastfilename = "";
-        Title = TitleName;
+        Title = Suite;
         UpdateRollControls();
     }
 
