@@ -12,8 +12,8 @@
         <Style Selector="TextBlock.onDark">
             <Setter Property="Foreground" Value="White" />
         </Style>
-        <!-- the selected row's text: T7Suite's MediumBlue in the light skin, the usual colours in the dark one -->
-        <Style Selector="DataGridRow:selected DataGridCell">
+        <!-- the selected row's text and the category row's under the keyboard: T7Suite's MediumBlue in the light skin, the usual colours in the dark one -->
+        <Style Selector="DataGridRow:selected DataGridCell, DataGridRowGroupHeader:current">
             <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
         </Style>
         <!-- the text size from Settings (Fluent's grid: 15 px on rows of at least 32 px) -->

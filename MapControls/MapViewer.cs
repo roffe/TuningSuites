@@ -208,6 +208,7 @@ public class MapViewer : UserControl
             }
             Grid.Map = change.NewValue as MapData;
             ShowSlice();
+            SplitRows();
         }
         else if (change.Property == ViewTypeProperty)
         {
@@ -232,11 +233,19 @@ public class MapViewer : UserControl
         else if (change.Property == ReadEcuCommandProperty || change.Property == WriteEcuCommandProperty || change.Property == CanSaveToFileProperty) UpdateButtons();
         else if (change.Property == CanEditXAxisProperty) m_editX.IsEnabled = CanEditXAxis;
         else if (change.Property == CanEditYAxisProperty) m_editY.IsEnabled = CanEditYAxis;
-        else if (change.Property == GraphVisibleProperty)
-        {
-            m_split.RowDefinitions[1].Height = new GridLength(GraphVisible ? 4 : 0);
-            m_split.RowDefinitions[2].Height = GraphVisible ? GridLength.Star : new GridLength(0);
-        }
+        else if (change.Property == GraphVisibleProperty) SplitRows();
+    }
+
+    /// <summary>The graph's share of the viewer's height, in table rows (the header row counts): the table's own, at least 8.</summary>
+    public static int GraphRows(MapData map) => Math.Max(map.Rows + 1, 8);
+
+    // table and graph share the height by rows: a small map keeps its rows at their natural height and the graph its room (half each
+    // gave a single value one cell over half the window)
+    private void SplitRows()
+    {
+        m_split.RowDefinitions[0].Height = new GridLength(Map is { } map ? map.Rows + 1 : 1, GridUnitType.Star);
+        m_split.RowDefinitions[1].Height = new GridLength(GraphVisible ? 4 : 0);
+        m_split.RowDefinitions[2].Height = GraphVisible && Map is { } m ? new GridLength(GraphRows(m), GridUnitType.Star) : new GridLength(0);
     }
 
     // read-only viewers (compare, differences) can't be saved or reloaded

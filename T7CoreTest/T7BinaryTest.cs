@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using T7;
+using TrionicCANLib.Checksum;
 
 namespace T7CoreTest
 {
@@ -95,6 +96,25 @@ namespace T7CoreTest
             {
                 Directory.Delete(dir, true);
             }
+        }
+
+        // a save can leave any value in the footer's FB checksum: 0x029B3412 lies there as 12 34 9B 02, which T7Suite's
+        // marker scan took for a 9B field, and the unpacked 5383278.bin reopened with no symbols
+        [TestMethod]
+        public void FooterChecksumDoesNotMakeUnpackedFilePacked()
+        {
+            string file = Path.Combine(m_dir, "5383278.bin");
+            File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5383278.bin"), file);
+            int symbols = T7Binary.Open(file, 0, false).Symbols.Count;
+            Assert.IsGreaterThan(3000, symbols);
+
+            var header = new T7FileHeader();
+            header.init(file, false);
+            header.setChecksumFB(0x029B3412);
+            header.save(file);
+
+            Assert.IsFalse(Trionic7File.IsBinaryPackedVersion(file, 0x80000));
+            Assert.AreEqual(symbols, T7Binary.Open(file, 0, false).Symbols.Count);
         }
 
         [TestMethod]

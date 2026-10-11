@@ -13,11 +13,11 @@ namespace T8CoreTest
     {
         private static string NoSymbolLists => Path.Combine(Path.GetTempPath(), "t8golden-no-symbol-lists");
 
-        private static T8Binary OpenCopy(out string dir)
+        private static T8Binary OpenCopy(out string dir, string name = "55353231_FA56_C_FME2_37_FIEF_81c.bin")
         {
             dir = Directory.CreateTempSubdirectory("t8binary").FullName;
-            string file = Path.Combine(dir, "55353231_FA56_C_FME2_37_FIEF_81c.bin");
-            File.Copy(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == "55353231_FA56_C_FME2_37_FIEF_81c.bin"), file);
+            string file = Path.Combine(dir, name);
+            File.Copy(BinGoldenTest.StockBins().Single(b => Path.GetFileName(b) == name), file);
             return T8Binary.Open(file, false, NoSymbolLists);
         }
 
@@ -88,6 +88,26 @@ namespace T8CoreTest
                 bin.WriteData(0, [1, 2]);
                 bin.WriteData(0x100000, [1, 2]);
                 CollectionAssert.AreEqual(before, File.ReadAllBytes(bin.FileName));
+            }
+            finally
+            {
+                Directory.Delete(dir, true);
+            }
+        }
+
+        // this bin's layer 2 is the byte sum, and zeroing the map takes the byte sum under a 1 MiB boundary: ChecksumT8 on its own
+        // then took the file for a dword-sum one and stored the dword sum, which verified as well
+        [TestMethod]
+        public void MapSaveKeepsTheLayer2Method()
+        {
+            T8Binary bin = OpenCopy(out string dir, "55353231_FA5I_C_FME4_73_FIEF_80d.bin");
+            try
+            {
+                Assert.AreEqual(true, ChecksumT8.Layer2ByteSum(bin.FileName));
+                SymbolHelper map = bin.Find("KnkFuelCal.fi_MaxOffsetMap");
+                bin.WriteSymbol(bin.FileAddress(map), new byte[map.Length]);
+                Assert.AreEqual(ChecksumResult.Ok, bin.VerifyChecksum());
+                Assert.AreEqual(true, ChecksumT8.Layer2ByteSum(bin.FileName));
             }
             finally
             {
