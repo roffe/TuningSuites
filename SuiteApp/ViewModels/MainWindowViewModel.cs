@@ -268,9 +268,19 @@ public abstract partial class MainWindowViewModel : ObservableObject
             await OpenProjectAsync(Settings.Lastprojectname);
     }
 
+    /// <summary>
+    /// TxSuite: a binary about to open (with the project it belongs to, or null); true when it's another suite's and that suite took
+    /// it over in its own window. Null in the single suites.
+    /// </summary>
+    public static Func<MainWindowViewModel, string, string?, Task<bool>>? Handoff { get; set; }
+
+    private async Task<bool> HandedOff(string path, string? project) => Handoff != null && await Handoff(this, path, project);
+
     /// <summary>frmMain.OpenFile: S19 is converted first, the file must be one of the suite's binaries, then its symbols are read.</summary>
     public async Task<bool> OpenFileAsync(string path, bool showMessage)
     {
+        // ponytail: an S19 stays with the suite it's opened in (converted at its size); TxSuite could check the converted size
+        if (await HandedOff(path, null)) return false;
         IsBusy = true;
         try
         {
@@ -683,7 +693,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>OpenProject: the project's binary, its transaction log (purge offered above 2000 entries), a backup.</summary>
     public async Task<bool> OpenProjectAsync(string name)
     {
-        if (SuiteProject.Open(Settings.ProjectFolder, name) is not { } project) return false;
+        if (SuiteProject.Open(Settings.ProjectFolder, name) is not { } project || await HandedOff(project.BinaryFile, name)) return false;
         Settings.LastOpenedType = 1;
         if (!await OpenFileAsync(project.BinaryFile, false)) return false;
         int count = project.TransactionLog.TransCollection.Count;

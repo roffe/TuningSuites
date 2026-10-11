@@ -26,21 +26,16 @@ public static class SuiteStartup
 
     public static void Start(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteMainWindow window)
     {
-        SymbolNumberConverter.Hex = vm.Settings.ShowAddressesInHex;
-        window.DataContext = vm;
-        desktop.MainWindow = window;
+        Attach(desktop, vm, window);
 
-        // the cores and TrionicCANLib ask from worker threads, the dialog runs on the UI thread meanwhile
-        UserPrompt.YesNo = (text, caption) => Dialogs.Wait(() => Dialogs.YesNo(window, text, caption));
-        UserPrompt.Notify = (text, caption) => Dialogs.Wait(async () => { await Dialogs.Info(window, text, caption); return true; });
-
-        // WinForms showed an unexpected exception and carried on, Avalonia ends the app and every unsaved map with it
-        Logger logger = LogManager.GetLogger(vm.GetType().FullName!);
+        // WinForms showed an unexpected exception and carried on, Avalonia ends the app and every unsaved map with it; told in the
+        // main window of the moment (TxSuite swaps it)
         Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
-            logger.Error(e.Exception);
-            vm.ShowInfo(e.Exception.Message);
             e.Handled = true;
+            if (desktop.MainWindow?.DataContext is not MainWindowViewModel current) return;
+            LogManager.GetLogger(current.GetType().FullName!).Error(e.Exception);
+            current.ShowInfo(e.Exception.Message);
         };
 
         string[] args = desktop.Args ?? [];
@@ -49,5 +44,17 @@ public static class SuiteStartup
             await vm.StartupAsync(args);
             await window.CheckForUpdatesAsync(true);
         };
+    }
+
+    /// <summary>The suite's window as the main one, the library's questions asked in it (also TxSuite's switch to another suite).</summary>
+    public static void Attach(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteMainWindow window)
+    {
+        SymbolNumberConverter.Hex = vm.Settings.ShowAddressesInHex;
+        window.DataContext = vm;
+        desktop.MainWindow = window;
+
+        // the cores and TrionicCANLib ask from worker threads, the dialog runs on the UI thread meanwhile
+        UserPrompt.YesNo = (text, caption) => Dialogs.Wait(() => Dialogs.YesNo(window, text, caption));
+        UserPrompt.Notify = (text, caption) => Dialogs.Wait(async () => { await Dialogs.Info(window, text, caption); return true; });
     }
 }

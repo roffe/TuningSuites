@@ -129,21 +129,28 @@ public partial class MainWindow : SuiteMainWindow
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
-        var settings = new SettingsViewModel(Vm.Settings);
-        // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T7Suite)
-        AutotuneSettingsViewModel? autotune = null;
-        var window = new SettingsWindow
+        if (SettingsDialog != null)
         {
-            DataContext = settings,
-            AutotuneSettings = async owner =>
+            if (!await SettingsDialog(this)) return;
+        }
+        else
+        {
+            var settings = new SettingsViewModel(Vm.Settings);
+            // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T7Suite)
+            AutotuneSettingsViewModel? autotune = null;
+            var window = new SettingsWindow
             {
-                var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings);
-                if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
-            },
-        };
-        if (!await window.ShowDialog<bool>(this)) return;
-        settings.Apply(Vm.Settings);
-        autotune?.Apply(Vm.Settings);
+                DataContext = settings,
+                AutotuneSettings = async owner =>
+                {
+                    var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings);
+                    if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
+                },
+            };
+            if (!await window.ShowDialog<bool>(this)) return;
+            settings.Apply(Vm.Settings);
+            autotune?.Apply(Vm.Settings);
+        }
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
         Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);

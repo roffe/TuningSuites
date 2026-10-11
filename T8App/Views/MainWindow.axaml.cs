@@ -43,9 +43,16 @@ public partial class MainWindow : SuiteMainWindow
 
     private async void OnSettings(object? sender, RoutedEventArgs e)
     {
-        var settings = new SettingsViewModel(Vm.Settings);
-        if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
-        settings.Apply(Vm.Settings);
+        if (SettingsDialog != null)
+        {
+            if (!await SettingsDialog(this)) return;
+        }
+        else
+        {
+            var settings = new SettingsViewModel(Vm.Settings);
+            if (!await new SettingsWindow { DataContext = settings }.ShowDialog<bool>(this)) return;
+            settings.Apply(Vm.Settings);
+        }
         Vm.SettingsChanged();
         ApplyHideSymbolTable();
     }

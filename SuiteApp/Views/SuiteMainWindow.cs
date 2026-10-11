@@ -152,6 +152,12 @@ public partial class SuiteMainWindow : Window
         vm.AskOkCancel = text => Dialogs.OkCancel(this, text, "Transaction log size warning...");
     }
 
+    /// <summary>
+    /// TxSuite: its settings dialog (what every suite shares, then each ECU's own) in place of the suite's; true when its Ok saved
+    /// them. Null in the single suites.
+    /// </summary>
+    public static Func<SuiteMainWindow, Task<bool>>? SettingsDialog { get; set; }
+
     // Open file's types, also what a dropped file opens as
     private static readonly string[] BinaryPatterns = ["*.bin", "*.s19"];
 
