@@ -120,7 +120,7 @@ jobs:
       with:
         dotnet-version: 10.x
 
-    # also puts the stock bins in Binaries (T5App.csproj, T7App.csproj, T8App.csproj)
+    # the stock bins are not in it, they ship as T5Extras / T7Extras / T8Extras (extras.yml)
     - name: Publish
       run: dotnet publish $APP/$APP.csproj -c Release -r ${{ matrix.rid }} --self-contained -o out/$SUITE
 
@@ -238,12 +238,19 @@ jobs:
         make_latest: "false"
         files: dist/T5Suite*
 
-    # the update check finds it by its <suite>_v tag, not by GitHub's latest marker (that's whichever suite released last);
+    # the update check finds it by its <suite>_v tag, not by GitHub's latest marker (that's the combined release below);
     # only the tagged suite was packaged
     - name: Release
       if: github.ref_type == 'tag'
       uses: softprops/action-gh-release@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        make_latest: "true"
+        make_latest: "false"
         files: dist/*
+
+    # releases/latest shows every suite's newest release on one page (and the Extras'), see the script
+    - name: Latest of every suite
+      if: github.ref_type == 'tag' && !contains(github.ref_name, '-')
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: bash packaging/latest-release.sh dist/*
