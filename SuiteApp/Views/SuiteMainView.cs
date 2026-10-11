@@ -85,6 +85,8 @@ public partial class SuiteMainView : UserControl
         m_workspaceReady = true;
         InitWorkspace();
         InitDrop();
+        // Help → About <suite>: About TxSuite in TxSuite
+        if (MainWindowViewModel.Combined is { } tx && this.FindControl<MenuItem>("AboutMenu") is { } about) about.Header = "About " + tx.Name;
         Space.Workspace.SizeChanged += (_, e) =>
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
@@ -147,9 +149,10 @@ public partial class SuiteMainView : UserControl
         base.OnDataContextChanged(e);
         if (DataContext is not MainWindowViewModel vm) return;
         InitOnce();
+        // TxSuite's skin is one for all suites; until it has one, the suite's own
+        using (var shared = SettingsKey.Open(vm.SharedSettings)) ApplySkin(shared.GetValue(SkinKey) as string ?? OwnSkin(vm));
         using (var settings = SettingsKey.Open(vm.Suite))
         {
-            ApplySkin(settings.GetValue(SkinKey) as string);
             // the symbol list's width from the last session, as the suites' saved dock layout kept it
             if (double.TryParse(settings.GetValue(SymbolListKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double width) && width > 50)
                 m_symbolWidth = width;
@@ -220,8 +223,14 @@ public partial class SuiteMainView : UserControl
     {
         if (sender is not MenuItem { Tag: string skin }) return;
         ApplySkin(skin);
-        using var settings = SettingsKey.Open(Vm.Suite);
+        using var settings = SettingsKey.Open(Vm.SharedSettings);
         settings.SetValue(SkinKey, skin);
+    }
+
+    private static string? OwnSkin(MainWindowViewModel vm)
+    {
+        using var settings = SettingsKey.Open(vm.Suite);
+        return settings.GetValue(SkinKey) as string;
     }
 
     private static void ApplySkin(string? skin)
@@ -262,7 +271,7 @@ public partial class SuiteMainView : UserControl
     {
         if (startup && Vm.BuildVersion == new Version(0, 0, 0, 0)) return;
         if (await Vm.CheckForUpdatesAsync() is not { } release) return;
-        if (await new UpdateAvailableWindow(release, Vm.Suite).ShowDialog<bool>(Host))
+        if (await new UpdateAvailableWindow(release, MainWindowViewModel.Combined?.Name ?? Vm.Suite).ShowDialog<bool>(Host))
             Dialogs.OpenWithShell(OperatingSystem.IsWindows() && release.Msi != null ? release.Msi : release.Page);
     }
 
@@ -277,14 +286,16 @@ public partial class SuiteMainView : UserControl
 
     protected async void OnAbout(object? sender, RoutedEventArgs e)
     {
-        string version = Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
+        string version = MainWindowViewModel.Combined?.Version
+            ?? Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
         // the build metadata (+commit) doesn't belong in the title
         int plus = version.IndexOf('+');
         await NewAboutWindow(plus > 0 ? version[..plus] : version).ShowDialog(Host);
     }
 
-    /// <summary>The suite's About... for a version.</summary>
-    public AboutWindow NewAboutWindow(string version) => new(Vm.Caption, version, AboutThanks);
+    /// <summary>The suite's About... for a version; TxSuite's in TxSuite.</summary>
+    public AboutWindow NewAboutWindow(string version) =>
+        MainWindowViewModel.Combined is { } tx ? new(tx.Name, version, tx.AboutThanks) : new(Vm.Caption, version, AboutThanks);
 
     // ---- projects ----
 

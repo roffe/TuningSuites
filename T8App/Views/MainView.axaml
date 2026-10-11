@@ -140,7 +140,7 @@
                 <MenuItem Header="Release notes" Click="OnReleaseNotes" />
                 <Separator />
                 <MenuItem Header="Check for updates" Click="OnCheckForUpdates" />
-                <MenuItem Header="About T8Suite" Click="OnAbout" />
+                <MenuItem x:Name="AboutMenu" Header="About T8Suite" Click="OnAbout" />
             </MenuItem>
         </Menu>
         <sv:StatusBar DockPanel.Dock="Bottom" />

@@ -42,6 +42,19 @@ public abstract partial class MainWindowViewModel : ObservableObject
     protected string Version =>
         GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
 
+    /// <summary>
+    /// TxSuite: the program the suites run in, null in a single suite. Its name and version head the title, the update check looks
+    /// for its releases, About is its, and its settings hold what the suites share (Recent, the skin).
+    /// </summary>
+    public static CombinedProgram? Combined { get; set; }
+
+    /// <summary>Where what the suites share is kept: TxSuite's settings, else the suite's own.</summary>
+    public string SharedSettings => Combined?.Name ?? Suite;
+
+    // the window title's name and version: TxSuite's, else the suite's
+    private string TitleName => Combined?.Name ?? Suite;
+    private string TitleVersion => Combined?.Version ?? Version;
+
     public AppSettings Settings { get; }
 
     /// <summary>The suite's settings key, for what keeps its own subkeys (log filters, symbol colours).</summary>
@@ -155,7 +168,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Settings = new AppSettings(registry);
         ApplyColorBlindMode();
         ApplySymbolListFont();
-        Title = $"{Suite} v{Version}";
+        Title = $"{TitleName} v{TitleVersion}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
         WatchFloating();
@@ -295,7 +308,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             {
                 Binary = null;
                 Symbols = null;
-                Title = $"{Suite} v{Version} [ none ]";
+                Title = $"{TitleName} v{TitleVersion} [ none ]";
                 if (showMessage && InvalidFileMessage is { } message) Info?.Invoke(message);
                 return false;
             }
@@ -314,7 +327,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
             view.MoveCurrentToPosition(-1);
             Binary = bin;
             Symbols = view;
-            Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
+            Title = $"{TitleName} v{TitleVersion} [ {Path.GetFileName(path)} ]";
             FileNameText = Path.GetFileNameWithoutExtension(path);
             OpenClosedText = bin.IsSoftwareOpen ? "Open/dev binary" : "Normal binary";
             await OnOpenedAsync(bin);
@@ -705,7 +718,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         project.CreateBackup();
         Project = project;
         Settings.Lastprojectname = name;
-        Title = $"{Suite} [Project: {name}]";
+        Title = $"{TitleName} [Project: {name}]";
         UpdateRollControls();
         return true;
     }
@@ -719,7 +732,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Symbols = null;
         FileNameText = "No file";
         Settings.Lastfilename = "";
-        Title = Suite;
+        Title = TitleName;
         UpdateRollControls();
     }
 
@@ -852,14 +865,15 @@ public abstract partial class MainWindowViewModel : ObservableObject
     private static void Exit() =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Close();
 
-    // ---- MRU: file name and path per entry, appended when new, no limit (T7Suite's HKCU\Software\T7SuitePro\MRUList) ----
+    // ---- MRU: file name and path per entry, appended when new, no limit (T7Suite's HKCU\Software\T7SuitePro\MRUList); TxSuite's
+    // one list for all suites ----
 
     private void LoadRecent()
     {
         // entries are numbered: a path's backslashes would read as subkeys
-        using var key = SettingsKey.Open(Suite, "MRUList");
+        using var key = SettingsKey.Open(SharedSettings, "MRUList");
         var entries = key.GetValueNames().OrderBy(n => int.TryParse(n, out int i) ? i : int.MaxValue).Select(n => (string)key.GetValue(n)!).ToList();
-        if (entries.Count == 0 && LegacyMruKey is { } legacy)
+        if (entries.Count == 0 && Combined == null && LegacyMruKey is { } legacy)
         {
             // once: what the old suite kept outside HKCU\Software\MattiasC
             entries = SettingsKey.ImportRegistry(legacy).Values.Distinct().ToList();
@@ -872,7 +886,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         if (Recent.Any(r => r.Path == path)) return;
         Recent.Add(new RecentFile(Path.GetFileName(path), path));
-        using var key = SettingsKey.Open(Suite, "MRUList");
+        using var key = SettingsKey.Open(SharedSettings, "MRUList");
         key.SetValue((Recent.Count - 1).ToString(), path);
     }
 }
@@ -892,3 +906,6 @@ public partial class ColumnFilter(string header, string path) : ObservableObject
     [ObservableProperty]
     private string _text = "";
 }
+
+/// <summary>TxSuite as the suites see it (MainWindowViewModel.Combined): its name, version, release tags and About's thanks.</summary>
+public sealed record CombinedProgram(string Name, string Version, Version BuildVersion, string ReleaseTagPrefix, string AboutThanks);

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -42,6 +43,16 @@ public partial class App : Application
             && T8SuitePro.T8Binary.IsValidFile(p)),
     ];
 
+    /// <summary>TxSuite to the suites: the title's name and version, its releases for the update check, its About.</summary>
+    public static readonly CombinedProgram Program = new(
+        SettingsName,
+        typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "",
+        typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0, 0),
+        "Txsuite_v",
+        // the three suites' thanks in one list
+        "Dilemma, Actitis H., Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, G-ice, " +
+        "General Failure, Danibjor, Johnc, tomas0student, Janus0070, Mattias Claesson, Roffe and...");
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
@@ -72,6 +83,8 @@ public partial class App : Application
     /// </summary>
     public static void Combine(IClassicDesktopStyleApplicationLifetime desktop)
     {
+        MainWindowViewModel.Combined = Program;
+        SeedRecent();
         MainWindowViewModel.Handoff = (from, path, project) => SwitchAsync(desktop, from, path, project);
         SuiteMainView.SettingsDialog = async owner =>
         {
@@ -80,6 +93,20 @@ public partial class App : Application
             settings.Apply();
             return true;
         };
+    }
+
+    // the first time: Recent starts as the suites' own lists together
+    private static void SeedRecent()
+    {
+        using var shared = SettingsKey.Open(SettingsName, "MRUList");
+        if (shared.GetValueNames().Any()) return;
+        int n = 0;
+        foreach (string suite in new[] { Trionic5Tools.T5AppSettings.Suite, "T7SuitePro", "T8SuitePro" })
+        {
+            using var own = SettingsKey.Open(suite, "MRUList");
+            foreach (string name in own.GetValueNames().OrderBy(v => int.TryParse(v, out int i) ? i : int.MaxValue))
+                if (own.GetValue(name) is string path) shared.SetValue((n++).ToString(), path);
+        }
     }
 
     private static Suite? SuiteFor(string path) => Suites.FirstOrDefault(s => s.Opens(path));

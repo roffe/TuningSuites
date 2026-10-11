@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <RootNamespace>TxSuite</RootNamespace>
     <AssemblyName>TxSuite</AssemblyName>
-    <!-- the version comes from the nearest TxSuite_vX.Y.Z tag (Directory.Build.props) -->
-    <VersionTagPrefix>TxSuite_</VersionTagPrefix>
+    <!-- the version comes from the nearest Txsuite_vX.Y.Z tag (Directory.Build.props), the suites' tag scheme -->
+    <VersionTagPrefix>Txsuite_</VersionTagPrefix>
     <!-- ponytail: T7Suite's icon until TxSuite has its own -->
     <ApplicationIcon>..\T7App\T7Suite.ico</ApplicationIcon>
     <Company>MattiasC</Company>

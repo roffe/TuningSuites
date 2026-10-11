@@ -90,13 +90,25 @@ namespace TxSuiteTest
                     Assert.IsNotNull(t8vm.Realtime);
                     await t8vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
 
+                    // TxSuite's title, About and skin whichever suite is in front
+                    StringAssert.StartsWith(window.Title, "TxSuite v");
+                    StringAssert.EndsWith(window.Title, "[ " + Path.GetFileName(t8) + " ]");
+                    Assert.AreEqual("About TxSuite", window.View.GetLogicalDescendants().OfType<MenuItem>().Single(m => m.Name == "AboutMenu").Header);
+                    Assert.AreEqual("TxSuite v1.2.3", window.View.NewAboutWindow("1.2.3").GetLogicalDescendants().OfType<TextBlock>().First().Text);
+                    window.View.GetLogicalDescendants().OfType<MenuItem>().Single(m => m.Tag as string == "Dark").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+                    using (var tx = SettingsKey.Open("TxSuite")) Assert.AreEqual("Dark", tx.GetValue("Skin"));
+                    using (var own = SettingsKey.Open("T8SuitePro")) Assert.IsNull(own.GetValue("Skin"));
+
                     // and on to T5, then back to T7
                     Assert.IsFalse(await t8vm.OpenPlainFileAsync(t5, true));
                     var t5vm = (MainWindowViewModel)window.DataContext!;
                     Assert.IsInstanceOfType<T5App.ViewModels.T5MainWindowViewModel>(t5vm);
                     Assert.AreEqual(t5, t5vm.Binary?.FileName);
+                    // one Recent for all suites
+                    CollectionAssert.IsSubsetOf(new[] { t7, t8, t5 }, t5vm.Recent.Select(r => r.Path).ToList());
                     Assert.IsFalse(await t5vm.OpenPlainFileAsync(t7, true));
                     Assert.IsInstanceOfType<T7App.ViewModels.T7MainWindowViewModel>(window.DataContext);
+                    Assert.AreEqual(Avalonia.Styling.ThemeVariant.Dark, Avalonia.Application.Current!.RequestedThemeVariant);
                     Assert.AreSame(window, desktop.MainWindow);
 
                     // its own kind stays
@@ -109,6 +121,8 @@ namespace TxSuiteTest
                 finally
                 {
                     MainWindowViewModel.Handoff = null;
+                    MainWindowViewModel.Combined = null;
+                    Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
                     SuiteApp.Views.SuiteMainView.SettingsDialog = null;
                 }
                 return true;
