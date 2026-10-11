@@ -74,6 +74,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
             m_selectedViewer = value;
             if (value != null) value.IsSelected = true;
             if (value?.Tabs is { } window) window.Selected = value;
+            // the map in front is the symbol list's selection (its category unfolded by the list); not another file's map
+            if (value is MapViewerViewModel { } map && map.Binary == Binary) SelectedSymbol = map.Symbol;
             OnPropertyChanged();
         }
     }
@@ -297,6 +299,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
             var view = new DataGridCollectionView(rows) { Filter = MatchesSearch };
             foreach (string group in SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
+            // no symbol selected yet: the grid would make the first row current, which unfolds its category
+            view.MoveCurrentToPosition(-1);
             Binary = bin;
             Symbols = view;
             Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";

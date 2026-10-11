@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -11,6 +14,12 @@ namespace SuiteApp.Views;
 public partial class SymbolListView : UserControl
 {
     private bool m_editingSymbol;
+    private MainWindowViewModel? m_vm;
+    private DataGridCollectionView? m_view;
+    // what the grid's next layout does to the groups: fold them all (a new file, a regroup), or see whether a search started or ended
+    private bool m_foldAll, m_refreshed;
+    // every group unfolded for a search
+    private bool m_searchUnfolded;
 
     public SymbolListView()
     {
@@ -21,6 +30,7 @@ public partial class SymbolListView : UserControl
         // the column headers get T7Suite's grid menu instead of the rows' one
         SymbolGrid.AddHandler(ContextRequestedEvent, OnContextRequested, RoutingStrategies.Tunnel);
         SymbolGrid.ColumnReordered += (_, _) => UpdateFilterColumns();
+        SymbolGrid.LayoutUpdated += OnGridLayoutUpdated;
     }
 
     private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
@@ -67,8 +77,8 @@ public partial class SymbolListView : UserControl
         menu.Items.Add(Item("Sort descending", () => vm.SortSymbols(path, true), path != null, vm.IsSortedBy(path, true)));
         menu.Items.Add(Item("Clear sorting", () => vm.SortSymbols(null)));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Group by this column", () => vm.GroupSymbols(path), path != null, path != null && vm.IsGroupedBy(path)));
-        menu.Items.Add(Item("Group by category", () => vm.GroupSymbols(nameof(SymbolHelper.Category)), true, vm.IsGroupedBy(nameof(SymbolHelper.Category))));
+        menu.Items.Add(Item("Group by this column", () => Group(vm, path), path != null, path != null && vm.IsGroupedBy(path)));
+        menu.Items.Add(Item("Group by category", () => Group(vm, nameof(SymbolHelper.Category)), true, vm.IsGroupedBy(nameof(SymbolHelper.Category))));
         menu.Items.Add(Item("No grouping", () => vm.GroupSymbols(null), true, vm.IsGroupedBy(null)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Hide this column", () =>
@@ -91,7 +101,12 @@ public partial class SymbolListView : UserControl
     protected override void OnDataContextChanged(System.EventArgs e)
     {
         base.OnDataContextChanged(e);
+        if (m_vm != null) m_vm.PropertyChanged -= OnVmPropertyChanged;
+        m_vm = Vm;
+        // Dock builds the list when it first shows, maybe with a file open already
+        WatchSymbols();
         if (Vm is not { } vm) return;
+        vm.PropertyChanged += OnVmPropertyChanged;
         vm.EndSymbolEdit = () => SymbolGrid.CommitEdit(DataGridEditingUnit.Row, true);
         SymbolColorConverter.Enabled = vm.ColorSymbolNames;
         CategoryColorConverter.Enabled = vm.ColorDescriptionsByCategory;
@@ -108,6 +123,64 @@ public partial class SymbolListView : UserControl
             column.IsVisible = wanted[i].Visible;
         }
         UpdateFilterColumns();
+    }
+
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.Symbols)) WatchSymbols();
+        // the selected symbol (the map in front too) unfolds its category
+        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedSymbol) && m_vm?.SelectedSymbol is { } sh) SymbolGrid.ScrollIntoView(sh, null);
+    }
+
+    // a new file starts folded
+    private void WatchSymbols()
+    {
+        if (m_view != null) m_view.CollectionChanged -= OnSymbolsChanged;
+        m_view = m_vm?.Symbols;
+        if (m_view != null) m_view.CollectionChanged += OnSymbolsChanged;
+        m_foldAll = true;
+        m_searchUnfolded = false;
+    }
+
+    // a refresh keeps the folds (the grid matches its groups by key), but a search starting or ending changes them
+    private void OnSymbolsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Reset) m_refreshed = true;
+    }
+
+    private void Group(MainWindowViewModel vm, string? path)
+    {
+        vm.GroupSymbols(path);
+        m_foldAll = true;
+    }
+
+    // after the grid's layout: before it the grid knows no groups (a file auto-loaded at startup), and folding inside its own
+    // reset breaks it. A search unfolds every category so its matches show; its end folds them again but the selected symbol's.
+    // ponytail: that also folds what was opened by hand before the search; remember the folds from before it if that bothers
+    private void OnGridLayoutUpdated(object? sender, System.EventArgs e)
+    {
+        if (!m_foldAll && !m_refreshed) return;
+        bool all = m_foldAll;
+        m_foldAll = m_refreshed = false;
+        if (m_vm is not { Symbols: { } view } vm) return;
+        bool searching = !string.IsNullOrWhiteSpace(vm.SearchText) || vm.ColumnFilters.Any(f => !string.IsNullOrWhiteSpace(f.Text));
+        if (searching == m_searchUnfolded && !all) return;
+        m_searchUnfolded = searching;
+        List<DataGridCollectionViewGroup> groups = [.. view.Groups?.OfType<DataGridCollectionViewGroup>() ?? []];
+        if (groups.Count == 0) return;
+        // (un)folding makes the group's header current, dropping the selected row
+        SymbolHelper? selected = vm.SelectedSymbol;
+        // from the top, the last first: the grid leaves a folded group's rows shown when its header is scrolled above them, and a
+        // fold moves the groups below it before the grid has laid them out again
+        SymbolGrid.ScrollIntoView(groups[0], null);
+        for (int i = groups.Count - 1; i >= 0; i--)
+        {
+            if (searching) SymbolGrid.ExpandRowGroup(groups[i], true);
+            else SymbolGrid.CollapseRowGroup(groups[i], true);
+        }
+        if (selected == null) return;
+        SymbolGrid.ScrollIntoView(selected, null);
+        vm.SelectedSymbol = selected;
     }
 
     // the auto filter row's boxes: the shown columns in the grid's order
