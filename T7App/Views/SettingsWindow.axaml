@@ -18,7 +18,7 @@
     </Window.Styles>
     <StackPanel Margin="12" Spacing="6">
         <HeaderedContentControl Classes="group" Header="User interface settings">
-            <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+            <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
                 <CheckBox Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}">
                     <ToolTip.Tip><c:SuperTip Title="Use red and white maps" Text="When checked, displays maps in red and transparent only. Normally green is used to display low values and red for higher values." /></ToolTip.Tip>
                 </CheckBox>
@@ -33,6 +33,9 @@
                 </CheckBox>
                 <CheckBox Grid.Row="1" Grid.Column="1" Content="Hide symbol window" IsChecked="{Binding HideSymbolTable}">
                     <ToolTip.Tip><c:SuperTip Title="Hide symbol window" Text="To save display space you can hide the symbol list to a tab at the side of the window. The tab brings the list out again, and it slides away when you open a map." /></ToolTip.Tip>
+                </CheckBox>
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="Show map preview popup" IsChecked="{Binding ShowMapPreviewPopup}">
+                    <ToolTip.Tip><c:SuperTip Title="Show map preview popup" Text="When checked, pointing at a symbol's name in the symbol list shows its map from the file as a read-only table in a popup." /></ToolTip.Tip>
                 </CheckBox>
                 <CheckBox Grid.Column="2" Content="Synchronize mapviewers" IsChecked="{Binding SynchronizeMapviewers}">
                     <ToolTip.Tip><c:SuperTip Title="Synchronize mapviewers" Text="When checked, mapviewers that show the same map will react to changes made in one of them. E.g. selecting cells or turning the 3D graph." /></ToolTip.Tip>
@@ -63,6 +66,15 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Color blind mode" />
                     <ComboBox Grid.Column="1" ItemsSource="{Binding ColorBlindModes}" SelectedIndex="{Binding ColorBlindMode}" HorizontalAlignment="Stretch" />
+                </Grid>
+                <Grid Grid.Row="5" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Symbol list font size" Text="Lets you choose the size of the text in the symbol list, in pixels (8 to 24); its rows grow and shrink with it. The list changes at once." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                        <ColumnDefinition Width="280" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Symbol list font size" />
+                    <NumericUpDown Grid.Column="1" Value="{Binding SymbolListFontSize}" Minimum="8" Maximum="24" Increment="1" FormatString="0" Width="120" HorizontalAlignment="Left" />
                 </Grid>
             </Grid>
         </HeaderedContentControl>

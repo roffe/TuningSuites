@@ -74,6 +74,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
             m_selectedViewer = value;
             if (value != null) value.IsSelected = true;
             if (value?.Tabs is { } window) window.Selected = value;
+            // the map in front is the symbol list's selection (its category unfolded by the list); not another file's map
+            if (value is MapViewerViewModel { } map && map.Binary == Binary) SelectedSymbol = map.Symbol;
             OnPropertyChanged();
         }
     }
@@ -152,6 +154,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Registry = registry;
         Settings = new AppSettings(registry);
         ApplyColorBlindMode();
+        ApplySymbolListFont();
         Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
@@ -207,9 +210,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>T5Suite coloured the description cell by the symbol's category instead.</summary>
     public virtual bool ColorDescriptionsByCategory => false;
 
-    /// <summary>T8Suite's map preview popup (Settings → Show map preview popup); T7Suite has none.</summary>
-    public virtual bool ShowsMapPreview => false;
-
     /// <summary>The closed-loop mark: T7Suite's "Closed loop indicator" setting (none by default).</summary>
     public virtual OpenLoopMark OpenLoopMarkStyle => (OpenLoopMark)Math.Clamp(Settings.StandardFill, 0, 2);
 
@@ -220,8 +220,11 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>A map's cell marks in a bin (T5Suite's padlocks and adaption boxes); null for none, as T7Suite and T8Suite.</summary>
     public virtual Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => null;
 
-    /// <summary>The map preview popup's content: the hovered map from the file, read only; null for one that only lives in SRAM.</summary>
-    public MapViewerViewModel? MapPreview(SymbolHelper sh) => ShowsMapPreview && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
+    /// <summary>
+    /// T8Suite's map preview popup (Settings → Show map preview popup), in every suite: the hovered map from the file, read only; null
+    /// for one that only lives in SRAM.
+    /// </summary>
+    public MapViewerViewModel? MapPreview(SymbolHelper sh) => Settings.ShowMapPreviewPopup && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
 
     /// <summary>The symbol list's predefined filters; none for T7Suite.</summary>
     public virtual IReadOnlyList<SymbolFilter> SymbolFilters => [];
@@ -297,6 +300,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
             var view = new DataGridCollectionView(rows) { Filter = MatchesSearch };
             foreach (string group in SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
+            // no symbol selected yet: the grid would make the first row current, which unfolds its category
+            view.MoveCurrentToPosition(-1);
             Binary = bin;
             Symbols = view;
             Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
@@ -653,6 +658,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         ApplyColorBlindMode();
+        ApplySymbolListFont();
         RefreshSymbols();
         RestartSramTimer();
     }
@@ -661,6 +667,15 @@ public abstract partial class MainWindowViewModel : ObservableObject
     private void ApplyColorBlindMode()
     {
         if (Application.Current is { } app) app.Resources["SuiteColorBlindMode"] = MapControls.HeatColor.ParseMode(Settings.ColorBlindMode);
+    }
+
+    /// <summary>The symbol list's text size into the application's resources, its rows as tall as Fluent's grid makes them for its 15 px.</summary>
+    private void ApplySymbolListFont()
+    {
+        if (Application.Current is not { } app) return;
+        double size = Math.Clamp(Settings.SymbolListFontSize, SuiteSettingsViewModel.MinFontSize, SuiteSettingsViewModel.MaxFontSize);
+        app.Resources["SuiteSymbolListFontSize"] = size;
+        app.Resources["SuiteSymbolListRowHeight"] = Math.Round(size * 32 / 15);
     }
 
     // ---- projects ----

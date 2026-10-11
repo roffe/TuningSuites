@@ -17,14 +17,18 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _autoLoadLastFile;
     [ObservableProperty] private int _defaultViewType;
     [ObservableProperty] private int _colorBlindMode;
+    [ObservableProperty] private decimal? _symbolListFontSize;
     [ObservableProperty] private bool _synchronizeMapviewers;
     [ObservableProperty] private bool _autoChecksum;
     [ObservableProperty] private bool _showAddressesInHex;
     [ObservableProperty] private bool _requestProjectNotes;
     [ObservableProperty] private bool _hideSymbolTable;
+    [ObservableProperty] private bool _showMapPreviewPopup;
     [ObservableProperty] private string _projectFolder;
 
     public string[] ViewTypes { get; } = ["Hexadecimal view", "Decimal view", "Easy view"];
+
+    public const int MinFontSize = 8, MaxFontSize = 24;
 
     /// <summary>txlogger's colour blind modes, in its order and under its names.</summary>
     public string[] ColorBlindModes { get; } = Enum.GetNames<MapControls.ColorBlindMode>();
@@ -96,11 +100,13 @@ public partial class SuiteSettingsViewModel : ObservableObject
         // values past Easy (the bar views) show as Easy, like the old combo
         _defaultViewType = System.Math.Min((int)s.DefaultViewType, 2);
         _colorBlindMode = (int)MapControls.HeatColor.ParseMode(s.ColorBlindMode);
+        _symbolListFontSize = Math.Clamp(s.SymbolListFontSize, MinFontSize, MaxFontSize);
         _synchronizeMapviewers = s.SynchronizeMapviewers;
         _autoChecksum = s.AutoChecksum;
         _showAddressesInHex = s.ShowAddressesInHex;
         _requestProjectNotes = s.RequestProjectNotes;
         _hideSymbolTable = s.HideSymbolTable;
+        _showMapPreviewPopup = s.ShowMapPreviewPopup;
         _projectFolder = s.ProjectFolder;
         _adapter = s.Adapter;
         _baudrate = s.Baudrate;
@@ -134,11 +140,13 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.AutoLoadLastFile = AutoLoadLastFile;
         s.DefaultViewType = (SuiteViewType)DefaultViewType;
         s.ColorBlindMode = ColorBlindModes[ColorBlindMode];
+        s.SymbolListFontSize = (int)(SymbolListFontSize ?? 13);
         s.SynchronizeMapviewers = SynchronizeMapviewers;
         s.AutoChecksum = AutoChecksum;
         s.ShowAddressesInHex = ShowAddressesInHex;
         s.RequestProjectNotes = RequestProjectNotes;
         s.HideSymbolTable = HideSymbolTable;
+        s.ShowMapPreviewPopup = ShowMapPreviewPopup;
         s.AdapterType = AdapterType;
         s.Adapter = Adapter ?? "";
         s.Baudrate = Baudrate;
