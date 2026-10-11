@@ -37,8 +37,10 @@ Every suite has a light and a dark skin (Skin menu, or the system's theme).
 | ![T5Suite map viewer](docs/screenshots/t5/mapviewer.png) | ![T5Suite map viewer, dark](docs/screenshots/t5/mapviewer-dark.png) |
 | ![T7Suite airmass result](docs/screenshots/t7/airmass-table.png) | ![T7Suite airmass result, dark](docs/screenshots/t7/airmass-table-dark.png) |
 | ![T8Suite dyno graph](docs/screenshots/t8/airmass-dyno.png) | ![T8Suite dyno graph, dark](docs/screenshots/t8/airmass-dyno-dark.png) |
+| ![T7Suite symbol palette](docs/screenshots/t7/palette-symbols.png) | ![T7Suite symbol palette, dark](docs/screenshots/t7/palette-symbols-dark.png) |
+| ![T5Suite command palette](docs/screenshots/t5/palette-commands.png) | ![T5Suite command palette, dark](docs/screenshots/t5/palette-commands-dark.png) |
 
-T7Suite's ignition map, T5Suite's fuel map, the airmass result of T7Suite and T8Suite's dyno graph, all on stock binaries. The firmware and settings dialogs of each suite are in [docs/screenshots](docs/screenshots); `bash docs/screenshots/generate.sh` renders them all again from the apps.
+T7Suite's ignition map, T5Suite's fuel map, the airmass result of T7Suite and T8Suite's dyno graph, all on stock binaries. As in VS Code, Ctrl+P opens a symbol by any part of its name and Ctrl+Shift+P runs any menu command (Cmd on macOS), in every suite. The firmware and settings dialogs and both palettes of each suite are in [docs/screenshots](docs/screenshots); `bash docs/screenshots/generate.sh` renders them all again from the apps.
 
 ## System Requirements
 - Windows 10 or Windows 11. The setup brings its own .NET runtime and the Visual C++ 2010 runtime the Lawicel driver needs.
