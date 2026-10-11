@@ -154,6 +154,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Registry = registry;
         Settings = new AppSettings(registry);
         ApplyColorBlindMode();
+        ApplySymbolListFont();
         Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
@@ -657,6 +658,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         ApplyColorBlindMode();
+        ApplySymbolListFont();
         RefreshSymbols();
         RestartSramTimer();
     }
@@ -665,6 +667,15 @@ public abstract partial class MainWindowViewModel : ObservableObject
     private void ApplyColorBlindMode()
     {
         if (Application.Current is { } app) app.Resources["SuiteColorBlindMode"] = MapControls.HeatColor.ParseMode(Settings.ColorBlindMode);
+    }
+
+    /// <summary>The symbol list's text size into the application's resources, its rows as tall as Fluent's grid makes them for its 15 px.</summary>
+    private void ApplySymbolListFont()
+    {
+        if (Application.Current is not { } app) return;
+        double size = Math.Clamp(Settings.SymbolListFontSize, SuiteSettingsViewModel.MinFontSize, SuiteSettingsViewModel.MaxFontSize);
+        app.Resources["SuiteSymbolListFontSize"] = size;
+        app.Resources["SuiteSymbolListRowHeight"] = Math.Round(size * 32 / 15);
     }
 
     // ---- projects ----

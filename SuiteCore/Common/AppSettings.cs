@@ -1171,6 +1171,19 @@ namespace CommonSuite
             }
         }
 
+        private int m_SymbolListFontSize = 13;
+
+        /// <summary>The symbol list's text size in pixels (Fluent's grid used 15).</summary>
+        public int SymbolListFontSize
+        {
+            get { return m_SymbolListFontSize; }
+            set
+            {
+                m_SymbolListFontSize = value;
+                SaveRegistrySetting("SymbolListFontSize", m_SymbolListFontSize.ToString());
+            }
+        }
+
         private bool m_AutoDockSameFile = false;
 
         public bool AutoDockSameFile
@@ -1714,6 +1727,7 @@ namespace CommonSuite
                 saveSettings.SetValue("AutoSizeColumnsInWindows", m_AutoSizeColumnsInWindows);
                 saveSettings.SetValue("DisableMapviewerColors", m_DisableMapviewerColors);
                 saveSettings.SetValue("ColorBlindMode", m_ColorBlindMode);
+                saveSettings.SetValue("SymbolListFontSize", m_SymbolListFontSize.ToString());
                 saveSettings.SetValue("AutoDockSameFile", m_AutoDockSameFile);
                 saveSettings.SetValue("AutoDockSameSymbol", m_AutoDockSameSymbol);
                 saveSettings.SetValue("ShowViewerInWindows", m_ShowViewerInWindows);
@@ -2040,6 +2054,10 @@ namespace CommonSuite
                             else if (a == "ColorBlindMode")
                             {
                                 m_ColorBlindMode = Settings.GetValue(a).ToString();
+                            }
+                            else if (a == "SymbolListFontSize")
+                            {
+                                m_SymbolListFontSize = Convert.ToInt32(Settings.GetValue(a).ToString());
                             }
                             else if (a == "AutoDockSameFile")
                             {

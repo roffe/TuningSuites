@@ -16,6 +16,11 @@
         <Style Selector="DataGridRow:selected DataGridCell">
             <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
         </Style>
+        <!-- the text size from Settings (Fluent's grid: 15 px on rows of at least 32 px) -->
+        <Style Selector="DataGridCell, DataGridRowGroupHeader">
+            <Setter Property="FontSize" Value="{DynamicResource SuiteSymbolListFontSize}" />
+            <Setter Property="MinHeight" Value="{DynamicResource SuiteSymbolListRowHeight}" />
+        </Style>
         <!-- the map preview popup is as large as its map -->
         <Style Selector="ToolTip">
             <Setter Property="MaxWidth" Value="1600" />

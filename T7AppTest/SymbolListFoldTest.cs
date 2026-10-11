@@ -15,7 +15,7 @@ namespace T7AppTest
     {
         /// <summary>
         /// The symbol list opens with every category folded; the map in front is selected in it, its category unfolded. A search
-        /// unfolds every category, its end folds them again; other refreshes keep the folds.
+        /// unfolds every category, its end folds them again; other refreshes keep the folds. Its text size comes from Settings.
         /// </summary>
         [TestMethod]
         public void SymbolListFollowsMapInFront()
@@ -59,6 +59,30 @@ namespace T7AppTest
                 vm.SettingsChanged();
                 window.CaptureRenderedFrame();
                 Assert.IsTrue(Shown().Contains(fuel) && Shown().All(s => s.Category == fuel.Category));
+                // the text size from Settings, the rows with it; Fluent's 15 px on 32 px rows was too large
+                DataGridCell Cell()
+                {
+                    grid.ScrollIntoView(fuel, null);
+                    window.CaptureRenderedFrame();
+                    return grid.GetVisualDescendants().OfType<DataGridRow>().First(r => r.IsVisible && r.DataContext == fuel).GetVisualDescendants().OfType<DataGridCell>().First();
+                }
+                Assert.AreEqual(13, Cell().FontSize);
+                try
+                {
+                    vm.Settings.SymbolListFontSize = 20;
+                    vm.SettingsChanged();
+                    window.CaptureRenderedFrame();
+                    Assert.AreEqual(20, Cell().FontSize);
+                    Assert.AreEqual(43, Cell().Bounds.Height, 1);
+                }
+                finally
+                {
+                    vm.Settings.SymbolListFontSize = 13;
+                    vm.SettingsChanged();
+                }
+                window.CaptureRenderedFrame();
+                Assert.AreEqual(28, Cell().Bounds.Height, 1);
+
                 // a file opened into the shown list: folded too, nothing selected (the grid made the first row current, unfolding its category)
                 Assert.IsTrue(await vm.OpenFileAsync(Path.Combine(s_dir, "5168646.bin"), true));
                 window.CaptureRenderedFrame();
