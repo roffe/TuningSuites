@@ -910,6 +910,19 @@ namespace T7AppTest
                 CollectionAssert.Contains(infos, "Check settings, no CAN adapter has been selected!");
                 Assert.IsFalse(vm.IsConnected);
                 Assert.AreEqual("Connect ECU", vm.ConnectCaption);
+                // Kvaser, none chosen or a saved channel that isn't there (Settings shows none): a message, the app carries on
+                string type = vm.Settings.AdapterType;
+                vm.Settings.AdapterType = "Kvaser HS";
+                infos.Clear();
+                Assert.IsFalse(await vm.EnsureConnectedAsync());
+                CollectionAssert.AreEqual(new[] { "Check settings, no CAN adapter has been selected!" }, infos);
+                vm.Settings.Adapter = "Kvaser Leaf Light v2 (0)";
+                infos.Clear();
+                Assert.IsFalse(await vm.EnsureConnectedAsync());
+                CollectionAssert.AreEqual(new[] { "Channel Kvaser Leaf Light v2 (0) cannot be selected" }, infos);
+                Assert.IsFalse(vm.IsConnected);
+                vm.Settings.AdapterType = type;
+                vm.Settings.Adapter = "";
                 // and Settings shows none chosen (it showed the first adapter found, which wasn't saved); choosing a type picks its first
                 var unset = new SettingsViewModel(vm.Settings);
                 Assert.IsNull(unset.Adapter);
