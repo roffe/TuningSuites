@@ -27,6 +27,9 @@ public sealed class PartNumberRow(DataRow row, Func<string, IBrush?> mark)
 
     public string Enginetype { get; } = $"{row["Enginetype"]}";
 
+    /// <summary>The engine type's group: the same engine under another car model is another group.</summary>
+    public GroupKey EngineGroup { get; } = new($"{row["Carmodel"]}", $"{row["Enginetype"]}");
+
     public string Partnumber { get; } = $"{row["Partnumber"]}";
 
     public IBrush? Marked { get; } = mark($"{row["Partnumber"]}");
@@ -57,7 +60,7 @@ public static class PartNumberListWindow
         var rows = table.Rows.Cast<DataRow>().Select(r => new PartNumberRow(r, mark)).OrderBy(r => r.Carmodel).ThenBy(r => r.Enginetype).ToList();
         var view = new Avalonia.Collections.DataGridCollectionView(rows);
         view.GroupDescriptions.Add(new Avalonia.Collections.DataGridPathGroupDescription(nameof(PartNumberRow.Carmodel)));
-        view.GroupDescriptions.Add(new Avalonia.Collections.DataGridPathGroupDescription(nameof(PartNumberRow.Enginetype)));
+        view.GroupDescriptions.Add(new Avalonia.Collections.DataGridPathGroupDescription(nameof(PartNumberRow.EngineGroup)));
         var grid = new DataGrid { ItemsSource = view, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single, GridLinesVisibility = DataGridGridLinesVisibility.Horizontal };
         // DevExpress' captions for the column names: "StockboostAUT" → "Stockboost AUT"
         string[] captions = table.Columns.Cast<DataColumn>().Select(c => Regex.Replace(c.ColumnName, "(?<=[a-z])(?=[A-Z])", " ")).ToArray();

@@ -128,6 +128,9 @@ namespace CommonSuite
             set { _subcategory = value; }
         }
 
+        /// <summary>The symbol list's subcategory group (T5Suite): the subcategory within its category.</summary>
+        public GroupKey SubcategoryGroup => new GroupKey(_category, _subcategory);
+
         public string SmartVarname
         {
             get

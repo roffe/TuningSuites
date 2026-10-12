@@ -146,7 +146,7 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
     protected override SymbolFilter? DefaultSymbolFilter => WithinBinary;
 
     // T5Suite's grid grouped by XDF category, then subcategory
-    protected override string[] SymbolGroupPaths => [nameof(SymbolHelper.Category), nameof(SymbolHelper.Subcategory)];
+    protected override string[] SymbolGroupPaths => [nameof(SymbolHelper.Category), nameof(SymbolHelper.SubcategoryGroup)];
 
     /// <summary>The firmware options dialog (the window sets it); true for Ok.</summary>
     public Func<FirmwareOptionsViewModel, Task<bool>>? ShowFirmwareOptions { get; set; }
