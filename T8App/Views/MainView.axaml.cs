@@ -19,7 +19,10 @@ public partial class MainView : SuiteMainView
 
     protected override string CompareFilesName => "Trionic 8 binaries";
 
-    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(Host, Vm.LookupPartNumber);
+    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(Host, 0, PartNumberTab());
+
+    /// <summary>frmPartNumberList: T8Suite's PartnumberCollection; TxSuite's T8 tab.</summary>
+    public static PartNumberTab PartNumberTab() => PartNumberListWindow.Tab("T8", new T8SuitePro.PartnumberCollection().GeneratePartNumberCollection());
 
     // T8Suite's frmAbout list
     protected override string AboutThanks =>

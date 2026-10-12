@@ -5,7 +5,7 @@ using System.Data;
 
 namespace T7
 {
-    class PartnumberCollection
+    public class PartnumberCollection
     {
         DataTable dt;
         private void AddPartNumber(string part, string my)

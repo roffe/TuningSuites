@@ -142,10 +142,16 @@ namespace T5AppTest
                 Directory.CreateDirectory(library);
                 foreach (string pn in new[] { "4239273", "4781035" })
                     File.Copy(Path.Combine(Here(), "..", "T5Binaries", pn + ".bin"), Path.Combine(library, pn + ".bin"), true);
-                var rows = T5ToolWindows.PartNumbers();
+                // T5Suite's columns, the library's 16 MHz bins yellow green, the 20 MHz ones orange
+                var tab = T5ToolWindows.PartNumberTab();
+                var rows = ((System.Collections.IEnumerable)tab.Grid.ItemsSource!).Cast<SuiteApp.Views.PartNumberRow>().ToList();
                 Assert.IsTrue(rows.Count > 100, "rows " + rows.Count);
-                Assert.AreEqual("16 MHz", rows.First(r => r.Partnumber == "4239273").Library);
-                Assert.AreEqual("20 MHz", rows.First(r => r.Partnumber == "4781035").Library);
+                Assert.AreEqual(Avalonia.Media.Brushes.YellowGreen, rows.First(r => r.Partnumber == "4239273").Marked);
+                Assert.AreEqual(Avalonia.Media.Brushes.Orange, rows.First(r => r.Partnumber == "4781035").Marked);
+                CollectionAssert.AreEqual(new[] { "Carmodel", "Enginetype", "Partnumber", "Turbomodel", "Aero", "2300cc", "FPT", "Turbo", "Power", "Torque",
+                    "Stage1", "Stage2", "Stage3", "Baseboost", "Stockboost", "Stockboost AUT", "Software Version", "Type", "From MY", "Upto MY", "Region",
+                    "High Altitude" }, tab.Grid.Columns.Select(c => (string)c.Header!).ToArray());
+                Assert.IsInstanceOfType<Avalonia.Controls.DataGridCheckBoxColumn>(tab.Grid.Columns.Last());
                 var window = new MainWindow { DataContext = new T5MainWindowViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 var pick = T5ToolWindows.PartNumberList(window);

@@ -20,6 +20,16 @@ namespace CommonSuite
                 ? Directory.GetFiles(dir, name + ".bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()
                 : null;
         }
+
+        /// <summary>The names of the stock bins in Binaries without .bin, any letter case: the partnumber list's "Available in library".</summary>
+        public static HashSet<string> StockBinaryNames()
+        {
+            string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (Directory.Exists(dir))
+                names.UnionWith(Directory.GetFiles(dir, "*.bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).Select(Path.GetFileNameWithoutExtension));
+            return names;
+        }
     }
 
     public sealed record PartDetail(string Label, string Value);

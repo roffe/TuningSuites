@@ -19,7 +19,10 @@ public partial class MainView : SuiteMainView
 
     protected override string OpenFileTitle => "Open a binary Trionic 7 file...";
 
-    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(Host, Vm.LookupPartNumber);
+    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => PartNumberListWindow.Show(Host, 0, PartNumberTab());
+
+    /// <summary>frmPartNumberList: T7Suite's PartnumberCollection; TxSuite's T7 tab.</summary>
+    public static PartNumberTab PartNumberTab() => PartNumberListWindow.Tab("T7", new T7.PartnumberCollection().GeneratePartNumberCollection());
 
     protected override void OnDataContextChanged(System.EventArgs e)
     {
