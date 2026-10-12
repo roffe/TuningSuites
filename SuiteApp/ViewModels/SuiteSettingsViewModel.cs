@@ -18,6 +18,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private int _defaultViewType;
     [ObservableProperty] private int _colorBlindMode;
     [ObservableProperty] private decimal? _symbolListFontSize;
+    [ObservableProperty] private decimal? _mapCellGap;
     [ObservableProperty] private bool _synchronizeMapviewers;
     [ObservableProperty] private bool _autoChecksum;
     [ObservableProperty] private bool _showAddressesInHex;
@@ -29,6 +30,8 @@ public partial class SuiteSettingsViewModel : ObservableObject
     public string[] ViewTypes { get; } = ["Hexadecimal view", "Decimal view", "Easy view"];
 
     public const int MinFontSize = 8, MaxFontSize = 24;
+
+    public const int MaxCellGap = 20;
 
     /// <summary>txlogger's colour blind modes, in its order and under its names.</summary>
     public string[] ColorBlindModes { get; } = Enum.GetNames<MapControls.ColorBlindMode>();
@@ -101,6 +104,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _defaultViewType = System.Math.Min((int)s.DefaultViewType, 2);
         _colorBlindMode = (int)MapControls.HeatColor.ParseMode(s.ColorBlindMode);
         _symbolListFontSize = Math.Clamp(s.SymbolListFontSize, MinFontSize, MaxFontSize);
+        _mapCellGap = Math.Clamp(s.MapCellGap, 0, MaxCellGap);
         _synchronizeMapviewers = s.SynchronizeMapviewers;
         _autoChecksum = s.AutoChecksum;
         _showAddressesInHex = s.ShowAddressesInHex;
@@ -141,6 +145,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.DefaultViewType = (SuiteViewType)DefaultViewType;
         s.ColorBlindMode = ColorBlindModes[ColorBlindMode];
         s.SymbolListFontSize = (int)(SymbolListFontSize ?? 13);
+        s.MapCellGap = (int)(MapCellGap ?? 0);
         s.SynchronizeMapviewers = SynchronizeMapviewers;
         s.AutoChecksum = AutoChecksum;
         s.ShowAddressesInHex = ShowAddressesInHex;

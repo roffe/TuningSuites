@@ -1184,6 +1184,19 @@ namespace CommonSuite
             }
         }
 
+        private int m_MapCellGap = 0;
+
+        /// <summary>The space between the map viewers' cells in pixels; 0 has them touch, as the old suites' grid.</summary>
+        public int MapCellGap
+        {
+            get { return m_MapCellGap; }
+            set
+            {
+                m_MapCellGap = value;
+                SaveRegistrySetting("MapCellGap", m_MapCellGap.ToString());
+            }
+        }
+
         private bool m_AutoDockSameFile = false;
 
         public bool AutoDockSameFile
@@ -1729,6 +1742,7 @@ namespace CommonSuite
                 saveSettings.SetValue("DisableMapviewerColors", m_DisableMapviewerColors);
                 saveSettings.SetValue("ColorBlindMode", m_ColorBlindMode);
                 saveSettings.SetValue("SymbolListFontSize", m_SymbolListFontSize.ToString());
+                saveSettings.SetValue("MapCellGap", m_MapCellGap.ToString());
                 saveSettings.SetValue("AutoDockSameFile", m_AutoDockSameFile);
                 saveSettings.SetValue("AutoDockSameSymbol", m_AutoDockSameSymbol);
                 saveSettings.SetValue("ShowViewerInWindows", m_ShowViewerInWindows);
@@ -2059,6 +2073,10 @@ namespace CommonSuite
                             else if (a == "SymbolListFontSize")
                             {
                                 m_SymbolListFontSize = Convert.ToInt32(Settings.GetValue(a).ToString());
+                            }
+                            else if (a == "MapCellGap")
+                            {
+                                m_MapCellGap = Convert.ToInt32(Settings.GetValue(a).ToString());
                             }
                             else if (a == "AutoDockSameFile")
                             {

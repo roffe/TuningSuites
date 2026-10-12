@@ -18,7 +18,7 @@
     </Window.Styles>
     <StackPanel Margin="12" Spacing="6">
         <HeaderedContentControl Classes="group" Header="User interface settings">
-            <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+            <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
                 <CheckBox Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}">
                     <ToolTip.Tip><c:SuperTip Title="Use red and white maps" Text="When checked, displays maps in red and transparent only. Normally green is used to display low values and red for higher values." /></ToolTip.Tip>
                 </CheckBox>
@@ -75,6 +75,15 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Symbol list font size" />
                     <NumericUpDown Grid.Column="1" Value="{Binding SymbolListFontSize}" Minimum="8" Maximum="24" Increment="1" FormatString="0" Width="120" HorizontalAlignment="Left" />
+                </Grid>
+                <Grid Grid.Row="6" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
+                    <ToolTip.Tip><c:SuperTip Title="Mapviewer cell spacing" Text="Lets you choose the space between the cells of a map table, in pixels (0 to 20). With a space the cells show as separate tiles without lines between them; at 0 they touch as in the old suites. Open mapviewers change at once." /></ToolTip.Tip>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
+                        <ColumnDefinition Width="280" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Mapviewer cell spacing" />
+                    <NumericUpDown Grid.Column="1" Value="{Binding MapCellGap}" Minimum="0" Maximum="20" Increment="1" FormatString="0" Width="120" HorizontalAlignment="Left" />
                 </Grid>
             </Grid>
         </HeaderedContentControl>

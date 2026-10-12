@@ -49,6 +49,43 @@ namespace MapControlsTest
             });
         }
 
+        /// <summary>
+        /// A cell gap draws the cells as tiles with the background between them and no lines; the natural size grows by a gap per column
+        /// and row. Without one the cells touch as before.
+        /// </summary>
+        [TestMethod]
+        public void CellGapMakesTiles()
+        {
+            Headless.Run(() =>
+            {
+                const uint magenta = 0xFFFF00FF;
+                MapData map = IgnitionMapData();
+                var touching = new MapGrid { Map = map };
+                var tiles = new MapGrid { Map = map, CellGap = 3 };
+                touching.Measure(Avalonia.Size.Infinity);
+                tiles.Measure(Avalonia.Size.Infinity);
+                Assert.AreEqual(touching.DesiredSize.Width + map.Cols * 3, tiles.DesiredSize.Width, 0.001);
+                Assert.AreEqual(touching.DesiredSize.Height + map.Rows * 3, tiles.DesiredSize.Height, 0.001);
+
+                var frame = Headless.Render(new Border { Background = Avalonia.Media.Brushes.Magenta, Child = tiles }, 641, 420, "mapgrid-cellgap");
+                Avalonia.Rect a = tiles.CellRect(2, 3), right = tiles.CellRect(2, 4), below = tiles.CellRect(3, 3);
+                Assert.AreEqual(3, right.X - a.Right, 0.001);
+                Assert.AreEqual(3, below.Y - a.Bottom, 0.001);
+                int midY = (int)a.Center.Y, midX = (int)a.Center.X;
+                Assert.AreEqual(magenta, Headless.Pixel(frame, (int)a.Right + 1, midY), "gap to the right");
+                Assert.AreEqual(magenta, Headless.Pixel(frame, midX, (int)a.Bottom + 1), "gap below");
+                Assert.AreEqual(magenta, Headless.Pixel(frame, (int)a.X - 2, midY), "gap to the left");
+                Assert.AreNotEqual(magenta, Headless.Pixel(frame, (int)a.X, (int)a.Y), "the tile's first pixel");
+                Assert.AreEqual(Headless.Pixel(frame, (int)a.X, (int)a.Y), Headless.Pixel(frame, (int)a.Right - 1, (int)a.Bottom - 1), "one fill to the tile's edges");
+
+                frame = Headless.Render(new Border { Background = Avalonia.Media.Brushes.Magenta, Child = touching }, 641, 420, "mapgrid-nogap");
+                Avalonia.Rect first = touching.CellRect(0, 0), last = touching.CellRect(map.Rows - 1, map.Cols - 1);
+                for (int y = (int)first.Y; y < (int)last.Bottom; y += 3)
+                    for (int x = (int)first.X; x < (int)last.Right; x += 3)
+                        Assert.AreNotEqual(magenta, Headless.Pixel(frame, x, y), $"no background between touching cells ({x}, {y})");
+            });
+        }
+
         [TestMethod]
         public void T5SuiteMarksInsideTheBox()
         {

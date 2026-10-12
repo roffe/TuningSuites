@@ -162,6 +162,8 @@
         <Setter Property="HeaderLines" Value="{DynamicResource SuiteMapHeaderLines}" />
         <Setter Property="GridLines" Value="{DynamicResource SuiteMapGridLines}" />
         <Setter Property="ColorMode" Value="{DynamicResource SuiteColorBlindMode}" />
+        <!-- the settings' cell gap, as the color blind mode below -->
+        <Setter Property="CellGap" Value="{DynamicResource SuiteMapCellGap}" />
     </Style>
     <!-- the settings' color blind mode (MainWindowViewModel puts it in the application's resources): every open map, its 3D view and
          graph, docked, floating or in a dialog, repaints when it changes -->

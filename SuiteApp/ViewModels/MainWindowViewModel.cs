@@ -168,6 +168,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Settings = new AppSettings(registry);
         ApplyColorBlindMode();
         ApplySymbolListFont();
+        ApplyMapCellGap();
         Title = $"{TitleName} v{TitleVersion}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
@@ -692,6 +693,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         ApplyColorBlindMode();
         ApplySymbolListFont();
+        ApplyMapCellGap();
         RefreshSymbols();
         RestartSramTimer();
     }
@@ -700,6 +702,12 @@ public abstract partial class MainWindowViewModel : ObservableObject
     private void ApplyColorBlindMode()
     {
         if (Application.Current is { } app) app.Resources["SuiteColorBlindMode"] = MapControls.HeatColor.ParseMode(Settings.ColorBlindMode);
+    }
+
+    /// <summary>The map viewers' cell gap into the application's resources, where SuiteTheme.axaml's style hands it to every map table.</summary>
+    private void ApplyMapCellGap()
+    {
+        if (Application.Current is { } app) app.Resources["SuiteMapCellGap"] = (double)Math.Clamp(Settings.MapCellGap, 0, SuiteSettingsViewModel.MaxCellGap);
     }
 
     /// <summary>The symbol list's text size into the application's resources, its rows as tall as Fluent's grid makes them for its 15 px.</summary>

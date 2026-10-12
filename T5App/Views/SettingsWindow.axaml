@@ -20,7 +20,7 @@
     </Window.Styles>
     <StackPanel Margin="12" Spacing="6">
         <HeaderedContentControl Classes="group" Header="User interface settings">
-            <Grid Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+            <Grid Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
                 <CheckBox Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}">
                     <ToolTip.Tip><c:SuperTip Title="Use red and white maps" Text="When checked, displays maps in red and transparent only. Normally green is used to display low values and red for higher values." /></ToolTip.Tip>
                 </CheckBox>
@@ -82,6 +82,12 @@
                 </TextBlock>
                 <NumericUpDown Grid.Row="6" Grid.Column="2" Value="{Binding SymbolListFontSize}" Minimum="8" Maximum="24" Increment="1" FormatString="0" Width="120" HorizontalAlignment="Left">
                     <ToolTip.Tip><c:SuperTip Title="Symbol list font size" Text="Lets you choose the size of the text in the symbol list, in pixels (8 to 24); its rows grow and shrink with it. The list changes at once." /></ToolTip.Tip>
+                </NumericUpDown>
+                <TextBlock Grid.Row="7" Grid.Column="1" Text="Mapviewer cell spacing">
+                    <ToolTip.Tip><c:SuperTip Title="Mapviewer cell spacing" Text="Lets you choose the space between the cells of a map table, in pixels (0 to 20). With a space the cells show as separate tiles without lines between them; at 0 they touch as in the old suites. Open mapviewers change at once." /></ToolTip.Tip>
+                </TextBlock>
+                <NumericUpDown Grid.Row="7" Grid.Column="2" Value="{Binding MapCellGap}" Minimum="0" Maximum="20" Increment="1" FormatString="0" Width="120" HorizontalAlignment="Left">
+                    <ToolTip.Tip><c:SuperTip Title="Mapviewer cell spacing" Text="Lets you choose the space between the cells of a map table, in pixels (0 to 20). With a space the cells show as separate tiles without lines between them; at 0 they touch as in the old suites. Open mapviewers change at once." /></ToolTip.Tip>
                 </NumericUpDown>
             </Grid>
         </HeaderedContentControl>

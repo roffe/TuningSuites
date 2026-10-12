@@ -64,6 +64,7 @@ public sealed class TxSettingsViewModel
         to.DefaultViewType = from.DefaultViewType;
         to.ColorBlindMode = from.ColorBlindMode;
         to.SymbolListFontSize = from.SymbolListFontSize;
+        to.MapCellGap = from.MapCellGap;
         to.SynchronizeMapviewers = from.SynchronizeMapviewers;
         to.AutoChecksum = from.AutoChecksum;
         to.ShowAddressesInHex = from.ShowAddressesInHex;

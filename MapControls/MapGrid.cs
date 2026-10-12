@@ -42,6 +42,7 @@ public class MapGrid : Control
     public static readonly StyledProperty<IBrush?> HeaderForegroundProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(HeaderForeground));
     public static readonly StyledProperty<IBrush?> HeaderLinesProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(HeaderLines));
     public static readonly StyledProperty<IBrush?> GridLinesProperty = AvaloniaProperty.Register<MapGrid, IBrush?>(nameof(GridLines));
+    public static readonly StyledProperty<double> CellGapProperty = AvaloniaProperty.Register<MapGrid, double>(nameof(CellGap));
 
     public MapData? Map { get => GetValue(MapProperty); set => SetValue(MapProperty, value); }
     public MapViewType ViewType { get => GetValue(ViewTypeProperty); set => SetValue(ViewTypeProperty, value); }
@@ -60,6 +61,8 @@ public class MapGrid : Control
     public IBrush? HeaderForeground { get => GetValue(HeaderForegroundProperty); set => SetValue(HeaderForegroundProperty, value); }
     public IBrush? HeaderLines { get => GetValue(HeaderLinesProperty); set => SetValue(HeaderLinesProperty, value); }
     public IBrush? GridLines { get => GetValue(GridLinesProperty); set => SetValue(GridLinesProperty, value); }
+    /// <summary>Space between the cells, which become tiles without the lines between them; 0 is the DevExpress grid's look.</summary>
+    public double CellGap { get => GetValue(CellGapProperty); set => SetValue(CellGapProperty, value); }
 
     /// <summary>The selection changed (data indices in <see cref="SelectedCells"/>).</summary>
     public event EventHandler? SelectionChanged;
@@ -86,8 +89,8 @@ public class MapGrid : Control
     {
         FocusableProperty.OverrideDefaultValue<MapGrid>(true);
         AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, ColorModeProperty, OpenLoopMarkProperty, ForegroundProperty,
-            HeaderBackgroundProperty, HeaderForegroundProperty, HeaderLinesProperty, GridLinesProperty);
-        AffectsMeasure<MapGrid>(MapProperty, ViewTypeProperty, FontSizeProperty, FontFamilyProperty);
+            HeaderBackgroundProperty, HeaderForegroundProperty, HeaderLinesProperty, GridLinesProperty, CellGapProperty);
+        AffectsMeasure<MapGrid>(MapProperty, ViewTypeProperty, FontSizeProperty, FontFamilyProperty, CellGapProperty);
     }
 
     public MapGrid()
@@ -183,7 +186,8 @@ public class MapGrid : Control
         for (int i = 0; i < map.Count; i++) cellW = Math.Max(cellW, Text(map.FormatCell(i, ViewType), b).Width);
         for (int c = 0; c < map.Cols; c++) cellW = Math.Max(cellW, Text(XLabel(c), b).Width);
         for (int r = 0; r < map.Rows; r++) headerW = Math.Max(headerW, Text(YLabel(r), b).Width);
-        return new Size(headerW + 10 + map.Cols * (cellW + 10), (map.Rows + 1) * (h + 6));
+        double gap = Gap;
+        return new Size(headerW + 10 + map.Cols * (cellW + 10 + gap), (map.Rows + 1) * (h + 6) + map.Rows * gap);
     }
 
     // the header column and row keep their natural size, the cells share the rest
@@ -198,7 +202,7 @@ public class MapGrid : Control
         for (int r = 0; r < map.Rows; r++) rowHeader = Math.Max(rowHeader, Text(YLabel(r), b).Width);
         // the open-loop box (and T5Suite's boxes inside it) take 3 px on each side of the text, on a map that can have them
         bool boxes = OpenLoopMark == OpenLoopMark.Box && map.OpenLoop != null || map.Marks != null;
-        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (boxes ? 10 : 4);
+        double room = (Bounds.Width - rowHeader - 10) / Math.Max(1, map.Cols) - (boxes ? 10 : 4) - Gap;
         if (widest > 0 && room < widest) m_textScale = Math.Clamp(room / widest, 0.6, 1);
         double headerW = 0;
         for (int r = 0; r < map.Rows; r++) headerW = Math.Max(headerW, Text(YLabel(r), b).Width);
@@ -216,8 +220,15 @@ public class MapGrid : Control
     private double ColX(int col) => Snap(m_headerW + col * m_cellW);
     private double RowY(int displayRow) => Snap(m_headerH + displayRow * m_cellH);
 
-    internal Rect CellRect(int displayRow, int col) =>
-        new(new Point(ColX(col), RowY(displayRow)), new Point(ColX(col + 1), RowY(displayRow + 1)));
+    // the gap in whole device pixels, so the tiles' edges stay on pixels too
+    private double Gap => Math.Round(Math.Max(0, CellGap) * Scale) / Scale;
+
+    // a cell; with a gap its tile, which leaves the gap free before it (from the headers and the cell to its left / above)
+    internal Rect CellRect(int displayRow, int col)
+    {
+        double gap = Gap;
+        return new(new Point(ColX(col) + gap, RowY(displayRow) + gap), new Point(Math.Max(ColX(col) + gap, ColX(col + 1)), Math.Max(RowY(displayRow) + gap, RowY(displayRow + 1))));
+    }
 
     // a frame inside rect, its strips whole pixels thick
     private void Frame(DrawingContext context, IBrush brush, Rect r, int pixels)
@@ -265,19 +276,21 @@ public class MapGrid : Control
         IBrush gridLine = GridLines ?? new ImmutableSolidColorBrush(fg is ISolidColorBrush s2 ? Color.FromArgb(60, s2.Color.R, s2.Color.G, s2.Color.B) : Colors.Gray);
 
         // headers
+        double gap = Gap;
         context.FillRectangle(headerBg, new Rect(0, 0, Bounds.Width, m_headerH));
         context.FillRectangle(headerBg, new Rect(0, 0, m_headerW, Bounds.Height));
         for (int c = 0; c < map.Cols; c++)
         {
             var t = Text(XLabel(c), headerFg);
-            // a squeezed column cuts its text at the cell like the DevExpress grid did, instead of writing over its neighbours
-            using (context.PushClip(new Rect(m_headerW + c * m_cellW, 0, m_cellW, m_headerH)))
-                context.DrawText(t, new Point(m_headerW + c * m_cellW + Math.Max(1, (m_cellW - t.Width) / 2), (m_headerH - t.Height) / 2));
+            // a squeezed column cuts its text at the cell like the DevExpress grid did, instead of writing over its neighbours; over its tile
+            double x = m_headerW + c * m_cellW + gap, w = m_cellW - gap;
+            using (context.PushClip(new Rect(x, 0, w, m_headerH)))
+                context.DrawText(t, new Point(x + Math.Max(1, (w - t.Width) / 2), (m_headerH - t.Height) / 2));
         }
         for (int r = 0; r < map.Rows; r++)
         {
             var t = Text(YLabel(r), headerFg);
-            context.DrawText(t, new Point(4, m_headerH + r * m_cellH + (m_cellH - t.Height) / 2));
+            context.DrawText(t, new Point(4, m_headerH + r * m_cellH + gap + (m_cellH - gap - t.Height) / 2));
         }
 
         int max = map.MaxValue(), min = map.MinValue();
@@ -355,12 +368,15 @@ public class MapGrid : Control
                     context.DrawText(t, new Point(x, rect.Y + (rect.Height - t.Height) / 2));
             }
 
-        // the lines on the pixel left of / above each edge, the last one inside the table
+        // the lines on the pixel left of / above each edge, the last one inside the table; tiles have the gap instead
         double px = Pixels(1), top = RowY(0), bottom = RowY(map.Rows), left = ColX(0), right = ColX(map.Cols);
-        for (int c = 0; c <= map.Cols; c++)
-            context.FillRectangle(gridLine, new Rect(Math.Min(ColX(c), right - px), top, px, bottom - top));
-        for (int r = 0; r <= map.Rows; r++)
-            context.FillRectangle(gridLine, new Rect(left, Math.Min(RowY(r), bottom - px), right - left, px));
+        if (Gap == 0)
+        {
+            for (int c = 0; c <= map.Cols; c++)
+                context.FillRectangle(gridLine, new Rect(Math.Min(ColX(c), right - px), top, px, bottom - top));
+            for (int r = 0; r <= map.Rows; r++)
+                context.FillRectangle(gridLine, new Rect(left, Math.Min(RowY(r), bottom - px), right - left, px));
+        }
         if (HeaderLines is { } headerLine)
         {
             // the header cells framed like the DevExpress grid's
