@@ -51,5 +51,60 @@ namespace T5AppTest
                 return true;
             }, default).GetAwaiter().GetResult();
         }
+
+        /// <summary>
+        /// Settings Ok keeps a clicked category or subcategory current, as it keeps a selected symbol; the refresh made the top one current.
+        /// </summary>
+        [TestMethod]
+        public void SettingsOkKeepsTheCurrentCategory()
+        {
+            string file = CopyOfStockBin("settingscurrent.bin");
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T5MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
+                window.CaptureRenderedFrame();
+                var grid = window.GetVisualDescendants().OfType<DataGrid>().First(g => g.Name == "SymbolGrid");
+                DataGridRowGroupHeader Header(object key)
+                {
+                    window.CaptureRenderedFrame();
+                    return grid.GetVisualDescendants().OfType<DataGridRowGroupHeader>()
+                        .Single(h => h.IsVisible && Equals(((DataGridCollectionViewGroup)h.DataContext!).Key, key));
+                }
+                object? Current()
+                {
+                    window.CaptureRenderedFrame();
+                    return grid.GetVisualDescendants().OfType<DataGridRowGroupHeader>()
+                        .SingleOrDefault(h => h.IsVisible && h.Classes.Contains(":current"))?.DataContext is DataGridCollectionViewGroup g ? g.Key : null;
+                }
+                // Down from header to header until the key's is current, as a user walks the list
+                void Walk(object key)
+                {
+                    grid.Focus();
+                    for (int i = 0; i < 30 && !Equals(Current(), key); i++)
+                        window.KeyPress(Avalonia.Input.Key.Down, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.ArrowDown, null);
+                }
+
+                Walk("Idle");
+                Assert.AreEqual("Idle", Current());
+                vm.SettingsChanged();
+                Assert.AreEqual("Idle", Current());
+                Assert.IsFalse(Header("Idle").Classes.Contains(":expanded"));
+
+                // a subcategory, under an unfolded category: Fuel → Idle, not the Idle category
+                grid.ExpandRowGroup(vm.Symbols!.Groups!.OfType<DataGridCollectionViewGroup>().Single(g => Equals(g.Key, "Fuel")), false);
+                var fuelIdle = new CommonSuite.GroupKey("Fuel", "Idle");
+                Walk(fuelIdle);
+                Assert.AreEqual(fuelIdle, Current());
+                vm.SettingsChanged();
+                Assert.AreEqual(fuelIdle, Current());
+                Assert.IsTrue(Header("Fuel").Classes.Contains(":expanded"));
+                Assert.IsFalse(Header(fuelIdle).Classes.Contains(":expanded"));
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
     }
 }

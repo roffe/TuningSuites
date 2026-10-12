@@ -22,6 +22,8 @@ public partial class SymbolListView : UserControl
     private bool m_foldAll, m_refreshed;
     // every group unfolded for a search
     private bool m_searchUnfolded;
+    // the category header that was current before a refresh, sort or regroup (with its fold), made current again after it
+    private (object Key, bool Unfolded)? m_currentGroup;
 
     public SymbolListView()
     {
@@ -109,7 +111,13 @@ public partial class SymbolListView : UserControl
         WatchSymbols();
         if (Vm is not { } vm) return;
         vm.PropertyChanged += OnVmPropertyChanged;
-        vm.EndSymbolEdit = () => SymbolGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        vm.SymbolsChanging = () =>
+        {
+            SymbolGrid.CommitEdit(DataGridEditingUnit.Row, true);
+            // a selected symbol the grid keeps itself; a current header it drops for the top one
+            m_currentGroup = SymbolGrid.GetVisualDescendants().OfType<DataGridRowGroupHeader>().FirstOrDefault(h => h.IsVisible && h.Classes.Contains(":current"))
+                is { DataContext: DataGridCollectionViewGroup group } header ? (group.Key, header.Classes.Contains(":expanded")) : null;
+        };
         SymbolColorConverter.Enabled = vm.ColorSymbolNames;
         CategoryColorConverter.Enabled = vm.ColorDescriptionsByCategory;
         FilterChoice.IsVisible = vm.SymbolFilters.Count > 0;
@@ -180,9 +188,15 @@ public partial class SymbolListView : UserControl
         if (!m_foldAll && !m_refreshed) return;
         bool all = m_foldAll;
         m_foldAll = m_refreshed = false;
+        var current = m_currentGroup;
+        m_currentGroup = null;
         if (m_vm is not { Symbols: { } view } vm) return;
         bool searching = !string.IsNullOrWhiteSpace(vm.SearchText) || vm.ColumnFilters.Any(f => !string.IsNullOrWhiteSpace(f.Text));
-        if (searching == m_searchUnfolded && !all) return;
+        if (searching == m_searchUnfolded && !all)
+        {
+            MakeCurrent(view, current);
+            return;
+        }
         m_searchUnfolded = searching;
         List<DataGridCollectionViewGroup> groups = [.. view.Groups?.OfType<DataGridCollectionViewGroup>() ?? []];
         if (groups.Count == 0) return;
@@ -199,6 +213,34 @@ public partial class SymbolListView : UserControl
         if (selected == null) return;
         SymbolGrid.ScrollIntoView(selected, null);
         vm.SelectedSymbol = selected;
+    }
+
+    // the header current again: only a fold or unfold makes a header current, so it takes two, ending as it was. A subcategory's key
+    // is unique (GroupKey), so the key alone finds it
+    // ponytail: a current header scrolled out of view isn't found (no realized header); the grid has no current-group API to ask
+    private void MakeCurrent(DataGridCollectionView view, (object Key, bool Unfolded)? current)
+    {
+        if (current is not { } c || Find(view.Groups) is not { } group) return;
+        if (c.Unfolded)
+        {
+            SymbolGrid.CollapseRowGroup(group, false);
+            SymbolGrid.ExpandRowGroup(group, false);
+        }
+        else
+        {
+            SymbolGrid.ExpandRowGroup(group, false);
+            SymbolGrid.CollapseRowGroup(group, false);
+        }
+
+        DataGridCollectionViewGroup? Find(System.Collections.IEnumerable? groups)
+        {
+            foreach (var g in groups?.OfType<DataGridCollectionViewGroup>() ?? [])
+            {
+                if (Equals(g.Key, c.Key)) return g;
+                if (Find(g.Items) is { } found) return found;
+            }
+            return null;
+        }
     }
 
     // the auto filter row's boxes: the shown columns in the grid's order

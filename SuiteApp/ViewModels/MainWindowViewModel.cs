@@ -344,13 +344,16 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => RefreshSymbols();
 
-    /// <summary>Set by the symbol list: ends a cell edit in its grid (which then saves the user descriptions).</summary>
-    public Action? EndSymbolEdit { get; set; }
+    /// <summary>
+    /// Set by the symbol list, called before the symbol view refreshes, sorts or regroups: it ends a cell edit in its grid (which then
+    /// saves the user descriptions) and remembers its current category header, which the refresh would lose.
+    /// </summary>
+    public Action? SymbolsChanging { get; set; }
 
     /// <summary>The symbol view with a user description edit committed: an open edit forbids its refresh, sorting and grouping.</summary>
     private DataGridCollectionView? CommittedSymbols()
     {
-        EndSymbolEdit?.Invoke();
+        SymbolsChanging?.Invoke();
         if (Symbols is not { } view) return null;
         if (view.IsAddingNew) view.CommitNew();
         if (view.IsEditingItem) view.CommitEdit();
