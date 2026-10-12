@@ -12,6 +12,9 @@ namespace CommonSuite
         /// <summary>The suite's own extra rows (T5Suite: boosts, model years, region, ECU type, Aero, high altitude).</summary>
         public IReadOnlyList<PartDetail> Extra { get; init; } = [];
 
+        /// <summary>Lookup partnumber shows power, torque and the engine boxes (T5Suite, T7Suite); T8Suite showed only the car and engine.</summary>
+        public bool Details { get; init; } = true;
+
         /// <summary>&lt;name&gt;.bin in Binaries next to the executable (the T5Extras / T7Extras / T8Extras installers put the stock bins there).</summary>
         public static string StockBinary(string name)
         {

@@ -32,9 +32,6 @@ public abstract partial class MainWindowViewModel
     /// <summary>Lookup partnumber: what the entered part number is, null when the suite doesn't know it.</summary>
     public abstract PartInfo? LookupPartNumber(string partNumber);
 
-    /// <summary>Lookup partnumber shows power, torque and the engine boxes (T7Suite).</summary>
-    public virtual bool PartDetails => true;
-
     /// <summary>What Define myMaps starts with when there is no mymaps.xml yet.</summary>
     public abstract IReadOnlyList<MapShortcut> MyMapsDefaults { get; }
 

@@ -41,7 +41,7 @@
         </ItemsControl>
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="Open this file" Click="OnOpenFile" IsEnabled="{Binding HasBinary}" />
-            <Button Content="Compare to this file" Click="OnCompare" IsEnabled="{Binding HasBinary}" />
+            <Button Content="Compare to this file" Click="OnCompare" IsEnabled="{Binding CanCompare}" />
             <Button Content="Create new from original" Click="OnCreate" IsEnabled="{Binding HasBinary}" />
             <Button Content="Close" IsCancel="True" Click="OnClose" />
         </StackPanel>

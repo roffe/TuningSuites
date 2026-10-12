@@ -215,11 +215,11 @@ namespace T8AppTest
                 settings.Apply(vm.Settings);
                 Assert.IsTrue(vm.Settings.MapDetectionActive);
 
-                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "55353231_FA56_C_FME2_37_FIEF_81c" };
+                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.Caption) { PartNumber = "55353231_FA56_C_FME2_37_FIEF_81c" };
                 lookup.Lookup();
                 Assert.AreEqual("Saab93", lookup.Info!.CarModel);
                 Assert.AreEqual("B207L", lookup.Info.EngineType);
-                var unknown = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "123" };
+                var unknown = new PartLookupViewModel(vm.LookupPartNumber, vm.Caption) { PartNumber = "123" };
                 unknown.Lookup();
                 Assert.AreEqual("The entered partnumber was not recognized by T8Suite", unknown.Message);
                 var lookupWindow = new SuiteApp.Views.PartLookupWindow { DataContext = lookup };

@@ -844,7 +844,7 @@ namespace T7AppTest
                 Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
                 about.Close();
 
-                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.PartDetails, vm.Caption) { PartNumber = "5168646" };
+                var lookup = new PartLookupViewModel(vm.LookupPartNumber, vm.Caption) { PartNumber = "5168646" };
                 lookup.Lookup();
                 Assert.IsNotNull(lookup.Info);
                 lookup.PartNumber = "123";

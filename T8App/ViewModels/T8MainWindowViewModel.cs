@@ -51,15 +51,16 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     protected override string? LegacyTransferKey => @"Software\T8SuitePro\TransferSettings";
 
     /// <summary>Lookup partnumber: "&lt;partnumber&gt;_&lt;software version&gt;", as the stock bins in Binaries are named; only the car and engine.</summary>
-    public override PartInfo? LookupPartNumber(string partNumber)
+    public override PartInfo? LookupPartNumber(string partNumber) => PartLookup(partNumber);
+
+    /// <summary>LookupPartNumber without a suite open (TxSuite's lookup over every ECU).</summary>
+    public static PartInfo? PartLookup(string partNumber)
     {
         ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
         return ecu.Valid
-            ? new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), 0, 0, false, false, false, false, PartInfo.StockBinary(partNumber))
+            ? new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), 0, 0, false, false, false, false, PartInfo.StockBinary(partNumber)) { Details = false }
             : null;
     }
-
-    public override bool PartDetails => false;
 
     public override IReadOnlyList<MapShortcut> MyMapsDefaults { get; } =
     [

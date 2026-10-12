@@ -77,7 +77,10 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
     public override string PackageExtension => "t5p";
 
     /// <summary>Lookup partnumber: T5's own part number list.</summary>
-    public override PartInfo? LookupPartNumber(string partNumber)
+    public override PartInfo? LookupPartNumber(string partNumber) => PartLookup(partNumber);
+
+    /// <summary>LookupPartNumber without a suite open (TxSuite's lookup over every ECU).</summary>
+    public static PartInfo? PartLookup(string partNumber)
     {
         ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
         if (!ecu.Valid) return null;

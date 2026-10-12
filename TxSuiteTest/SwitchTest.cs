@@ -124,6 +124,8 @@ namespace TxSuiteTest
                     MainWindowViewModel.Combined = null;
                     Avalonia.Application.Current!.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Default;
                     SuiteApp.Views.SuiteMainView.SettingsDialog = null;
+                    SuiteApp.Views.SuiteMainView.LookupAll = null;
+                    SuiteApp.Views.SuiteMainView.BrowseAll = null;
                 }
                 return true;
             }, default).GetAwaiter().GetResult();

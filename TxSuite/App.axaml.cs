@@ -29,18 +29,20 @@ public partial class App : Application
     public const string SettingsName = "TxSuite";
     private const string SuiteKey = "Suite";
 
-    private sealed record Suite(string Name, Func<string, bool> Opens, Type ViewModel, Func<MainWindowViewModel> NewViewModel, Func<SuiteMainView> NewView);
+    private sealed record Suite(string Name, Func<string, bool> Opens, Type ViewModel, Func<MainWindowViewModel> NewViewModel, Func<SuiteMainView> NewView,
+        Func<string, PartInfo?> Lookup, Func<PartNumberTab> PartNumbers);
 
-    private static Suite Of<TVm, TView>(string name, Func<string, bool> opens) where TVm : MainWindowViewModel, new() where TView : SuiteMainView, new() =>
-        new(name, opens, typeof(TVm), () => new TVm(), () => new TView());
+    private static Suite Of<TVm, TView>(string name, Func<string, bool> opens, Func<string, PartInfo?> lookup, Func<PartNumberTab> partNumbers)
+        where TVm : MainWindowViewModel, new() where TView : SuiteMainView, new() =>
+        new(name, opens, typeof(TVm), () => new TVm(), () => new TView(), lookup, partNumbers);
 
     // by size first: T8Suite's own check tells the user about any file that isn't a T8 binary
     private static readonly Suite[] Suites =
     [
-        Of<T5MainWindowViewModel, T5App.Views.MainView>("T5", Trionic5Tools.T5Binary.IsValidFile),
-        Of<T7MainWindowViewModel, T7App.Views.MainView>("T7", T7.T7Binary.IsValidFile),
+        Of<T5MainWindowViewModel, T5App.Views.MainView>("T5", Trionic5Tools.T5Binary.IsValidFile, T5MainWindowViewModel.PartLookup, T5App.Views.T5ToolWindows.PartNumberTab),
+        Of<T7MainWindowViewModel, T7App.Views.MainView>("T7", T7.T7Binary.IsValidFile, T7.BinaryTools.LookupPartNumber, T7App.Views.MainView.PartNumberTab),
         Of<T8MainWindowViewModel, T8App.Views.MainView>("T8", p => File.Exists(p) && new FileInfo(p).Length == TrionicCANLib.Firmware.FileT8.Length
-            && T8SuitePro.T8Binary.IsValidFile(p)),
+            && T8SuitePro.T8Binary.IsValidFile(p), T8MainWindowViewModel.PartLookup, T8App.Views.MainView.PartNumberTab),
     ];
 
     /// <summary>TxSuite to the suites: the title's name and version, its releases for the update check, its About.</summary>
@@ -86,6 +88,10 @@ public partial class App : Application
         MainWindowViewModel.Combined = Program;
         SeedRecent();
         MainWindowViewModel.Handoff = (from, path, project) => SwitchAsync(desktop, from, path, project);
+        // Lookup partnumber finds every ECU's (no partnumber is in two lists); its list has a tab per ECU, the open suite's in front
+        SuiteMainView.LookupAll = pn => Suites.Select(s => s.Lookup(pn)).FirstOrDefault(info => info != null);
+        SuiteMainView.BrowseAll = (owner, vm) =>
+            PartNumberListWindow.Show(owner, Array.FindIndex(Suites, s => s.ViewModel == vm.GetType()), [.. Suites.Select(s => s.PartNumbers())]);
         SuiteMainView.SettingsDialog = async owner =>
         {
             var settings = new TxSettingsViewModel((MainWindowViewModel)owner.DataContext!);

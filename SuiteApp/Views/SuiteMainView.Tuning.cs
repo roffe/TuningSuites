@@ -104,6 +104,12 @@ public partial class SuiteMainView
     /// <summary>The lookup's partnumber list (T5Suite's frmPartNumberList): the picked partnumber, null when cancelled.</summary>
     protected virtual Func<Task<string?>>? BrowsePartNumbers => null;
 
+    /// <summary>TxSuite: Lookup partnumber over every ECU's partnumbers; null in the single suites.</summary>
+    public static Func<string, PartInfo?>? LookupAll { get; set; }
+
+    /// <summary>TxSuite: the partnumber list with a tab per ECU, the open suite's in front; null in the single suites.</summary>
+    public static Func<Window, MainWindowViewModel, Task<string?>>? BrowseAll { get; set; }
+
     protected async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
     {
         if (await ShowPartLookupAsync(Host) is { } pick) await RunPartLookupAsync(pick.action, pick.stock);
@@ -112,7 +118,9 @@ public partial class SuiteMainView
     /// <summary>Lookup partnumber over owner, looked up at once when a partnumber is given: the action picked on its stock file, or null.</summary>
     protected async Task<(string action, string stock)?> ShowPartLookupAsync(Window owner, string partNumber = "")
     {
-        var lookup = new PartLookupViewModel(Vm.LookupPartNumber, Vm.PartDetails, Vm.Caption) { Browse = BrowsePartNumbers, PartNumber = partNumber };
+        var lookup = LookupAll is { } all
+            ? new PartLookupViewModel(all, MainWindowViewModel.Combined?.Name ?? Vm.Caption) { Own = Vm.LookupPartNumber, Browse = () => BrowseAll!(Host, Vm), PartNumber = partNumber }
+            : new PartLookupViewModel(Vm.LookupPartNumber, Vm.Caption) { Browse = BrowsePartNumbers, PartNumber = partNumber };
         if (partNumber != "") lookup.Lookup();
         string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(owner);
         return action != null && lookup.Info?.Binary is { } stock ? (action, stock) : null;
