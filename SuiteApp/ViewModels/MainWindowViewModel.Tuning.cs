@@ -60,6 +60,7 @@ public abstract partial class MainWindowViewModel
     /// <summary>"Compare symbols with other binary": the results open as a tab.</summary>
     public async Task CompareToFileAsync(string otherFile)
     {
+        otherFile = LinkTarget(otherFile);
         if (Binary is not { } bin || bin.Symbols.Count == 0) return;
         if (!await Task.Run(() => IsValidFile(otherFile)))
         {

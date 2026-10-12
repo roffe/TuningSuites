@@ -289,9 +289,16 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     private async Task<bool> HandedOff(string path, string? project) => Handoff != null && await Handoff(this, path, project);
 
+    /// <summary>
+    /// The file a path names, through symbolic links: on Linux .NET's FileInfo.Length is the link's own, and every suite checks a binary's
+    /// length (a linked stock bin was "File has incorrect length").
+    /// </summary>
+    protected static string LinkTarget(string path) => File.Exists(path) ? File.ResolveLinkTarget(path, true)?.FullName ?? path : path;
+
     /// <summary>frmMain.OpenFile: S19 is converted first, the file must be one of the suite's binaries, then its symbols are read.</summary>
     public async Task<bool> OpenFileAsync(string path, bool showMessage)
     {
+        path = LinkTarget(path);
         // ponytail: an S19 stays with the suite it's opened in (converted at its size); TxSuite could check the converted size
         if (await HandedOff(path, null)) return false;
         IsBusy = true;

@@ -26,13 +26,21 @@ namespace TxSuiteTest
         [TestMethod]
         public void PartLookupOpensAnotherEcusStockBinary()
         {
-            // the stock bins in Binaries next to the program, as the Extras put them
+            // the stock bins in Binaries next to the program, as the Extras put them; off Windows symbolic links to copies, as a
+            // developer links the repository's (FileInfo.Length is the link's there: every suite's length check refused them)
             string library = Path.Combine(AppContext.BaseDirectory, "Binaries");
             Directory.CreateDirectory(library);
-            string t7Stock = Path.Combine(library, T7Part + ".bin");
+            string t7Stock = Path.Combine(library, T7Part + ".bin"), t5Stock = Path.Combine(library, T5Part + ".bin");
             foreach (var (folder, name) in new[] { ("T5Binaries", T5Part), ("T7Binaries", T7Part), ("T8Binaries", T8Part) })
-                File.Copy(Path.Combine(Here(), "..", folder, name + ".bin"), Path.Combine(library, name + ".bin"), true);
-            string t5 = Stock("T5Binaries", T5Part + ".bin");
+            {
+                string bin = Path.Combine(library, name + ".bin");
+                File.Delete(bin);
+                if (OperatingSystem.IsWindows()) File.Copy(Path.Combine(Here(), "..", folder, name + ".bin"), bin);
+                else File.CreateSymbolicLink(bin, Stock(folder, name + ".bin"));
+            }
+            // what opens: the file a link points at
+            string t7Opened = OperatingSystem.IsWindows() ? t7Stock : Path.Combine(s_dir, T7Part + ".bin");
+            string t5 = OperatingSystem.IsWindows() ? Stock("T5Binaries", T5Part + ".bin") : Path.Combine(s_dir, T5Part + ".bin");
             string copy = Path.Combine(s_dir, "copy-of-" + T7Part + ".bin");
             s_session!.Dispatch(async () =>
             {
@@ -128,11 +136,11 @@ namespace TxSuiteTest
 
                     // Open this file: T7's view with the stock bin
                     Click(lookupWindow, "Open this file");
-                    var t7vm = await SwitchedTo<T7App.ViewModels.T7MainWindowViewModel>(window, t7Stock);
+                    var t7vm = await SwitchedTo<T7App.ViewModels.T7MainWindowViewModel>(window, t7Opened);
                     Assert.IsInstanceOfType<T7App.Views.MainView>(window.View);
 
                     // back to T5, then Create new from original (the save picker's answer given straight to the dialog)
-                    Assert.IsFalse(await t7vm.OpenPlainFileAsync(t5, true));
+                    Assert.IsFalse(await t7vm.OpenPlainFileAsync(t5Stock, true));
                     await SwitchedTo<T5App.ViewModels.T5MainWindowViewModel>(window, t5);
                     (lookupWindow, lookup) = OpenLookup(window);
                     lookup.PartNumber = T7Part;

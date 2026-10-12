@@ -67,6 +67,29 @@ namespace T8AppTest
             frame.Save(Path.Combine(dir, name + ".png"), new PngBitmapEncoderOptions());
         }
 
+        /// <summary>A symbolic link to a bin opens and compares as the bin: FileInfo.Length on Linux is the link's, T8's check said "incorrect length".</summary>
+        [TestMethod]
+        public void OpensAndComparesThroughASymbolicLink()
+        {
+            if (OperatingSystem.IsWindows()) Assert.Inconclusive("making a symbolic link needs developer mode on Windows");
+            string file = CopyOfStockBin("linked.BIN");
+            string link = Path.Combine(s_dir, "link.bin");
+            File.Delete(link);
+            File.CreateSymbolicLink(link, file);
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new T8MainWindowViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenPlainFileAsync(link, true));
+                Assert.AreEqual(file, vm.Binary?.FileName);
+                await vm.CompareToFileAsync(link);
+                Assert.IsInstanceOfType<CompareResultsViewModel>(vm.SelectedViewer);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
         [TestMethod]
         public void OpenBinSymbolsMapAndFirmware()
         {
