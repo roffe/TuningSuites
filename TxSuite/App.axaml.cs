@@ -88,10 +88,11 @@ public partial class App : Application
         MainWindowViewModel.Combined = Program;
         SeedRecent();
         MainWindowViewModel.Handoff = (from, path, project) => SwitchAsync(desktop, from, path, project);
-        // Lookup partnumber finds every ECU's (no partnumber is in two lists); its list has a tab per ECU, the open suite's in front
+        // Lookup partnumber finds every ECU's (no partnumber is in two lists); its list has a tab per ECU, the open binary's in front, T5's
+        // with none open
         SuiteMainView.LookupAll = pn => Suites.Select(s => s.Lookup(pn)).FirstOrDefault(info => info != null);
         SuiteMainView.BrowseAll = (owner, vm) =>
-            PartNumberListWindow.Show(owner, Array.FindIndex(Suites, s => s.ViewModel == vm.GetType()), [.. Suites.Select(s => s.PartNumbers())]);
+            PartNumberListWindow.Show(owner, vm.Binary == null ? 0 : Array.FindIndex(Suites, s => s.ViewModel == vm.GetType()), [.. Suites.Select(s => s.PartNumbers())]);
         SuiteMainView.SettingsDialog = async owner =>
         {
             var settings = new TxSettingsViewModel((MainWindowViewModel)owner.DataContext!);

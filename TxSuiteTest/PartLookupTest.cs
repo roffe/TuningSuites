@@ -156,6 +156,51 @@ namespace TxSuiteTest
             }, default).GetAwaiter().GetResult();
         }
 
+        /// <summary>The partnumber list opens on the open binary's ECU, on T5 with none open whichever suite is in front.</summary>
+        [TestMethod]
+        public void PartNumberListStartsOnTheOpenBinarysEcu()
+        {
+            string t7 = Stock("T7Binaries", T7Part + ".bin");
+            s_session!.Dispatch(async () =>
+            {
+                try
+                {
+                    var desktop = new ClassicDesktopStyleApplicationLifetime();
+                    var vm = new T7App.ViewModels.T7MainWindowViewModel();
+                    var window = TxSuite.App.NewWindow(new T7App.Views.MainView());
+                    SuiteStartup.Attach(desktop, vm, window);
+                    window.Show();
+                    TxSuite.App.Combine(desktop);
+                    async Task<int> Tab()
+                    {
+                        var (lookupWindow, lookup) = OpenLookup(window);
+                        var browsed = lookup.BrowseAsync();
+                        Dispatcher.UIThread.RunJobs();
+                        var list = window.OwnedWindows.Single(w => w.Title == "Partnumber list");
+                        int tab = list.GetLogicalDescendants().OfType<TabControl>().Single().SelectedIndex;
+                        Click(list, "Close");
+                        await browsed;
+                        lookupWindow.Close();
+                        Dispatcher.UIThread.RunJobs();
+                        return tab;
+                    }
+                    Assert.AreEqual(0, await Tab());
+                    Assert.IsTrue(await vm.OpenPlainFileAsync(t7, true));
+                    Assert.AreEqual(1, await Tab());
+                    window.Close();
+                }
+                finally
+                {
+                    MainWindowViewModel.Handoff = null;
+                    MainWindowViewModel.Combined = null;
+                    SuiteMainView.SettingsDialog = null;
+                    SuiteMainView.LookupAll = null;
+                    SuiteMainView.BrowseAll = null;
+                }
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
         // the main menu's Lookup partnumber
         private static (PartLookupWindow, PartLookupViewModel) OpenLookup(SuiteWindow window)
         {
