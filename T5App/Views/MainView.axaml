@@ -44,7 +44,6 @@
                 <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
                 <Separator />
                 <MenuItem Header="Settings" Click="OnSettings" />
-                <MenuItem Header="Autotune settings" Click="OnAutotuneSettings" />
                 <MenuItem Header="Lookup partnumber" Click="OnLookupPartnumber" />
                 <MenuItem Header="User library" Click="OnUserLibrary" />
                 <Separator />

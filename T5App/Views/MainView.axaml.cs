@@ -84,13 +84,6 @@ public partial class MainView : SuiteMainView
         ApplyHideSymbolTable();
     }
 
-    // File → Autotune settings: no Settings dialog around it, so its Ok saves at once
-    private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
-    {
-        var settings = new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);
-        if (await new AutotuneSettingsWindow { DataContext = settings }.ShowDialog<bool>(Host)) settings.Apply(Vm.Settings, Vm.T5Settings);
-    }
-
     // ---- Tuning wizards ----
 
     private async void OnTuneMeUp(object? sender, RoutedEventArgs e)

@@ -158,11 +158,4 @@ public partial class MainView : SuiteMainView
         ApplyHideSymbolTable();
         Logging.ApplyCanLogging(Vm.Settings.EnableCanLog);
     }
-
-    // File → Autotune settings (as T5): no Settings dialog around it, so its Ok saves at once
-    private async void OnAutotuneSettings(object? sender, RoutedEventArgs e)
-    {
-        var autotune = new AutotuneSettingsViewModel(Vm.Settings);
-        if (await new AutotuneSettingsWindow { DataContext = autotune }.ShowDialog<bool>(Host)) autotune.Apply(Vm.Settings);
-    }
 }
