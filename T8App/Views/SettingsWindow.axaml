@@ -122,7 +122,7 @@
                     <ComboBox Grid.Column="1" ItemsSource="{Binding AdapterTypes}" SelectedItem="{Binding AdapterType}" HorizontalAlignment="Stretch" />
                 </Grid>
                 <Grid Grid.Row="3" Grid.Column="1" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0">
-                    <ToolTip.Tip><c:SuperTip Title="Adapter" Text="Lets you choose which adapter of the selected type to use; for an OBDLink SX, Just4Trionic or SLCAN adapter this is its serial port. The CombiAdapter is found by itself, so the list stays empty for it." /></ToolTip.Tip>
+                    <ToolTip.Tip><c:SuperTip Title="Adapter" Text="Lets you choose which adapter of the selected type to use; for an OBDLink SX / EX, ELM327, Just4Trionic or SLCAN adapter this is its serial port. The CombiAdapter is found by itself, so the list stays empty for it." /></ToolTip.Tip>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Label1" />
                         <ColumnDefinition Width="*" />
@@ -132,7 +132,7 @@
                               PlaceholderText="Select an adapter" />
                 </Grid>
                 <Grid Grid.Row="3" Grid.Column="2" Classes="pair" ColumnSpacing="8" Margin="0,6,0,0" IsVisible="{Binding AdapterNeedsBaudrate}">
-                    <ToolTip.Tip><c:SuperTip Title="Serial speed" Text="Lets you choose the speed of the serial connection to an OBDLink SX (it is switched to this speed after connecting) or a Just4Trionic. SLCAN adapters always use 3000000 baud." /></ToolTip.Tip>
+                    <ToolTip.Tip><c:SuperTip Title="Serial speed" Text="Lets you choose the speed of the serial connection to an ELM327 (it is switched to this speed after connecting) or a Just4Trionic. The OBDLink SX and EX switch themselves to 2000000 baud, SLCAN adapters always use 3000000 baud." /></ToolTip.Tip>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Label2" />
                         <ColumnDefinition Width="*" />
