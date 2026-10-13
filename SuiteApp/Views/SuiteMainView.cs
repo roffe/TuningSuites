@@ -272,7 +272,7 @@ public partial class SuiteMainView : UserControl
         if (startup && Vm.BuildVersion == new Version(0, 0, 0, 0)) return;
         if (await Vm.CheckForUpdatesAsync() is not { } release) return;
         if (await new UpdateAvailableWindow(release, MainWindowViewModel.Combined?.Name ?? Vm.Suite).ShowDialog<bool>(Host))
-            Dialogs.OpenWithShell(OperatingSystem.IsWindows() && release.Msi != null ? release.Msi : release.Page);
+            Dialogs.OpenWithShell(OperatingSystem.IsWindows() && release.Setup != null ? release.Setup : release.Page);
     }
 
     protected async void OnCheckForUpdates(object? sender, RoutedEventArgs e) => await CheckForUpdatesAsync(false);

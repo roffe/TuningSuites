@@ -25,13 +25,15 @@ namespace SuiteCoreTest
             Release r = UpdateCheck.Newest(json, "T7suite_v");
             Assert.AreEqual(new Version(2, 0, 1, 0), r.Version);
             Assert.AreEqual("T7suite_v2.0.1", r.Tag);
-            Assert.AreEqual("https://github.com/roffe/TuningSuites/releases/download/T7suite_v2.0.1/T7Suite.msi", r.Msi);
+            Assert.AreEqual("https://github.com/roffe/TuningSuites/releases/download/T7suite_v2.0.1/T7Suite.msi", r.Setup);
             StringAssert.EndsWith(r.Page, "/tag/T7suite_v2.0.1");
 
             Assert.IsNull(UpdateCheck.Newest("[" + Release("T8suite_v3.0.0") + "]", "T7suite_v"));
             Assert.AreEqual(new Version(3, 0, 0, 0), UpdateCheck.Newest(json, "T8suite_v").Version);
             Assert.IsNull(UpdateCheck.Newest("[]", "T7suite_v"));
-            Assert.IsNull(UpdateCheck.Newest("[" + Release("T7suite_v0.1.59.0", asset: "T7Suite.md5") + "]", "T7suite_v").Msi);
+            Assert.IsNull(UpdateCheck.Newest("[" + Release("T7suite_v0.1.59.0", asset: "T7Suite.md5") + "]", "T7suite_v").Setup);
+            // TxSuite's setup is an Inno Setup .exe
+            StringAssert.EndsWith(UpdateCheck.Newest("[" + Release("Txsuite_v1.0.0", asset: "TxSuiteSetup.exe") + "]", "Txsuite_v").Setup, "/TxSuiteSetup.exe");
             Assert.AreEqual(new Version(2, 0, 0, 0), UpdateCheck.Pad(new Version(2, 0)));
         }
     }

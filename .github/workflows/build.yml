@@ -6,6 +6,7 @@ on:
     - 'T7suite_v*' # a T7Suite release, e.g. T7suite_v2.0.0
     - 'T8suite_v*' # a T8Suite release, e.g. T8suite_v2.0.0
     - 'T5suite_v*' # a T5Suite release, e.g. T5suite_v2.1.0
+    - 'Txsuite_v*' # a TxSuite release (all three suites in one program), e.g. Txsuite_v1.0.0
   pull_request:
   workflow_dispatch:
 
@@ -27,7 +28,7 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     env:
-      # a suite's tag tests that suite and the shared code, anything else all three
+      # a suite's tag tests that suite and the shared code, anything else (TxSuite's tag too) everything
       SUITE: ${{ startsWith(github.ref, 'refs/tags/T7suite_v') && 'T7' || startsWith(github.ref, 'refs/tags/T8suite_v') && 'T8' || startsWith(github.ref, 'refs/tags/T5suite_v') && 'T5' || '' }}
     steps:
     - uses: actions/checkout@v7
@@ -89,14 +90,20 @@ jobs:
       if: env.SUITE == '' || env.SUITE == 'T5'
       run: dotnet test T5AppTest -c Release --no-build
 
-  # each suite for each platform, packaged as roffe/Trionic packages the flasher: <suite>App, Setup<suite>, out/<suite>Suite
+    # TxSuite headless: switching suites, the partnumber lookup over every ECU, the settings tabs
+    - name: Test TxSuite
+      if: env.SUITE == ''
+      run: dotnet test TxSuiteTest -c Release --no-build
+
+  # each suite for each platform, packaged as roffe/Trionic packages the flasher: <suite>App, Setup<suite>, out/<suite>Suite;
+  # TxSuite: TxSuite, SetupTx (Inno Setup), out/TxSuite
   package:
     needs: test
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
-        # a suite's tag packages that suite, anything else both
-        suite: ${{ fromJSON(startsWith(github.ref, 'refs/tags/T7suite_v') && '["T7"]' || startsWith(github.ref, 'refs/tags/T8suite_v') && '["T8"]' || startsWith(github.ref, 'refs/tags/T5suite_v') && '["T5"]' || '["T5","T7","T8"]') }}
+        # a suite's tag packages that suite, anything else all of them
+        suite: ${{ fromJSON(startsWith(github.ref, 'refs/tags/T7suite_v') && '["T7"]' || startsWith(github.ref, 'refs/tags/T8suite_v') && '["T8"]' || startsWith(github.ref, 'refs/tags/T5suite_v') && '["T5"]' || startsWith(github.ref, 'refs/tags/Txsuite_v') && '["Tx"]' || '["T5","T7","T8","Tx"]') }}
         rid: [win-x86, linux-x64, linux-arm64, osx-arm64, osx-x64]
         include:
         - { rid: win-x86,     os: windows-latest }
@@ -106,7 +113,7 @@ jobs:
         - { rid: osx-x64,     os: macos-latest }
     runs-on: ${{ matrix.os }}
     env:
-      APP: ${{ matrix.suite }}App
+      APP: ${{ matrix.suite == 'Tx' && 'TxSuite' || format('{0}App', matrix.suite) }}
       SUITE: ${{ matrix.suite }}Suite
     steps:
     - uses: actions/checkout@v7
@@ -134,14 +141,34 @@ jobs:
         7z x -y -olibusb libusb.7z > /dev/null
         cp libusb/MinGW32/dll/libusb-1.0.dll out/$SUITE/
 
+    # Lawicel's canusbdrv.dll needs the VC++ 2010 runtime. The suites' MSIs merge it in, Inno Setup can't: its two DLLs from the
+    # flasher's merge module next to TxSuite.exe, where Windows looks first
+    - name: Add the VC++ 2010 runtime
+      if: runner.os == 'Windows' && matrix.suite == 'Tx'
+      run: |
+        7z x -y -ovc100 Trionic/SetupCANFlasher/Microsoft_VC100_CRT_x86.msm MergeModule.CABinet > /dev/null
+        7z x -y -ovc100 vc100/MergeModule.CABinet > /dev/null
+        cp vc100/F_CENTRAL_msvcr100_x86.* out/$SUITE/msvcr100.dll
+        cp vc100/F_CENTRAL_msvcp100_x86.* out/$SUITE/msvcp100.dll
+
     # T5Suite.msi / T7Suite.msi / T8Suite.msi, and zipped as upstream's releases had it (T7Suite.zip)
     - name: Build Setup
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && matrix.suite != 'Tx'
       run: |
         dotnet build Setup${{ matrix.suite }}/Setup${{ matrix.suite }}.wixproj -c Release -p:Platform=x86 "-p:PublishDir=$GITHUB_WORKSPACE/out/$SUITE"
         mkdir dist
         cp Setup${{ matrix.suite }}/bin/x86/Release/$SUITE.msi dist/
         cd dist && 7z a $SUITE.zip $SUITE.msi
+
+    # TxSuiteSetup.exe; the runner's Inno Setup if it has one
+    - name: Build TxSuite setup
+      if: runner.os == 'Windows' && matrix.suite == 'Tx'
+      shell: pwsh
+      run: |
+        choco install innosetup -y --no-progress | Out-Null
+        $iscc = (Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe", "$env:ProgramFiles\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -Last 1).FullName
+        & $iscc /Q "/DPublishDir=$env:GITHUB_WORKSPACE\out\TxSuite" "/O$env:GITHUB_WORKSPACE\dist" SetupTx\TxSuite.iss
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
     - name: Package Linux
       if: runner.os == 'Linux'
@@ -192,6 +219,7 @@ jobs:
         echo "t7=$(dotnet msbuild T7App/T7App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
         echo "t8=$(dotnet msbuild T8App/T8App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
         echo "t5=$(dotnet msbuild T5App/T5App.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
+        echo "tx=$(dotnet msbuild TxSuite/TxSuite.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
 
     # ponytail: rolling tags, one pre-release per suite that always points at the latest master build; the update check skips them
     - name: Move nightly tags
@@ -200,7 +228,8 @@ jobs:
         git tag -f T7suite_nightly
         git tag -f T8suite_nightly
         git tag -f T5suite_nightly
-        git push -f origin T7suite_nightly T8suite_nightly T5suite_nightly
+        git tag -f Txsuite_nightly
+        git push -f origin T7suite_nightly T8suite_nightly T5suite_nightly Txsuite_nightly
 
     - name: T7Suite nightly release
       if: github.ref == 'refs/heads/master'
@@ -237,6 +266,18 @@ jobs:
         prerelease: true
         make_latest: "false"
         files: dist/T5Suite*
+
+    - name: TxSuite nightly release
+      if: github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: Txsuite_nightly
+        name: TxSuite nightly build ${{ steps.version.outputs.tx }}
+        body: Automated build ${{ steps.version.outputs.tx }} of ${{ github.sha }}
+        prerelease: true
+        make_latest: "false"
+        files: dist/TxSuite*
 
     # the update check finds it by its <suite>_v tag, not by GitHub's latest marker (that's the combined release below);
     # only the tagged suite was packaged

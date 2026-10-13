@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace CommonSuite
 {
     /// <summary>A published release: its version (four parts), tag, page and Windows installer (null without one).</summary>
-    public sealed record Release(Version Version, string Tag, string Page, string Msi);
+    public sealed record Release(Version Version, string Tag, string Page, string Setup);
 
     /// <summary>
     /// The suites' update check (msiupdater, which read develop.trionictuning.com) on GitHub releases, as the flasher's MsiUpdater
@@ -31,9 +31,10 @@ namespace CommonSuite
                 if (!tag.StartsWith(tagPrefix, StringComparison.Ordinal) || !Version.TryParse(tag[tagPrefix.Length..], out Version v)) continue;
                 v = Pad(v);
                 if (best != null && v <= best.Version) continue;
-                string msi = r.GetProperty("assets").EnumerateArray().Select(a => a.GetProperty("browser_download_url").GetString())
-                    .FirstOrDefault(u => u != null && u.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
-                best = new Release(v, tag, r.GetProperty("html_url").GetString() ?? ReleasesPage, msi);
+                // the suites' .msi, TxSuite's Inno Setup TxSuiteSetup.exe
+                string setup = r.GetProperty("assets").EnumerateArray().Select(a => a.GetProperty("browser_download_url").GetString())
+                    .FirstOrDefault(u => u != null && (u.EndsWith(".msi", StringComparison.OrdinalIgnoreCase) || u.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase)));
+                best = new Release(v, tag, r.GetProperty("html_url").GetString() ?? ReleasesPage, setup);
             }
             return best;
         }
