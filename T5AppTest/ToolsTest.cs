@@ -137,9 +137,8 @@ namespace T5AppTest
         {
             s_session!.Dispatch(async () =>
             {
-                // Binaries next to the program (published only): a 16 MHz and a 20 MHz stock bin for the test, in Binaries itself as the old
-                // suites' Extras put them (PartInfo.StockFolder falls back to it without a Binaries/T5)
-                string library = Path.Combine(System.AppContext.BaseDirectory, "Binaries");
+                // Binaries/T5 next to the program (published only): a 16 MHz and a 20 MHz stock bin for the test
+                string library = Path.Combine(System.AppContext.BaseDirectory, "Binaries", "T5");
                 Directory.CreateDirectory(library);
                 foreach (string pn in new[] { "4239273", "4781035" })
                     File.Copy(Path.Combine(Here(), "..", "T5Binaries", pn + ".bin"), Path.Combine(library, pn + ".bin"), true);

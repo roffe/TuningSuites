@@ -15,16 +15,8 @@ namespace CommonSuite
         /// <summary>Lookup partnumber shows power, torque and the engine boxes (T5Suite, T7Suite); T8Suite showed only the car and engine.</summary>
         public bool Details { get; init; } = true;
 
-        /// <summary>
-        /// The ECU's ("T5", "T7", "T8") stock bins: Binaries/&lt;ecu&gt; next to the executable, where TxExtras and the T5Extras / T7Extras /
-        /// T8Extras installers put them, else Binaries itself (the old suites' Extras put one suite's bins there).
-        /// </summary>
-        public static string StockFolder(string ecu)
-        {
-            string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
-            string own = Path.Combine(dir, ecu);
-            return Directory.Exists(own) ? own : dir;
-        }
+        /// <summary>The ECU's ("T5", "T7", "T8") stock bins: Binaries/&lt;ecu&gt; next to the executable, where TxExtras puts them.</summary>
+        public static string StockFolder(string ecu) => Path.Combine(AppContext.BaseDirectory, "Binaries", ecu);
 
         /// <summary>&lt;name&gt;.bin in the ECU's stock bins, any letter case.</summary>
         public static string StockBinary(string ecu, string name)
