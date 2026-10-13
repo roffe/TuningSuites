@@ -48,12 +48,12 @@ public static class PartNumberListWindow
     /// <summary>T7Suite's and T8Suite's legend.</summary>
     public static readonly (string, IBrush)[] InLibrary = [("Available in library", Brushes.YellowGreen)];
 
-    /// <summary>The table's rows; mark colours a partnumber (default: yellow green when its bin is in Binaries).</summary>
+    /// <summary>The table's rows; mark colours a partnumber (default: yellow green when its bin is in the ECU's stock bins, the header naming the ECU).</summary>
     public static PartNumberTab Tab(string header, DataTable table, Func<string, IBrush?>? mark = null, (string, IBrush)[]? legend = null)
     {
         if (mark == null)
         {
-            var library = PartInfo.StockBinaryNames();
+            var library = PartInfo.StockBinaryNames(header);
             mark = pn => library.Contains(pn) ? Brushes.YellowGreen : null;
         }
         // the table's order within each group, as the old grid

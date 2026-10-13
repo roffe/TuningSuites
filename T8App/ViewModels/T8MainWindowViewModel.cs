@@ -50,7 +50,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     // T8Suite kept the last selection outside MattiasC
     protected override string? LegacyTransferKey => @"Software\T8SuitePro\TransferSettings";
 
-    /// <summary>Lookup partnumber: "&lt;partnumber&gt;_&lt;software version&gt;", as the stock bins in Binaries are named; only the car and engine.</summary>
+    /// <summary>Lookup partnumber: "&lt;partnumber&gt;_&lt;software version&gt;", as the stock bins in Binaries/T8 are named; only the car and engine.</summary>
     public override PartInfo? LookupPartNumber(string partNumber) => PartLookup(partNumber);
 
     /// <summary>LookupPartNumber without a suite open (TxSuite's lookup over every ECU).</summary>
@@ -58,7 +58,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     {
         ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
         return ecu.Valid
-            ? new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), 0, 0, false, false, false, false, PartInfo.StockBinary(partNumber)) { Details = false }
+            ? new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), 0, 0, false, false, false, false, PartInfo.StockBinary("T8", partNumber)) { Details = false }
             : null;
     }
 

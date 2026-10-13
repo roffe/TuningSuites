@@ -76,4 +76,14 @@
              Text="The nearest git tag $(_GitTag) is not a $(VersionTagPrefix)vX.Y.Z or $(VersionTagPrefix)vX.Y.Z-label version, building as version $(InformationalVersion)." />
   </Target>
 
+  <!--
+    dotnet run sees the stock bins where the Extras install them: a suite's (a VersionTagPrefix project's) Debug build links Binaries/T5, T7
+    and T8 in its output folder to the repository's T5Binaries, T7Binaries and T8Binaries. A Binaries that is itself a link (the old one
+    suite layout) is replaced, a real folder of bins is left alone.
+    ponytail: Linux / macOS only; on Windows link by hand (mklink /J bin\Debug\net10.0\Binaries\T7 ..\T7Binaries)
+  -->
+  <Target Name="LinkStockBinaries" AfterTargets="Build" Condition="'$(VersionTagPrefix)' != '' and '$(Configuration)' == 'Debug' and '$(OS)' != 'Windows_NT'">
+    <Exec Command="b='$(OutDir)Binaries'; if [ -L &quot;$b&quot; ]; then rm &quot;$b&quot;; fi; mkdir -p &quot;$b&quot; &amp;&amp; for e in T5 T7 T8; do [ -d &quot;$b/$e&quot; ] &amp;&amp; [ ! -L &quot;$b/$e&quot; ] || ln -sfn '$(MSBuildThisFileDirectory)'&quot;$e&quot;Binaries &quot;$b/$e&quot;; done" />
+  </Target>
+
 </Project>

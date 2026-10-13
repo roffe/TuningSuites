@@ -160,11 +160,11 @@ public partial class T5MainWindowViewModel
     }
 
     /// <summary>
-    /// "Compare to original file": Binaries/&lt;partnumber&gt;-&lt;software id&gt;.bin, else Binaries/&lt;partnumber&gt;.bin. T5Suite looked for the
+    /// "Compare to original file": Binaries/T5/&lt;partnumber&gt;-&lt;software id&gt;.bin, else Binaries/T5/&lt;partnumber&gt;.bin. T5Suite looked for the
     /// first and compared the second, so the item never lit up.
     /// </summary>
     public string? OriginalFile => T5?.File.GetTrionicProperties() is { } p
-        ? PartInfo.StockBinary($"{p.Partnumber.Trim()}-{p.SoftwareID.Trim()}") ?? PartInfo.StockBinary(p.Partnumber.Trim())
+        ? PartInfo.StockBinary("T5", $"{p.Partnumber.Trim()}-{p.SoftwareID.Trim()}") ?? PartInfo.StockBinary("T5", p.Partnumber.Trim())
         : null;
 
     [RelayCommand]

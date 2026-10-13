@@ -59,7 +59,7 @@ namespace T7
             ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
             if (!ecu.Valid) return null;
             return new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), ecu.Bhp, ecu.Torque,
-                !ecu.Is2point3liter, ecu.Is2point3liter, ecu.Isturbo, ecu.Isfpt, PartInfo.StockBinary(partNumber));
+                !ecu.Is2point3liter, ecu.Is2point3liter, ecu.Isturbo, ecu.Isfpt, PartInfo.StockBinary("T7", partNumber));
         }
     }
 }

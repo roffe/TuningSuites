@@ -565,12 +565,12 @@ namespace T7
 
         public override void CopyAddressTable(string target) => BinaryTools.CopyAddressTable(FileName, target, AutoFixFooter);
 
-        /// <summary>"Compare to original file": the stock bin with the part number in Binaries next to the executable.</summary>
+        /// <summary>"Compare to original file": the stock bin with the part number in Binaries/T7 next to the executable.</summary>
         public string OriginalFile()
         {
             var header = new T7FileHeader();
             header.init(FileName, false);
-            string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
+            string dir = PartInfo.StockFolder("T7");
             if (!Directory.Exists(dir)) return null;
             string[] files = Directory.GetFiles(dir, header.getPartNumber().Trim() + ".bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive });
             return files.Length == 1 ? files[0] : null;

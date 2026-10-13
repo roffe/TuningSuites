@@ -1,6 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
-	<!-- a suite's stock bins (and T7's symbol files) in Binaries in the suite's folder, where the suite looks for them (PartInfo.StockBinary).
+	<!-- a suite's stock bins (and T7's symbol files) in Binaries\T5, T7 or T8 in the suite's folder, where the suite looks for them (PartInfo.StockFolder;
+	     TxExtras, SetupTx/TxExtras.iss, the same for all three in TxSuite's folder).
 	     T7 / T8: the old T7Extras / T8Extras setups' (OldSuites/SetupT7Extras, SetupT8Extras) upgrade codes and folders, installing this replaces them.
 	     T5: new, the old T5Suite setup installed its bins itself -->
 	<?if $(var.Suite) = "T5"?>
@@ -38,7 +39,9 @@
 		<StandardDirectory Id="ProgramFilesFolder">
 			<Directory Id="ManufacturerFolder" Name="!(bind.property.Manufacturer)">
 				<Directory Id="INSTALLFOLDER" Name="$(var.SuiteFolder)">
-					<Directory Id="BinariesFolder" Name="Binaries" />
+					<Directory Id="BinariesRoot" Name="Binaries">
+						<Directory Id="BinariesFolder" Name="$(var.Suite)" />
+					</Directory>
 				</Directory>
 			</Directory>
 		</StandardDirectory>

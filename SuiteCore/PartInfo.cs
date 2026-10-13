@@ -15,19 +15,30 @@ namespace CommonSuite
         /// <summary>Lookup partnumber shows power, torque and the engine boxes (T5Suite, T7Suite); T8Suite showed only the car and engine.</summary>
         public bool Details { get; init; } = true;
 
-        /// <summary>&lt;name&gt;.bin in Binaries next to the executable (the T5Extras / T7Extras / T8Extras installers put the stock bins there).</summary>
-        public static string StockBinary(string name)
+        /// <summary>
+        /// The ECU's ("T5", "T7", "T8") stock bins: Binaries/&lt;ecu&gt; next to the executable, where TxExtras and the T5Extras / T7Extras /
+        /// T8Extras installers put them, else Binaries itself (the old suites' Extras put one suite's bins there).
+        /// </summary>
+        public static string StockFolder(string ecu)
         {
             string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
+            string own = Path.Combine(dir, ecu);
+            return Directory.Exists(own) ? own : dir;
+        }
+
+        /// <summary>&lt;name&gt;.bin in the ECU's stock bins, any letter case.</summary>
+        public static string StockBinary(string ecu, string name)
+        {
+            string dir = StockFolder(ecu);
             return Directory.Exists(dir)
                 ? Directory.GetFiles(dir, name + ".bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).FirstOrDefault()
                 : null;
         }
 
-        /// <summary>The names of the stock bins in Binaries without .bin, any letter case: the partnumber list's "Available in library".</summary>
-        public static HashSet<string> StockBinaryNames()
+        /// <summary>The names of the ECU's stock bins without .bin, any letter case: the partnumber list's "Available in library".</summary>
+        public static HashSet<string> StockBinaryNames(string ecu)
         {
-            string dir = Path.Combine(AppContext.BaseDirectory, "Binaries");
+            string dir = StockFolder(ecu);
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (Directory.Exists(dir))
                 names.UnionWith(Directory.GetFiles(dir, "*.bin", new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }).Select(Path.GetFileNameWithoutExtension));

@@ -3513,7 +3513,7 @@ namespace Trionic5Tools
             WriteTunedToStageMarker(m_currentfile, stage);
             m_resume.AddToResumeTable("Updated binary description with tuned stage");
             Trionic5File file = new Trionic5File();
-            file.LibraryPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Binaries");
+            file.LibraryPath = CommonSuite.PartInfo.StockFolder("T5");
             file.SetAutoUpdateChecksum(m_autoUpdateChecksum);
             file.UpdateChecksum(m_currentfile);
         }

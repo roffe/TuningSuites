@@ -82,7 +82,7 @@ public partial class MainView : SuiteMainView
     // was cancelled), then where to save it
     private async void OnCreateFromTis(object? sender, RoutedEventArgs e)
     {
-        string binaries = System.IO.Path.Combine(System.AppContext.BaseDirectory, "Binaries");
+        string binaries = CommonSuite.PartInfo.StockFolder("T8");
         if (await Dialogs.OpenFileIn(Host, "Select a binary file to base the new file on", binaries, "Binary files", ["*.bin"]) is not { } baseBin
             || !T8SuitePro.T8Binary.IsValidFile(baseBin)) return;
         string? tis = await Dialogs.OpenFile(Host, "Choose a TIS T8 file to build the new file with", "TIS T8 files", ["*.gbf", "*.s19"]);

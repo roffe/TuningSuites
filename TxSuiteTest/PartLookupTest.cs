@@ -26,14 +26,14 @@ namespace TxSuiteTest
         [TestMethod]
         public void PartLookupOpensAnotherEcusStockBinary()
         {
-            // the stock bins in Binaries next to the program, as the Extras put them; off Windows symbolic links to copies, as a
-            // developer links the repository's (FileInfo.Length is the link's there: every suite's length check refused them)
+            // the stock bins in Binaries/T5, T7 and T8 next to the program, as TxExtras puts them; off Windows symbolic links to copies
+            // (FileInfo.Length is the link's there: every suite's length check refused them)
             string library = Path.Combine(AppContext.BaseDirectory, "Binaries");
-            Directory.CreateDirectory(library);
-            string t7Stock = Path.Combine(library, T7Part + ".bin"), t5Stock = Path.Combine(library, T5Part + ".bin");
+            string t7Stock = Path.Combine(library, "T7", T7Part + ".bin"), t5Stock = Path.Combine(library, "T5", T5Part + ".bin");
             foreach (var (folder, name) in new[] { ("T5Binaries", T5Part), ("T7Binaries", T7Part), ("T8Binaries", T8Part) })
             {
-                string bin = Path.Combine(library, name + ".bin");
+                string bin = Path.Combine(library, folder[..2], name + ".bin");
+                Directory.CreateDirectory(Path.GetDirectoryName(bin)!);
                 File.Delete(bin);
                 if (OperatingSystem.IsWindows()) File.Copy(Path.Combine(Here(), "..", folder, name + ".bin"), bin);
                 else File.CreateSymbolicLink(bin, Stock(folder, name + ".bin"));

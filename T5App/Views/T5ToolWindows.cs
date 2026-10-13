@@ -181,7 +181,7 @@ public static class T5ToolWindows
     /// <summary>T5Suite's PartnumberCollection, the library's 20 MHz bins orange, the 16 MHz ones yellow green; TxSuite's T5 tab.</summary>
     public static PartNumberTab PartNumberTab() =>
         PartNumberListWindow.Tab("T5", new PartnumberCollection().GeneratePartNumberCollection(),
-            pn => PartInfo.StockBinary(pn) is { } bin ? Trionic5File.Is20Mhz(bin) ? Brushes.Orange : Brushes.YellowGreen : null,
+            pn => PartInfo.StockBinary("T5", pn) is { } bin ? Trionic5File.Is20Mhz(bin) ? Brushes.Orange : Brushes.YellowGreen : null,
             [("Available in library: 20 Mhz", Brushes.Orange), ("Available in library: 16 Mhz", Brushes.YellowGreen)]);
 
     /// <summary>

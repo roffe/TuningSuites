@@ -87,7 +87,7 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         // frmPartnumberLookup: Aero implies FPT, FPT implies turbo
         bool fpt = ecu.Isfpt || ecu.Isaero;
         return new PartInfo(partNumber, ecu.Carmodel.ToString().Replace('_', ' '), ecu.Enginetype.ToString().Replace('_', ' '), ecu.Bhp, ecu.Torque,
-            !ecu.Is2point3liter, ecu.Is2point3liter, ecu.Isturbo || fpt, fpt, PartInfo.StockBinary(partNumber))
+            !ecu.Is2point3liter, ecu.Is2point3liter, ecu.Isturbo || fpt, fpt, PartInfo.StockBinary("T5", partNumber))
         {
             Extra =
             [
