@@ -51,12 +51,16 @@ The adapters still need their own drivers, see [Adapter setup](https://github.co
 
 ## Installation
 
-The newest release of every suite is on [one page](https://github.com/roffe/TuningSuites/releases/latest). All downloads are on the [releases page](https://github.com/roffe/TuningSuites/releases): the `T5suite_v…`, `T7suite_v…` and `T8suite_v…` releases, and `T5suite_nightly` / `T7suite_nightly` / `T8suite_nightly` with the latest build. The stock binaries (Compare to original file, Lookup partnumber, Create binary from TIS file) are separate downloads again, as T7Extras and T8Extras were: the `T5extras_v…`, `T7extras_v…` and `T8extras_v…` releases. On Windows `T7Extras.msi` installs them into the suite's folder; elsewhere unpack `T7Extras.zip` (a `Binaries` folder) into the folder the suite runs from. T5 / T8 alike. T8Suite's packages also carry the Tuning Wizard's packs in `TuningPacks`.
+The newest release of every suite is on [one page](https://github.com/roffe/TuningSuites/releases/latest). All downloads are on the [releases page](https://github.com/roffe/TuningSuites/releases): the `T5suite_v…`, `T7suite_v…` and `T8suite_v…` releases, and `T5suite_nightly` / `T7suite_nightly` / `T8suite_nightly` with the latest build. The stock binaries (Compare to original file, Lookup partnumber, Create binary from TIS file) are separate downloads again, as T7Extras and T8Extras were: the `T5extras_v…`, `T7extras_v…` and `T8extras_v…` releases. On Windows `T7Extras.msi` installs them into the suite's folder (`Binaries\T7`); elsewhere unpack `T7Extras.zip` (a `Binaries` folder) into the folder the suite runs from. T5 / T8 alike.
 
-Below, T7Suite stands for any of the suites: the T5Suite and T8Suite files are named the same way (T8Suite.msi, T8Suite-linux-x64.tar.gz, `./T8Suite/T8Suite`, `70-t8suite.rules`).
+TxSuite is all three suites in one program: it opens a T5, T7 or T8 binary in that suite. Its releases are `Txsuite_v…` and `Txsuite_nightly`, its stock binaries TxExtras (`Txextras_v…`, all three ECUs' in `Binaries\T5`, `T7` and `T8`). T8Suite's packages also carry the Tuning Wizard's packs in `TuningPacks`.
+
+Below, T7Suite stands for any of the suites: the T5Suite, T8Suite and TxSuite files are named the same way (T8Suite.msi, T8Suite-linux-x64.tar.gz, `./T8Suite/T8Suite`, `70-t8suite.rules`), except TxSuite's Windows setup.
 
 ### Windows
 Download T7Suite.zip (or T7Suite.msi), extract T7Suite.msi and run it. It installs to `Program Files (x86)\MattiasC\T7Suite` and replaces an installed old T7Suite; T7Suite takes the old suite's settings over the first time it starts. T8Suite installs to `Program Files (x86)\MattiasC\T8SuitePro`, the old T8SuitePro's folder, and T5Suite to `Program Files (x86)\MattiasC\T5SuiteII`, the old T5Suite 2.0's, and they replace those the same way. Running the setup of a newer build over an existing installation upgrades it. `.bin` files get the suite under Open with; their default program stays as it is.
+
+TxSuite: run TxSuiteSetup.exe. It installs to `Program Files (x86)\MattiasC\TxSuite`, next to the single suites (it replaces none of them), and asks whether `.bin` files should open in TxSuite; if you once picked another program with "Always", Windows keeps that one until you pick TxSuite under Open with. Then TxExtrasSetup.exe puts the stock binaries into TxSuite's folder.
 
 ### Linux
 Download T7Suite-linux-x64.tar.gz (or -linux-arm64) and run it from where you extracted it:
