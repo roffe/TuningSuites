@@ -76,8 +76,7 @@ public partial class App : Application
 
     /// <summary>TxSuite's window, the one the suites' views take turns in.</summary>
     public static SuiteWindow NewWindow(SuiteMainView view) =>
-        // ponytail: T7Suite's icon until TxSuite has its own
-        new(view) { Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://T7Suite/T7Suite.ico"))) };
+        new(view) { Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://TxSuite/TxSuite.ico"))) };
 
     /// <summary>
     /// The suites as one: another suite's file or project opens in that suite's view in the same window, and Settings shows every
