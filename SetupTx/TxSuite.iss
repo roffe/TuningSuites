@@ -1,5 +1,5 @@
-; TxSuite's Windows setup (Inno Setup 6): the self-contained win-x86 publish folder with libusb-1.0.dll and the VC++ 2010 runtime
-; added (.github/workflows/build.yml), the disclaimer, shortcuts and the choice to open .bin files with TxSuite.
+; TxSuite's Windows setup (Inno Setup 6): the self-contained win-x86 publish folder with libusb-1.0.dll added
+; (.github/workflows/build.yml), the disclaimer, shortcuts and the choice to open .bin files with TxSuite.
 ;   ISCC /DPublishDir=<out\TxSuite> /O<dist> SetupTx\TxSuite.iss   ->   TxSuiteSetup.exe
 ; TxExtras (TxExtras.iss) puts the stock bins into the folder this installs to.
 

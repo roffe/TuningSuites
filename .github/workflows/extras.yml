@@ -2,10 +2,7 @@ name: Extras
 on:
   push:
     tags:
-    - 'T5extras_v*' # T5Extras, T5Suite's stock bins, e.g. T5extras_v1.0.0
-    - 'T7extras_v*' # T7Extras, e.g. T7extras_v2.0.0
-    - 'T8extras_v*' # T8Extras, e.g. T8extras_v2.0.0
-    - 'Txextras_v*' # TxExtras, all three ECUs' stock bins for TxSuite, e.g. Txextras_v1.0.0
+    - 'Txextras_v*' # TxExtras, the three ECUs' stock bins for TxSuite, e.g. Txextras_v1.0.0
 
 permissions:
   contents: write
@@ -15,32 +12,16 @@ defaults:
     shell: bash
 
 jobs:
-  # the stock bins on their own track, as upstream's T7Extras / T8Extras: they hardly change, the suites' packages leave them out
+  # the stock bins on their own track, as upstream's T7Extras / T8Extras: they hardly change, TxSuite's packages leave them out
   extras:
     runs-on: windows-latest
-    env:
-      SUITE: ${{ startsWith(github.ref_name, 'T5') && 'T5' || startsWith(github.ref_name, 'T7') && 'T7' || startsWith(github.ref_name, 'T8') && 'T8' || 'Tx' }}
     steps:
     - uses: actions/checkout@v7
       with:
-        fetch-depth: 0 # every suite's tags, for the notes of releases/latest
-
-    - uses: actions/setup-dotnet@v6
-      with:
-        dotnet-version: 10.x
-
-    # T7Extras.msi installs into the suite's folder, Binaries\T7
-    - name: Build
-      if: env.SUITE != 'Tx'
-      run: |
-        v=${GITHUB_REF_NAME#*_v}
-        dotnet build SetupExtras/SetupExtras.wixproj -c Release -p:Platform=x86 -p:Suite=$SUITE -p:Version=${v%%-*}
-        mkdir -p dist
-        cp SetupExtras/bin/x86/Release/${SUITE}Extras.msi dist/
+        fetch-depth: 0 # the tags, for the notes of releases/latest
 
     # TxExtrasSetup.exe installs into TxSuite's folder, Binaries\T5, T7 and T8 (SetupTx/TxExtras.iss)
-    - name: Build TxExtras
-      if: env.SUITE == 'Tx'
+    - name: Build setup
       shell: pwsh
       run: |
         $v = $env:GITHUB_REF_NAME -replace '^.*_v', '' -replace '-.*$', ''
@@ -49,12 +30,11 @@ jobs:
         & $iscc /Q "/DVersion=$v" "/O$env:GITHUB_WORKSPACE\dist" SetupTx\TxExtras.iss
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
-    # <Suite>Extras.zip: the Binaries folder to unpack into the suite's folder (Linux, macOS), Binaries/<ECU> as the installers lay it out
+    # TxExtras.zip: the Binaries folder to unpack into TxSuite's folder (Linux, macOS), Binaries/<ECU> as the setup lays it out
     - name: Zip
       run: |
-        ecus=$SUITE; if [ $SUITE = Tx ]; then ecus="T5 T7 T8"; fi
-        for e in $ecus; do mkdir -p dist/Binaries/$e && cp ${e}Binaries/* dist/Binaries/$e/; done
-        cd dist && 7z a ${SUITE}Extras.zip Binaries > /dev/null && rm -r Binaries
+        for e in T5 T7 T8; do mkdir -p dist/Binaries/$e && cp ${e}Binaries/* dist/Binaries/$e/; done
+        cd dist && 7z a TxExtras.zip Binaries > /dev/null && rm -r Binaries
 
     - name: Release
       uses: softprops/action-gh-release@v3
@@ -63,7 +43,7 @@ jobs:
         make_latest: "false"
         files: dist/*
 
-    - name: Latest of every suite
+    - name: Latest release
       if: ${{ !contains(github.ref_name, '-') }}
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
