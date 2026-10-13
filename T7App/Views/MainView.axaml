@@ -125,8 +125,21 @@
                     <MenuItem Header="{Binding ClearFeedbackCaption}" Command="{Binding ClearAfrFeedbackMapCommand}" />
                     <MenuItem Header="Show AFR target map" Command="{Binding ShowAfrTargetMapCommand}" />
                 </MenuItem>
-                <MenuItem Header="Extra functions" IsEnabled="{Binding HasFile}">
-                    <MenuItem Header="Set ethanol content" Command="{Binding ShowEcuMapCommand}" CommandParameter="E85.X_EthAct_Tech2" />
+                <!-- T7Suite's barExtraOnline: SaabOpenTech's functions on the car's I-bus (Tag: the program's arguments), no file needed -->
+                <MenuItem Header="Extra functions">
+                    <MenuItem Header="Set ethanol content" Command="{Binding ShowEcuMapCommand}" CommandParameter="E85.X_EthAct_Tech2" IsEnabled="{Binding HasFile}" />
+                    <MenuItem Header="Set seatbelt ping on" Tag="S 1" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Set seatbelt ping off" Tag="S 0" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Set double unlocking with remote on" Tag="U 1" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Set double unlocking with remote off" Tag="U 0" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Get trionic info" Tag="I" Click="OnSaabOpenTech" />
+                    <MenuItem Header="SID display test" Tag="T" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Read trionic engine data" Tag="M" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Get SPA info and fault codes" Tag="P" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Get alarm level" Tag="Z" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Set alarm level no alarm" Tag="Z 0" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Set alarm level glass break sensor" Tag="Z 1" Click="OnSaabOpenTech" />
+                    <MenuItem Header="Set alarm level glass break and tilt sensor" Tag="Z 2" Click="OnSaabOpenTech" />
                 </MenuItem>
                 <MenuItem Header="Synchronize to binary" Click="OnSyncToBinary" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Synchronize to ECU" Click="OnSyncToEcu" IsEnabled="{Binding HasFile}" />

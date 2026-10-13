@@ -48,6 +48,15 @@ public partial class MainView : SuiteMainView
 
     // ---- ECU ----
 
+    // Realtime → Extra functions (frmMain.SpawnSaabOpenTech): the switches and the SID test first say the I-bus is needed (T7Suite's
+    // "Lawicel only:" is gone, any adapter that opens the I-bus does), then the report
+    private async void OnSaabOpenTech(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Avalonia.Controls.MenuItem)?.Tag is not string arguments) return;
+        if (arguments[0] is 'S' or 'U' or 'T') await Dialogs.Info(Host, "Please note that you will have to be connected to the cars I-bus for this to work!");
+        if (await Vm.SaabOpenTechAsync(arguments) is { } report) await Dialogs.Text(Host, "Communication report", report);
+    }
+
     private async void OnSyncToBinary(object? sender, RoutedEventArgs e)
     {
         if (await Dialogs.OkCancel(Host, "This will overwrite data in your binary file. Are you sure you want to proceed?", "Warning!")) await Vm.SyncToBinaryAsync();

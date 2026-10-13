@@ -220,6 +220,33 @@ public partial class T7MainWindowViewModel
         }
     }
 
+    // ---- Realtime → Extra functions ----
+
+    /// <summary>
+    /// frmMain.SpawnSaabOpenTech: the realtime connection closed, then the SaabOpenTech function ("S 1", "Z", ...) on the car's
+    /// I-bus; its report for the "Communication report", null when no adapter is set up (the message shown).
+    /// </summary>
+    public async Task<string?> SaabOpenTechAsync(string arguments)
+    {
+        await DisconnectRealtimeAsync();
+        IsBusy = true;
+        ProgressText = "Communicating with the car, please wait. This can take upto 30 seconds";
+        try
+        {
+            return await Ecu.SaabOpenTechAsync(Settings, arguments);
+        }
+        catch (InvalidOperationException e)
+        {
+            ShowInfo(e.Message);
+            return null;
+        }
+        finally
+        {
+            IsBusy = false;
+            ProgressText = "";
+        }
+    }
+
     // ---- fault codes ----
 
     /// <summary>Get fault codes (OBDII): obdFaults from SRAM, with descriptions. Codes without one are listed too (T7Suite hid them).</summary>

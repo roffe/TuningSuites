@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using CommonSuite;
 using TrionicCANLib.API;
+using TrionicCANLib.CAN;
 
 namespace T7
 {
@@ -11,8 +12,14 @@ namespace T7
     /// </summary>
     public sealed class T7Ecu : EcuWorker<Trionic7>
     {
-        public T7Ecu() : base(new Trionic7(), "T7 ECU")
+        public T7Ecu() : base(new Trionic7Can(), "T7 ECU")
         {
+        }
+
+        // Trionic7 with its CAN device in reach (ITrionic keeps it protected): SaabOpenTech talks to the car's other modules on it
+        private sealed class Trionic7Can : Trionic7
+        {
+            public ICANDevice Device => canUsbDevice;
         }
 
         /// <summary>
@@ -94,6 +101,25 @@ namespace T7
             if (t.openDevice()) return true;
             t.Cleanup();
             return false;
+        });
+
+        /// <summary>
+        /// Realtime → Extra functions: a SaabOpenTech function ("S 1", "Z", ...) on the car's I-bus, through the settings' adapter
+        /// opened as SaabOpenTech.exe opened its CANUSB: on the I-bus whatever "Only P-bus" says, without a session with the Trionic.
+        /// Its report; throws a message when no adapter is configured.
+        /// </summary>
+        public Task<string> SaabOpenTechAsync(AppSettings settings, string arguments) => RunAsync(t =>
+        {
+            if (IsConnected || t.isOpen()) Close(t);
+            CanAdapters.Setup(t, settings, Latency.Default);
+            try
+            {
+                return SaabOpenTech.Run(((Trionic7Can)t).Device, arguments);
+            }
+            finally
+            {
+                t.Cleanup();
+            }
         });
 
         /// <summary>Get SRAM snapshot: the 64 KB of SRAM to a .RAM file, in a flasher session.</summary>
