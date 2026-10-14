@@ -222,15 +222,22 @@
                 <MenuItem Header="Tile windows vertically" Click="OnTileVertical" />
                 <MenuItem Header="Dock all floating windows" Command="{Binding DockAllCommand}" />
             </MenuItem>
-            <MenuItem Header="_Help" c:Ribbon.Group="Documentation">
-                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5_manual.pdf" IsVisible="{Binding IsT5}" />
-                <MenuItem Header="Trionic 5 documentation" Click="OnHelpFile" Tag="Trionic 5.pdf" IsVisible="{Binding IsT5}" />
-                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T7_manual.pdf" IsVisible="{Binding IsT7}" />
-                <MenuItem Header="Trionic 7 documentation" Click="OnHelpFile" Tag="Trionic 7.pdf" IsVisible="{Binding IsT7}" />
-                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T8_manual.pdf" IsVisible="{Binding IsT8}" />
-                <MenuItem Header="Trionic 8 documentation" Click="OnHelpFile" Tag="Trionic 8.pdf" IsVisible="{Binding IsT8}" />
-                <MenuItem Header="Release notes" Click="OnReleaseNotes" />
+            <!-- every ECU's manuals whatever file is open, a submenu each (in the ribbon a group each) -->
+            <MenuItem Header="_Help">
+                <MenuItem Header="T5" c:Ribbon.Group="T5">
+                    <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5_manual.pdf" />
+                    <MenuItem Header="Trionic 5 documentation" Click="OnHelpFile" Tag="Trionic 5.pdf" />
+                </MenuItem>
+                <MenuItem Header="T7" c:Ribbon.Group="T7">
+                    <MenuItem Header="User manual" Click="OnHelpFile" Tag="T7_manual.pdf" />
+                    <MenuItem Header="Trionic 7 documentation" Click="OnHelpFile" Tag="Trionic 7.pdf" />
+                </MenuItem>
+                <MenuItem Header="T8" c:Ribbon.Group="T8">
+                    <MenuItem Header="User manual" Click="OnHelpFile" Tag="T8_manual.pdf" />
+                    <MenuItem Header="Trionic 8 documentation" Click="OnHelpFile" Tag="Trionic 8.pdf" />
+                </MenuItem>
                 <Separator c:Ribbon.Group="Help on TxSuite" />
+                <MenuItem Header="Release notes" Click="OnReleaseNotes" />
                 <MenuItem Header="Check for updates" Click="OnCheckForUpdates" />
                 <MenuItem x:Name="AboutMenu" Header="About TxSuite" Click="OnAbout" />
             </MenuItem>

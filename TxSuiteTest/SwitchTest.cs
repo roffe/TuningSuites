@@ -83,8 +83,11 @@ namespace TxSuiteTest
 
                     // no file: what every ECU has, and nothing connects (the file tells which ECU it is)
                     Assert.IsTrue(Item(window, "Lookup partnumber").IsVisible);
-                    foreach (string own in new[] { "SID information", "PID editor", "Examine binary", "Export to S19", "User manual" })
+                    foreach (string own in new[] { "SID information", "PID editor", "Examine binary", "Export to S19" })
                         Assert.IsFalse(Item(window, own).IsVisible, own);
+                    // Help has every ECU's manuals, file or not
+                    foreach (string ecu in new[] { "T5", "T7", "T8" })
+                        Assert.IsTrue(Item(window, ecu).IsVisible, ecu);
                     await vm.ConnectDisconnectCommand.ExecuteAsync(null);
                     Assert.AreEqual(MainWindowViewModel.FileNeeded, info);
                     Assert.IsFalse(vm.IsConnected);

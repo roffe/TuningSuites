@@ -119,6 +119,12 @@ namespace TxSuiteTest
                     CollectionAssert.Contains(Shown(Group(ribbon, "Tuning in realtime")), "AFR maps ▾");
                     Save(window, "ribbon-realtime-dark");
 
+                    // Help: every ECU's manuals in a group each, the release notes with the program's
+                    Select(ribbon, "Help");
+                    CollectionAssert.AreEqual(new[] { "T5", "T7", "T8", "Help on TxSuite" }, Groups(ribbon).Select(g => g.Caption).ToArray());
+                    CollectionAssert.AreEqual(new[] { "User manual", "Trionic 5 documentation" }, Shown(Group(ribbon, "T5")));
+                    CollectionAssert.AreEqual(new[] { "Release notes", "Check for updates", "About TxSuite" }, Shown(Group(ribbon, "Help on TxSuite")));
+
                     // the Tuning page: txlogger's map groups for T7
                     Select(ribbon, "Tuning");
                     var tuning = Groups(ribbon);
