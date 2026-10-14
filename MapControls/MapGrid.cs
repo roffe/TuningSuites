@@ -18,7 +18,7 @@ public enum OpenLoopMark { None = 0, Box = 1, Corner = 2 }
 
 /// <summary>
 /// The map table, replacing MapViewerEx's DevExpress grid: X axis values as column headers, Y axis values as row headers,
-/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's red-white variant and online tint kept), open-loop marks,
+/// cells coloured green→yellow→red over the map's range like txlogger (T7Suite's online tint kept), open-loop marks,
 /// T5Suite's padlocks and adaption / sample boxes (<see cref="MapData.Marks"/>) and the yellow live cell. Behaves like the DevExpress grid T7Suite used: click/drag selects a block, Shift extends, Ctrl
 /// toggles, arrows move (Shift extends); typing, F2 or Enter edits the focused cell (Easy view starts from the value with two
 /// decimals) and Enter commits it; +/- step by one, PgUp/PgDn by ten (0x10 in hex), Home sets max, End zero, on every
@@ -29,9 +29,7 @@ public class MapGrid : Control
 {
     public static readonly StyledProperty<MapData?> MapProperty = AvaloniaProperty.Register<MapGrid, MapData?>(nameof(Map));
     public static readonly StyledProperty<MapViewType> ViewTypeProperty = AvaloniaProperty.Register<MapGrid, MapViewType>(nameof(ViewType), MapViewType.Easy);
-    public static readonly StyledProperty<bool> IsRedWhiteProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(IsRedWhite));
     public static readonly StyledProperty<bool> OnlineModeProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(OnlineMode));
-    public static readonly StyledProperty<bool> DisableColorsProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(DisableColors));
     public static readonly StyledProperty<ColorBlindMode> ColorModeProperty = AvaloniaProperty.Register<MapGrid, ColorBlindMode>(nameof(ColorMode));
     public static readonly StyledProperty<OpenLoopMark> OpenLoopMarkProperty = AvaloniaProperty.Register<MapGrid, OpenLoopMark>(nameof(OpenLoopMark));
     public static readonly StyledProperty<bool> IsReadOnlyProperty = AvaloniaProperty.Register<MapGrid, bool>(nameof(IsReadOnly));
@@ -46,10 +44,8 @@ public class MapGrid : Control
 
     public MapData? Map { get => GetValue(MapProperty); set => SetValue(MapProperty, value); }
     public MapViewType ViewType { get => GetValue(ViewTypeProperty); set => SetValue(ViewTypeProperty, value); }
-    public bool IsRedWhite { get => GetValue(IsRedWhiteProperty); set => SetValue(IsRedWhiteProperty, value); }
     public bool OnlineMode { get => GetValue(OnlineModeProperty); set => SetValue(OnlineModeProperty, value); }
-    public bool DisableColors { get => GetValue(DisableColorsProperty); set => SetValue(DisableColorsProperty, value); }
-    /// <summary>The value scale's colour blind mode (not the red-white or online tints, which are T7Suite's).</summary>
+    /// <summary>The value scale's colour blind mode (not the online tint, which is T7Suite's).</summary>
     public ColorBlindMode ColorMode { get => GetValue(ColorModeProperty); set => SetValue(ColorModeProperty, value); }
     public OpenLoopMark OpenLoopMark { get => GetValue(OpenLoopMarkProperty); set => SetValue(OpenLoopMarkProperty, value); }
     public bool IsReadOnly { get => GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
@@ -88,7 +84,7 @@ public class MapGrid : Control
     static MapGrid()
     {
         FocusableProperty.OverrideDefaultValue<MapGrid>(true);
-        AffectsRender<MapGrid>(ViewTypeProperty, IsRedWhiteProperty, OnlineModeProperty, DisableColorsProperty, ColorModeProperty, OpenLoopMarkProperty, ForegroundProperty,
+        AffectsRender<MapGrid>(ViewTypeProperty, OnlineModeProperty, ColorModeProperty, OpenLoopMarkProperty, ForegroundProperty,
             HeaderBackgroundProperty, HeaderForegroundProperty, HeaderLinesProperty, GridLinesProperty, CellGapProperty);
         AffectsMeasure<MapGrid>(MapProperty, ViewTypeProperty, FontSizeProperty, FontFamilyProperty, CellGapProperty);
     }
@@ -253,16 +249,12 @@ public class MapGrid : Control
     private Color CellColor(int raw, int min, int max)
     {
         // txlogger's green → yellow → red over min..max; T7Suite's raw*255/max made a fuel map red from its lowest cell
-        if (!OnlineMode && !IsRedWhite) return HeatColor.Interpolate(min, max, raw, false, ColorMode);
-        // T7Suite: b = raw*255/max (integer), alpha red, or a white→red tint online
+        if (!OnlineMode) return HeatColor.Interpolate(min, max, raw, false, ColorMode);
+        // T7Suite online: b = raw*255/max (integer) as a white→red tint
         int b = raw * 255;
         if (max != 0) b /= max;
-        if (OnlineMode)
-        {
-            int r = Math.Clamp(b / 2, 0, 255);
-            return Color.FromRgb((byte)r, (byte)(255 - r), (byte)(255 - r));
-        }
-        return Color.FromArgb((byte)Math.Min(Math.Abs(b), 255), 255, 0, 0);
+        int r = Math.Clamp(b / 2, 0, 255);
+        return Color.FromRgb((byte)r, (byte)(255 - r), (byte)(255 - r));
     }
 
     public override void Render(DrawingContext context)
@@ -294,7 +286,7 @@ public class MapGrid : Control
         }
 
         int max = map.MaxValue(), min = map.MinValue();
-        bool colors = !DisableColors && ViewType != MapViewType.Ascii;
+        bool colors = ViewType != MapViewType.Ascii;
         for (int r = 0; r < map.Rows; r++)
             for (int c = 0; c < map.Cols; c++)
             {
@@ -307,10 +299,10 @@ public class MapGrid : Control
                 {
                     Color col = CellColor(map[i], min, max);
                     context.FillRectangle(new ImmutableSolidColorBrush(col), rect);
-                    if (!IsRedWhite) textBrush = HeatColor.TextOn(col);
+                    textBrush = HeatColor.TextOn(col);
                     // a colour blind scale can wear the corner mark's own colour (Tritanopia's teal is SeaGreen to a tritanope):
                     // outline the mark like the text; the green → red scale keeps T7Suite's plain corner
-                    if (ColorMode != ColorBlindMode.Normal && !OnlineMode && !IsRedWhite) markOutline = new Pen(HeatColor.TextOn(col), 1);
+                    if (ColorMode != ColorBlindMode.Normal && !OnlineMode) markOutline = new Pen(HeatColor.TextOn(col), 1);
                 }
                 // T5Suite's marks, none in the ASCII view as there; its padlock first, 10 × 10 at the right ending where the closed-loop box
                 // begins, which goes over it like the 1 px boxes (left out of a cell too narrow for it)

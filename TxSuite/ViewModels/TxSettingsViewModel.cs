@@ -59,9 +59,7 @@ public sealed class TxSettingsViewModel
     // The wideband on a com port and through a symbol exclude each other: a com port wideband turns the symbol one off for every ECU
     private static void CopyCommon(SuiteSettingsViewModel from, SuiteSettingsViewModel to)
     {
-        to.ShowRedWhite = from.ShowRedWhite;
         to.ShowGraphs = from.ShowGraphs;
-        to.DisableMapviewerColors = from.DisableMapviewerColors;
         to.AutoLoadLastFile = from.AutoLoadLastFile;
         to.DefaultViewType = from.DefaultViewType;
         to.ColorBlindMode = from.ColorBlindMode;

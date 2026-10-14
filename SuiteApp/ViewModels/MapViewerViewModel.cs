@@ -63,8 +63,6 @@ public partial class MapViewerViewModel : DocumentViewModel
     private Task WriteEcu() => Owner.WriteMapToEcuAsync(this);
 
     public bool IsReadOnly { get; init; }
-    public bool IsRedWhite { get; init; }
-    public bool DisableColors { get; init; }
     public bool GraphVisible { get; init; }
     public OpenLoopMark OpenLoopMark { get; init; }
 
@@ -173,8 +171,6 @@ public partial class MapViewerViewModel : DocumentViewModel
             IsReadOnly = readOnly,
             TitleOverride = title,
             ViewType = owner.DefaultMapView,
-            IsRedWhite = settings.ShowRedWhite,
-            DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
             OpenLoopMark = owner.OpenLoopMarkStyle,
             XAxisSymbol = xAxis != "" && bin.Find(xAxis) != null ? xAxis : null,

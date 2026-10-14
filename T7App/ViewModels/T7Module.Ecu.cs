@@ -118,8 +118,6 @@ public partial class T7Module
             ReadFrom = target ? () => afr.Target : null,
             // MapViewerFactory.Get(settings): the default view, as every other map
             ViewType = DefaultMapView,
-            IsRedWhite = settings.ShowRedWhite,
-            DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
             OpenLoopMark = OpenLoopMarkStyle,
         };

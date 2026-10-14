@@ -33,13 +33,7 @@
                 <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding Common}" x:DataType="svm:SuiteSettingsViewModel">
                     <HeaderedContentControl Classes="group" Header="User interface settings">
                         <Grid Grid.IsSharedSizeScope="True" Classes="columns" ColumnDefinitions="300,300,300" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
-                            <CheckBox Content="Use red and white maps" IsChecked="{Binding ShowRedWhite}">
-                                <ToolTip.Tip><c:SuperTip Title="Use red and white maps" Text="When checked, displays maps in red and transparent only. Normally green is used to display low values and red for higher values." /></ToolTip.Tip>
-                            </CheckBox>
-                            <CheckBox Grid.Row="1" Content="Don't display colors in mapviewer" IsChecked="{Binding DisableMapviewerColors}">
-                                <ToolTip.Tip><c:SuperTip Title="Don't display colors in mapviewer" Text="To improve performance you can check this item and coloring of the mapviewer cells will be disabled." /></ToolTip.Tip>
-                            </CheckBox>
-                            <CheckBox Grid.Row="2" Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}">
+                            <CheckBox Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}">
                                 <ToolTip.Tip><c:SuperTip Title="Show graphs in mapviewer" Text="When checked the graphical representation of the selected map will also be displayed. This consumes more system memory and cpu time." /></ToolTip.Tip>
                             </CheckBox>
                             <CheckBox Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}">
@@ -70,7 +64,7 @@
                                 <ComboBox Grid.Column="1" ItemsSource="{Binding ViewTypes}" SelectedIndex="{Binding DefaultViewType}" HorizontalAlignment="Stretch" />
                             </Grid>
                             <Grid Grid.Row="4" Grid.ColumnSpan="2" Classes="pair" ColumnSpacing="8">
-                                <ToolTip.Tip><c:SuperTip Title="Color blind mode" Text="Lets you choose a color scale for maps and their graphs that is easier to tell apart with color blindness, instead of the normal green, yellow and red. Open mapviewers change at once; red and white tables and maps opened while connected to the ECU keep their own colors." /></ToolTip.Tip>
+                                <ToolTip.Tip><c:SuperTip Title="Color blind mode" Text="Lets you choose a color scale for maps and their graphs that is easier to tell apart with color blindness, instead of the normal green, yellow and red. Open mapviewers change at once; maps opened while connected to the ECU keep their own colors (T7Suite's online tint)." /></ToolTip.Tip>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="ViewLabel" />
                                     <ColumnDefinition Width="280" />

@@ -11,9 +11,7 @@ namespace SuiteApp.ViewModels;
 /// </summary>
 public partial class SuiteSettingsViewModel : ObservableObject
 {
-    [ObservableProperty] private bool _showRedWhite;
     [ObservableProperty] private bool _showGraphs;
-    [ObservableProperty] private bool _disableMapviewerColors;
     [ObservableProperty] private bool _autoLoadLastFile;
     [ObservableProperty] private int _defaultViewType;
     [ObservableProperty] private int _colorBlindMode;
@@ -96,9 +94,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
 
     public SuiteSettingsViewModel(AppSettings s)
     {
-        _showRedWhite = s.ShowRedWhite;
         _showGraphs = s.ShowGraphs;
-        _disableMapviewerColors = s.DisableMapviewerColors;
         _autoLoadLastFile = s.AutoLoadLastFile;
         // values past Easy (the bar views) show as Easy, like the old combo
         _defaultViewType = System.Math.Min((int)s.DefaultViewType, 2);
@@ -138,9 +134,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
     /// <summary>OK: every value back into AppSettings (each setter saves).</summary>
     public virtual void Apply(AppSettings s)
     {
-        s.ShowRedWhite = ShowRedWhite;
         s.ShowGraphs = ShowGraphs;
-        s.DisableMapviewerColors = DisableMapviewerColors;
         s.AutoLoadLastFile = AutoLoadLastFile;
         s.DefaultViewType = (SuiteViewType)DefaultViewType;
         s.ColorBlindMode = ColorBlindModes[ColorBlindMode];

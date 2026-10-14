@@ -20,8 +20,6 @@ public class MapViewer : UserControl
     public static readonly StyledProperty<MapViewType> ViewTypeProperty =
         AvaloniaProperty.Register<MapViewer, MapViewType>(nameof(ViewType), MapViewType.Easy, defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
     public static readonly StyledProperty<bool> OnlineModeProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(OnlineMode));
-    public static readonly StyledProperty<bool> IsRedWhiteProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(IsRedWhite));
-    public static readonly StyledProperty<bool> DisableColorsProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(DisableColors));
     public static readonly StyledProperty<OpenLoopMark> OpenLoopMarkProperty = AvaloniaProperty.Register<MapViewer, OpenLoopMark>(nameof(OpenLoopMark));
     public static readonly StyledProperty<bool> IsReadOnlyProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(IsReadOnly));
     public static readonly StyledProperty<bool> GraphVisibleProperty = AvaloniaProperty.Register<MapViewer, bool>(nameof(GraphVisible), true);
@@ -31,8 +29,6 @@ public class MapViewer : UserControl
     public MapData? Map { get => GetValue(MapProperty); set => SetValue(MapProperty, value); }
     public MapViewType ViewType { get => GetValue(ViewTypeProperty); set => SetValue(ViewTypeProperty, value); }
     public bool OnlineMode { get => GetValue(OnlineModeProperty); set => SetValue(OnlineModeProperty, value); }
-    public bool IsRedWhite { get => GetValue(IsRedWhiteProperty); set => SetValue(IsRedWhiteProperty, value); }
-    public bool DisableColors { get => GetValue(DisableColorsProperty); set => SetValue(DisableColorsProperty, value); }
     public OpenLoopMark OpenLoopMark { get => GetValue(OpenLoopMarkProperty); set => SetValue(OpenLoopMarkProperty, value); }
     public bool IsReadOnly { get => GetValue(IsReadOnlyProperty); set => SetValue(IsReadOnlyProperty, value); }
     public bool GraphVisible { get => GetValue(GraphVisibleProperty); set => SetValue(GraphVisibleProperty, value); }
@@ -221,8 +217,6 @@ public class MapViewer : UserControl
         {
             Grid.OnlineMode = Surface.OnlineMode = Graph.OnlineMode = OnlineMode;
         }
-        else if (change.Property == IsRedWhiteProperty) Grid.IsRedWhite = IsRedWhite;
-        else if (change.Property == DisableColorsProperty) Grid.DisableColors = DisableColors;
         else if (change.Property == OpenLoopMarkProperty) Grid.OpenLoopMark = OpenLoopMark;
         else if (change.Property == IsReadOnlyProperty)
         {

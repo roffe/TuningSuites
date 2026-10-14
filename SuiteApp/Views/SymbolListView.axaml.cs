@@ -283,7 +283,7 @@ public partial class SymbolListView : UserControl
         }
         ToolTip.SetTip(c, new MapControls.MapGrid
         {
-            Map = preview.Map, ViewType = preview.ViewType, IsRedWhite = preview.IsRedWhite, DisableColors = preview.DisableColors, IsReadOnly = true,
+            Map = preview.Map, ViewType = preview.ViewType, IsReadOnly = true,
         });
     }
 

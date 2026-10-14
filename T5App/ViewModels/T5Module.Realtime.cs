@@ -260,7 +260,7 @@ public partial class T5Module
         ShowDocument(new MapViewerViewModel
         {
             Owner = Main, Binary = bin, Symbol = sh, MapName = "Knock_count_map", Map = map, Address = -1, IsReadOnly = true, TitleOverride = title,
-            ViewType = DefaultMapView, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = Settings.ShowGraphs,
+            ViewType = DefaultMapView, GraphVisible = Settings.ShowGraphs,
         });
     }
 
@@ -346,8 +346,6 @@ public partial class T5Module
             },
             ReadFrom = target ? () => AfrContent(afr, kind) : null,
             ViewType = DefaultMapView,
-            IsRedWhite = settings.ShowRedWhite,
-            DisableColors = settings.DisableMapviewerColors,
             GraphVisible = settings.ShowGraphs,
             OpenLoopMark = OpenLoopMarkStyle,
         };

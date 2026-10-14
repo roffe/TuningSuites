@@ -9,7 +9,6 @@
                   ReadEcuCommand="{Binding EcuReadCommand}" WriteEcuCommand="{Binding EcuWriteCommand}"
                   OnlineMode="{Binding OnlineMode}" CanSaveToFile="{Binding CanSaveToFile}"
                   CanEditXAxis="{Binding CanEditXAxis}" CanEditYAxis="{Binding CanEditYAxis}"
-                  IsReadOnly="{Binding IsReadOnly}" IsRedWhite="{Binding IsRedWhite}"
-                  DisableColors="{Binding DisableColors}" GraphVisible="{Binding GraphVisible}"
+                  IsReadOnly="{Binding IsReadOnly}" GraphVisible="{Binding GraphVisible}"
                   OpenLoopMark="{Binding OpenLoopMark}" LiveCell="{Binding LiveCell}" />
 </UserControl>

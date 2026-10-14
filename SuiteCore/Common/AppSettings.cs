@@ -1815,7 +1815,7 @@ namespace CommonSuite
         /// </summary>
         public static readonly HashSet<string> SharedNames = new(StringComparer.OrdinalIgnoreCase)
         {
-            "ShowRedWhite", "ShowGraphs", "DisableMapviewerColors", "AutoLoadLastFile", "DefaultViewType", "ColorBlindMode", "SymbolListFontSize",
+            "ShowGraphs", "AutoLoadLastFile", "DefaultViewType", "ColorBlindMode", "SymbolListFontSize",
             "MapCellGap", "SynchronizeMapviewers", "AutoChecksum", "ShowAddressesInHex", "RequestProjectNotes", "HideSymbolTable", "ShowMapPreviewPopup",
             "ProjectFolder", "AdapterType", "Adapter", "Baudrate", "AutoUpdateSRAMViewers", "AutoUpdateInterval", "InterpolateLogWorksTimescale",
             "MeasureAFRInLambda", "UseDigitalWidebandLambda", "WidebandDevice", "WbPort", "LastFilename", "LastProjectname", "LastOpenedType",

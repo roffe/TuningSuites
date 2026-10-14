@@ -193,7 +193,6 @@ namespace MapControlsTest
             {
                 MapData map = IgnitionMapData();
                 Headless.Render(new MapGrid { Map = map, ViewType = MapViewType.Hex }, 1100, 480, "mapgrid-hex");
-                Headless.Render(new MapGrid { Map = map, IsRedWhite = true }, 1100, 480, "mapgrid-redwhite");
                 Headless.Render(new MapGrid { Map = map, OnlineMode = true, OpenLoopMark = OpenLoopMark.Box }, 1100, 480, "mapgrid-online");
             });
         }

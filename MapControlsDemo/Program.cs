@@ -68,19 +68,17 @@ public class DemoWindow : Window
         var maps = new ComboBox { ItemsSource = Maps.Select(m => m.name).ToList(), SelectedIndex = 0 };
         var view = new ComboBox { ItemsSource = Enum.GetNames<MapViewType>(), SelectedIndex = (int)MapViewType.Easy };
         var online = new CheckBox { Content = "Online" };
-        var redWhite = new CheckBox { Content = "Red-white" };
         var status = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
         maps.SelectionChanged += (_, _) => Load(Maps[maps.SelectedIndex]);
         view.SelectionChanged += (_, _) => m_grid.ViewType = (MapViewType)view.SelectedIndex;
         online.IsCheckedChanged += (_, _) => m_grid.OnlineMode = m_surface.OnlineMode = m_graph.OnlineMode = online.IsChecked == true;
-        redWhite.IsCheckedChanged += (_, _) => m_grid.IsRedWhite = redWhite.IsChecked == true;
         m_grid.OpenLoopMark = OpenLoopMark.Corner;
         m_grid.EditRejected += (_, msg) => status.Text = msg;
         m_grid.SelectionChanged += (_, _) => status.Text = $"{m_grid.SelectedCells.Count} selected";
         m_slice.ValueChanged += (_, _) => ShowSlice();
 
         var bar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(8) };
-        bar.Children.AddRange([maps, view, online, redWhite, status]);
+        bar.Children.AddRange([maps, view, online, status]);
         var tabs = new TabControl();
         tabs.Items.Add(new TabItem { Header = "3D", Content = m_surface });
         tabs.Items.Add(new TabItem { Header = "2D", Content = new DockPanel { Children = { m_slice, m_graph } } });
