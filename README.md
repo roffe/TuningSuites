@@ -107,7 +107,7 @@ The Windows setups are built with [Inno Setup 6](https://jrsoftware.org/isinfo.p
     ISCC /DPublishDir=C:\path\to\out\TxSuite SetupTx\TxSuite.iss
     ISCC /DVersion=1.0.0 SetupTx\TxExtras.iss
 
-The release builds are made by [.github/workflows/build.yml](.github/workflows/build.yml) and [.github/workflows/extras.yml](.github/workflows/extras.yml): every push to `master` updates the `Txsuite_nightly` pre-release, a `Txsuite_v*` tag makes a TxSuite release and a `Txextras_v*` tag a TxExtras release.
+The release builds are made by [.github/workflows/build.yml](.github/workflows/build.yml) and [.github/workflows/extras.yml](.github/workflows/extras.yml): every push to `master` or `combine` (TxSuite's branch until it is merged) updates the `Txsuite_nightly` pre-release, a `Txsuite_v*` tag makes a TxSuite release and a `Txextras_v*` tag a TxExtras release.
 
 ## Versioning and releasing
 No file holds the version. TxSuite takes it from its nearest `Txsuite_vX.Y.Z` tag ([Directory.Build.props](Directory.Build.props)). The window title shows it:

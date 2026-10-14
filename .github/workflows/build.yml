@@ -1,7 +1,8 @@
 name: Build
 on:
   push:
-    branches: [master]
+    # combine: TxSuite's branch until it is merged into master
+    branches: [master, combine]
     tags:
     - 'Txsuite_v*' # a TxSuite release, e.g. Txsuite_v1.0.0
   pull_request:
@@ -162,27 +163,28 @@ jobs:
         merge-multiple: true
 
     - uses: actions/setup-dotnet@v6
-      if: github.ref == 'refs/heads/master'
+      if: github.ref_type == 'branch'
       with:
         dotnet-version: 10.x
 
     # the same VersionFromGit target the build ran, e.g. 1.0.0-bfecafebc
     - name: Version
       id: version
-      if: github.ref == 'refs/heads/master'
+      if: github.ref_type == 'branch'
       env:
         DOTNET_NOLOGO: true
       run: echo "tx=$(dotnet msbuild TxSuite/TxSuite.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
 
-    # ponytail: a rolling tag, a pre-release that always points at the latest master build; the update check skips it
+    # ponytail: a rolling tag, a pre-release that always points at the latest build of a branch above (master or combine; the last pushed
+    # wins); the update check skips it
     - name: Move nightly tag
-      if: github.ref == 'refs/heads/master'
+      if: github.ref_type == 'branch'
       run: |
         git tag -f Txsuite_nightly
         git push -f origin Txsuite_nightly
 
     - name: Nightly release
-      if: github.ref == 'refs/heads/master'
+      if: github.ref_type == 'branch'
       uses: softprops/action-gh-release@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
