@@ -12,6 +12,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
 using T8App.ViewModels;
@@ -55,7 +57,7 @@ namespace T8AppTest
             File.WriteAllText(notes, "not a binary");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 window.CaptureRenderedFrame();

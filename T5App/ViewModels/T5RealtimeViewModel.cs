@@ -16,7 +16,7 @@ namespace T5App.ViewModels;
 /// </summary>
 public partial class T5RealtimeViewModel : RealtimeViewModel
 {
-    private readonly T5MainWindowViewModel m_t5;
+    private readonly T5Module m_t5;
     // the base class's m_bin as the T5Binary it is
     private new readonly T5Binary m_bin;
     private double? m_afr;
@@ -25,7 +25,7 @@ public partial class T5RealtimeViewModel : RealtimeViewModel
     private AFRMaps? m_tuning;
     private int m_injectorCc = 365;
 
-    public T5RealtimeViewModel(T5MainWindowViewModel owner, T5Binary bin) : base(owner, bin, T5Realtime.Rules, new T5RealtimeEngine(owner.Ecu))
+    public T5RealtimeViewModel(T5Module owner, T5Binary bin) : base(owner.Main, bin, T5Realtime.Rules, new T5RealtimeEngine(owner.Ecu))
     {
         m_t5 = owner;
         m_bin = bin;

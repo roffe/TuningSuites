@@ -7,6 +7,8 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.Views;
 using T7App.ViewModels;
 using T7App.Views;
@@ -31,7 +33,7 @@ namespace T7AppTest
                     // each shot in the light skin, then in the dark one (<name>-dark.png)
                     foreach (var (theme, suffix) in new[] { (ThemeVariant.Light, ""), (ThemeVariant.Dark, "-dark") })
                     {
-                        var vm = new T7MainWindowViewModel();
+                        var vm = new MainViewModel();
                         var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
                         window.Show();
                         Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -42,7 +44,7 @@ namespace T7AppTest
                         Maximized(window, "mapviewer" + suffix);
                         Palettes(window, "bfuelcal", suffix);
 
-                        vm.ShowAirmassResultCommand.Execute(null);
+                        vm.T7.ShowAirmassResultCommand.Execute(null);
                         Maximized(window, "airmass-table" + suffix);
                         window.GetVisualDescendants().OfType<AirmassResultView>().Single().GetVisualDescendants().OfType<TabControl>().First().SelectedIndex = 1;
                         Maximized(window, "airmass-dyno" + suffix);
@@ -52,8 +54,8 @@ namespace T7AppTest
                         settings.ProjectFolder = settings.ProjectFolder.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~");
                         foreach (var (w, name) in new (Window, string)[]
                         {
-                            (new FirmwareInfoWindow { DataContext = vm.FirmwareInfo()! }, "firmware"),
-                            (new SettingsWindow { DataContext = settings }, "settings"),
+                            (new FirmwareInfoWindow { DataContext = vm.T7.FirmwareInfo()! }, "firmware"),
+                            (ShowSettings(vm, edit: s => s.Common.ProjectFolder = settings.ProjectFolder), "settings"),
                         })
                         {
                             w.Show();

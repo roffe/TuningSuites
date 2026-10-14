@@ -11,13 +11,13 @@ using TrionicCANLib.Checksum;
 namespace T8App.ViewModels;
 
 /// <summary>The ECU side over T8Ecu: T8Suite's Realtime page (connect, ECU information, fault codes) and its CAN Flasher group.</summary>
-public partial class T8MainWindowViewModel
+public partial class T8Module
 {
     public T8Ecu Ecu { get; } = new();
 
     protected override bool EcuConnected => Ecu.IsConnected;
 
-    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished before closing T8Suite." : null;
+    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished." : null;
 
     public override void Shutdown() => Ecu.Dispose();
 
@@ -45,7 +45,7 @@ public partial class T8MainWindowViewModel
 
     /// <summary>The shared panel over T8Suite's GMLAN passes (dynamic list unless "Prefer dynamic retrieval of live data" is off).</summary>
     protected override RealtimeViewModel CreateRealtimePanel(SuiteBinary bin) =>
-        new(this, bin, T8Realtime.Rules, new T8RealtimeEngine(Ecu, Settings.PreferDynamicLiveData));
+        new(Main, bin, T8Realtime.Rules, new T8RealtimeEngine(Ecu, Settings.PreferDynamicLiveData));
 
     /// <summary>MapViewerEx's timer only read the maps that live in SRAM alone.</summary>
     protected override bool AutoUpdates(MapViewerViewModel viewer) => base.AutoUpdates(viewer) && viewer.Symbol.Flash_start_address >= 0x100000;

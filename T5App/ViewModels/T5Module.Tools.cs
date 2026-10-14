@@ -7,7 +7,7 @@ using Trionic5Tools;
 namespace T5App.ViewModels;
 
 /// <summary>T5Suite's own tools: the dyno graph, the compressor map and the injection timing viewer, over T5InjectionModel.</summary>
-public partial class T5MainWindowViewModel
+public partial class T5Module
 {
     /// <summary>Show dyno graph: per rpm the WOT boost, torque, power and injector duty cycle.</summary>
     public List<(int Rpm, double Boost, double Torque, double Power, double DutyCycle)> Dyno() => T5 is { } bin ? T5InjectionModel.Dyno(bin) : [];

@@ -8,6 +8,8 @@ using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T7App.ViewModels;
 using SuiteApp.ViewModels;
 
@@ -51,8 +53,8 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
-                var window = new T7App.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                var vm = new MainViewModel();
+                var window = new TxSuite.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.OpenSymbolByName("IgnNormCal.Map");
@@ -108,8 +110,8 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
-                var window = new T7App.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                var vm = new MainViewModel();
+                var window = new TxSuite.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.OpenSymbolByName("BFuelCal.Map");
@@ -142,8 +144,8 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
-                var window = new T7App.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                var vm = new MainViewModel();
+                var window = new TxSuite.Views.MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.OpenSymbolByName("IgnNormCal.Map");

@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SuiteApp;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
+using TxSuite.ViewModels;
 
 namespace TxSuiteTest
 {
@@ -46,17 +47,10 @@ namespace TxSuiteTest
             {
                 try
                 {
-                    var desktop = new ClassicDesktopStyleApplicationLifetime();
-                    var vm = new T5App.ViewModels.T5MainWindowViewModel();
-                    var window = TxSuite.App.NewWindow(new T5App.Views.MainView());
-                    window.Width = 1200;
-                    window.Height = 800;
-                    SuiteStartup.Attach(desktop, vm, window);
-                    window.Show();
-                    TxSuite.App.Combine(desktop);
+                    var (vm, window) = NewWindow(new ClassicDesktopStyleApplicationLifetime());
                     Assert.IsTrue(await vm.OpenPlainFileAsync(t5, true));
 
-                    // every ECU's partnumbers, each with its own details; Compare only for the open suite's
+                    // every ECU's partnumbers, each with its own details; Compare only for the open file's ECU's
                     var (lookupWindow, lookup) = OpenLookup(window);
                     lookup.PartNumber = T5Part;
                     lookup.Lookup();
@@ -115,7 +109,7 @@ namespace TxSuiteTest
                     CollectionAssert.AreEqual(new[] { T7Part }, t7Rows.Where(r => r.Marked != null).Select(r => r.Partnumber).Distinct().ToArray());
                     var t7Row = t7Rows.First(r => r.Partnumber == T7Part);
                     Assert.AreEqual("Saab95", t7Row.Carmodel);
-                    var export = T7App.Views.MainView.PartNumberTab().Export().ToList();
+                    var export = TxSuite.Views.MainView.PartNumberTabs()[1].Export().ToList();
                     Assert.AreEqual("Carmodel\tEnginetype\tPartnumber\tTurbomodel\tTurbo\tPower\tTorque\tSoftware Version\tEmission Variant\tMakeyear", export[0]);
                     Assert.AreEqual(561, export.Count);
                     var line = export.Single(l => l.Split('\t')[2] == "5169446").Split('\t');
@@ -134,77 +128,55 @@ namespace TxSuiteTest
                     Assert.IsFalse(ButtonIn(lookupWindow, "Compare to this file").IsEnabled);
                     Assert.IsTrue(ButtonIn(lookupWindow, "Open this file").IsEnabled);
 
-                    // Open this file: T7's view with the stock bin
+                    // Open this file: the stock bin open as a T7 binary
                     Click(lookupWindow, "Open this file");
-                    var t7vm = await SwitchedTo<T7App.ViewModels.T7MainWindowViewModel>(window, t7Opened);
-                    Assert.IsInstanceOfType<T7App.Views.MainView>(window.View);
+                    await OpenedIn(vm, vm.T7, t7Opened);
 
                     // back to T5, then Create new from original (the save picker's answer given straight to the dialog)
-                    Assert.IsFalse(await t7vm.OpenPlainFileAsync(t5Stock, true));
-                    await SwitchedTo<T5App.ViewModels.T5MainWindowViewModel>(window, t5);
+                    Assert.IsTrue(await vm.OpenPlainFileAsync(t5Stock, true));
+                    await OpenedIn(vm, vm.T5, t5);
                     (lookupWindow, lookup) = OpenLookup(window);
                     lookup.PartNumber = T7Part;
                     lookup.Lookup();
                     Assert.IsTrue(ButtonIn(lookupWindow, "Create new from original").IsEnabled);
                     lookupWindow.Close("create:" + copy);
-                    await SwitchedTo<T7App.ViewModels.T7MainWindowViewModel>(window, copy);
+                    await OpenedIn(vm, vm.T7, copy);
                     CollectionAssert.AreEqual(File.ReadAllBytes(t7Stock), File.ReadAllBytes(copy));
                     window.Close();
                 }
                 finally
                 {
-                    MainWindowViewModel.Handoff = null;
-                    MainWindowViewModel.Combined = null;
-                    SuiteMainView.SettingsDialog = null;
-                    SuiteMainView.LookupAll = null;
-                    SuiteMainView.BrowseAll = null;
                     Directory.Delete(library, true);
                 }
                 return true;
             }, default).GetAwaiter().GetResult();
         }
 
-        /// <summary>The partnumber list opens on the open binary's ECU, on T5 with none open whichever suite is in front.</summary>
+        /// <summary>The partnumber list opens on the open binary's ECU, on T5 with none open.</summary>
         [TestMethod]
         public void PartNumberListStartsOnTheOpenBinarysEcu()
         {
             string t7 = Stock("T7Binaries", T7Part + ".bin");
             s_session!.Dispatch(async () =>
             {
-                try
+                var (vm, window) = NewWindow(new ClassicDesktopStyleApplicationLifetime());
+                async Task<int> Tab()
                 {
-                    var desktop = new ClassicDesktopStyleApplicationLifetime();
-                    var vm = new T7App.ViewModels.T7MainWindowViewModel();
-                    var window = TxSuite.App.NewWindow(new T7App.Views.MainView());
-                    SuiteStartup.Attach(desktop, vm, window);
-                    window.Show();
-                    TxSuite.App.Combine(desktop);
-                    async Task<int> Tab()
-                    {
-                        var (lookupWindow, lookup) = OpenLookup(window);
-                        var browsed = lookup.BrowseAsync();
-                        Dispatcher.UIThread.RunJobs();
-                        var list = window.OwnedWindows.Single(w => w.Title == "Partnumber list");
-                        int tab = list.GetLogicalDescendants().OfType<TabControl>().Single().SelectedIndex;
-                        Click(list, "Close");
-                        await browsed;
-                        lookupWindow.Close();
-                        Dispatcher.UIThread.RunJobs();
-                        return tab;
-                    }
-                    Assert.AreEqual(0, await Tab());
-                    Assert.IsTrue(await vm.OpenPlainFileAsync(t7, true));
-                    Assert.AreEqual(1, await Tab());
-                    window.Close();
+                    var (lookupWindow, lookup) = OpenLookup(window);
+                    var browsed = lookup.BrowseAsync();
+                    Dispatcher.UIThread.RunJobs();
+                    var list = window.OwnedWindows.Single(w => w.Title == "Partnumber list");
+                    int tab = list.GetLogicalDescendants().OfType<TabControl>().Single().SelectedIndex;
+                    Click(list, "Close");
+                    await browsed;
+                    lookupWindow.Close();
+                    Dispatcher.UIThread.RunJobs();
+                    return tab;
                 }
-                finally
-                {
-                    MainWindowViewModel.Handoff = null;
-                    MainWindowViewModel.Combined = null;
-                    SuiteMainView.SettingsDialog = null;
-                    SuiteMainView.LookupAll = null;
-                    SuiteMainView.BrowseAll = null;
-                }
+                Assert.AreEqual(0, await Tab());
+                Assert.IsTrue(await vm.OpenPlainFileAsync(t7, true));
+                Assert.AreEqual(1, await Tab());
+                window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();
         }
@@ -219,19 +191,16 @@ namespace TxSuiteTest
             return (lookupWindow, (PartLookupViewModel)lookupWindow.DataContext!);
         }
 
-        // the suite of the file in front with it open; the switch and the open run on after the dialog closed
-        private static async Task<T> SwitchedTo<T>(SuiteWindow window, string file) where T : MainWindowViewModel
+        // the file open in its ECU's module; the open runs on after the dialog closed
+        private static async Task OpenedIn(MainViewModel vm, EcuModule ecu, string file)
         {
-            for (int i = 0; i < 200 && !(window.DataContext is T { Binary: { } bin, IsBusy: false } && bin.FileName == file); i++)
+            for (int i = 0; i < 200 && !(vm is { Binary: { } bin, IsBusy: false } && bin.FileName == file && vm.Module == ecu); i++)
             {
                 Dispatcher.UIThread.RunJobs();
                 await Task.Delay(50);
             }
-            var vm = window.DataContext as T;
-            Assert.IsNotNull(vm, $"{typeof(T).Name} in front, not {window.DataContext?.GetType().Name}");
+            Assert.AreSame(ecu, vm.Module, $"{ecu.Name}'s file open, not {vm.Module.Name}'s");
             Assert.AreEqual(file, vm.Binary?.FileName);
-            Assert.AreSame(vm, window.View.DataContext);
-            return vm;
         }
 
         private static PartNumberRow[] Rows(TabControl tabs, int tab) =>

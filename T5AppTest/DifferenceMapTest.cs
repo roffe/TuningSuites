@@ -3,6 +3,8 @@ using System.Linq;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -19,7 +21,7 @@ namespace T5AppTest
             string other = CopyOfStockBin("diff-other.BIN", "4300331.bin");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -92,7 +94,7 @@ namespace T5AppTest
             File.Copy(Path.Combine(Here(), "..", "T5Binaries", "4300331.bin"), other, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));

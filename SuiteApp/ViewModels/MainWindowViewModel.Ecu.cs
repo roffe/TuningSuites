@@ -15,9 +15,10 @@ namespace SuiteApp.ViewModels;
 public record FaultCode(string Code, string Description);
 
 /// <summary>
-/// The ECU side both suites have on top of their own session (T7Ecu over KWP, T8Ecu over GMLAN): the connection state, the map
+/// The ECU side every ECU has on top of its own session (T5Ecu, T7Ecu over KWP, T8Ecu over GMLAN): the connection state, the map
 /// viewers' Read from / Save to ECU and their auto update, maps that only live in SRAM, .RAM snapshot files, the flasher's busy
-/// state and fault code descriptions. What goes over the wire is the suite's.
+/// state and fault code descriptions. What goes over the wire is the open file's ECU's module's. Nothing connects without a file:
+/// the file says which ECU it is.
 /// </summary>
 public abstract partial class MainWindowViewModel
 {
@@ -37,39 +38,32 @@ public abstract partial class MainWindowViewModel
 
     public bool HasSramFile => SramFile != null && File.Exists(SramFile);
 
-    // ---- what the suite's session does ----
-
-    /// <summary>Opens the realtime session: the status bar's text, null when it didn't open. Throws a message when no adapter is set.</summary>
-    protected abstract Task<string?> ConnectEcuAsync();
-
-    /// <summary>The status bar's text when the session didn't open.</summary>
-    protected abstract string ConnectFailedText { get; }
-
-    protected abstract Task DisconnectEcuAsync();
-
-    /// <summary>The symbol's bytes from the ECU's SRAM, null when the read failed.</summary>
-    protected abstract Task<byte[]?> ReadEcuMapAsync(SymbolHelper sh);
-
-    /// <summary>The bytes into the ECU's SRAM; false when the ECU didn't accept them.</summary>
-    protected abstract Task<bool> WriteEcuMapAsync(SymbolHelper sh, byte[] data);
-
-    /// <summary>Why the ECU didn't take a map.</summary>
-    protected virtual string WriteRefusedText(string map) => $"The ECU did not accept {map}.";
-
-    /// <summary>Viewers the auto update re-reads: online ones without edits.</summary>
-    protected virtual bool AutoUpdates(MapViewerViewModel viewer) => viewer.OnlineMode && !viewer.Map.Mutated;
-
-    /// <summary>Read ECU: the flash into a file.</summary>
-    public abstract Task ReadEcuAsync(string file);
+    /// <summary>Read ECU: the flash into a file, the open file's ECU's way.</summary>
+    public async Task ReadEcuAsync(string file)
+    {
+        if (NeedsFile()) return;
+        await Module.ReadEcuAsync(file);
+    }
 
     /// <summary>Flash current file to ECU (askYesNo for the questions on the way).</summary>
-    public abstract Task FlashEcuAsync(Func<string, Task<bool>> askYesNo);
+    public Task FlashEcuAsync(Func<string, Task<bool>> askYesNo) => Module.FlashEcuAsync(askYesNo);
 
     /// <summary>Get fault codes (OBDII): the ECU's codes with descriptions, null when there was nothing to show.</summary>
-    public abstract Task<List<FaultCode>?> ReadFaultCodesAsync();
+    public Task<List<FaultCode>?> ReadFaultCodesAsync() => Module.ReadFaultCodesAsync();
 
-    /// <summary>The fault code window's Clear: the code (or all of them, where the suite can only do that), then the codes again.</summary>
-    public abstract Task<List<FaultCode>?> ClearFaultCodeAsync(string code);
+    /// <summary>The fault code window's Clear: the code (or all of them, where the ECU can only do that), then the codes again.</summary>
+    public Task<List<FaultCode>?> ClearFaultCodeAsync(string code) => Module.ClearFaultCodeAsync(code);
+
+    /// <summary>Without a file there is no ECU to talk to (which one it is comes from the file): says so, true then.</summary>
+    public bool NeedsFile()
+    {
+        if (Binary != null) return false;
+        ShowInfo(FileNeeded);
+        return true;
+    }
+
+    /// <summary>The ECU's protocol is the open file's: what Connect says without one.</summary>
+    public const string FileNeeded = "A file must be loaded first: it tells which ECU (Trionic 5, 7 or 8) to connect to.";
 
     // ---- the connection ----
 
@@ -77,11 +71,12 @@ public abstract partial class MainWindowViewModel
     public async Task<bool> EnsureConnectedAsync()
     {
         if (EcuConnected) return true;
+        if (NeedsFile()) return false;
         CanStatus = "Initializing CANbus interface";
         string? status;
         try
         {
-            status = await ConnectEcuAsync();
+            status = await Module.ConnectEcuAsync();
         }
         catch (InvalidOperationException e)
         {
@@ -90,7 +85,7 @@ public abstract partial class MainWindowViewModel
             return false;
         }
         IsConnected = status != null;
-        CanStatus = status ?? ConnectFailedText;
+        CanStatus = status ?? Module.ConnectFailedText;
         return IsConnected;
     }
 
@@ -99,7 +94,7 @@ public abstract partial class MainWindowViewModel
     {
         if (EcuConnected)
         {
-            await DisconnectEcuAsync();
+            await Module.DisconnectEcuAsync();
             IsConnected = false;
             CanStatus = "";
             foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>()) v.OnlineMode = false;
@@ -110,10 +105,10 @@ public abstract partial class MainWindowViewModel
         }
     }
 
-    protected async Task DisconnectRealtimeAsync()
+    internal async Task DisconnectRealtimeAsync()
     {
         if (!EcuConnected) return;
-        await DisconnectEcuAsync();
+        await Module.DisconnectEcuAsync();
         IsConnected = false;
         CanStatus = "";
     }
@@ -135,7 +130,7 @@ public abstract partial class MainWindowViewModel
         List<CompareRow> rows = await Task.Run(() => SuiteCompare.CompareToSram(bin, File.ReadAllBytes(file)));
         string name = Path.GetFileName(file);
         ShowDocument(new CompareResultsViewModel(this, bin, CompareSide.Bin(this, bin), SramSide(bin, file), rows,
-            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]") { DifferenceView = SramToBinDifferenceView });
+            $"SRAM <> BIN Compare results: {name}", $"SRAM symbol difference: {{0}} [{name}]") { DifferenceView = Module.SramToBinDifferenceView });
     }
 
     /// <summary>Compare SRAM snapshots: both snapshots' maps per symbol.</summary>
@@ -146,32 +141,23 @@ public abstract partial class MainWindowViewModel
             SuiteCompare.CompareSram(bin, File.ReadAllBytes(file1), File.ReadAllBytes(file2)));
         string a = Path.GetFileName(file1), b = Path.GetFileName(file2);
         ShowDocument(new CompareResultsViewModel(this, bin, SramSide(bin, file1), SramSide(bin, file2), rows,
-            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]") { DifferenceView = SramDifferenceView });
+            $"SRAM compare results: {a} {b}", $"SRAM symbol difference: {{0}} [{a} vs {b}]") { DifferenceView = Module.SramDifferenceView });
     }
-
-    /// <summary>The view the SRAM compares' difference maps open in (snapshot to bin, two snapshots), null for the default one.</summary>
-    protected virtual MapViewType? SramToBinDifferenceView => null;
-    protected virtual MapViewType? SramDifferenceView => null;
 
     // ---- SRAM maps ----
 
     /// <summary>T5Suite: while connected every map shows the ECU's SRAM, and a viewer's Save writes SRAM and the file in one go.</summary>
-    protected virtual bool OnlineMapsFromEcu => false;
-
-    public bool SaveWritesEcu => OnlineMapsFromEcu && EcuConnected;
-
-    /// <summary>A map that only lives in SRAM; T7Suite / T8Suite connected and read it.</summary>
-    protected virtual Task OpenSramOnlyAsync(SuiteBinary bin, SymbolHelper sh) => OpenSramSymbolAsync(bin, sh);
+    public bool SaveWritesEcu => Module.OnlineMapsFromEcu && EcuConnected;
 
     /// <summary>A map that only lives in SRAM: read it from the ECU (connecting first) and show it.</summary>
-    protected async Task OpenSramSymbolAsync(SuiteBinary bin, SymbolHelper sh)
+    internal async Task OpenSramSymbolAsync(SuiteBinary bin, SymbolHelper sh)
     {
         if (!await EnsureConnectedAsync())
         {
             ShowInfo("An active CAN bus connection is needed to get data from the ECU");
             return;
         }
-        if (await ReadEcuMapAsync(sh) is not { } data)
+        if (await Module.ReadEcuMapAsync(sh) is not { } data)
         {
             ProgressText = "Could not read SRAM";
             return;
@@ -191,7 +177,7 @@ public abstract partial class MainWindowViewModel
             ShowInfo("An active CAN bus connection is needed to get data from the ECU");
             return;
         }
-        if (await ReadEcuMapAsync(viewer.Symbol) is not { } data)
+        if (await Module.ReadEcuMapAsync(viewer.Symbol) is not { } data)
         {
             ProgressText = "Could not read SRAM";
             return;
@@ -213,12 +199,12 @@ public abstract partial class MainWindowViewModel
             ShowInfo("An active CAN bus connection is needed to write data to the ECU");
             return;
         }
-        if (!await WriteEcuMapAsync(viewer.Symbol, viewer.Map.ToBytes())) ShowInfo(WriteRefusedText(viewer.MapName));
+        if (!await Module.WriteEcuMapAsync(viewer.Symbol, viewer.Map.ToBytes())) ShowInfo(Module.WriteRefusedText(viewer.MapName));
     }
 
     private DispatcherTimer? m_sramTimer;
 
-    /// <summary>AutoUpdateSRAMViewers: while connected, the viewers the suite updates re-read every AutoUpdateInterval seconds.</summary>
+    /// <summary>AutoUpdateSRAMViewers: while connected, the viewers the open file's ECU updates re-read every AutoUpdateInterval seconds.</summary>
     public void RestartSramTimer()
     {
         m_sramTimer?.Stop();
@@ -227,7 +213,7 @@ public abstract partial class MainWindowViewModel
         m_sramTimer.Tick += async (_, _) =>
         {
             if (!EcuConnected) return;
-            foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(AutoUpdates).ToList())
+            foreach (MapViewerViewModel v in Viewers.OfType<MapViewerViewModel>().Where(Module.AutoUpdates).ToList())
                 await ReadMapFromEcuAsync(v);
         };
         m_sramTimer.Start();
@@ -239,7 +225,7 @@ public abstract partial class MainWindowViewModel
     /// A flasher operation (Read ECU, Flash, Recover, snapshot): the realtime connection closed first, busy while it runs, the
     /// adapter's complaint shown, the status cleared afterwards.
     /// </summary>
-    protected async Task RunFlasherAsync(Func<Task> operation)
+    internal async Task RunFlasherAsync(Func<Task> operation)
     {
         await DisconnectRealtimeAsync();
         IsBusy = true;
@@ -264,7 +250,7 @@ public abstract partial class MainWindowViewModel
     /// Flash current file to ECU flashes the file on disk: unsaved map changes are pointed out, and a checksum that doesn't
     /// verify is fixed (Auto update checksum) or offered to be fixed first. Neither suite checked either. Null: don't flash.
     /// </summary>
-    protected async Task<SuiteBinary?> FlashableBinaryAsync(Func<string, Task<bool>> askYesNo)
+    internal async Task<SuiteBinary?> FlashableBinaryAsync(Func<string, Task<bool>> askYesNo)
     {
         if (Binary is not { } bin || !File.Exists(bin.FileName))
         {
@@ -297,7 +283,7 @@ public abstract partial class MainWindowViewModel
     private Dictionary<string, DTCDescription>? m_dtcCatalog;
 
     /// <summary>The codes with frmFaultcodes' descriptions (DTC_*.xml next to the program); codes without one are listed too.</summary>
-    protected List<FaultCode> Describe(IEnumerable<string> codes)
+    internal List<FaultCode> Describe(IEnumerable<string> codes)
     {
         m_dtcCatalog ??= DtcCatalog.Load();
         return codes.Distinct().Select(c => new FaultCode(c, m_dtcCatalog.TryGetValue(c, out var d) ? d.Description : "")).ToList();

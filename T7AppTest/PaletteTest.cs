@@ -4,6 +4,8 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T7App.ViewModels;
 using T7App.Views;
@@ -18,7 +20,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(Path.Combine(s_dir, "5168646.bin"), true));

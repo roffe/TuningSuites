@@ -53,8 +53,8 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <!-- every column a suite shows; the suite's SymbolColumns pick and order them (SortMemberPath is the key). The rows' menu
-             is the suite's, the main window's resource SymbolListMenu -->
+        <!-- every column an ECU shows; the open file's ECU's SymbolColumns pick and order them (SortMemberPath is the key). The rows'
+             menu is the main window's resource SymbolListMenu -->
         <DataGrid x:Name="SymbolGrid" ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedSymbol}" ContextMenu="{DynamicResource SymbolListMenu}"
                   CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
                   GridLinesVisibility="Horizontal" SelectionMode="Extended"

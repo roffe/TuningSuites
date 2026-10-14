@@ -1,14 +1,11 @@
 using CommonSuite;
 using SuiteApp.ViewModels;
-using T5App.ViewModels;
-using T7App.ViewModels;
-using T8App.ViewModels;
 
-namespace TxSuite;
+namespace TxSuite.ViewModels;
 
 /// <summary>
-/// TxSuite's settings: what every suite shares once (Common), then each ECU's own (T5, T7, T8). Ok writes all three suites' settings:
-/// the suite in front edits its live settings, the others their files, which they read when they come to the front.
+/// TxSuite's settings: what every ECU shares (Common), then each ECU's own (T5, T7, T8), as the old suites' frmSettings had them. Ok
+/// writes each ECU's live settings: the shared options go once to the top of TxSuite's settings, each tab's into its ECU's section.
 /// </summary>
 public sealed class TxSettingsViewModel
 {
@@ -24,15 +21,14 @@ public sealed class TxSettingsViewModel
     public T5App.ViewModels.AutotuneSettingsViewModel? T5Autotune { get; set; }
     public T7App.ViewModels.AutotuneSettingsViewModel? T7Autotune { get; set; }
 
-    public TxSettingsViewModel(MainWindowViewModel current)
+    public TxSettingsViewModel(MainViewModel main)
     {
-        var t5 = current as T5MainWindowViewModel;
-        m_t5 = t5?.Settings ?? new AppSettings(new Trionic5Tools.T5SuiteRegistry());
-        m_t5Own = t5?.T5Settings ?? new Trionic5Tools.T5AppSettings();
-        m_t7 = current is T7MainWindowViewModel ? current.Settings : new AppSettings(new T7.T7SuiteRegistry());
-        m_t8 = current is T8MainWindowViewModel ? current.Settings : new AppSettings(new T8SuitePro.T8SuiteRegistry());
-        // the shared options as the suite in front has them; Ok gives them to the other two
-        Common = new SuiteSettingsViewModel(current.Settings);
+        m_t5 = main.T5.Settings;
+        m_t5Own = main.T5.T5Settings;
+        m_t7 = main.T7.Settings;
+        m_t8 = main.T8.Settings;
+        // the shared options as the open file's ECU has them; Ok gives them to every ECU
+        Common = new SuiteSettingsViewModel(main.Settings);
         T5 = new(m_t5, m_t5Own);
         T7 = new(m_t7);
         T8 = new(m_t8);
@@ -45,7 +41,7 @@ public sealed class TxSettingsViewModel
     public void Apply()
     {
         foreach (SuiteSettingsViewModel ecu in new SuiteSettingsViewModel[] { T5, T7, T8 }) CopyCommon(Common, ecu);
-        // each suite's order (T5App's and T7App's OnSettings)
+        // each old suite's order (T5Suite's and T7Suite's frmSettings)
         T5Autotune?.Apply(m_t5, m_t5Own);
         T5.Apply(m_t5, m_t5Own);
         T7.Apply(m_t7);
@@ -53,8 +49,8 @@ public sealed class TxSettingsViewModel
         T8.Apply(m_t8);
     }
 
-    // the Common tab's options; the ones an ECU tab shows (P-bus, the wideband through a symbol) stay the ECU's. The wideband on a com
-    // port and through a symbol exclude each other: a com port wideband turns the symbol one off in every suite
+    // the Common tab's options (AppSettings.SharedNames); the ones an ECU tab shows (P-bus, the wideband through a symbol) stay the ECU's.
+    // The wideband on a com port and through a symbol exclude each other: a com port wideband turns the symbol one off for every ECU
     private static void CopyCommon(SuiteSettingsViewModel from, SuiteSettingsViewModel to)
     {
         to.ShowRedWhite = from.ShowRedWhite;

@@ -39,7 +39,7 @@ public sealed class PartNumberRow(DataRow row, Func<string, IBrush?> mark)
 public sealed record PartNumberTab(string Header, DataGrid Grid, IReadOnlyList<(string Text, IBrush Colour)> Legend, Func<IEnumerable<string>> Export);
 
 /// <summary>
-/// frmPartNumberList "Partnumber list" for all suites: the suite's PartnumberCollection as the old grid showed it (every column, captions
+/// frmPartNumberList "Partnumber list", a tab per ECU: each old suite's PartnumberCollection as its grid showed it (every column, captions
 /// split as DevExpress did, grouped by car model and engine type with the grouped columns shown), the ones in Binaries coloured; Ok or
 /// double-click picks one, Export writes the list as text. TxSuite shows a tab per ECU.
 /// </summary>

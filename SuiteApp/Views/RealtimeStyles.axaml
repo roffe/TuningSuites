@@ -37,7 +37,7 @@
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="FontSize" Value="12" />
     </Style>
-    <!-- displays the suite has no symbol for -->
+    <!-- displays the ECU has no symbol for -->
     <Style Selector="StackPanel:disabled, c|LinearGauge:disabled, TextBlock.caption:disabled">
         <Setter Property="Opacity" Value="0.3" />
     </Style>

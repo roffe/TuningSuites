@@ -12,7 +12,7 @@ using Trionic5Tools;
 namespace T5App.ViewModels;
 
 /// <summary>Online tuning's "Air/Fuel maps": the AFR target, feedback and error maps (main and idle) next to the bin.</summary>
-public partial class T5MainWindowViewModel
+public partial class T5Module
 {
     private AFRMaps? m_afr;
     private string? m_afrFile;
@@ -130,7 +130,7 @@ public partial class T5MainWindowViewModel
 
     private ObservableCollection<UserMap>? m_userMaps;
 
-    private string UserMapsFile => System.IO.Path.Combine(SettingsKey.Folder(Suite), "UserMaps.json");
+    private string UserMapsFile => System.IO.Path.Combine(SettingsKey.Folder(SettingsPath), "UserMaps.json");
 
     /// <summary>The realtime panel's User maps (T5Suite: UserMaps.xml in its app data folder), kept in the settings folder.</summary>
     public ObservableCollection<UserMap> RealtimeUserMaps
@@ -155,7 +155,7 @@ public partial class T5MainWindowViewModel
     {
         try
         {
-            System.IO.Directory.CreateDirectory(SettingsKey.Folder(Suite));
+            System.IO.Directory.CreateDirectory(SettingsKey.Folder(SettingsPath));
             System.IO.File.WriteAllText(UserMapsFile, System.Text.Json.JsonSerializer.Serialize(RealtimeUserMaps.ToList()));
         }
         catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
@@ -259,7 +259,7 @@ public partial class T5MainWindowViewModel
         };
         ShowDocument(new MapViewerViewModel
         {
-            Owner = this, Binary = bin, Symbol = sh, MapName = "Knock_count_map", Map = map, Address = -1, IsReadOnly = true, TitleOverride = title,
+            Owner = Main, Binary = bin, Symbol = sh, MapName = "Knock_count_map", Map = map, Address = -1, IsReadOnly = true, TitleOverride = title,
             ViewType = DefaultMapView, IsRedWhite = Settings.ShowRedWhite, DisableColors = Settings.DisableMapviewerColors, GraphVisible = Settings.ShowGraphs,
         });
     }
@@ -323,7 +323,7 @@ public partial class T5MainWindowViewModel
         AppSettings settings = Settings;
         return new MapViewerViewModel
         {
-            Owner = this,
+            Owner = Main,
             Binary = bin,
             Symbol = fuel,
             MapName = kind,

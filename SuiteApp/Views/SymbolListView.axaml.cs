@@ -12,7 +12,7 @@ using SuiteApp.ViewModels;
 
 namespace SuiteApp.Views;
 
-/// <summary>The symbol list, the workspace's dockable tool pane. The rows' menu is the suite's (the window's SymbolListMenu).</summary>
+/// <summary>The symbol list, the workspace's dockable tool pane, the open file's ECU's way. The rows' menu is the window's SymbolListMenu.</summary>
 public partial class SymbolListView : UserControl
 {
     private bool m_editingSymbol;
@@ -118,13 +118,27 @@ public partial class SymbolListView : UserControl
             m_currentGroup = SymbolGrid.GetVisualDescendants().OfType<DataGridRowGroupHeader>().FirstOrDefault(h => h.IsVisible && h.Classes.Contains(":current"))
                 is { DataContext: DataGridCollectionViewGroup group } header ? (group.Key, header.Classes.Contains(":expanded")) : null;
         };
+        ApplyEcu(vm);
+    }
+
+    // every column the list has, whichever ECU's are shown
+    private List<DataGridColumn>? m_allColumns;
+
+    /// <summary>The open file's ECU's way: its name and description colours, its filters, its columns in its order (the others out).</summary>
+    private void ApplyEcu(MainWindowViewModel vm)
+    {
         SymbolColorConverter.Enabled = vm.ColorSymbolNames;
         CategoryColorConverter.Enabled = vm.ColorDescriptionsByCategory;
         FilterChoice.IsVisible = vm.SymbolFilters.Count > 0;
-        // the suite's columns in its order, the others dropped; hidden ones stay in the column chooser
+        // the ECU's columns in its order, the others dropped; hidden ones stay in the column chooser
+        m_allColumns ??= [.. SymbolGrid.Columns];
         var wanted = vm.SymbolColumns;
-        foreach (DataGridColumn c in SymbolGrid.Columns.ToList())
-            if (wanted.All(w => w.Path != c.SortMemberPath)) SymbolGrid.Columns.Remove(c);
+        foreach (DataGridColumn c in m_allColumns)
+        {
+            bool shows = wanted.Any(w => w.Path == c.SortMemberPath);
+            if (!shows) SymbolGrid.Columns.Remove(c);
+            else if (!SymbolGrid.Columns.Contains(c)) SymbolGrid.Columns.Add(c);
+        }
         for (int i = 0; i < wanted.Count; i++)
         {
             if (SymbolGrid.Columns.FirstOrDefault(c => c.SortMemberPath == wanted[i].Path) is not { } column) continue;
@@ -137,7 +151,8 @@ public partial class SymbolListView : UserControl
 
     private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindowViewModel.Symbols)) WatchSymbols();
+        if (e.PropertyName == nameof(MainWindowViewModel.Module) && m_vm != null) ApplyEcu(m_vm);
+        else if (e.PropertyName == nameof(MainWindowViewModel.Symbols)) WatchSymbols();
         else if (e.PropertyName == nameof(MainWindowViewModel.SelectedSymbol) && m_vm?.SelectedSymbol is { } sh) ShowSymbol(sh);
     }
 
@@ -258,7 +273,7 @@ public partial class SymbolListView : UserControl
         if (e.EditAction == DataGridEditAction.Commit) Vm?.SaveUserDescriptions();
     }
 
-    // T8Suite's map preview popup (frmMapHelper): the hovered name's map as a table, read only; nothing when the suite has none
+    // T8Suite's map preview popup (frmMapHelper): the hovered name's map as a table, read only; nothing when the ECU has none
     private void OnNameToolTipOpening(object? sender, CancelRoutedEventArgs e)
     {
         if (sender is not Control c || c.DataContext is not SymbolHelper sh || Vm?.MapPreview(sh) is not { } preview)

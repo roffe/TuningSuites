@@ -46,7 +46,7 @@ public static class T5ToolWindows
     }
 
     /// <summary>frmDynoChart "Estimated dyno results": torque, power and injector duty cycle over rpm; Refresh re-reads the file, Export saves a PNG.</summary>
-    public static Window Dyno(Window owner, T5MainWindowViewModel vm)
+    public static Window Dyno(Window owner, T5Module vm)
     {
         var chart = new LineChart();
         void Fill()
@@ -79,7 +79,7 @@ public static class T5ToolWindows
     /// ctrlCompressorMapEx "Compressor map plotter": the WOT boost per rpm on the chosen compressor's map. ponytail: one VE for every
     /// rpm (T5Suite had 16 boxes, all 90 by default).
     /// </summary>
-    public static Window Compressor(Window owner, T5MainWindowViewModel vm)
+    public static Window Compressor(Window owner, T5Module vm)
     {
         var (index, cid) = vm.CompressorDefaults();
         var turbo = new ComboBox { ItemsSource = CompressorMap.Compressors.Select(c => c.Name).ToList(), SelectedIndex = index, MinWidth = 280 };
@@ -111,16 +111,16 @@ public static class T5ToolWindows
     /// intake temperature, battery voltage and injector constant. ponytail: the grid's colour scale instead of T5Suite's red cells and
     /// duty cycle bars.
     /// </summary>
-    public static Window InjectionTiming(Window owner, T5MainWindowViewModel vm)
+    public static Window InjectionTiming(Window owner, T5Module vm)
     {
         var temps = T5InjectionModel.Temperatures;
         var iat = new ComboBox { ItemsSource = temps.Select(t => t.Celsius + " °C").ToList(), SelectedIndex = 4 };
-        var condition = new ComboBox { ItemsSource = T5MainWindowViewModel.InjectionConditions.Select(c => c.Caption).ToList(), SelectedIndex = 0 };
+        var condition = new ComboBox { ItemsSource = T5Module.InjectionConditions.Select(c => c.Caption).ToList(), SelectedIndex = 0 };
         var volt = new ComboBox { ItemsSource = Enumerable.Range(4, 12).Select(v => v + " V").ToList(), SelectedIndex = 9 };
         var konst = new NumericUpDown { Value = vm.InjectorConstant, Minimum = 1, Maximum = 255, Increment = 1, FormatString = "0", Width = 120 };
         var show = new ComboBox { ItemsSource = new List<string> { "Injection duration", "Injection duty cycle" }, SelectedIndex = 0 };
         var grid = new MapGrid { IsReadOnly = true, ViewType = MapViewType.Easy };
-        void Update() => grid.Map = vm.InjectionTiming(T5MainWindowViewModel.InjectionConditions[Math.Max(0, condition.SelectedIndex)].Map,
+        void Update() => grid.Map = vm.InjectionTiming(T5Module.InjectionConditions[Math.Max(0, condition.SelectedIndex)].Map,
             temps[Math.Max(0, iat.SelectedIndex)].Ad, 4 + Math.Max(0, volt.SelectedIndex), (int)(konst.Value ?? 21), show.SelectedIndex == 1);
         foreach (ComboBox box in new[] { iat, condition, volt, show }) box.SelectionChanged += (_, _) => Update();
         konst.ValueChanged += (_, _) => Update();
@@ -140,7 +140,7 @@ public static class T5ToolWindows
     /// frmKnockCounterMapSelect "Select a knock count map file...": file, snapshot time and total knocks; Ok shows one, Compare the
     /// difference of two.
     /// </summary>
-    public static async Task KnockSnapshots(Window owner, T5MainWindowViewModel vm)
+    public static async Task KnockSnapshots(Window owner, T5Module vm)
     {
         var snapshots = vm.KnockSnapshots();
         if (snapshots.Count == 0)
@@ -188,7 +188,7 @@ public static class T5ToolWindows
     /// frmUserLibrary "User library browser": the bins under the folders added, with T5Suite's guesses; Open selected, Compare to selected
     /// (with a file open), Clear library.
     /// </summary>
-    public static async Task UserLibrary(Window owner, T5MainWindowViewModel vm)
+    public static async Task UserLibrary(Window owner, T5Module vm)
     {
         var rows = new System.Collections.ObjectModel.ObservableCollection<T5UserLibrary.Row>(T5UserLibrary.Load());
         var grid = new DataGrid { ItemsSource = rows, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single, GridLinesVisibility = DataGridGridLinesVisibility.Horizontal };

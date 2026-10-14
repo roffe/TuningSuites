@@ -2,6 +2,8 @@ using System.Linq;
 using MapControls;
 using Trionic5Tools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -16,7 +18,7 @@ namespace T5AppTest
             string file = CopyOfStockBin("math.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -39,7 +41,7 @@ namespace T5AppTest
             T5Tuning.ConvertMapSensor(T5Binary.Open(file), MapSensorType.MapSensor25, MapSensorType.MapSensor30, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -50,7 +52,7 @@ namespace T5AppTest
                 CollectionAssert.AreEqual(stored.Select(v => (double)((int)v * 120 / 100)).ToArray(), ign.Map.XAxis);
                 CollectionAssert.AreNotEqual(ign.Map.XAxis, ign.Map.XHex);
                 // the AFR maps on the fuel map's axis follow the sensor too (T5Suite's Decimal3Bar headers)
-                vm.ShowAfrCommand.Execute("TargetAFR");
+                vm.T5.ShowAfrCommand.Execute("TargetAFR");
                 var afr = (MapViewerViewModel)vm.SelectedViewer!;
                 double[] fuelAxis = [.. afr.Binary.GetXaxisValues("Insp_mat!").Select(v => (double)v)];
                 CollectionAssert.AreEqual(fuelAxis, afr.Map.XHex);

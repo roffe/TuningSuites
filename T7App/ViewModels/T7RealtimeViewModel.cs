@@ -9,16 +9,16 @@ namespace T7App.ViewModels;
 /// <summary>T7Suite's realtime panel: the shared panel plus Eco / Norm / Sport, AutoTune and the AFR maps fed by every pass.</summary>
 public partial class T7RealtimeViewModel : RealtimeViewModel
 {
-    private readonly T7MainWindowViewModel m_t7;
+    private readonly T7Module m_t7;
     private readonly T7Binary m_t7bin;
     private readonly T7RealtimeEngine m_t7engine;
     private Autotune? m_autotune;
 
-    public T7RealtimeViewModel(T7MainWindowViewModel owner, T7Binary bin) : this(owner, bin, new T7RealtimeEngine(owner.Ecu))
+    public T7RealtimeViewModel(T7Module owner, T7Binary bin) : this(owner, bin, new T7RealtimeEngine(owner.Ecu))
     {
     }
 
-    private T7RealtimeViewModel(T7MainWindowViewModel owner, T7Binary bin, T7RealtimeEngine engine) : base(owner, bin, T7Realtime.Rules, engine)
+    private T7RealtimeViewModel(T7Module owner, T7Binary bin, T7RealtimeEngine engine) : base(owner.Main, bin, T7Realtime.Rules, engine)
     {
         m_t7 = owner;
         m_t7bin = bin;

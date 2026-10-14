@@ -12,7 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>A row of the Free logging grid; format gives the suite's text for its value and peak.</summary>
+/// <summary>A row of the Free logging grid; format gives the ECU's text for its value and peak.</summary>
 public partial class RealtimeRow(RealtimeSymbol symbol, Func<string, double, string>? format = null) : ObservableObject
 {
     public RealtimeSymbol Symbol { get; } = symbol;
@@ -53,7 +53,7 @@ public partial class RealtimeRow(RealtimeSymbol symbol, Func<string, double, str
 }
 
 /// <summary>
-/// The realtime panel (dashboard, Free logging, bottom panel), a document tab here. While it is open the suite's engine polls
+/// The realtime panel (dashboard, Free logging, bottom panel), a document tab here. While it is open the ECU's engine polls
 /// the table, the day's log gets a line per pass and open map viewers show the engine's cell. What only T7Suite had (AutoTune,
 /// the AFR maps, Eco / Norm / Sport) is its subclass's.
 /// </summary>
@@ -128,7 +128,7 @@ public partial class RealtimeViewModel : DocumentViewModel
 
     public bool HasEgt { get; }
 
-    /// <summary>The airmass displays (requested, actual, air demand, limiter) and the consumption: greyed when the suite has no such symbols (T5).</summary>
+    /// <summary>The airmass displays (requested, actual, air demand, limiter) and the consumption: greyed when the ECU has no such symbols (T5).</summary>
     public bool HasAirmass => m_rules.Symbols.Airmass != "";
 
     public bool HasConsumption => m_rules.Symbols.FuelConsumption != "";
@@ -156,7 +156,7 @@ public partial class RealtimeViewModel : DocumentViewModel
     }
 
     /// <summary>rtsymbols.txt: the user rows, kept between sessions.</summary>
-    public string LayoutFile => Path.Combine(SettingsKey.Folder(m_owner.Suite), "rtsymbols.txt");
+    public string LayoutFile => Path.Combine(SettingsKey.Folder(m_owner.Module.SettingsPath), "rtsymbols.txt");
 
     /// <summary>"t7rtl": Save / Load layout's files.</summary>
     public string LayoutExtension => m_rules.LayoutExtension;
@@ -455,7 +455,7 @@ public partial class RealtimeViewModel : DocumentViewModel
         SaveUserRows();
     }
 
-    /// <summary>The suite's rows again (from the settings as they are now) with these user rows.</summary>
+    /// <summary>The ECU's rows again (from the settings as they are now) with these user rows.</summary>
     protected void Rebuild(IEnumerable<RealtimeSymbol> user)
     {
         List<RealtimeSymbol> keep = [.. user];

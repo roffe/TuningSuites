@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T5App.ViewModels;
 
 namespace T5AppTest
@@ -10,9 +12,12 @@ namespace T5AppTest
         [TestMethod]
         public void ConnectWithoutAnAdapterShowsAMessage()
         {
+            string file = CopyOfStockBin("connect.bin");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
+                // the file tells which ECU to connect to
+                Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 var infos = new List<string>();
                 vm.Info += infos.Add;
                 string type = vm.Settings.AdapterType, adapter = vm.Settings.Adapter;

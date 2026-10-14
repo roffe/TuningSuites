@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\T8App\T8App.csproj" />
+    <ProjectReference Include="..\TxSuite\TxSuite.csproj" />
   </ItemGroup>
 
 </Project>

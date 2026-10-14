@@ -4,6 +4,8 @@ using System.IO;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T7App.ViewModels;
 
@@ -30,7 +32,7 @@ namespace T7AppTest
                 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
                 try
                 {
-                    var vm = new T7MainWindowViewModel();
+                    var vm = new MainViewModel();
                     Assert.IsTrue(await vm.OpenFileAsync(file, true));
                     var (lines, matrix) = vm.MatrixSelection(log);
                     matrix.X = "ActualIn.n_Engine";

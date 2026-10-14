@@ -1,6 +1,8 @@
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -16,7 +18,7 @@ namespace T5AppTest
             string file = CopyOfStockBin("tools.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -51,36 +53,36 @@ namespace T5AppTest
             string file = CopyOfStockBin("dyno.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
                 // a stock 2.0 T5.5: 16 rpm points, peak torque and power in a sane range, the duty cycle below 100 %
-                var dyno = vm.Dyno();
+                var dyno = vm.T5.Dyno();
                 Assert.AreEqual(16, dyno.Count);
                 Assert.IsTrue(dyno.Max(d => d.Torque) is > 150 and < 500, "torque " + dyno.Max(d => d.Torque));
                 Assert.IsTrue(dyno.Max(d => d.Power) is > 80 and < 300, "power " + dyno.Max(d => d.Power));
                 Assert.IsTrue(dyno.All(d => d.DutyCycle is >= 0 and < 100), "dc " + string.Join(",", dyno.Select(d => d.DutyCycle)));
-                var dynoWindow = T5ToolWindows.Dyno(window, vm);
+                var dynoWindow = T5ToolWindows.Dyno(window, vm.T5);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(dynoWindow, "dyno");
                 dynoWindow.Close();
 
-                var (compressor, cid) = vm.CompressorDefaults();
+                var (compressor, cid) = vm.T5.CompressorDefaults();
                 Assert.AreEqual(122, cid);
-                var points = vm.CompressorPoints(cid, 20, Enumerable.Repeat(90.0, 16).ToList());
+                var points = vm.T5.CompressorPoints(cid, 20, Enumerable.Repeat(90.0, 16).ToList());
                 Assert.AreEqual(16, points.Count);
                 Assert.IsTrue(points.All(p => p.lbmin > 0 && p.pr > 0.9));
-                var compressorWindow = T5ToolWindows.Compressor(window, vm);
+                var compressorWindow = T5ToolWindows.Compressor(window, vm.T5);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(compressorWindow, "compressor");
                 compressorWindow.Close();
 
-                var timing = vm.InjectionTiming("Insp_mat!", 46, 13, vm.InjectorConstant, false)!;
+                var timing = vm.T5.InjectionTiming("Insp_mat!", 46, 13, vm.T5.InjectorConstant, false)!;
                 Assert.AreEqual(256, timing.Count);
                 Assert.IsTrue(Enumerable.Range(0, timing.Count).Select(timing.Physical).All(ms => ms is > 0 and < 40));
-                var timingWindow = T5ToolWindows.InjectionTiming(window, vm);
+                var timingWindow = T5ToolWindows.InjectionTiming(window, vm.T5);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(timingWindow, "injectiontiming");
                 timingWindow.Close();
@@ -105,24 +107,22 @@ namespace T5AppTest
             File.WriteAllText(Path.Combine(folder, "broken.KNK"), "00");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
-                var snapshots = vm.KnockSnapshots();
+                var snapshots = vm.T5.KnockSnapshots();
                 Assert.AreEqual(2, snapshots.Count);
                 Assert.AreEqual(6, snapshots.Single(k => k.File.EndsWith("100000.KNK")).Knocks);
-                vm.ShowKnockMap(snapshots.Single(k => k.File.EndsWith("100000.KNK")).File, snapshots.Single(k => k.File.EndsWith("110000.KNK")).File);
+                vm.T5.ShowKnockMap(snapshots.Single(k => k.File.EndsWith("100000.KNK")).File, snapshots.Single(k => k.File.EndsWith("110000.KNK")).File);
                 var diff = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual(288, diff.Map.Count);
                 Assert.AreEqual(3, diff.Map[0]);
                 Assert.AreEqual(1, diff.Map[287]);
                 StringAssert.StartsWith(diff.Title, "Knock counter difference");
 
-                var settings = new SettingsViewModel(vm.Settings, vm.T5Settings);
-                var settingsWindow = new SettingsWindow { DataContext = settings };
-                settingsWindow.Show();
+                var settingsWindow = ShowSettings(vm);
                 Save(settingsWindow, "settings");
                 // every option says what it does: the old dialogs' SuperTips, the same style for the rest
                 CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
@@ -152,7 +152,7 @@ namespace T5AppTest
                     "Stage1", "Stage2", "Stage3", "Baseboost", "Stockboost", "Stockboost AUT", "Software Version", "Type", "From MY", "Upto MY", "Region",
                     "High Altitude" }, tab.Grid.Columns.Select(c => (string)c.Header!).ToArray());
                 Assert.IsInstanceOfType<Avalonia.Controls.DataGridCheckBoxColumn>(tab.Grid.Columns.Last());
-                var window = new MainWindow { DataContext = new T5MainWindowViewModel(), Width = 1500, Height = 950 };
+                var window = new MainWindow { DataContext = new MainViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 var pick = T5ToolWindows.PartNumberList(window);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();

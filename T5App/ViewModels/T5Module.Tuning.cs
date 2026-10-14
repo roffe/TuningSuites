@@ -10,7 +10,7 @@ using Trionic5Tools;
 namespace T5App.ViewModels;
 
 /// <summary>The "Tuning wizards" page: the windows ask, T5Tuning writes, then the viewers, status bar and checksum are refreshed.</summary>
-public partial class T5MainWindowViewModel
+public partial class T5Module
 {
     private T5Binary? T5 => Binary as T5Binary;
 
@@ -27,7 +27,7 @@ public partial class T5MainWindowViewModel
     public bool AdvancedMode => T5Settings.EnableAdvancedMode;
 
     /// <summary>After Settings Ok: the advanced wizards and the open file's sensor detection follow T5Suite's settings.</summary>
-    public void T5SettingsChanged()
+    public override void SettingsChanged()
     {
         OnPropertyChanged(nameof(AdvancedMode));
         (Realtime as T5RealtimeViewModel)?.SettingsChanged();
@@ -151,24 +151,19 @@ public partial class T5MainWindowViewModel
 
     // ---- Actions page ----
 
-    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    protected override void OnMainPropertyChanged(string? name)
     {
-        base.OnPropertyChanged(e);
-        if (e.PropertyName == nameof(Binary)) OnPropertyChanged(nameof(OriginalFile));
         // the SRAM symbols matter once the ECU or a snapshot is there: T5Suite switched its filter off
-        if (e.PropertyName is nameof(IsConnected) or nameof(SramFile) && (IsConnected || SramFile != null) && Binary != null) SymbolFilter = SymbolFilters[0];
+        if (name is nameof(IsConnected) or nameof(SramFile) && (IsConnected || SramFile != null) && IsCurrent) SymbolFilter = SymbolFilters[0];
     }
 
     /// <summary>
     /// "Compare to original file": Binaries/T5/&lt;partnumber&gt;-&lt;software id&gt;.bin, else Binaries/T5/&lt;partnumber&gt;.bin. T5Suite looked for the
     /// first and compared the second, so the item never lit up.
     /// </summary>
-    public string? OriginalFile => T5?.File.GetTrionicProperties() is { } p
+    public override string? OriginalFile => T5?.File.GetTrionicProperties() is { } p
         ? PartInfo.StockBinary("T5", $"{p.Partnumber.Trim()}-{p.SoftwareID.Trim()}") ?? PartInfo.StockBinary("T5", p.Partnumber.Trim())
         : null;
-
-    [RelayCommand]
-    private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
 
     /// <summary>Import SRAM snapshot into binary (merge adaption data); "Data was imported".</summary>
     public async Task MergeAdaptionAsync(string ramFile, T5Tuning.AdaptionMerge options)

@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>The Information tools both suites have: the axis browser, the disassembly and the hex view.</summary>
+/// <summary>The Information tools every ECU has: the axis browser, the disassembly and the hex view.</summary>
 public abstract partial class MainWindowViewModel
 {
     /// <summary>Information → Browse axis information (the symbol list's "Browse axis info" passes one symbol).</summary>

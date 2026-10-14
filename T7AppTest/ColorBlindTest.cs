@@ -7,6 +7,8 @@ using Avalonia.VisualTree;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T7App.ViewModels;
 using T7App.Views;
@@ -22,7 +24,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 try
@@ -34,7 +36,7 @@ namespace T7AppTest
                     var grid = window.GetVisualDescendants().OfType<MapGrid>().Single();
                     var surface = window.GetVisualDescendants().OfType<Surface3D>().Single();
                     Assert.AreEqual(ColorBlindMode.Normal, grid.ColorMode);
-                    vm.ShowAirmassResultCommand.Execute(null);
+                    vm.T7.ShowAirmassResultCommand.Execute(null);
                     Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                     var airmass = window.GetVisualDescendants().OfType<SuiteApp.Controls.AirmassGrid>().Single();
                     Assert.IsGreaterThan(500, GreenIn(window, airmass), "the airmass table is green → red");
@@ -43,8 +45,7 @@ namespace T7AppTest
                     var settings = new SettingsViewModel(vm.Settings);
                     CollectionAssert.AreEqual(new[] { "Normal", "Universal", "Protanopia", "Tritanopia", "Deuteranomaly" }, settings.ColorBlindModes);
                     settings.ColorBlindMode = 2;
-                    var settingsWindow = new SettingsWindow { DataContext = settings };
-                    settingsWindow.Show();
+                    var settingsWindow = ShowSettings(vm, 0, s => s.Common.ColorBlindMode = 2);
                     Save(settingsWindow, "settings-colorblind");
                     settingsWindow.Close();
                     settings.Apply(vm.Settings);

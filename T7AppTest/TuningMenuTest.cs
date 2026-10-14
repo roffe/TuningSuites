@@ -3,6 +3,8 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
 using T7App.ViewModels;
@@ -12,11 +14,11 @@ namespace T7AppTest
 {
     public partial class AppTest
     {
-        private static string[] Headers(MenuItem menu) => menu.Items.OfType<MenuItem>().Select(i => (string)i.Header!).ToArray();
+        private static string[] Headers(MenuItem menu) => menu.Items.OfType<MenuItem>().Where(i => i.IsVisible).Select(i => (string)i.Header!).ToArray();
 
         private static MenuItem TuningEntry(MenuItem menu, params string[] path)
         {
-            foreach (string caption in path) menu = menu.Items.OfType<MenuItem>().Single(i => (string?)i.Header == MenuTextConverter.Escape(caption));
+            foreach (string caption in path) menu = menu.Items.OfType<MenuItem>().Single(i => i.IsVisible && (string?)i.Header == MenuTextConverter.Escape(caption));
             return menu;
         }
 
@@ -31,7 +33,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "55561754.bin"), newer, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));

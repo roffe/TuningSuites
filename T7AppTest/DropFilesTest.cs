@@ -12,6 +12,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
 using T7App.ViewModels;
@@ -60,7 +62,7 @@ namespace T7AppTest
             File.WriteAllBytes(ram, new byte[0x8000]);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 window.CaptureRenderedFrame();

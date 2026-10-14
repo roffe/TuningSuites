@@ -4,6 +4,7 @@ using System.Text;
 using System.ComponentModel;
 using System.Data;
 using System.IO;
+using System.Linq;
 using CommonSuite;
 using NLog;
 
@@ -1624,21 +1625,21 @@ namespace CommonSuite
 
         private void SaveRegistrySetting(string key, string value)
         {
-            using (SettingsKey saveSettings = SettingsKey.Open(_suiteRegistry.getRegistryPath()))
+            using (Store saveSettings = new Store(_suiteRegistry.getRegistryPath()))
             {
                 saveSettings.SetValue(key, value);
             }
         }
         private void SaveRegistrySetting(string key, Int32 value)
         {
-            using (SettingsKey saveSettings = SettingsKey.Open(_suiteRegistry.getRegistryPath()))
+            using (Store saveSettings = new Store(_suiteRegistry.getRegistryPath()))
             {
                 saveSettings.SetValue(key, value);
             }
         }
         private void SaveRegistrySetting(string key, bool value)
         {
-            using (SettingsKey saveSettings = SettingsKey.Open(_suiteRegistry.getRegistryPath()))
+            using (Store saveSettings = new Store(_suiteRegistry.getRegistryPath()))
             {
                 saveSettings.SetValue(key, value);
             }
@@ -1646,7 +1647,7 @@ namespace CommonSuite
 
         public void SaveSettings()
         {
-            using (SettingsKey saveSettings = SettingsKey.Open(_suiteRegistry.getRegistryPath()))
+            using (Store saveSettings = new Store(_suiteRegistry.getRegistryPath()))
             {
                 saveSettings.SetValue("PanelMode", (int)_panelmode);
                 saveSettings.SetValue("PlayCellProcessedSound", m_PlayCellProcessedSound);
@@ -1808,11 +1809,48 @@ namespace CommonSuite
 
         SuiteRegistry _suiteRegistry;
 
+        /// <summary>
+        /// The options every ECU shares (Settings → Common, the last file and project), once at the top of the program's settings; the
+        /// others are each ECU's own, in its section ("TxSuite/T7" keeps them as "T7\name").
+        /// </summary>
+        public static readonly HashSet<string> SharedNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "ShowRedWhite", "ShowGraphs", "DisableMapviewerColors", "AutoLoadLastFile", "DefaultViewType", "ColorBlindMode", "SymbolListFontSize",
+            "MapCellGap", "SynchronizeMapviewers", "AutoChecksum", "ShowAddressesInHex", "RequestProjectNotes", "HideSymbolTable", "ShowMapPreviewPopup",
+            "ProjectFolder", "AdapterType", "Adapter", "Baudrate", "AutoUpdateSRAMViewers", "AutoUpdateInterval", "InterpolateLogWorksTimescale",
+            "MeasureAFRInLambda", "UseDigitalWidebandLambda", "WidebandDevice", "WbPort", "LastFilename", "LastProjectname", "LastOpenedType",
+        };
+
+        // the section's own names and the shared ones through one SettingsKey on the file, so neither kind of write undoes the other
+        private sealed class Store : IDisposable
+        {
+            private readonly SettingsKey m_key;
+            private readonly string m_section;
+
+            public Store(string path)
+            {
+                int slash = path.IndexOf('/');
+                m_key = SettingsKey.Open(slash < 0 ? path : path[..slash]);
+                m_section = slash < 0 ? "" : path[(slash + 1)..].Replace('/', '\\');
+            }
+
+            private string Name(string name) => m_section == "" || SharedNames.Contains(name) ? name : m_section + "\\" + name;
+
+            public string[] GetValueNames() => m_section == "" ? m_key.GetValueNames()
+                : [.. m_key.GetValueNames().Where(SharedNames.Contains), .. m_key.GetValueNames(m_section).Where(n => !SharedNames.Contains(n))];
+
+            public object GetValue(string name) => m_key.GetValue(Name(name));
+
+            public void SetValue(string name, object value) => m_key.SetValue(Name(name), value);
+
+            public void Dispose() => m_key.Dispose();
+        }
+
         public AppSettings(SuiteRegistry suiteRegistry)
         {
             _suiteRegistry = suiteRegistry;
             // laad alle waarden uit het register
-            using (SettingsKey Settings = SettingsKey.Open(_suiteRegistry.getRegistryPath()))
+            using (Store Settings = new Store(_suiteRegistry.getRegistryPath()))
             {
                 if (Settings != null)
                 {

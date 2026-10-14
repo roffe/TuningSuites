@@ -11,6 +11,8 @@ using AvaloniaHex;
 using AvaloniaHex.Document;
 using AvaloniaHex.Rendering;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T7App.ViewModels;
 using T7App.Views;
 using SuiteApp.ViewModels;
@@ -75,7 +77,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));

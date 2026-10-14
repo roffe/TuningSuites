@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T7App.ViewModels;
 
@@ -25,7 +27,7 @@ namespace T7AppTest
             ]);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 Assert.IsTrue(await vm.OpenFileAsync(file, true));
 
                 // the matrix shows a negative mean as T7Suite did: -9.75 (raw -9750 at factor 0.001), not 55.79

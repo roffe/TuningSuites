@@ -13,14 +13,14 @@ using TrionicCANLib.API;
 namespace T5App.ViewModels;
 
 /// <summary>The ECU side over T5Ecu: the "Online tuning" page and the CANBUS group of "ECU programming".</summary>
-public partial class T5MainWindowViewModel
+public partial class T5Module
 {
     public T5Ecu Ecu { get; } = new();
 
     protected override bool EcuConnected => Ecu.IsConnected;
 
-    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished before closing T5Suite."
-        : Realtime is T5RealtimeViewModel { IsAnyAutotuning: true } ? "Stop the autotune before closing T5Suite: it puts closed loop and the maps back." : null;
+    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished."
+        : Realtime is T5RealtimeViewModel { IsAnyAutotuning: true } ? "Stop the autotune first: it puts closed loop and the maps back." : null;
 
     public override void Shutdown() => Ecu.Dispose();
 
@@ -143,7 +143,7 @@ public partial class T5MainWindowViewModel
     {
         if (EcuConnected) return OpenSramSymbolAsync(bin, sh);
         if (HasSramFile) OpenFromSramFile(sh);
-        else ShowInfo("Symbol resides in SRAM and you are in offline mode. T5Suite is unable to fetch this symboldata in offline mode");
+        else ShowInfo("Symbol resides in SRAM and you are in offline mode. TxSuite is unable to fetch this symboldata in offline mode");
         return Task.CompletedTask;
     }
 

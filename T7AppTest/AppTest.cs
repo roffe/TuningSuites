@@ -11,6 +11,8 @@ using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T7App.ViewModels;
 using T7App.Views;
 using SuiteApp.Views;
@@ -26,7 +28,7 @@ namespace T7AppTest
     public partial class AppTest
     {
         public static AppBuilder BuildAvaloniaApp() =>
-            AppBuilder.Configure<T7App.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+            AppBuilder.Configure<TxSuite.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
@@ -74,7 +76,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 string? info = null;
@@ -184,7 +186,7 @@ namespace T7AppTest
                 Assert.AreEqual(viewer.XAxisSymbol, ((MapViewerViewModel)vm.Viewers[1]).MapName);
 
                 // firmware information: edit, OK, the bin has it
-                FirmwareInfoViewModel fw = vm.FirmwareInfo()!;
+                FirmwareInfoViewModel fw = vm.T7.FirmwareInfo()!;
                 bool limiter = fw.TorqueLimiters;
                 fw.TorqueLimiters = !limiter;
                 fw.ChassisID = "YS3EF48E";
@@ -195,7 +197,7 @@ namespace T7AppTest
                 fwWindow.Show();
                 Save(fwWindow, "firmware-edit");
                 fwWindow.Close();
-                vm.ApplyFirmware(fw, _ => true);
+                vm.T7.ApplyFirmware(fw, _ => true);
                 var after = T7.FirmwareInfo.Read(T7.T7Binary.Open(file, 0, false));
                 Assert.AreEqual(!limiter, after.TorqueLimiters.Enabled);
                 Assert.AreEqual("YS3EF48E", after.ChassisID.Trim());
@@ -216,7 +218,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 vm.Settings.ProjectFolder = Path.Combine(s_dir, "Projects");
                 vm.Settings.RequestProjectNotes = true;
                 vm.AskText = _ => Task.FromResult<string?>("leaner at idle");
@@ -226,7 +228,7 @@ namespace T7AppTest
                 Assert.AreEqual("5168646 EA1WF0LC.47D", props.ProjectName);
                 await vm.CreateProjectAsync(props);
                 Assert.IsTrue(vm.IsProjectOpen);
-                Assert.AreEqual("T7SuitePro [Project: 5168646 EA1WF0LC.47D]", vm.Title);
+                Assert.AreEqual("TxSuite [Project: 5168646 EA1WF0LC.47D]", vm.Title);
                 Assert.AreEqual(Path.Combine(vm.Settings.ProjectFolder, "5168646 EA1WF0LC.47D", "proj-source.bin"), vm.Binary!.FileName);
                 Assert.IsFalse(vm.CanRollBack);
 
@@ -290,7 +292,7 @@ namespace T7AppTest
             binB.WriteSymbol(binB.FileAddress(map), changed, false);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(a, true));
@@ -336,7 +338,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -353,8 +355,7 @@ namespace T7AppTest
 
                 // settings: hex off applies to the symbol list at once
                 var settings = new SettingsViewModel(vm.Settings) { ShowAddressesInHex = false, SynchronizeMapviewers = false };
-                var settingsWindow = new SettingsWindow { DataContext = settings };
-                settingsWindow.Show();
+                var settingsWindow = ShowSettings(vm);
                 Save(settingsWindow, "settings");
                 // every option says what it does: the old dialogs' SuperTips, the same style for the rest
                 CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
@@ -417,7 +418,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -455,7 +456,7 @@ namespace T7AppTest
                 vm.Settings.UseWidebandLambda = true;
                 vm.Settings.WideBandSymbol = "DisplProt.AD_Scanner";
                 vm.Settings.AutoCreateAFRMaps = true;
-                vm.ShowAfrFeedbackMapCommand.Execute(null);
+                vm.T7.ShowAfrFeedbackMapCommand.Execute(null);
                 var feedback = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Symbol: FeedbackAFR [realtime.bin]", feedback.Title);
                 Assert.IsNull(feedback.EcuReadCommand);
@@ -465,7 +466,7 @@ namespace T7AppTest
                 Assert.AreEqual("22.3", rt.AfrText);
                 int cell = 6 * T7.AfrFeedback.Columns + 3;
                 Assert.AreEqual(223, feedback.Map[cell]);
-                vm.ImportAfrFeedbackCommand.Execute(null);
+                vm.T7.ImportAfrFeedbackCommand.Execute(null);
                 Assert.AreEqual(0, feedback.Map[cell]);
                 Assert.AreEqual(TrionicCANLib.Checksum.ChecksumResult.Ok, T7.T7Binary.OpenRaw(file).VerifyChecksum());
                 vm.Settings.UseWidebandLambda = false;
@@ -506,7 +507,7 @@ namespace T7AppTest
             File.WriteAllLines(log, lines);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 System.Collections.Generic.IReadOnlyList<string>? offered = null;
@@ -558,7 +559,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -573,7 +574,7 @@ namespace T7AppTest
                 CollectionAssert.AreEqual(new[] { "_Verify checksum", "_Firmware information", "VIN decoder", "Browse axis information" },
                     ((MenuItem)menu.Items[1]!).Items.OfType<MenuItem>().Take(4).Select(m => m.Header as string).ToArray());
                 // the decoder opens with the file's VIN (it was an expander in the firmware dialog)
-                Assert.AreEqual(vm.FirmwareInfo()!.ChassisID, vm.BinaryVin);
+                Assert.AreEqual(vm.T7.FirmwareInfo()!.ChassisID, vm.BinaryVin);
                 Assert.AreEqual(17, vm.BinaryVin.Trim().Length);
 
                 // dark theme: the coloured symbol names get black text, the others keep the theme's light text
@@ -667,11 +668,11 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1600, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                vm.ShowAirmassResultCommand.Execute(null);
+                vm.T7.ShowAirmassResultCommand.Execute(null);
                 var am = (AirmassResultViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Airmass result viewer: airmass.bin", am.Title);
                 int wot = am.Result!.Pedal.Length - 1, c2400 = System.Array.IndexOf(am.Result.Rpm, 2400);
@@ -707,7 +708,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -749,7 +750,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 var bin = (T7.T7Binary)vm.Binary!;
                 var sid = new SidInfoViewModel(bin, T7.SidInfo.Read(bin)!);
@@ -800,7 +801,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -836,9 +837,9 @@ namespace T7AppTest
                 var about = window.View.NewAboutWindow("2.5.0");
                 about.Show();
                 Save(about, "about");
-                // About in the same words for every suite; Roffe among the thanks
+                // TxSuite's About; Roffe among the thanks
                 var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
-                CollectionAssert.Contains(aboutTexts, "T7Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "TxSuite was created with the help of lots of people on ecuproject.com and trionictuning.com");
                 CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
                 CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
                 Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
@@ -849,7 +850,7 @@ namespace T7AppTest
                 Assert.IsNotNull(lookup.Info);
                 lookup.PartNumber = "123";
                 lookup.Lookup();
-                Assert.AreEqual("The entered partnumber was not recognized by T7Suite", lookup.Message);
+                Assert.AreEqual("The entered partnumber was not recognized by TxSuite", lookup.Message);
                 window.Close();
                 return true;
             }, default).GetAwaiter().GetResult();
@@ -864,7 +865,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -897,7 +898,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -962,8 +963,8 @@ namespace T7AppTest
                 results.ShowDifferenceMap(row);
                 Assert.AreEqual("SRAM symbol difference: IgnNormCal.Map [snap.RAM vs snap2.RAM]", vm.SelectedViewer!.Title);
 
-                StringAssert.StartsWith(Path.GetFileName(vm.SnapshotFileName()), "SRAM");
-                Assert.AreEqual(Path.GetDirectoryName(file), Path.GetDirectoryName(vm.SnapshotFileName()));
+                StringAssert.StartsWith(Path.GetFileName(vm.T7.SnapshotFileName()), "SRAM");
+                Assert.AreEqual(Path.GetDirectoryName(file), Path.GetDirectoryName(vm.T7.SnapshotFileName()));
 
                 var faults = new FaultCodesWindow(vm, [new FaultCode("P0300", "Random misfire"), new FaultCode("P1A0F", "")]);
                 faults.Show();
@@ -979,7 +980,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
 
@@ -1014,7 +1015,7 @@ namespace T7AppTest
                 Assert.IsNotNull(viewer.Map.OpenLoop);
                 Save(window, "main");
 
-                FirmwareInfoViewModel fw = vm.FirmwareInfo()!;
+                FirmwareInfoViewModel fw = vm.T7.FirmwareInfo()!;
                 Assert.AreEqual("5168646", fw.Info.PartNumber.Trim());
                 var fwWindow = new FirmwareInfoWindow { DataContext = fw };
                 fwWindow.Show();

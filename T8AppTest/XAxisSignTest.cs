@@ -1,6 +1,8 @@
 using System.IO;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T8App.ViewModels;
 
@@ -19,7 +21,7 @@ namespace T8AppTest
             File.Copy(Path.Combine(Here(), "..", "T8Binaries", "55353231_FA5I_C_FME2_65_FIEF_80d.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 SuiteBinary bin = vm.Binary!;
                 double[] X(string map) => MapViewerViewModel.Create(vm, bin, bin.Find(map))!.Map.XAxis!;

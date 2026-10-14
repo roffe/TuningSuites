@@ -5,6 +5,8 @@ using System.Linq;
 using Avalonia.Media;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T7;
 using T7App.ViewModels;
 using T7App.Views;
@@ -22,7 +24,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 Assert.IsTrue(await vm.OpenFileAsync(file, true));
                 const string symbol = "ActualIn.p_AirInlet";
 

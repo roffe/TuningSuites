@@ -17,7 +17,7 @@ namespace SuiteApp.ViewModels;
 public record LimiterLegend(AirmassLimitType Type, string Name, IBrush Brush);
 
 /// <summary>
-/// What the airmass result viewer needs from the suite: its calculation on a file as it is on disk (null when the file can't be
+/// What the airmass result viewer needs from the ECU's module: its calculation on a file as it is on disk (null when the file can't be
 /// read), the compare file's check (it says why itself, or NotValidText does), the variant option's caption (T7: convertible,
 /// T8: high output) and default, the gears, the legend and the compressor map's first guess.
 /// </summary>

@@ -1,18 +1,18 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="using:System"
-        xmlns:local="using:TxSuite"
+        xmlns:local="using:TxSuite.ViewModels"
         xmlns:svm="using:SuiteApp.ViewModels"
         xmlns:t5="using:T5App.ViewModels"
-        xmlns:t5v="using:T5App.Views"
+        xmlns:v="using:TxSuite.Views"
         xmlns:t7="using:T7App.ViewModels"
         xmlns:t8="using:T8App.ViewModels"
         xmlns:c="using:SuiteApp.Controls"
-        x:Class="TxSuite.TxSettingsWindow"
+        x:Class="TxSuite.Views.TxSettingsWindow"
         x:DataType="local:TxSettingsViewModel"
         Title="Settings" SizeToContent="WidthAndHeight" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
-    <!-- the suites' frmSettings in one: Common holds what every suite has (T7Suite's captions and order), each ECU's tab its own
-         options in its old groups; the same three 300 px columns as the suites' dialogs -->
+    <!-- the old suites' frmSettings in one: Common holds what every ECU has (T7Suite's captions and order), each ECU's tab its own
+         options in its old suite's groups; the same three 300 px columns as the old suites' dialogs -->
     <Window.Styles>
         <Style Selector="Grid.columns > TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -213,7 +213,7 @@
                                 <ToolTip.Tip><c:SuperTip Title="Use wideband lambda through symbol" Text="Lets you select which symbol to read from the ECU's memory that should be used as wideband lambda values." /></ToolTip.Tip>
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="sys:String">
-                                        <TextBlock Text="{Binding Converter={x:Static t5v:SettingsWindow.PinCaption}}" />
+                                        <TextBlock Text="{Binding Converter={x:Static v:TxSettingsWindow.PinCaption}}" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>

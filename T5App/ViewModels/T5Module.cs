@@ -9,10 +9,13 @@ using TrionicCANLib.Checksum;
 
 namespace T5App.ViewModels;
 
-/// <summary>T5Suite 2.0's main window (frmMain): T5 binaries on the shared window; T5Suite's own features come chunk by chunk.</summary>
-public partial class T5MainWindowViewModel : MainWindowViewModel
+/// <summary>
+/// T5 binaries in the main window, what T5Suite 2.0's frmMain did its own way: opening and checking them, the firmware options, the ECU
+/// over the P-bus, the realtime panel with its autotunes, the tuning wizards and T5Suite's tools.
+/// </summary>
+public partial class T5Module : EcuModule
 {
-    public T5MainWindowViewModel() : base(T5AppSettings.Suite, "T5Suite", new T5SuiteRegistry())
+    public T5Module(MainWindowViewModel main) : base(main, "T5", new T5SuiteRegistry(), T5AppSettings.Former)
     {
         T5Settings = new T5AppSettings();
         MigrateCanDevice();
@@ -21,16 +24,14 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
 
     /// <summary>
     /// Once, T5Suite's own names as the shared settings: CanDevice ("Lawicel", "CombiAdapter" / "Multiadapter", "Just4Trionic", "Kvaser")
-    /// as the adapter type, "Use wideband lambda through symbol" (AD_EGR / AD_cat; AD_sond stays the narrowband) as the wideband symbol.
+    /// as the adapter type when no ECU has one yet, "Use wideband lambda through symbol" (AD_EGR / AD_cat; AD_sond stays the narrowband)
+    /// as T5's wideband symbol.
     /// </summary>
     private void MigrateCanDevice()
     {
         bool hasAdapter, hasWideband;
-        using (var key = SettingsKey.Open(T5AppSettings.Suite))
-        {
-            hasAdapter = key.GetValue("AdapterType") != null;
-            hasWideband = key.GetValue("WideBandSymbol") != null;
-        }
+        using (var key = SettingsKey.Open(SettingsKey.Program)) hasAdapter = key.GetValue("AdapterType") != null;
+        using (var key = SettingsKey.Open(T5AppSettings.Suite)) hasWideband = key.GetValue("WideBandSymbol") != null;
         if (!hasWideband)
         {
             Settings.WideBandSymbol = T5Settings.WidebandLambdaSymbol is "AD_cat" ? "AD_cat" : "AD_EGR";
@@ -70,8 +71,6 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
         return bin;
     }
 
-    protected override string ReleaseTagPrefix => "T5suite_v";
-
     public override string PackageFilesName => "Trionic 5 packages";
 
     public override string PackageExtension => "t5p";
@@ -79,7 +78,7 @@ public partial class T5MainWindowViewModel : MainWindowViewModel
     /// <summary>Lookup partnumber: T5's own part number list.</summary>
     public override PartInfo? LookupPartNumber(string partNumber) => PartLookup(partNumber);
 
-    /// <summary>LookupPartNumber without a suite open (TxSuite's lookup over every ECU).</summary>
+    /// <summary>LookupPartNumber without a module (the partnumber list).</summary>
     public static PartInfo? PartLookup(string partNumber)
     {
         ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");

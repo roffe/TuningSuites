@@ -8,32 +8,23 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>The offline tuning both suites have: compare and transfer maps, search, symbol imports, tuning packages, map menus.</summary>
+/// <summary>The offline tuning every ECU has: compare and transfer maps, search, symbol imports, tuning packages, map menus.</summary>
 public abstract partial class MainWindowViewModel
 {
     /// <summary>The package dialogs' filter: "Trionic 7 packages".</summary>
-    public abstract string PackageFilesName { get; }
+    public string PackageFilesName => Module.PackageFilesName;
 
     /// <summary>"t7p" / "t8p".</summary>
-    public abstract string PackageExtension { get; }
-
-    /// <summary>A file to compare with, opened without changing it.</summary>
-    protected virtual SuiteBinary OpenCompareBinary(string path) => OpenBinary(path);
+    public string PackageExtension => Module.PackageExtension;
 
     /// <summary>Export symbollist as CSV writes the user description too (T7Suite; T8Suite didn't).</summary>
-    public virtual bool SymbolCsvUserDescription => true;
+    public bool SymbolCsvUserDescription => Module.SymbolCsvUserDescription;
 
-    /// <summary>The search results' tab: "Search results: &lt;file&gt;" (T7Suite).</summary>
-    protected virtual string SearchTitle(SuiteBinary bin, MapSearchOptions options) => "Search results: " + Path.GetFileName(bin.FileName);
+    /// <summary>Lookup partnumber: what the entered part number is for the open file's ECU, null when it doesn't know it.</summary>
+    public PartInfo? LookupPartNumber(string partNumber) => Module.LookupPartNumber(partNumber);
 
-    /// <summary>The last transfer selection the old suite kept outside HKCU\Software\MattiasC, imported once; null when it didn't.</summary>
-    protected virtual string? LegacyTransferKey => null;
-
-    /// <summary>Lookup partnumber: what the entered part number is, null when the suite doesn't know it.</summary>
-    public abstract PartInfo? LookupPartNumber(string partNumber);
-
-    /// <summary>What Define myMaps starts with when there is no mymaps.xml yet.</summary>
-    public abstract IReadOnlyList<MapShortcut> MyMapsDefaults { get; }
+    /// <summary>Lookup partnumber over every ECU's partnumbers (no partnumber is in two of their lists).</summary>
+    public PartInfo? LookupAnyPartNumber(string partNumber) => Modules.Select(m => m.LookupPartNumber(partNumber)).FirstOrDefault(info => info != null);
 
     // ---- compare ----
 
@@ -49,7 +40,7 @@ public abstract partial class MainWindowViewModel
         IsBusy = true;
         try
         {
-            ShowDocument(new CompareListViewModel(this, bin.FileName, await Task.Run(() => CompareListViewModel.Count(bin, files, OpenCompareBinary))));
+            ShowDocument(new CompareListViewModel(this, bin.FileName, await Task.Run(() => CompareListViewModel.Count(bin, files, Module.OpenCompareBinary))));
         }
         finally
         {
@@ -62,9 +53,10 @@ public abstract partial class MainWindowViewModel
     {
         otherFile = LinkTarget(otherFile);
         if (Binary is not { } bin || bin.Symbols.Count == 0) return;
-        if (!await Task.Run(() => IsValidFile(otherFile)))
+        EcuModule ecu = Module;
+        if (!await Task.Run(() => ecu.IsValidFile(otherFile)))
         {
-            if (InvalidFileMessage is { } message) ShowInfo(message);
+            if (ecu.InvalidFileMessage is { } message) ShowInfo(message);
             return;
         }
         IsBusy = true;
@@ -72,7 +64,7 @@ public abstract partial class MainWindowViewModel
         {
             var (other, rows) = await Task.Run(() =>
             {
-                SuiteBinary o = OpenCompareBinary(otherFile);
+                SuiteBinary o = ecu.OpenCompareBinary(otherFile);
                 return (o, SuiteCompare.Compare(bin, o));
             });
             ShowDocument(CompareResultsViewModel.Binaries(this, bin, other, rows));
@@ -87,9 +79,9 @@ public abstract partial class MainWindowViewModel
     /// <summary>Transfer maps: the selection remembered between runs (the old TransferSettings key).</summary>
     public HashSet<string> LastTransferSelection()
     {
-        using var key = SettingsKey.Open(Suite, "TransferSettings");
+        using var key = SettingsKey.Open(Module.SettingsPath, "TransferSettings");
         var names = key.GetValueNames().ToHashSet();
-        if (names.Count == 0 && LegacyTransferKey is { } legacy)
+        if (names.Count == 0 && Module.LegacyTransferKey is { } legacy)
         {
             names = SettingsKey.ImportRegistry(legacy).Keys.Where(n => !n.Contains('\\')).ToHashSet();
             foreach (string name in names) key.SetValue(name, "1");
@@ -99,13 +91,13 @@ public abstract partial class MainWindowViewModel
 
     public List<string> TransferMaps(string target, HashSet<string> selected)
     {
-        using (var key = SettingsKey.Open(Suite, "TransferSettings"))
+        using (var key = SettingsKey.Open(Module.SettingsPath, "TransferSettings"))
         {
             foreach (string old in key.GetValueNames()) key.DeleteValue(old);
             foreach (string name in selected) key.SetValue(name, "1");
         }
         int before = TransactionLog?.TransCollection.Count ?? 0;
-        List<string> report = SuiteCompare.TransferMaps(Binary!, target, OpenBinary, selected, TransactionLog);
+        List<string> report = SuiteCompare.TransferMaps(Binary!, target, Module.OpenBinary, selected, TransactionLog);
         TransactionsAdded(before);
         return report;
     }
@@ -134,7 +126,7 @@ public abstract partial class MainWindowViewModel
         if (Binary is not { } bin) return;
         List<SymbolHelper> hits = MapSearch.Find(bin, options);
         if (hits.Count == 0) ShowInfo("No results found...");
-        else ShowDocument(new SearchResultsViewModel(this, SearchTitle(bin, options), hits));
+        else ShowDocument(new SearchResultsViewModel(this, Module.SearchTitle(bin, options), hits));
     }
 
     /// <summary>A descriptor import changed names: the list shows them (the import saved &lt;bin&gt;.xml).</summary>
@@ -191,13 +183,14 @@ public abstract partial class MainWindowViewModel
 
     // ---- map menus ----
 
-    public string MyMapsFile => Path.Combine(SettingsKey.Folder(Suite), "mymaps.xml");
+    /// <summary>The open file's ECU's My Maps (its map names): mymaps.xml in its settings folder.</summary>
+    public string MyMapsFile => Path.Combine(SettingsKey.Folder(Module.SettingsPath), "mymaps.xml");
 
     /// <summary>My Maps changed: the view rebuilds its menu.</summary>
     public event Action? MyMapsChanged;
 
-    /// <summary>Define myMaps' rows: the file, or the suite's defaults when there is none yet.</summary>
-    public List<MapShortcut> MyMapsToEdit() => File.Exists(MyMapsFile) ? MapMenus.LoadMyMaps(MyMapsFile) : MyMapsDefaults.ToList();
+    /// <summary>Define myMaps' rows: the file, or the ECU's defaults when there is none yet.</summary>
+    public List<MapShortcut> MyMapsToEdit() => File.Exists(MyMapsFile) ? MapMenus.LoadMyMaps(MyMapsFile) : Module.MyMapsDefaults.ToList();
 
     public void SaveMyMaps(IEnumerable<MapShortcut> maps)
     {
@@ -215,7 +208,7 @@ public abstract partial class MainWindowViewModel
     [RelayCommand]
     private void OpenShortcut(MapShortcut shortcut)
     {
-        if (!OpenSpecialShortcut(shortcut)) OpenSymbolByName(shortcut.Symbol);
+        if (!Module.OpenSpecialShortcut(shortcut)) OpenSymbolByName(shortcut.Symbol);
     }
 
     /// <summary>A Tuning menu entry (txlogger's menu): each of its maps in its own viewer.</summary>
@@ -224,7 +217,4 @@ public abstract partial class MainWindowViewModel
     {
         foreach (string map in maps) OpenSymbolByName(map);
     }
-
-    /// <summary>A My Maps entry that isn't a symbol (T7Suite's AFR maps); true when handled.</summary>
-    protected virtual bool OpenSpecialShortcut(MapShortcut shortcut) => false;
 }

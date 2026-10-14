@@ -9,16 +9,13 @@ using CommunityToolkit.Mvvm.Input;
 namespace SuiteApp.ViewModels;
 
 /// <summary>
-/// The Realtime menu both suites have: the panel and its commands, the logs' viewer, CSV and LogWorks exports, matrix and log
-/// filters, Set symbol colors. The suite's RealtimeRules say its names and file types; its engine reads.
+/// The Realtime menu every ECU has: the panel and its commands, the logs' viewer, CSV and LogWorks exports, matrix and log
+/// filters, Set symbol colors. The open file's ECU's RealtimeRules say its names and file types; its engine reads.
 /// </summary>
 public abstract partial class MainWindowViewModel
 {
-    /// <summary>The suite's realtime table: names, conversions, the logs' extension.</summary>
-    public abstract RealtimeRules RealtimeRules { get; }
-
-    /// <summary>The realtime panel over the suite's session.</summary>
-    protected abstract RealtimeViewModel CreateRealtimePanel(SuiteBinary bin);
+    /// <summary>The open file's ECU's realtime table: names, conversions, the logs' extension.</summary>
+    public RealtimeRules RealtimeRules => Module.RealtimeRules;
 
     /// <summary>"Trionic 7 logfiles": the logs' open dialogs.</summary>
     public string LogFilesName => RealtimeRules.LogFilesName;
@@ -43,7 +40,7 @@ public abstract partial class MainWindowViewModel
             return;
         }
         if (Binary is not { } bin) return;
-        RealtimeViewModel panel = CreateRealtimePanel(bin);
+        RealtimeViewModel panel = Module.CreateRealtimePanel(bin);
         ShowDocument(panel);
         // not awaited: the command has to stay free to close the panel again
         _ = panel.StartAsync();
@@ -53,7 +50,7 @@ public abstract partial class MainWindowViewModel
     [RelayCommand]
     private void ConfigureRealtimePanel()
     {
-        if (Realtime == null && Binary is { } bin) ShowDocument(CreateRealtimePanel(bin));
+        if (Realtime == null && Binary is { } bin) ShowDocument(Module.CreateRealtimePanel(bin));
     }
 
     /// <summary>The Realtime menu's map buttons (ShowRealtimeMapFromECU): read from SRAM.</summary>
@@ -82,7 +79,7 @@ public abstract partial class MainWindowViewModel
             panel.Add(symbol);
             return;
         }
-        string file = Path.Combine(SettingsKey.Folder(Suite), "rtsymbols.txt");
+        string file = Path.Combine(SettingsKey.Folder(Module.SettingsPath), "rtsymbols.txt");
         var rows = CommonSuite.Realtime.LoadLayout(file, Binary).Where(r => r.Name != symbol.Name).Append(symbol).ToList();
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         CommonSuite.Realtime.SaveLayout(file, rows);

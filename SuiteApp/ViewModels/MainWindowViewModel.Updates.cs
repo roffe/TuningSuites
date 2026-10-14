@@ -16,14 +16,14 @@ public partial class MainWindowViewModel
     [ObservableProperty]
     private string _updateText = "";
 
-    /// <summary>The suite's release tags, upstream's scheme ("T7suite_v"); Directory.Build.props versions the app by the same tags.</summary>
-    protected abstract string ReleaseTagPrefix { get; }
+    /// <summary>The program's release tags ("Txsuite_v"); Directory.Build.props versions the program by the same tags.</summary>
+    protected string ReleaseTagPrefix { get; }
 
     /// <summary>This build's file version, the release tag padded to four parts; 0.0.0.0 without a tag.</summary>
-    public Version BuildVersion => Combined?.BuildVersion ?? GetType().Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
+    public Version BuildVersion => GetType().Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
 
     /// <summary>
-    /// The newest release of the suite when it's newer than this build, else null; the result goes into the status bar as
+    /// The newest release of the program when it's newer than this build, else null; the result goes into the status bar as
     /// msiupdater's messages did. A failed check only says so there.
     /// </summary>
     public async Task<Release?> CheckForUpdatesAsync()
@@ -35,8 +35,8 @@ public partial class MainWindowViewModel
                 Timeout = TimeSpan.FromSeconds(10),
             };
             // GitHub's API refuses requests without a user agent
-            http.DefaultRequestHeaders.UserAgent.ParseAdd((Combined?.Name ?? Caption) + "/" + BuildVersion);
-            Release? newest = UpdateCheck.Newest(await http.GetStringAsync(UpdateCheck.ReleasesApi), Combined?.ReleaseTagPrefix ?? ReleaseTagPrefix);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd(Caption + "/" + BuildVersion);
+            Release? newest = UpdateCheck.Newest(await http.GetStringAsync(UpdateCheck.ReleasesApi), ReleaseTagPrefix);
             Version current = UpdateCheck.Pad(BuildVersion);
             if (newest != null && newest.Version > current)
             {

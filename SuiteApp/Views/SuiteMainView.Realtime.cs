@@ -5,7 +5,7 @@ using SuiteApp.ViewModels;
 
 namespace SuiteApp.Views;
 
-/// <summary>The Realtime menu's log tools both suites have, and the symbol list's Add to realtime list.</summary>
+/// <summary>The Realtime menu's log tools every ECU has, and the symbol list's Add to realtime list.</summary>
 public partial class SuiteMainView
 {
     // the suites' "Open CAN bus logfile" (View matrix from logfile's had no title)

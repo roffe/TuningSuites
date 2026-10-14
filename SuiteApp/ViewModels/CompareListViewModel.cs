@@ -21,7 +21,7 @@ public sealed class CompareListViewModel(MainWindowViewModel owner, string binFi
 
     public Task Open(CompareListRow? row) => row != null ? owner.CompareToFileAsync(row.File) : Task.CompletedTask;
 
-    /// <summary>The rows: every file the suite can open, compared with the bin.</summary>
+    /// <summary>The rows: every file the open file's ECU can open, compared with the bin.</summary>
     public static List<CompareListRow> Count(SuiteBinary bin, IEnumerable<string> files, System.Func<string, SuiteBinary> open) =>
         files.Select(f => new CompareListRow(f, Path.GetFileName(f), SuiteCompare.Compare(bin, open(f)).Count)).ToList();
 }

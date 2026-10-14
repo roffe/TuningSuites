@@ -10,6 +10,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -25,7 +27,7 @@ namespace T5AppTest
     public partial class AppTest
     {
         public static AppBuilder BuildAvaloniaApp() =>
-            AppBuilder.Configure<T5App.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+            AppBuilder.Configure<TxSuite.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
@@ -74,22 +76,22 @@ namespace T5AppTest
             string file = CopyOfStockBin("open.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                StringAssert.StartsWith(vm.Title, "T5SuitePro v");
+                StringAssert.StartsWith(vm.Title, "TxSuite v");
                 var about = window.View.NewAboutWindow("2.5.0");
                 about.Show();
                 about.CaptureRenderedFrame();
-                // About in the same words for every suite; Roffe among the thanks
+                // TxSuite's About; Roffe among the thanks
                 var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
-                CollectionAssert.Contains(aboutTexts, "T5Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "TxSuite was created with the help of lots of people on ecuproject.com and trionictuning.com");
                 CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
                 CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
                 Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
                 about.Close();
-                // the menus the three suites share: the same menus, captions and order (T5Suite's own items in their place)
+                // the menus every ECU shares: the same menus, captions and order (T5Suite's own items in their place)
                 var menu = window.GetVisualDescendants().OfType<Menu>().First();
                 CollectionAssert.AreEqual(new[] { "_File", "_Actions", "_Tuning", "M_y Maps", "_Realtime", "E_CU", "_Skin", "_Help" },
                     menu.Items.OfType<MenuItem>().Select(m => m.Header as string).ToArray());

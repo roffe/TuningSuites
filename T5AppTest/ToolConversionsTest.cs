@@ -8,6 +8,8 @@ using Avalonia.LogicalTree;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T5App.ViewModels;
 using T5App.Views;
 
@@ -31,13 +33,13 @@ namespace T5AppTest
             }
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
                 // Normal, 60 °C, 13 V
-                MapData timing = vm.InjectionTiming("Insp_mat!", 46, 13, vm.InjectorConstant, true)!;
+                MapData timing = vm.T5.InjectionTiming("Insp_mat!", 46, 13, vm.T5.InjectorConstant, true)!;
                 int Cell(int rpm, int map) => Array.IndexOf(timing.YAxis!, (double)rpm) * timing.Cols + Array.IndexOf(timing.XAxis!, (double)map);
                 Assert.AreEqual(40.76, timing.Physical(Cell(6200, 96)), 1e-9);
                 Assert.AreEqual(77.05, timing.Physical(Cell(4300, 208)), 1e-9);
@@ -47,19 +49,19 @@ namespace T5AppTest
                 Assert.AreEqual((timing[round] / 100.0).ToString(CultureInfo.CurrentCulture), timing.FormatCell(round, MapViewType.Easy));
                 // a duty cycle past the 16-bit cell's 655.35 % still shows (-30 °C, 4 V and the dialog's injector constant up to 255
                 // reach the model's 130 ms, 671.67 % at 6200 rpm)
-                MapData rich = vm.InjectionTiming("Insp_mat!", 230, 4, 100, true)!;
+                MapData rich = vm.T5.InjectionTiming("Insp_mat!", 230, 4, 100, true)!;
                 Assert.IsTrue(Enumerable.Range(0, rich.Count).Any(i => double.Parse(rich.FormatCell(i, MapViewType.Easy), CultureInfo.CurrentCulture) > 655.35));
 
                 // the bar headers on every map: raw × 0.01 − 1 on the stock sensor
-                foreach (var (_, map) in T5MainWindowViewModel.InjectionConditions)
+                foreach (var (_, map) in T5App.ViewModels.T5Module.InjectionConditions)
                 {
-                    MapData m = vm.InjectionTiming(map, 46, 13, vm.InjectorConstant, false)!;
+                    MapData m = vm.T5.InjectionTiming(map, 46, 13, vm.T5.InjectorConstant, false)!;
                     CollectionAssert.AreEqual(vm.Binary!.GetXaxisValues(map).Select(v => Math.Round(v * 0.01 - 1, 9)).ToArray(),
                         m.XEasy!.Select(v => Math.Round(v, 9)).ToArray(), map);
                 }
 
                 Assert.IsTrue(await vm.OpenPlainFileAsync(threeBar, true));
-                timing = vm.InjectionTiming("Insp_mat!", 46, 13, vm.InjectorConstant, false)!;
+                timing = vm.T5.InjectionTiming("Insp_mat!", 46, 13, vm.T5.InjectorConstant, false)!;
                 int column = Array.IndexOf(vm.Binary!.GetXaxisValues("Insp_mat!"), 38);
                 Assert.AreEqual(-0.544, timing.XEasy![column], 1e-9);
                 Assert.AreEqual(45, timing.XAxis![column]);
@@ -75,11 +77,11 @@ namespace T5AppTest
             string file = CopyOfStockBin("boostbias.bin");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                Assert.AreEqual(10, vm.BoostBiasStep());
+                Assert.AreEqual(10, vm.T5.BoostBiasStep());
                 window.GetLogicalDescendants().OfType<MenuItem>().Single(m => m.Header as string == "Change boost bias range")
                     .RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
@@ -108,7 +110,7 @@ namespace T5AppTest
             File.WriteAllLines(log, [RealtimeLog.Line(t0, [("Rpm", 3000), ("Ign_angle", 12.25), ("P_medel", 0.125), ("AD_sond", 0.95)], false)]);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.ExportLogDif(log, vm.LogSelection(log));
                 string[] dif = File.ReadAllLines(Path.ChangeExtension(log, ".dif"));

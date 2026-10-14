@@ -8,6 +8,8 @@ using Avalonia.VisualTree;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
 using T7App.ViewModels;
@@ -74,7 +76,7 @@ namespace T7AppTest
                 SymbolNumberConverter.Hex = true;
                 try
                 {
-                    var vm = new T7MainWindowViewModel();
+                    var vm = new MainViewModel();
                     var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                     window.Show();
                     Assert.IsTrue(await vm.OpenPlainFileAsync(a, true));
@@ -112,7 +114,7 @@ namespace T7AppTest
                 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
                 try
                 {
-                    var vm = new T7MainWindowViewModel();
+                    var vm = new MainViewModel();
                     Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                     vm.Settings.Adapter = "";
                     await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);
@@ -155,9 +157,9 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                vm.ShowAirmassResultCommand.Execute(null);
+                vm.T7.ShowAirmassResultCommand.Execute(null);
                 var am = (AirmassResultViewModel)vm.SelectedViewer!;
                 int wot = am.Result!.Pedal.Length - 1, c1640 = Array.IndexOf(am.Result.Rpm, 1640), c2020 = Array.IndexOf(am.Result.Rpm, 2020),
                     c5060 = Array.IndexOf(am.Result.Rpm, 5060);

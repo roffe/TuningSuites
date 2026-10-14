@@ -10,6 +10,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T8App.ViewModels;
 using T8App.Views;
@@ -25,7 +27,7 @@ namespace T8AppTest
     public partial class AppTest
     {
         public static AppBuilder BuildAvaloniaApp() =>
-            AppBuilder.Configure<T8App.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+            AppBuilder.Configure<TxSuite.App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path)!;
 
@@ -78,7 +80,7 @@ namespace T8AppTest
             File.CreateSymbolicLink(link, file);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(link, true));
@@ -96,11 +98,11 @@ namespace T8AppTest
             string file = CopyOfStockBin("open.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                StringAssert.StartsWith(vm.Title, "T8SuitePro v");
+                StringAssert.StartsWith(vm.Title, "TxSuite v");
                 StringAssert.EndsWith(vm.Title, "[ open.BIN ]");
                 Assert.AreEqual("Normal binary", vm.OpenClosedText);
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
@@ -109,9 +111,9 @@ namespace T8AppTest
                 var about = window.View.NewAboutWindow("2.5.0");
                 about.Show();
                 about.CaptureRenderedFrame();
-                // About in the same words for every suite; Roffe among the thanks
+                // TxSuite's About; Roffe among the thanks
                 var aboutTexts = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(about).OfType<TextBlock>().Select(t => t.Text).ToList();
-                CollectionAssert.Contains(aboutTexts, "T8Suite was created with the help of lots of people on ecuproject.com and trionictuning.com");
+                CollectionAssert.Contains(aboutTexts, "TxSuite was created with the help of lots of people on ecuproject.com and trionictuning.com");
                 CollectionAssert.Contains(aboutTexts, "No e-mail support currently, check out www.trionictuning.com and www.ecuproject.com");
                 CollectionAssert.Contains(aboutTexts, "Just4pLeisure ;-)");
                 Assert.IsTrue(aboutTexts.Any(t => t?.Contains("Roffe") == true));
@@ -165,7 +167,7 @@ namespace T8AppTest
                 Assert.IsFalse(viewer.Map.Mutated);
                 Assert.AreEqual(TrionicCANLib.Checksum.ChecksumResult.Ok, vm.Binary.VerifyChecksum());
 
-                FirmwareInfo info = vm.FirmwareInfo()!;
+                FirmwareInfo info = vm.T8.FirmwareInfo()!;
                 Assert.AreEqual("FA56_C_FME2_37_FIEF_81c", info.SoftwareVersion);
                 Assert.AreEqual("B207L MY2004/2005 MY03-06 Gasoline / front wheel drive", info.EngineTypeBySoftwareVersion);
                 var firmware = new FirmwareInfoWindow { DataContext = new FirmwareInfoViewModel(info) };
@@ -187,7 +189,7 @@ namespace T8AppTest
             string file = CopyOfStockBin("tune.BIN"), other = CopyOfStockBin("other.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
 
@@ -213,7 +215,7 @@ namespace T8AppTest
                 // the Tuning menu (txlogger's T8 menu) opening the maps of an old calibration
                 var quick = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
                 // after the Tuning Wizard
-                var airmass = (MenuItem)quick.Items[1]!;
+                var airmass = quick.Items.OfType<MenuItem>().Where(i => i.IsVisible).ElementAt(1);
                 Assert.AreEqual("Airmass", airmass.Header);
                 var manual = (MenuItem)airmass.Items[0]!;
                 Assert.AreEqual("Max airmass map (manual)", manual.Header);
@@ -229,8 +231,7 @@ namespace T8AppTest
                 Assert.AreEqual("IgnAbsCal.fi__NormalMAP", ((MenuItem)directly.Items[0]!).Header);
 
                 var settings = new SettingsViewModel(vm.Settings) { MapDetectionActive = true };
-                var settingsWindow = new SettingsWindow { DataContext = settings };
-                settingsWindow.Show();
+                var settingsWindow = ShowSettings(vm);
                 Save(settingsWindow, "settings");
                 // every option says what it does: the old dialogs' SuperTips, the same style for the rest
                 CollectionAssert.AreEqual(System.Array.Empty<string>(), Untipped(settingsWindow));
@@ -244,25 +245,25 @@ namespace T8AppTest
                 Assert.AreEqual("B207L", lookup.Info.EngineType);
                 var unknown = new PartLookupViewModel(vm.LookupPartNumber, vm.Caption) { PartNumber = "123" };
                 unknown.Lookup();
-                Assert.AreEqual("The entered partnumber was not recognized by T8Suite", unknown.Message);
+                Assert.AreEqual("The entered partnumber was not recognized by TxSuite", unknown.Message);
                 var lookupWindow = new SuiteApp.Views.PartLookupWindow { DataContext = lookup };
                 lookupWindow.Show();
                 Save(lookupWindow, "partlookup");
                 lookupWindow.Close();
 
                 // VIN and immobilizer code from the firmware dialog, then the checksum as on open
-                var firmware = new FirmwareInfoViewModel(vm.FirmwareInfo()!);
+                var firmware = new FirmwareInfoViewModel(vm.T8.FirmwareInfo()!);
                 firmware.StartVinAndImmoEdit();
                 firmware.ChassisId = "YS3FB45F431012345";
                 var firmwareWindow = new FirmwareInfoWindow { DataContext = firmware };
                 firmwareWindow.Show();
                 Save(firmwareWindow, "firmware-edit");
                 firmwareWindow.Close();
-                await vm.ApplyFirmwareAsync(firmware.ToEdit());
-                Assert.AreEqual("YS3FB45F431012345", vm.FirmwareInfo()!.ChassisId);
+                await vm.T8.ApplyFirmwareAsync(firmware.ToEdit());
+                Assert.AreEqual("YS3FB45F431012345", vm.T8.FirmwareInfo()!.ChassisId);
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
 
-                var vin = new VinDecoderViewModel(vm.FirmwareInfo()!.ChassisId);
+                var vin = new VinDecoderViewModel(vm.T8.FirmwareInfo()!.ChassisId);
                 Assert.AreEqual("Valid", vin.Decoded.Checksum);
                 var vinWindow = new SuiteApp.Views.VinDecoderWindow { DataContext = vin };
                 vinWindow.Show();
@@ -279,7 +280,7 @@ namespace T8AppTest
             string file = CopyOfStockBin("ecu.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -289,7 +290,7 @@ namespace T8AppTest
                 Assert.IsFalse(await vm.EnsureConnectedAsync());
                 Assert.IsFalse(vm.IsConnected);
                 Assert.AreEqual("Connect ECU", vm.ConnectCaption);
-                Assert.IsNull(await vm.ReadEcuInfoAsync());
+                Assert.IsNull(await vm.T8.ReadEcuInfoAsync());
                 Assert.IsNull(await vm.ReadFaultCodesAsync());
                 Assert.IsNull(vm.CloseBlocker);
 
@@ -336,7 +337,7 @@ namespace T8AppTest
                 RealtimeLog.Line(t0.AddMilliseconds(i * 100), [("ActualIn.n_Engine", 900 + i * 40), ("Out.M_EngTrqAct", i * 4)], false)));
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));

@@ -14,14 +14,14 @@ using TrionicCANLib.Checksum;
 
 namespace T7App.ViewModels;
 
-/// <summary>The ECU side of the main window over T7Ecu (frmMain's CAN flasher, SRAM and fault code features).</summary>
-public partial class T7MainWindowViewModel
+/// <summary>The ECU side of T7 binaries over T7Ecu (frmMain's CAN flasher, SRAM and fault code features).</summary>
+public partial class T7Module
 {
     public T7Ecu Ecu { get; } = new();
 
     protected override bool EcuConnected => Ecu.IsConnected;
 
-    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished before closing T7Suite." : null;
+    public override string? CloseBlocker => Ecu.IsFlashing ? "Wait until the ECU operation has finished." : null;
 
     public override void Shutdown() => Ecu.Dispose();
 
@@ -106,7 +106,7 @@ public partial class T7MainWindowViewModel
         bool target = kind == "TargetAFR";
         return new MapViewerViewModel
         {
-            Owner = this,
+            Owner = Main,
             Binary = bin,
             Symbol = fuel,
             MapName = kind,

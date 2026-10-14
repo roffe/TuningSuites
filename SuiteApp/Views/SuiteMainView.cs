@@ -18,10 +18,9 @@ using SuiteApp.ViewModels;
 namespace SuiteApp.Views;
 
 /// <summary>
-/// The main window's content the suites share (frmMain / Form1): the workspace with the symbol list and the documents, and the menu
-/// actions every suite has. Each app's MainView.axaml derives from it with its own menus (its ribbon's order and captions), a
-/// StatusBar, a SuiteWorkspace, and the symbol list's row menu as the resource "SymbolListMenu"; menu items can name the handlers
-/// here. A SuiteWindow holds it: the app's MainWindow, or TxSuite's one window, which swaps the suites' views.
+/// The main window's content (the old suites' frmMain / Form1): the workspace with the symbol list and the documents, and the menu
+/// actions every ECU has. The program's MainView.axaml derives from it with its menus, a StatusBar, a SuiteWorkspace, and the
+/// symbol list's row menu as the resource "SymbolListMenu"; menu items can name the handlers here. A SuiteWindow holds it.
 /// </summary>
 public partial class SuiteMainView : UserControl
 {
@@ -65,14 +64,13 @@ public partial class SuiteMainView : UserControl
         m_keyHost = null;
     }
 
-    /// <summary>Open file's filter name ("Trionic 7 binary or Motorola S19").</summary>
+    /// <summary>Open file's filter name ("Trionic binary or Motorola S19").</summary>
     protected virtual string BinaryFilesName => "Binary or Motorola S19";
 
     /// <summary>Open file's picker title, as T7Suite's and T8Suite's "Open a binary Trionic 7 file...".</summary>
     protected virtual string OpenFileTitle => "Open file";
 
-    /// <summary>About...: the thanks, support and closing lines of the suite's frmAbout (T7Suite's by default).</summary>
-    /// <summary>About's special thanks, the suite's own list (Roffe in every suite's); the rest of About is the same for all.</summary>
+    /// <summary>About's special thanks (Roffe in every old suite's list); the rest of About is the same text whatever the program.</summary>
     protected virtual string AboutThanks =>
         "Dilemma, Steve Hayes, Hook, mackan, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Mattias Claesson, Roffe and...";
 
@@ -85,8 +83,6 @@ public partial class SuiteMainView : UserControl
         m_workspaceReady = true;
         InitWorkspace();
         InitDrop();
-        // Help → About <suite>: About TxSuite in TxSuite
-        if (MainWindowViewModel.Combined is { } tx && this.FindControl<MenuItem>("AboutMenu") is { } about) about.Header = "About " + tx.Name;
         Space.Workspace.SizeChanged += (_, e) =>
         {
             if (!e.WidthChanged || e.NewSize.Width <= 0) return;
@@ -149,10 +145,9 @@ public partial class SuiteMainView : UserControl
         base.OnDataContextChanged(e);
         if (DataContext is not MainWindowViewModel vm) return;
         InitOnce();
-        // TxSuite's skin is one for all suites; until it has one, the suite's own
-        using (var shared = SettingsKey.Open(vm.SharedSettings)) ApplySkin(shared.GetValue(SkinKey) as string ?? OwnSkin(vm));
         using (var settings = SettingsKey.Open(vm.Suite))
         {
+            ApplySkin(settings.GetValue(SkinKey) as string);
             // the symbol list's width from the last session, as the suites' saved dock layout kept it
             if (double.TryParse(settings.GetValue(SymbolListKey) as string, NumberStyles.Float, CultureInfo.CurrentCulture, out double width) && width > 50)
                 m_symbolWidth = width;
@@ -179,12 +174,6 @@ public partial class SuiteMainView : UserControl
         vm.AskText = caption => Dialogs.Prompt(Host, caption);
         vm.AskOkCancel = text => Dialogs.OkCancel(Host, text, "Transaction log size warning...");
     }
-
-    /// <summary>
-    /// TxSuite: its settings dialog (what every suite shares, then each ECU's own) in place of the suite's; true when its Ok saved
-    /// them. Null in the single suites.
-    /// </summary>
-    public static Func<SuiteMainView, Task<bool>>? SettingsDialog { get; set; }
 
     // Open file's types, also what a dropped file opens as
     private static readonly string[] BinaryPatterns = ["*.bin", "*.s19"];
@@ -223,14 +212,8 @@ public partial class SuiteMainView : UserControl
     {
         if (sender is not MenuItem { Tag: string skin }) return;
         ApplySkin(skin);
-        using var settings = SettingsKey.Open(Vm.SharedSettings);
+        using var settings = SettingsKey.Open(Vm.Suite);
         settings.SetValue(SkinKey, skin);
-    }
-
-    private static string? OwnSkin(MainWindowViewModel vm)
-    {
-        using var settings = SettingsKey.Open(vm.Suite);
-        return settings.GetValue(SkinKey) as string;
     }
 
     private static void ApplySkin(string? skin)
@@ -263,7 +246,7 @@ public partial class SuiteMainView : UserControl
     // ---- updates ----
 
     /// <summary>
-    /// frmMain_Shown and Help → Check for updates: the dialog when a newer release of the suite is out; OK downloads its setup in
+    /// frmMain_Shown and Help → Check for updates: the dialog when a newer release of the program is out; OK downloads its setup in
     /// the browser on Windows, elsewhere the release page lists the packages. A build without a release tag (0.0.0) skips the
     /// startup check, every release would be newer.
     /// </summary>
@@ -271,7 +254,7 @@ public partial class SuiteMainView : UserControl
     {
         if (startup && Vm.BuildVersion == new Version(0, 0, 0, 0)) return;
         if (await Vm.CheckForUpdatesAsync() is not { } release) return;
-        if (await new UpdateAvailableWindow(release, MainWindowViewModel.Combined?.Name ?? Vm.Suite).ShowDialog<bool>(Host))
+        if (await new UpdateAvailableWindow(release, Vm.Suite).ShowDialog<bool>(Host))
             Dialogs.OpenWithShell(OperatingSystem.IsWindows() && release.Setup != null ? release.Setup : release.Page);
     }
 
@@ -286,16 +269,14 @@ public partial class SuiteMainView : UserControl
 
     protected async void OnAbout(object? sender, RoutedEventArgs e)
     {
-        string version = MainWindowViewModel.Combined?.Version
-            ?? Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
+        string version = Vm.GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
         // the build metadata (+commit) doesn't belong in the title
         int plus = version.IndexOf('+');
         await NewAboutWindow(plus > 0 ? version[..plus] : version).ShowDialog(Host);
     }
 
-    /// <summary>The suite's About... for a version; TxSuite's in TxSuite.</summary>
-    public AboutWindow NewAboutWindow(string version) =>
-        MainWindowViewModel.Combined is { } tx ? new(tx.Name, version, tx.AboutThanks) : new(Vm.Caption, version, AboutThanks);
+    /// <summary>The program's About... for a version.</summary>
+    public AboutWindow NewAboutWindow(string version) => new(Vm.Caption, version, AboutThanks);
 
     // ---- projects ----
 
@@ -350,10 +331,7 @@ public partial class SuiteMainView : UserControl
 
     // ---- closing ----
 
-    /// <summary>
-    /// The window closed, or TxSuite put another suite's view in its place: the symbol list's width saved, the floating windows
-    /// closed, the ECU let go.
-    /// </summary>
+    /// <summary>The window closed: the symbol list's width saved, the floating windows closed, the ECUs let go.</summary>
     public void Closed()
     {
         if (DataContext is not MainWindowViewModel vm) return;

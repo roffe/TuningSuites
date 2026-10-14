@@ -5,6 +5,8 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T7App.ViewModels;
 using T7App.Views;
 using SuiteApp.Views;
@@ -22,7 +24,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(() =>
             {
-                var window = new MainWindow { DataContext = new T7MainWindowViewModel(), Width = 1500, Height = 950 };
+                var window = new MainWindow { DataContext = new MainViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 window.CaptureRenderedFrame();
                 double before = SymbolListWidth(window);
@@ -36,7 +38,7 @@ namespace T7AppTest
                 Assert.IsGreaterThan(before + 150, dragged);
                 window.Close();
 
-                window = new MainWindow { DataContext = new T7MainWindowViewModel(), Width = 1500, Height = 950 };
+                window = new MainWindow { DataContext = new MainViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 window.CaptureRenderedFrame();
                 Assert.AreEqual(dragged, SymbolListWidth(window), 2);
@@ -64,7 +66,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(() =>
             {
-                var window = new MainWindow { DataContext = new T7MainWindowViewModel(), Width = 1500, Height = 950 };
+                var window = new MainWindow { DataContext = new MainViewModel(), Width = 1500, Height = 950 };
                 window.Show();
                 double docked = DocumentsLeft(window);
                 Assert.IsGreaterThan(300, docked);
@@ -87,7 +89,7 @@ namespace T7AppTest
             System.IO.File.Copy(System.IO.Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 vm.Settings.HideSymbolTable = true;
                 try
                 {

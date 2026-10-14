@@ -22,7 +22,7 @@ public partial class FirmwareInfoWindow : Window
     // the browser reads the file again, as T8Suite did
     private async void OnFlashBlocks(object? sender, RoutedEventArgs e)
     {
-        if (Owner is Window { DataContext: T8MainWindowViewModel { Binary: { } bin } })
+        if (Owner is Window { DataContext: SuiteApp.ViewModels.MainWindowViewModel { Binary: T8SuitePro.T8Binary bin } })
             await new FlashBlocksWindow(FirmwareInfo.FlashBlocks(bin.FileName)).ShowDialog(this);
     }
 

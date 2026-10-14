@@ -4,6 +4,8 @@ using System.Linq;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -23,7 +25,7 @@ namespace T5AppTest
                 RealtimeLog.Line(t0.AddMilliseconds(i * 100), [("Rpm", 900 + i * 40), ("P_medel", i * 0.02)], false)));
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -129,7 +131,7 @@ namespace T5AppTest
                 // the line selection: a hidden line stays hidden (settings), back on with a second click
                 rt.ToggleGraphLine("TQ");
                 Assert.AreEqual(8, rt.GraphChannels().Channels.Count);
-                Assert.AreEqual("TQ", vm.T5Settings.HiddenGraphLines);
+                Assert.AreEqual("TQ", vm.T5.T5Settings.HiddenGraphLines);
                 rt.ToggleGraphLine("TQ");
                 Assert.AreEqual(9, rt.GraphChannels().Channels.Count);
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
@@ -140,7 +142,7 @@ namespace T5AppTest
                 vm.Settings.UseWidebandLambda = true;
                 vm.Settings.WideBandSymbol = "AD_EGR";
                 // Settings Ok: the panel reads the new lambda input (FillRealtimePool read the setting each time)
-                vm.T5SettingsChanged();
+                vm.T5.SettingsChanged();
                 Assert.IsTrue(rt.Rows.Any(r => r.Name == "AD_EGR") && rt.Rows.All(r => r.Name != "AD_sond"));
                 CollectionAssert.Contains(rt.PolledNames.ToList(), "AD_EGR");
                 for (int i = 0; i < 3; i++)
@@ -148,7 +150,7 @@ namespace T5AppTest
                 // T5Suite's User defined grid: F2, Pgm_status in 16 hex digits
                 Assert.AreEqual(3000.ToString("F2", System.Globalization.CultureInfo.CurrentCulture), rt.Rows.Single(r => r.Name == "Rpm").ValueText);
                 Assert.AreEqual("0000000000000000", rt.Rows.Single(r => r.Name == "Pgm_status").ValueText);
-                vm.ShowAfrCommand.Execute("FeedbackAFR");
+                vm.T5.ShowAfrCommand.Execute("FeedbackAFR");
                 var feedback = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("FeedbackAFR", feedback.MapName);
                 Assert.IsTrue(feedback.IsReadOnly);
@@ -160,7 +162,7 @@ namespace T5AppTest
                 int samples = feedback.Map.Marks!(sampled).Samples;
                 rt.Apply(new RealtimeSample(DateTime.Now, [("Rpm", 3000), ("P_medel", 0.8), ("AD_EGR", 12.5), ("Pgm_status", 0)], 20, null));
                 Assert.AreEqual(samples + 1, feedback.Map.Marks!(sampled).Samples);
-                vm.ShowAfrCommand.Execute("TargetAFR");
+                vm.T5.ShowAfrCommand.Execute("TargetAFR");
                 var target = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.IsFalse(target.IsReadOnly);
                 // T5Suite's default target: 13.0 below 1000 rpm, richer with boost
@@ -171,17 +173,17 @@ namespace T5AppTest
                 Save(window, "afrtarget");
 
                 // the ignition autotune's lock map (Ign_map_0!'s padlocks, see CellMarksTest) and the autotune settings
-                vm.ShowIgnitionLocksCommand.Execute(null);
+                vm.T5.ShowIgnitionLocksCommand.Execute(null);
                 Assert.AreEqual("Ign_map_0!", ((MapViewerViewModel)vm.SelectedViewer!).MapName);
-                var autotune = new AutotuneSettingsViewModel(vm.Settings, vm.T5Settings);
+                var autotune = new AutotuneSettingsViewModel(vm.Settings, vm.T5.T5Settings);
                 Assert.AreEqual(35m, autotune.GlobalMaximumAdvance);
                 autotune.GlobalMaximumAdvance = 33.5m;
                 var autotuneWindow = new AutotuneSettingsWindow { DataContext = autotune };
                 autotuneWindow.Show();
                 Save(autotuneWindow, "autotunesettings");
                 autotuneWindow.Close();
-                autotune.Apply(vm.Settings, vm.T5Settings);
-                Assert.AreEqual(33.5, vm.T5Settings.GlobalMaximumIgnitionAdvance);
+                autotune.Apply(vm.Settings, vm.T5.T5Settings);
+                Assert.AreEqual(33.5, vm.T5.T5Settings.GlobalMaximumIgnitionAdvance);
 
                 // a .t5l in the viewer
                 await vm.OpenLogAsync(log, _ => System.Threading.Tasks.Task.FromResult<int?>(0));

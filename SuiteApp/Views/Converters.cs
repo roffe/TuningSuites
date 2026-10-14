@@ -12,7 +12,7 @@ public class SymbolColorConverter : IValueConverter
 {
     public static readonly SymbolColorConverter Instance = new();
 
-    /// <summary>T8Suite's list had no name colours: the suite's view model switches them off.</summary>
+    /// <summary>T8Suite's list had no name colours: the open file's ECU switches them off.</summary>
     public static bool Enabled { get; set; } = true;
 
     private static readonly (string[] prefixes, IBrush brush)[] Colors =
@@ -88,7 +88,7 @@ public class SymbolShadeConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
 }
 
-/// <summary>T5Suite's description cell by XDF category (gridViewSymbols_CustomDrawCell); the suite's view model switches it on.</summary>
+/// <summary>T5Suite's description cell by XDF category (gridViewSymbols_CustomDrawCell); the open file's ECU (T5) switches it on.</summary>
 public class CategoryColorConverter : IValueConverter
 {
     public static readonly CategoryColorConverter Instance = new();

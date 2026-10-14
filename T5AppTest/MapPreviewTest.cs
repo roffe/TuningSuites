@@ -2,6 +2,8 @@ using System.Linq;
 using Avalonia.Headless;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T5App.ViewModels;
 using T5App.Views;
 
@@ -16,7 +18,7 @@ namespace T5AppTest
             string file = CopyOfStockBin("preview.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));

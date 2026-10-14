@@ -3,6 +3,8 @@ using System.Linq;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T7App.ViewModels;
 using T7App.Views;
@@ -19,7 +21,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 SuiteViewType before = vm.Settings.DefaultViewType;
                 vm.Settings.DefaultViewType = SuiteViewType.Decimal;
                 try

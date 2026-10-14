@@ -4,6 +4,8 @@ using Avalonia.Headless;
 using Avalonia.VisualTree;
 using Avalonia.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T8App.ViewModels;
 using T8App.Views;
 using T8SuitePro;
@@ -18,14 +20,14 @@ namespace T8AppTest
             string file = CopyOfStockBin("pid.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 // no stock bin has a TEM table
-                Assert.IsFalse(vm.HasTemTable);
+                Assert.IsFalse(vm.T8.HasTemTable);
 
-                PidEditorViewModel editor = vm.PidEditor(false)!;
+                PidEditorViewModel editor = vm.T8.PidEditor(false)!;
                 Assert.AreEqual($"PID editor ({editor.Rows.Count} items)", editor.Title);
                 PidRow row = editor.Rows[0];
                 Assert.AreEqual("0100", row.Pid);
@@ -66,7 +68,7 @@ namespace T8AppTest
                 dialog.Close();
                 editor.Rows[2].Read = 1;
 
-                await vm.ApplyPidEditorAsync(editor);
+                await vm.T8.ApplyPidEditorAsync(editor);
                 T8Binary reopened = T8Binary.Open(file, false);
                 Assert.AreEqual("01AB", reopened.Pids[0].PID);
                 Assert.AreEqual(row.Entry.SymbolIndex, reopened.Pids[0].SymbolIndex);
@@ -74,7 +76,7 @@ namespace T8AppTest
                 Assert.AreEqual(TrionicCANLib.Checksum.ChecksumResult.Ok, reopened.VerifyChecksum());
 
                 // the TEM editor's columns, on an empty table
-                var tem = new PidEditorWindow { DataContext = vm.PidEditor(true) };
+                var tem = new PidEditorWindow { DataContext = vm.T8.PidEditor(true) };
                 CollectionAssert.AreEqual(new[] { " ", "Label", "Symbol", "Description", "Type", "Address", "Size" },
                     tem.FindControl<DataGrid>("Grid")!.Columns.Where(c => c.IsVisible).Select(c => (string)c.Header!).ToArray());
                 window.Close();
@@ -88,7 +90,7 @@ namespace T8AppTest
             string file = CopyOfStockBin("bits.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -100,7 +102,7 @@ namespace T8AppTest
 
                 // the window's dialog: the symbol's bit is named and set as in the file; flip it
                 BitmaskViewModel? shown = null;
-                vm.ShowBitmask = bits =>
+                vm.T8.ShowBitmask = bits =>
                 {
                     shown = bits;
                     MaskBit bit = bits.Low.Concat(bits.High).Single(b => b.Mask == sh.BitMask);
@@ -115,16 +117,16 @@ namespace T8AppTest
                     return System.Threading.Tasks.Task.FromResult(true);
                 };
                 // opening it from the symbol list shows the dialog (Cancel: nothing written)
-                var ok = vm.ShowBitmask;
+                var ok = vm.T8.ShowBitmask;
                 bool routed = false;
-                vm.ShowBitmask = _ => { routed = true; return System.Threading.Tasks.Task.FromResult(false); };
+                vm.T8.ShowBitmask = _ => { routed = true; return System.Threading.Tasks.Task.FromResult(false); };
                 vm.OpenSymbolCommand.Execute(sh);
                 for (int i = 0; i < 100 && !routed; i++) await System.Threading.Tasks.Task.Delay(50);
                 Assert.IsTrue(routed);
                 // Ok: awaited, so nothing reads the file while the write and the checksum update run (a reader blocks the update on
                 // Linux, a fixed delay failed under load)
-                vm.ShowBitmask = ok;
-                await vm.OpenBitMaskAsync(bin, sh);
+                vm.T8.ShowBitmask = ok;
+                await vm.T8.OpenBitMaskAsync(bin, sh);
                 Assert.IsNotNull(shown);
                 Assert.AreEqual(shown!.Value, bin.Read(address, 2) is var after ? after[0] << 8 | after[1] : -1);
                 Assert.AreNotEqual((before[0] << 8 | before[1]) & sh.BitMask, shown.Value & sh.BitMask);
@@ -134,7 +136,7 @@ namespace T8AppTest
                 // one in SRAM needs the ECU
                 string? info = null;
                 vm.Info += text => info = text;
-                await vm.OpenBitMaskAsync(bin, masked.First(s => s.Flash_start_address >= 0x100000));
+                await vm.T8.OpenBitMaskAsync(bin, masked.First(s => s.Flash_start_address >= 0x100000));
                 Assert.AreEqual("Symbol outside of flash boundary and no connection to ECU available", info);
                 window.Close();
                 return true;
@@ -147,7 +149,7 @@ namespace T8AppTest
             string file = CopyOfStockBin("preview.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -194,17 +196,18 @@ namespace T8AppTest
             string file = CopyOfStockBin("wizard.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 // the wizard first in the Tuning menu, txlogger's menu after it
                 var tuning = window.View.FindControl<MenuItem>("QuickMapsMenu")!;
-                Assert.AreEqual("Tuning Wizard", ((MenuItem)tuning.Items[0]!).Header);
-                Assert.AreEqual("Airmass", ((MenuItem)tuning.Items[1]!).Header);
+                var shown = tuning.Items.OfType<MenuItem>().Where(i => i.IsVisible).ToList();
+                Assert.AreEqual("Tuning Wizard", shown[0].Header);
+                Assert.AreEqual("Airmass", shown[1].Header);
 
                 // an old calibration: the OLD and BOTH packs
-                TuningWizardViewModel wizard = vm.TuningWizard()!;
+                TuningWizardViewModel wizard = vm.T8.TuningWizard()!;
                 Assert.AreEqual("FA56", wizard.SoftwareVersion);
                 Assert.HasCount(11, wizard.Packs);
                 Assert.IsTrue(wizard.Packs.All(p => p.BinType is "OLD" or "BOTH"));
@@ -247,7 +250,7 @@ namespace T8AppTest
             string file = CopyOfStockBin("info.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T8MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1600, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -274,7 +277,7 @@ namespace T8AppTest
                 Save(window, "axisbrowser");
 
                 // the airmass result viewer with T8Suite's options
-                vm.ShowAirmassResultCommand.Execute(null);
+                vm.T8.ShowAirmassResultCommand.Execute(null);
                 var am = (SuiteApp.ViewModels.AirmassResultViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Airmass result viewer: info.BIN", am.Title);
                 Assert.AreEqual("Car is high output (175/210 hp)", am.VariantCaption);

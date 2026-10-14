@@ -12,6 +12,7 @@ using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MapControls;
+using SuiteApp.Services;
 
 namespace SuiteApp.ViewModels;
 
@@ -24,44 +25,53 @@ public record SymbolColumn(string Header, string Path, bool Visible = true);
 public record SymbolFilter(string Name, Func<SymbolHelper, bool> Matches);
 
 /// <summary>
-/// The main window the suites share (frmMain / Form1): the opened binary, its symbol list, the open documents and the project.
-/// Each suite's subclass opens its own binaries and adds the features only it has.
+/// The main window (the old suites' frmMain / Form1, now one for every ECU): the opened binary, its symbol list, the open documents and
+/// the project. What a T5, T7 or T8 binary needs its own way is that ECU's module (<see cref="EcuModule"/>): the open file's is
+/// <see cref="Module"/>, and a file of another ECU makes its module the open one.
 /// </summary>
 public abstract partial class MainWindowViewModel : ObservableObject
 {
-    /// <summary>"T7SuitePro": the window title, the settings folder and registry key.</summary>
+    /// <summary>"TxSuite": the window title, the settings folder (SettingsKey.Program).</summary>
     public string Suite { get; }
 
-    /// <summary>"T7Suite": message captions.</summary>
+    /// <summary>"TxSuite": message captions.</summary>
     public string Caption { get; }
 
     /// <summary>The open file's VIN for Actions → VIN decoder; "" where the files carry none (T5).</summary>
-    public virtual string BinaryVin => "";
+    public string BinaryVin => Module.BinaryVin;
 
-    // the app's own version, not this library's
+    // the program's own version, not this library's
     protected string Version =>
         GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
 
-    /// <summary>
-    /// TxSuite: the program the suites run in, null in a single suite. Its name and version head the title, the update check looks
-    /// for its releases, About is its, and its settings hold what the suites share (Recent, the skin).
-    /// </summary>
-    public static CombinedProgram? Combined { get; set; }
+    /// <summary>A module per ECU, in the order their old suites' settings are imported (the first one's shared options win).</summary>
+    public IReadOnlyList<EcuModule> Modules { get; }
 
-    /// <summary>Where what the suites share is kept: TxSuite's settings, else the suite's own.</summary>
-    public string SharedSettings => Combined?.Name ?? Suite;
+    /// <summary>The open file's ECU; with no file open the one of the file opened last (the program's last one at startup).</summary>
+    [ObservableProperty]
+    private EcuModule _module;
 
-    // the window title's name and version: TxSuite's, else the suite's
-    private string TitleName => Combined?.Name ?? Suite;
-    private string TitleVersion => Combined?.Version ?? Version;
+    partial void OnModuleChanged(EcuModule value)
+    {
+        OnPropertyChanged(nameof(Settings));
+        OnPropertyChanged(nameof(SymbolFilters));
+        OnPropertyChanged(nameof(SymbolColumns));
+        OnPropertyChanged(nameof(OriginalFile));
+        using var settings = SettingsKey.Open(Suite);
+        settings.SetValue(EcuKey, value.Name);
+    }
 
-    public AppSettings Settings { get; }
+    // the program's settings: the ECU of the file opened last
+    private const string EcuKey = "Suite";
 
-    /// <summary>The suite's settings key, for what keeps its own subkeys (log filters, symbol colours).</summary>
-    protected SuiteRegistry Registry { get; }
+    /// <summary>The open file's ECU's settings: the shared options (Settings → Common) and its own.</summary>
+    public AppSettings Settings => Module.Settings;
+
+    /// <summary>The ECU's settings key, for what keeps its own subkeys (log filters, symbol colours).</summary>
+    protected SuiteRegistry Registry => Module.Registry;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasFile))]
+    [NotifyPropertyChangedFor(nameof(HasFile), nameof(OriginalFile))]
     private SuiteBinary? _binary;
 
     [ObservableProperty]
@@ -160,44 +170,32 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>Text, caption and button labels: the index clicked, null when closed.</summary>
     public Func<string, string, string[], Task<int?>>? AskButtons { get; set; }
 
-    protected MainWindowViewModel(string suite, string caption, SuiteRegistry registry)
+    /// <param name="name">The program ("TxSuite"): the title, message captions, the settings.</param>
+    /// <param name="releaseTagPrefix">Its release tags ("Txsuite_v"), for the update check.</param>
+    /// <param name="modules">A module per ECU over this main window.</param>
+    protected MainWindowViewModel(string name, string releaseTagPrefix, Func<MainWindowViewModel, IReadOnlyList<EcuModule>> modules)
     {
-        Suite = suite;
-        Caption = caption;
-        Registry = registry;
-        Settings = new AppSettings(registry);
+        Suite = name;
+        Caption = name;
+        ReleaseTagPrefix = releaseTagPrefix;
+        Modules = modules(this);
+        string? last;
+        using (var settings = SettingsKey.Open(Suite)) last = settings.GetValue(EcuKey) as string;
+        // T7 the first time, as T7Suite was the suite TxSuite started with
+        _module = Modules.FirstOrDefault(m => m.Name == last) ?? Modules.FirstOrDefault(m => m.Name == "T7") ?? Modules[0];
         ApplyColorBlindMode();
         ApplySymbolListFont();
         ApplyMapCellGap();
-        Title = $"{TitleName} v{TitleVersion}";
+        Logging.ApplyCanLogging(Settings.EnableCanLog);
+        Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
         WatchFloating();
         RestartSramTimer();
     }
 
-    // ---- what each suite does its own way ----
-
-    /// <summary>The binary's size, for converting S19 files.</summary>
-    protected abstract uint FileLength { get; }
-
-    /// <summary>Open file with an S19: the binary it converts to next to it, null when it didn't (T5Suite has its own converter).</summary>
-    protected virtual string? ConvertS19(string path) => new Srecord().ConvertSrecToBin(path, FileLength, out string bin, true) ? bin : null;
-
-    /// <summary>The file is one of this suite's binaries.</summary>
-    protected abstract bool IsValidFile(string path);
-
-    /// <summary>Shown when an opened file isn't one; null when IsValidFile says why itself (T8Suite).</summary>
-    protected virtual string? InvalidFileMessage => null;
-
-    /// <summary>Parses the file (on a worker thread).</summary>
-    protected abstract SuiteBinary OpenBinary(string path);
-
-    /// <summary>After a file opened and shows (T8Suite checks the checksum then).</summary>
-    protected virtual Task OnOpenedAsync(SuiteBinary bin) => Task.CompletedTask;
-
     /// <summary>
-    /// The symbol list's columns in order, the same for every suite (each old suite had its own); the ones a suite has
+    /// The symbol list's columns in order, the same for every ECU (each old suite had its own); the ones the open file's ECU has
     /// (HasSymbolColumn). The hidden ones stay in the column chooser.
     /// </summary>
     public IReadOnlyList<SymbolColumn> SymbolColumns =>
@@ -209,65 +207,50 @@ public abstract partial class MainWindowViewModel : ObservableObject
             new("Length", nameof(SymbolHelper.Length)), new("Type", nameof(SymbolHelper.Symbol_type), false),
             new("Bitmask", nameof(SymbolHelper.BitMask), false), new("Description", nameof(SymbolHelper.Description)),
             new("User description", nameof(SymbolHelper.Userdescription)), new("Category", nameof(SymbolHelper.Category), false),
-        }.Where(c => HasSymbolColumn(c.Path)),
+        }.Where(c => Module.HasSymbolColumn(c.Path)),
     ];
 
-    /// <summary>A symbol list column the suite fills (Type: T7 / T8, Bitmask: T8).</summary>
-    protected virtual bool HasSymbolColumn(string path) => true;
-
-    /// <summary>The symbol list's order inside its category groups (T7Suite: largest first).</summary>
-    protected virtual IEnumerable<SymbolHelper> OrderSymbols(IEnumerable<SymbolHelper> symbols) => symbols.OrderByDescending(s => s.Length);
-
     /// <summary>Symbol names coloured by their prefix (T7Suite did, T8Suite didn't).</summary>
-    public virtual bool ColorSymbolNames => true;
+    public bool ColorSymbolNames => Module.ColorSymbolNames;
 
     /// <summary>T5Suite coloured the description cell by the symbol's category instead.</summary>
-    public virtual bool ColorDescriptionsByCategory => false;
+    public bool ColorDescriptionsByCategory => Module.ColorDescriptionsByCategory;
 
-    /// <summary>The closed-loop mark: T7Suite's "Closed loop indicator" setting (none by default).</summary>
-    public virtual OpenLoopMark OpenLoopMarkStyle => (OpenLoopMark)Math.Clamp(Settings.StandardFill, 0, 2);
+    /// <summary>The closed-loop mark of the open file's ECU.</summary>
+    public OpenLoopMark OpenLoopMarkStyle => Module.OpenLoopMarkStyle;
 
-    /// <summary>The view a map opens in: "Default view type for maps" as it is (T7Suite's and T8Suite's MapViewerFactory).</summary>
-    public virtual MapViewType DefaultMapView =>
-        (int)Settings.DefaultViewType is var v && v <= (int)MapViewType.Ascii ? (MapViewType)v : MapViewType.Easy;
+    /// <summary>The view a map opens in, the open file's ECU's way.</summary>
+    public MapViewType DefaultMapView => Module.DefaultMapView;
 
     /// <summary>A map's cell marks in a bin (T5Suite's padlocks and adaption boxes); null for none, as T7Suite and T8Suite.</summary>
-    public virtual Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => null;
+    public Func<int, CellMarks>? CellMarks(SuiteBinary bin, string mapName) => Module.CellMarks(bin, mapName);
 
     /// <summary>
-    /// T8Suite's map preview popup (Settings → Show map preview popup), in every suite: the hovered map from the file, read only; null
+    /// T8Suite's map preview popup (Settings → Show map preview popup), for every ECU: the hovered map from the file, read only; null
     /// for one that only lives in SRAM.
     /// </summary>
     public MapViewerViewModel? MapPreview(SymbolHelper sh) => Settings.ShowMapPreviewPopup && Binary is { } bin ? MapViewerViewModel.Create(this, bin, sh, readOnly: true) : null;
 
-    /// <summary>The symbol list's predefined filters; none for T7Suite.</summary>
-    public virtual IReadOnlyList<SymbolFilter> SymbolFilters => [];
+    /// <summary>The symbol list's predefined filters; none for T7.</summary>
+    public IReadOnlyList<SymbolFilter> SymbolFilters => Module.SymbolFilters;
 
-    /// <summary>The filter a newly opened file starts with.</summary>
-    protected virtual SymbolFilter? DefaultSymbolFilter => null;
+    /// <summary>The open file's ECU's realtime session is open: new viewers show the ECU's data.</summary>
+    protected bool EcuConnected => Module.EcuConnected;
 
-    /// <summary>A symbol that doesn't open as a map (T8Suite's bit mask symbols); true when handled.</summary>
-    protected virtual bool OpenOther(SuiteBinary bin, SymbolHelper sh) => false;
+    /// <summary>Why the program can't close now (a flash or an autotune in progress), null when it can.</summary>
+    public string? CloseBlocker => Modules.Select(m => m.CloseBlocker).FirstOrDefault(b => b != null);
 
-    /// <summary>The suite's realtime session is open: new viewers show the ECU's data.</summary>
-    protected abstract bool EcuConnected { get; }
-
-    /// <summary>Verify checksum, the suite's way.</summary>
-    protected abstract Task VerifyChecksumAsync();
-
-    /// <summary>Create project: what to prefill from the open binary (car model, project name).</summary>
-    protected abstract (string carModel, string projectName) ProjectDefaults(SuiteBinary bin);
-
-    /// <summary>Why the app can't close now (a flash in progress), null when it can.</summary>
-    public virtual string? CloseBlocker => null;
-
-    /// <summary>The app closes: release the ECU.</summary>
-    public virtual void Shutdown()
+    /// <summary>The program closes: every ECU released.</summary>
+    public void Shutdown()
     {
+        foreach (EcuModule m in Modules) m.Shutdown();
     }
 
-    /// <summary>The MRU list the old suite kept outside HKCU\Software\MattiasC, imported once; null when it had none.</summary>
-    protected virtual string? LegacyMruKey => null;
+    /// <summary>"Compare to original file": the stock bin with the open file's part number (T5, T7), null without one.</summary>
+    public string? OriginalFile => Binary == null ? null : Module.OriginalFile;
+
+    [RelayCommand]
+    private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
 
     // ---- opening ----
 
@@ -283,62 +266,61 @@ public abstract partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// TxSuite: a binary about to open (with the project it belongs to, or null); true when it's another suite's and that suite took
-    /// it over in its own window. Null in the single suites.
-    /// </summary>
-    public static Func<MainWindowViewModel, string, string?, Task<bool>>? Handoff { get; set; }
-
-    private async Task<bool> HandedOff(string path, string? project) => Handoff != null && await Handoff(this, path, project);
-
-    /// <summary>
-    /// The file a path names, through symbolic links: on Linux .NET's FileInfo.Length is the link's own, and every suite checks a binary's
+    /// The file a path names, through symbolic links: on Linux .NET's FileInfo.Length is the link's own, and every ECU checks a binary's
     /// length (a linked stock bin was "File has incorrect length").
     /// </summary>
     protected static string LinkTarget(string path) => File.Exists(path) ? File.ResolveLinkTarget(path, true)?.FullName ?? path : path;
 
-    /// <summary>frmMain.OpenFile: S19 is converted first, the file must be one of the suite's binaries, then its symbols are read.</summary>
+    /// <summary>
+    /// frmMain.OpenFile: S19 is converted first, the file must be a T5, T7 or T8 binary (another ECU's makes that ECU the open one,
+    /// SwitchToAsync), then its symbols are read.
+    /// </summary>
     public async Task<bool> OpenFileAsync(string path, bool showMessage)
     {
         path = LinkTarget(path);
-        // ponytail: an S19 stays with the suite it's opened in (converted at its size); TxSuite could check the converted size
-        if (await HandedOff(path, null)) return false;
         IsBusy = true;
         try
         {
             if (path.EndsWith(".s19", StringComparison.OrdinalIgnoreCase))
             {
+                // ponytail: converted at the size of the ECU of the file opened last (T5 with its own converter); the S19's addresses
+                // could tell the ECU
                 string source = path;
-                if (await Task.Run(() => ConvertS19(source)) is { } converted) path = converted;
+                EcuModule converter = Module;
+                if (await Task.Run(() => converter.ConvertS19(source)) is { } converted) path = converted;
                 else Info?.Invoke("Failed to convert S19 file to binary");
             }
             Settings.Lastfilename = path;
-            if (!await Task.Run(() => IsValidFile(path)))
+            string file = path;
+            EcuModule? ecu = await Task.Run(() => Modules.FirstOrDefault(m => m.Claims(file)));
+            if (ecu == null || !await Task.Run(() => ecu.IsValidFile(file)))
             {
                 Binary = null;
                 Symbols = null;
-                Title = $"{TitleName} v{TitleVersion} [ none ]";
-                if (showMessage && InvalidFileMessage is { } message) Info?.Invoke(message);
+                Title = $"{Suite} v{Version} [ none ]";
+                if (showMessage && (ecu == null ? NotABinary : ecu.InvalidFileMessage) is { } message) Info?.Invoke(message);
                 return false;
             }
+            if (ecu != Module && !await SwitchToAsync(ecu)) return false;
             AddRecent(path);
             ReadOnlyText = new FileInfo(path).IsReadOnly ? "File is READ ONLY" : "File access OK";
-            SuiteBinary bin = await Task.Run(() => OpenBinary(path));
+            SuiteBinary bin = await Task.Run(() => ecu.OpenBinary(file));
 
-            // grouped by category and sorted by it ascending in every suite (the suite's order inside a category); the view filters
-            // as it's made, so the suite's filter first
-            SymbolFilter = DefaultSymbolFilter;
-            var rows = OrderSymbols(bin.Symbols.Cast<SymbolHelper>()).ToList();
+            // grouped by category and sorted by it ascending for every ECU (its order inside a category); the view filters as it's
+            // made, so the ECU's filter first
+            SymbolFilter = ecu.DefaultSymbolFilter;
+            var rows = ecu.OrderSymbols(bin.Symbols.Cast<SymbolHelper>()).ToList();
             var view = new DataGridCollectionView(rows) { Filter = MatchesSearch };
-            foreach (string group in SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
+            foreach (string group in ecu.SymbolGroupPaths) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(nameof(SymbolHelper.Category)));
             // no symbol selected yet: the grid would make the first row current, which unfolds its category
             view.MoveCurrentToPosition(-1);
             Binary = bin;
             Symbols = view;
-            Title = $"{TitleName} v{TitleVersion} [ {Path.GetFileName(path)} ]";
+            Title = $"{Suite} v{Version} [ {Path.GetFileName(path)} ]";
             FileNameText = Path.GetFileNameWithoutExtension(path);
             OpenClosedText = bin.IsSoftwareOpen ? "Open/dev binary" : "Normal binary";
-            await OnOpenedAsync(bin);
+            await ecu.OnOpenedAsync(bin);
             return true;
         }
         finally
@@ -346,6 +328,33 @@ public abstract partial class MainWindowViewModel : ObservableObject
             ProgressText = "";
             IsBusy = false;
         }
+    }
+
+    /// <summary>A file no ECU takes.</summary>
+    public const string NotABinary = "File is not a Trionic 5, 7 or 8 binary file!";
+
+    /// <summary>
+    /// Another ECU's file is about to open: what belonged to the one before goes first, as when the old suites were separate programs.
+    /// Nothing switches while that ECU is being flashed or autotuned; every document closes (unsaved maps asked about first, Cancel
+    /// keeps everything), its ECU session and SRAM snapshot are let go. False when it can't or the user cancelled.
+    /// </summary>
+    private async Task<bool> SwitchToAsync(EcuModule ecu)
+    {
+        if (Module.CloseBlocker is { } blocker)
+        {
+            ShowInfo(blocker);
+            return false;
+        }
+        if (!await CloseMutatedViewersAsync()) return false;
+        foreach (DocumentViewModel d in Viewers.ToList())
+            if (Viewers.Contains(d)) await CloseViewerAsync(d);
+        await DisconnectRealtimeAsync();
+        SramFile = null;
+        Binary = null;
+        Symbols = null;
+        Module = ecu;
+        Logging.ApplyCanLogging(Settings.EnableCanLog);
+        return true;
     }
 
     // ---- symbol list ----
@@ -429,9 +438,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
             view.SortDescriptions.Add(DataGridSortDescription.FromPath(path, descending ? System.ComponentModel.ListSortDirection.Descending : System.ComponentModel.ListSortDirection.Ascending));
     }
 
-    /// <summary>The symbol list's groups on open and for "Group by category": the category (T5Suite: then the subcategory).</summary>
-    protected virtual string[] SymbolGroupPaths => [nameof(SymbolHelper.Category)];
-
     /// <summary>Group by this column / by category (the suites' default) / not at all.</summary>
     public void GroupSymbols(string? path)
     {
@@ -440,7 +446,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         foreach (string group in GroupPaths(path)) view.GroupDescriptions.Add(new DataGridPathGroupDescription(group));
     }
 
-    private string[] GroupPaths(string? path) => path == nameof(SymbolHelper.Category) ? SymbolGroupPaths : path != null ? [path] : [];
+    private string[] GroupPaths(string? path) => path == nameof(SymbolHelper.Category) ? Module.SymbolGroupPaths : path != null ? [path] : [];
 
     /// <summary>The header menu's ticks: sorted by this column only, this way.</summary>
     public bool IsSortedBy(string? path, bool descending) =>
@@ -476,7 +482,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         if (Binary is not { } bin || sh == null) return null;
         if (sh.Flash_start_address == 0 && sh.Start_address == 0) return null;
-        if (OpenOther(bin, sh)) return null;
+        if (Module.OpenOther(bin, sh)) return null;
         string title = $"Symbol: {sh.SmartVarname} [{Path.GetFileName(bin.FileName)}]";
         if (Viewers.OfType<MapViewerViewModel>().FirstOrDefault(v => v.Title == title && v.FileName == bin.FileName) is { } open)
         {
@@ -486,13 +492,13 @@ public abstract partial class MainWindowViewModel : ObservableObject
         if (MapViewerViewModel.Create(this, bin, sh) is not { } viewer)
         {
             // only in SRAM (not in the file): read it from the ECU
-            _ = OpenSramOnlyAsync(bin, sh);
+            _ = Module.OpenSramOnlyAsync(bin, sh);
             return null;
         }
         viewer.OnlineMode = EcuConnected;
         Viewers.Add(viewer);
         SelectedViewer = viewer;
-        if (OnlineMapsFromEcu && EcuConnected && sh.Start_address > 0) _ = ReadMapFromEcuAsync(viewer);
+        if (Module.OnlineMapsFromEcu && EcuConnected && sh.Start_address > 0) _ = ReadMapFromEcuAsync(viewer);
         return viewer;
     }
 
@@ -584,6 +590,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
             foreach (DocumentViewModel d in e.NewItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged += OnDocumentChanged;
             foreach (DocumentViewModel d in e.OldItems?.OfType<DocumentViewModel>() ?? []) d.PropertyChanged -= OnDocumentChanged;
             SyncDocked();
+            // the realtime panel opened or closed: what binds to it (Shift+F5's autotune) follows
+            OnPropertyChanged(nameof(Realtime));
         };
     }
 
@@ -655,7 +663,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task VerifyChecksum() => VerifyChecksumAsync();
+    private Task VerifyChecksum() => Module.VerifyChecksumAsync();
 
     /// <summary>gridViewSymbols_CellValueChanged: an edited user description is saved to &lt;bin&gt;.xml (not into a read-only folder).</summary>
     public void SaveUserDescriptions()
@@ -686,9 +694,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     /// After the settings dialog: what applies at once (SetupDisplayOptions) and the colour blind mode, which open viewers take
-    /// too; the other viewer settings apply to new viewers.
+    /// too; the other viewer settings apply to new viewers. Each ECU applies its own.
     /// </summary>
-    public virtual void SettingsChanged()
+    public void SettingsChanged()
     {
         Views.SymbolNumberConverter.Hex = Settings.ShowAddressesInHex;
         ApplyColorBlindMode();
@@ -696,6 +704,8 @@ public abstract partial class MainWindowViewModel : ObservableObject
         ApplyMapCellGap();
         RefreshSymbols();
         RestartSramTimer();
+        Logging.ApplyCanLogging(Settings.EnableCanLog);
+        foreach (EcuModule m in Modules) m.SettingsChanged();
     }
 
     /// <summary>The colour blind mode into the application's resources, where SuiteTheme.axaml's styles hand it to every map control.</summary>
@@ -724,7 +734,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     /// <summary>OpenProject: the project's binary, its transaction log (purge offered above 2000 entries), a backup.</summary>
     public async Task<bool> OpenProjectAsync(string name)
     {
-        if (SuiteProject.Open(Settings.ProjectFolder, name) is not { } project || await HandedOff(project.BinaryFile, name)) return false;
+        if (SuiteProject.Open(Settings.ProjectFolder, name) is not { } project) return false;
         Settings.LastOpenedType = 1;
         if (!await OpenFileAsync(project.BinaryFile, false)) return false;
         int count = project.TransactionLog.TransCollection.Count;
@@ -736,7 +746,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         project.CreateBackup();
         Project = project;
         Settings.Lastprojectname = name;
-        Title = $"{TitleName} [Project: {name}]";
+        Title = $"{Suite} [Project: {name}]";
         UpdateRollControls();
         return true;
     }
@@ -750,7 +760,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Symbols = null;
         FileNameText = "No file";
         Settings.Lastfilename = "";
-        Title = TitleName;
+        Title = Suite;
         UpdateRollControls();
     }
 
@@ -761,7 +771,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         if (Binary is { } bin)
         {
             p.BinaryFile = bin.FileName;
-            (p.CarModel, p.ProjectName) = ProjectDefaults(bin);
+            (p.CarModel, p.ProjectName) = Module.ProjectDefaults(bin);
         }
         return p;
     }
@@ -883,20 +893,14 @@ public abstract partial class MainWindowViewModel : ObservableObject
     private static void Exit() =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Close();
 
-    // ---- MRU: file name and path per entry, appended when new, no limit (T7Suite's HKCU\Software\T7SuitePro\MRUList); TxSuite's
-    // one list for all suites ----
+    // ---- MRU: file name and path per entry, appended when new, no limit (T7Suite's HKCU\Software\T7SuitePro\MRUList); one list for
+    // every ECU, the old suites' lists added once (SettingsKey.ImportOnce) ----
 
     private void LoadRecent()
     {
         // entries are numbered: a path's backslashes would read as subkeys
-        using var key = SettingsKey.Open(SharedSettings, "MRUList");
+        using var key = SettingsKey.Open(Suite, "MRUList");
         var entries = key.GetValueNames().OrderBy(n => int.TryParse(n, out int i) ? i : int.MaxValue).Select(n => (string)key.GetValue(n)!).ToList();
-        if (entries.Count == 0 && Combined == null && LegacyMruKey is { } legacy)
-        {
-            // once: what the old suite kept outside HKCU\Software\MattiasC
-            entries = SettingsKey.ImportRegistry(legacy).Values.Distinct().ToList();
-            for (int i = 0; i < entries.Count; i++) key.SetValue(i.ToString(), entries[i]);
-        }
         foreach (string path in entries.Distinct()) Recent.Add(new RecentFile(Path.GetFileName(path), path));
     }
 
@@ -904,7 +908,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
     {
         if (Recent.Any(r => r.Path == path)) return;
         Recent.Add(new RecentFile(Path.GetFileName(path), path));
-        using var key = SettingsKey.Open(SharedSettings, "MRUList");
+        using var key = SettingsKey.Open(Suite, "MRUList");
         key.SetValue((Recent.Count - 1).ToString(), path);
     }
 }
@@ -925,5 +929,3 @@ public partial class ColumnFilter(string header, string path) : ObservableObject
     private string _text = "";
 }
 
-/// <summary>TxSuite as the suites see it (MainWindowViewModel.Combined): its name, version, release tags and About's thanks.</summary>
-public sealed record CombinedProgram(string Name, string Version, Version BuildVersion, string ReleaseTagPrefix, string AboutThanks);

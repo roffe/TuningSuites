@@ -1,42 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- the T8 module of TxSuite: what T8 binaries need their own way (T8Module) and T8's own windows; TxSuite ships its files -->
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>T8App</RootNamespace>
     <AssemblyName>T8Suite</AssemblyName>
-    <!-- the version comes from the nearest T8suite_vX.Y.Z tag (Directory.Build.props), upstream's release tags -->
-    <VersionTagPrefix>T8suite_</VersionTagPrefix>
-    <ApplicationIcon>T8Suite.ico</ApplicationIcon>
-    <Company>MattiasC</Company>
-    <Copyright>Copyright © Dilemma, Mattias Claesson</Copyright>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
-
-  <!-- ponytail: Windows stays 32-bit as T7App (x86-only J2534 and Lawicel CANUSB drivers); only the launcher, the dll stays AnyCPU -->
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT'">
-    <DefaultAppHostRuntimeIdentifier>win-x86</DefaultAppHostRuntimeIdentifier>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <AvaloniaResource Include="T8Suite.ico" />
-    <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
-    <!-- Help → T8Suite user manual / Trionic 8 technical documentation -->
-    <None Include="..\T8_manual.pdf" Link="T8_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\Trionic 8.pdf" Link="Trionic 8.pdf" CopyToOutputDirectory="PreserveNewest" />
-    <!-- the Tuning Wizard's packs (T8Suite's installer put them into TuningPacks next to the program) -->
-    <None Include="..\TuningPacks\*.t8x" Link="TuningPacks\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <!-- Kvaser's CANlib for TrionicCANLib on Windows, as the flasher ships it -->
-    <None Include="$(TrionicDir)\Libs\canlib32.dll" Link="canlib32.dll" CopyToOutputDirectory="PreserveNewest"
-          Condition="$(RuntimeIdentifier.StartsWith('win')) or ('$(RuntimeIdentifier)' == '' and '$(OS)' == 'Windows_NT')" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\T8Core\T8Core.csproj" />

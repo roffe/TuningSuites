@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace SuiteApp.ViewModels;
 
-/// <summary>frmPartnumberLookup: the suite's lookup (TxSuite's: every ECU's); T8Suite only showed the car model and engine type.</summary>
+/// <summary>frmPartnumberLookup over every ECU's partnumbers; T8Suite only showed the car model and engine type (PartInfo.Details).</summary>
 public partial class PartLookupViewModel(Func<string, PartInfo?> lookup, string suite) : ObservableObject
 {
     [ObservableProperty] private string _partNumber = "";
@@ -16,7 +16,7 @@ public partial class PartLookupViewModel(Func<string, PartInfo?> lookup, string 
 
     public bool HasBinary => Info?.Binary != null;
 
-    /// <summary>TxSuite: the open suite's own lookup. Compare takes only its own ECU's binaries (no partnumber is in two suites' lists).</summary>
+    /// <summary>The open file's ECU's own lookup. Compare takes only its own ECU's binaries (no partnumber is in two ECUs' lists).</summary>
     public Func<string, PartInfo?>? Own { get; init; }
 
     public bool CanCompare => HasBinary && (Own == null || Own(Info!.PartNumber) != null);

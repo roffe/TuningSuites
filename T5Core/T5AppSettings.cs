@@ -14,8 +14,11 @@ namespace Trionic5Tools
     public class T5AppSettings
     {
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-        /// <summary>The settings name, like T7SuitePro / T8SuitePro: settings.json in &lt;AppData&gt;/MattiasC/T5SuitePro.</summary>
-        public const string Suite = "T5SuitePro";
+        /// <summary>T5's settings: the T5 section of the program's (its values "T5\name" in TxSuite's settings.json, its files in TxSuite/T5).</summary>
+        public const string Suite = SettingsKey.Program + "/T5";
+
+        /// <summary>T5SuitePro's own settings name (settings.json in &lt;AppData&gt;/MattiasC/T5SuitePro), imported once.</summary>
+        public const string Former = "T5SuitePro";
 
         static T5AppSettings() => Register();
 
@@ -24,10 +27,10 @@ namespace Trionic5Tools
         /// HKCU\Software\MattiasC\T5Suite2 with the log filters, channels and symbol colours, then its own HKCU\Software\T5Suite2,
         /// which wins), and the settings folder's name before the rename, T5Suite2.
         /// </summary>
-        internal static void Register()
+        public static void Register()
         {
-            SettingsKey.RegistryPaths[Suite] = [@"Software\MattiasC\T5Suite2", @"Software\T5Suite2"];
-            SettingsKey.FormerFolders[Suite] = "T5Suite2";
+            SettingsKey.RegistryPaths[Former] = [@"Software\MattiasC\T5Suite2", @"Software\T5Suite2"];
+            SettingsKey.FormerFolders[Former] = "T5Suite2";
         }
 
 

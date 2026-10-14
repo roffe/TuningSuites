@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -20,11 +22,11 @@ namespace T5AppTest
             string file = CopyOfStockBin("afrerror.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
-                var afr = vm.AfrMaps!;
+                var afr = vm.T5.AfrMaps!;
                 // target 13.0 everywhere; one pass at 11.5 (1.5 rich) and one in the idle map at 12.0
                 afr.SetTargetAFRMapInBytes([.. Enumerable.Range(0, 256).SelectMany(_ => new byte[] { 0, 130 })]);
                 afr.SetIdleTargetAFRMapInBytes([.. Enumerable.Range(0, 96).SelectMany(_ => new byte[] { 0, 130 })]);
@@ -34,7 +36,7 @@ namespace T5AppTest
                 Assert.IsTrue(cell > 0 && idleCell > 0);
 
                 // T5Suite: -1.50 (its viewer read the stored low byte 201..255 as negative), not 24.10
-                vm.ShowAfrCommand.Execute("FeedbackvsTargetAFR");
+                vm.T5.ShowAfrCommand.Execute("FeedbackvsTargetAFR");
                 MapData error = ((MapViewerViewModel)vm.SelectedViewer!).Map;
                 Assert.AreEqual(-15, error[cell]);
                 Assert.AreEqual(Easy(-1.5), error.FormatCell(cell, MapViewType.Easy));
@@ -43,16 +45,16 @@ namespace T5AppTest
                 Assert.AreEqual("", error.FormatCell(0, MapViewType.Easy));
                 Assert.AreEqual("0", error.FormatCell(0, MapViewType.Decimal));
 
-                vm.ShowAfrCommand.Execute("IdleFeedbackvsTargetAFR");
+                vm.T5.ShowAfrCommand.Execute("IdleFeedbackvsTargetAFR");
                 MapData idleError = ((MapViewerViewModel)vm.SelectedViewer!).Map;
                 Assert.AreEqual(Easy(-1.0), idleError.FormatCell(idleCell, MapViewType.Easy));
                 Assert.AreEqual("", idleError.FormatCell(0, MapViewType.Easy));
 
-                vm.ShowAfrCommand.Execute("FeedbackAFR");
+                vm.T5.ShowAfrCommand.Execute("FeedbackAFR");
                 MapData feedback = ((MapViewerViewModel)vm.SelectedViewer!).Map;
                 Assert.AreEqual(Easy(11.5), feedback.FormatCell(cell, MapViewType.Easy));
                 Assert.AreEqual("", feedback.FormatCell(0, MapViewType.Easy));
-                vm.ShowAfrCommand.Execute("TargetAFR");
+                vm.T5.ShowAfrCommand.Execute("TargetAFR");
                 Assert.IsFalse(((MapViewerViewModel)vm.SelectedViewer!).Map.BlankZero);
 
                 // the realtime panel's Autotune tab: T5Suite filled the feedback grid with F1 text (λ in F2)

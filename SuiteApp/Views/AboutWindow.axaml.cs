@@ -8,8 +8,8 @@ public partial class AboutWindow : Window
     public AboutWindow() => InitializeComponent();
 
     /// <summary>
-    /// frmAbout in the same words for every suite, only the thanks are the suite's; the heading "T7Suite v&lt;version&gt;" as
-    /// frmAbout.SetInformation set it.
+    /// frmAbout in the old suites' words, the three suites' thanks in one list; the heading "TxSuite v&lt;version&gt;" as
+    /// frmAbout.SetInformation set T7Suite's.
     /// </summary>
     public AboutWindow(string caption, string version, string thanks) : this()
     {

@@ -8,20 +8,24 @@ using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SuiteApp.ViewModels;
 
 namespace TxSuiteTest
 {
     public partial class SwitchTest
     {
-        /// <summary>One settings dialog: Common goes to every suite, an ECU tab's options to its suite only.</summary>
+        /// <summary>
+        /// One settings dialog: Common goes to every ECU, kept once at the top of TxSuite's settings; an ECU tab's options to that ECU only,
+        /// in its section.
+        /// </summary>
         [TestMethod]
         public void SettingsHaveCommonAndAnEcuTabEach()
         {
             s_session!.Dispatch(async () =>
             {
-                var t7 = new T7App.ViewModels.T7MainWindowViewModel();
-                var settings = new TxSuite.TxSettingsViewModel(t7);
-                var window = new TxSuite.TxSettingsWindow { DataContext = settings };
+                var vm = new TxSuite.ViewModels.MainViewModel();
+                var settings = new TxSuite.ViewModels.TxSettingsViewModel(vm);
+                var window = new TxSuite.Views.TxSettingsWindow { DataContext = settings };
                 window.Show();
                 var tabs = window.FindControl<TabControl>("Tabs")!;
                 CollectionAssert.AreEqual(new[] { "Common", "T5", "T7", "T8" }, tabs.Items.OfType<TabItem>().Select(t => (string)t.Header!).ToArray());
@@ -46,16 +50,25 @@ namespace TxSuiteTest
                 settings.Apply();
                 window.Close();
 
-                // the suite in front has it at once, the others in their files
-                Assert.AreEqual(!hex, t7.Settings.ShowAddressesInHex);
+                // every ECU has the shared option at once, an ECU's own only that ECU
+                foreach (EcuModule ecu in vm.Modules) Assert.AreEqual(!hex, ecu.Settings.ShowAddressesInHex, ecu.Name);
+                Assert.AreEqual(!legion, vm.T8.Settings.UseLegionBootloader);
+                Assert.AreEqual(!t7Pbus, vm.T7.Settings.OnlyPBus);
+                Assert.AreEqual(t8Pbus, vm.T8.Settings.OnlyPBus);
+                // as kept: the shared option once at the top of TxSuite's settings, the own ones in their ECU's section
                 var t5 = new AppSettings(new Trionic5Tools.T5SuiteRegistry());
                 var t8 = new AppSettings(new T8SuitePro.T8SuiteRegistry());
                 Assert.AreEqual(!hex, t5.ShowAddressesInHex);
-                Assert.AreEqual(!hex, t8.ShowAddressesInHex);
                 Assert.AreEqual(!legion, t8.UseLegionBootloader);
-                Assert.AreEqual(!t7Pbus, t7.Settings.OnlyPBus);
                 Assert.AreEqual(t8Pbus, t8.OnlyPBus);
-                t7.Shutdown();
+                using (var tx = SettingsKey.Open(SettingsKey.Program))
+                {
+                    Assert.IsNotNull(tx.GetValue("ShowAddressesInHex"));
+                    Assert.IsNull(tx.GetValue("T7\\ShowAddressesInHex"));
+                    Assert.AreEqual((!t7Pbus).ToString(System.Globalization.CultureInfo.CurrentCulture), tx.GetValue("T7\\OnlyPBus"));
+                    Assert.IsNull(tx.GetValue("OnlyPBus"));
+                }
+                vm.Shutdown();
                 return true;
             }, default).GetAwaiter().GetResult();
         }

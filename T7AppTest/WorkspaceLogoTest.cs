@@ -7,6 +7,8 @@ using Avalonia.VisualTree;
 using CommonSuite;
 using Dock.Avalonia.Controls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.Controls;
 using T7App.ViewModels;
 using T7App.Views;
@@ -25,7 +27,7 @@ namespace T7AppTest
             {
                 var brush = (DrawingBrush)WorkspaceLogo.Brush;
                 Assert.IsTrue(brush.Drawing!.GetBounds().Width > 100, "the griffin's outline");
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();

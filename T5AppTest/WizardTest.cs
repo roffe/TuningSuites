@@ -1,5 +1,7 @@
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T5App.ViewModels;
 using T5App.Views;
 using Trionic5Tools;
@@ -14,32 +16,32 @@ namespace T5AppTest
             string file = CopyOfStockBin("wizards.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
 
-                TuneMeUpViewModel tune = vm.TuneMeUp()!;
+                TuneMeUpViewModel tune = vm.T5.TuneMeUp()!;
                 Assert.AreEqual(1, tune.Stage);
                 var tuneWindow = new TuneMeUpWindow { DataContext = tune };
                 tuneWindow.Show();
                 Save(tuneWindow, "tunemeup");
                 tuneWindow.Close();
-                Assert.IsTrue((await vm.RunTuneMeUpAsync(tune))!.Count > 0);
+                Assert.IsTrue((await vm.T5.RunTuneMeUpAsync(tune))!.Count > 0);
                 Assert.AreEqual(TuningStage.Stage1, T5Binary.Open(file).File.GetTrionicProperties().TuningStage);
 
-                InjectorWizardViewModel injectors = vm.InjectorWizard()!;
+                InjectorWizardViewModel injectors = vm.T5.InjectorWizard()!;
                 injectors.Type = InjectorType.GreenGiants;
                 var injWindow = new InjectorWizardWindow { DataContext = injectors };
                 injWindow.Show();
                 Save(injWindow, "injectorwizard");
                 injWindow.Close();
-                await vm.ApplyInjectorsAsync(injectors);
+                await vm.T5.ApplyInjectorsAsync(injectors);
                 Assert.AreEqual(InjectorType.GreenGiants, T5Binary.Open(file).File.GetTrionicProperties().InjectorType);
                 Assert.AreEqual("Checksum: OK", vm.ChecksumText);
 
                 // a 3.0 bar file: the boost map and its MAP axis show × 1.2, an edit goes back rounded up
-                await vm.ConvertMapSensorAsync(MapSensorType.MapSensor30);
+                await vm.T5.ConvertMapSensorAsync(MapSensorType.MapSensor30);
                 vm.OpenSymbolByName("Tryck_mat!");
                 var boost = (SuiteApp.ViewModels.MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual(120, boost.Map.ScalePercent);
@@ -64,7 +66,7 @@ namespace T5AppTest
             T5Tuning.TuneToStage(T5Binary.Open(tuned), 1, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));

@@ -13,28 +13,30 @@ using TrionicCANLib.Firmware;
 
 namespace T8App.ViewModels;
 
-/// <summary>T8Suite's main window (Form1): T8 binaries on the shared window; T8Suite's own features come chunk by chunk.</summary>
-public partial class T8MainWindowViewModel : MainWindowViewModel
+/// <summary>T8 binaries in the main window, what T8Suite's Form1 did its own way: opening and checking them, the ECU over GMLAN, the tools.</summary>
+public partial class T8Module : EcuModule
 {
-    public T8MainWindowViewModel() : base("T8SuitePro", "T8Suite", new T8SuiteRegistry())
+    public T8Module(MainWindowViewModel main) : base(main, "T8", new T8SuiteRegistry(), T8SuiteRegistry.Former)
     {
         // "Symbol: ...", "Adding symbol names: ", "Importing symbols"; "Idle" / "Completed" clear it
         Trionic8File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Info is "Idle" or "Completed" ? "" : e.Info);
         InitEcu();
-        PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(Binary)) OnPropertyChanged(nameof(HasTemTable));
-        };
+    }
+
+    protected override void OnMainPropertyChanged(string? name)
+    {
+        if (name == nameof(Binary)) OnPropertyChanged(nameof(HasTemTable));
     }
 
     protected override uint FileLength => FileT8.Length;
+
+    // a T8 binary by its size; IsValidFile then says why one isn't ("File does not seem to be a Trionic 8 file: x")
+    public override bool Claims(string path) => System.IO.File.Exists(path) && new System.IO.FileInfo(path).Length == FileT8.Length;
 
     // says why itself ("File has incorrect length: x", "File does not seem to be a Trionic 8 file: x")
     protected override bool IsValidFile(string path) => T8Binary.IsValidFile(path);
 
     protected override SuiteBinary OpenBinary(string path) => T8Binary.Open(path, Settings.MapDetectionActive);
-
-    protected override string ReleaseTagPrefix => "T8suite_v";
 
     public override string PackageFilesName => "Trionic 8 packages";
 
@@ -53,7 +55,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
     /// <summary>Lookup partnumber: "&lt;partnumber&gt;_&lt;software version&gt;", as the stock bins in Binaries/T8 are named; only the car and engine.</summary>
     public override PartInfo? LookupPartNumber(string partNumber) => PartLookup(partNumber);
 
-    /// <summary>LookupPartNumber without a suite open (TxSuite's lookup over every ECU).</summary>
+    /// <summary>LookupPartNumber without a module (the partnumber list).</summary>
     public static PartInfo? PartLookup(string partNumber)
     {
         ECUInformation ecu = new PartNumberConverter().GetECUInfo(partNumber, "");
@@ -290,7 +292,7 @@ public partial class T8MainWindowViewModel : MainWindowViewModel
             ShowInfo("This file lacks the pedal, torque or airmass tables the airmass result viewer needs");
             return;
         }
-        ShowDocument(new AirmassResultViewModel(this, bin.FileName, new AirmassSuite(
+        ShowDocument(new AirmassResultViewModel(Main, bin.FileName, new AirmassSuite(
             (file, options) => new T8AirmassResult(T8Binary.Open(file, false), options),
             T8Binary.IsValidFile, null, "Car is high output (175/210 hp)", true,
             ["Undefined gear", "First gear", "Second gear", "Third gear", "Fourth gear", "Fifth gear", "Sixth gear", "Reverse gear"],

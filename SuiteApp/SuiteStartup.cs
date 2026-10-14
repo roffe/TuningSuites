@@ -9,7 +9,7 @@ using TrionicCANLib.API;
 
 namespace SuiteApp;
 
-/// <summary>A suite's start (frmMain_Load / frmMain_Shown): its main window, the library's questions as dialogs, then the file.</summary>
+/// <summary>The program's start (frmMain_Load / frmMain_Shown): its main window, the library's questions as dialogs, then the file.</summary>
 public static class SuiteStartup
 {
     /// <summary>
@@ -29,7 +29,7 @@ public static class SuiteStartup
         Attach(desktop, vm, window);
 
         // WinForms showed an unexpected exception and carried on, Avalonia ends the app and every unsaved map with it; told in the
-        // main window of the moment (TxSuite swaps it)
+        // main window
         Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
             e.Handled = true;
@@ -46,7 +46,7 @@ public static class SuiteStartup
         };
     }
 
-    /// <summary>The suite's window as the main one, the library's questions asked in it (also TxSuite's switch to another suite).</summary>
+    /// <summary>The window as the main one, the library's questions asked in it.</summary>
     public static void Attach(IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel vm, SuiteWindow window)
     {
         SymbolNumberConverter.Hex = vm.Settings.ShowAddressesInHex;

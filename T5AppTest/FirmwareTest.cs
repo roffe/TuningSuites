@@ -1,5 +1,7 @@
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T5App.ViewModels;
 using T5App.Views;
 using Trionic5Tools;
@@ -14,13 +16,13 @@ namespace T5AppTest
             string file = CopyOfStockBin("firmware.BIN");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 StringAssert.StartsWith(vm.OpenClosedText, "T5.5 | ");
 
-                FirmwareOptionsViewModel options = vm.FirmwareOptions()!;
+                FirmwareOptionsViewModel options = vm.T5.FirmwareOptions()!;
                 Assert.AreEqual("4239273", options.Partnumber.Trim());
                 OptionFlag fuelcut = options.Fuelling.Single(f => f.Caption == "Fuelcut in engine brake");
                 // frmEasyFirmwareSettings' captions, turbo by name (its list was one off)
@@ -38,7 +40,7 @@ namespace T5AppTest
                 dialog.Show();
                 Save(dialog, "firmwareoptions");
                 dialog.Close();
-                await vm.ApplyFirmwareAsync(options.Properties);
+                await vm.T5.ApplyFirmwareAsync(options.Properties);
 
                 Trionic5Properties after = T5Binary.Open(file).File.GetTrionicProperties();
                 Assert.AreEqual(!was, after.Fuelcut);

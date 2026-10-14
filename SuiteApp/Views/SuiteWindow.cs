@@ -6,10 +6,7 @@ using SuiteApp.ViewModels;
 
 namespace SuiteApp.Views;
 
-/// <summary>
-/// The suites' main window around a SuiteMainView: its title, size and closing. Each app's MainWindow is one around its MainView;
-/// TxSuite keeps one and puts another suite's view in it (Show).
-/// </summary>
+/// <summary>The main window around a SuiteMainView: its title, size and closing.</summary>
 public class SuiteWindow : Window
 {
     public SuiteWindow(SuiteMainView view)
@@ -22,19 +19,6 @@ public class SuiteWindow : Window
     }
 
     public SuiteMainView View => (SuiteMainView)Content!;
-
-    /// <summary>Another suite's view and view model in place of the ones before, which close as the window would (TxSuite).</summary>
-    public void Show(SuiteMainView view, MainWindowViewModel vm)
-    {
-        // the view inherits the window's view model; each keeps its own here: the old one out of the window, the new one never
-        // seeing the one before (setting it from the window's DataContextChanged left the view's bindings stuck)
-        SuiteMainView old = View;
-        old.DataContext = old.DataContext;
-        view.DataContext = vm;
-        Content = view;
-        DataContext = vm;
-        old.Closed();
-    }
 
     // ---- closing ----
 

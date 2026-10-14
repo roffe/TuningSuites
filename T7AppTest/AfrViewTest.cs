@@ -2,6 +2,8 @@ using System.IO;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T7App.ViewModels;
 using T7App.Views;
@@ -18,7 +20,7 @@ namespace T7AppTest
             File.Copy(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), file, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 SuiteViewType before = vm.Settings.DefaultViewType;
                 vm.Settings.DefaultViewType = SuiteViewType.Hexadecimal;
                 try
@@ -28,12 +30,12 @@ namespace T7AppTest
                     Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                     vm.OpenSymbolByName("BFuelCal.Map");
                     Assert.AreEqual(MapViewType.Hex, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
-                    vm.ShowAfrTargetMapCommand.Execute(null);
+                    vm.T7.ShowAfrTargetMapCommand.Execute(null);
                     var target = (MapViewerViewModel)vm.SelectedViewer!;
                     Assert.IsTrue(target.IsAfrMap);
                     Assert.AreEqual(MapViewType.Hex, target.ViewType);
                     vm.Settings.DefaultViewType = SuiteViewType.Decimal;
-                    vm.ShowAfrCounterMapCommand.Execute(null);
+                    vm.T7.ShowAfrCounterMapCommand.Execute(null);
                     Assert.AreEqual(MapViewType.Decimal, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
                     window.Close();
                 }

@@ -3,6 +3,8 @@ using System.Linq;
 using CommonSuite;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -31,7 +33,7 @@ namespace T5AppTest
             string file = CopyOfStockBin("openview.bin");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 SuiteViewType before = vm.Settings.DefaultViewType;
                 try
                 {
@@ -42,10 +44,10 @@ namespace T5AppTest
                     vm.Settings.DefaultViewType = SuiteViewType.Hexadecimal;
                     vm.OpenSymbolByName("Ign_map_0!");
                     Assert.AreEqual(MapViewType.Easy, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
-                    vm.ShowAfrCommand.Execute("TargetAFR");
+                    vm.T5.ShowAfrCommand.Execute("TargetAFR");
                     Assert.AreEqual(MapViewType.Easy, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
                     // the knock counters on the MAP axis in bar
-                    vm.ShowKnockMap(KnockSnapshot("openview-hex.KNK"));
+                    vm.T5.ShowKnockMap(KnockSnapshot("openview-hex.KNK"));
                     var knock = (MapViewerViewModel)vm.SelectedViewer!;
                     Assert.AreEqual(MapViewType.Easy, knock.ViewType);
                     Assert.AreEqual(-1, knock.Map.XEasy![0], 1e-9);
@@ -53,9 +55,9 @@ namespace T5AppTest
                     vm.Settings.DefaultViewType = SuiteViewType.Decimal;
                     vm.OpenSymbolByName("Insp_mat!");
                     Assert.AreEqual(MapViewType.Decimal, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
-                    vm.ShowAfrCommand.Execute("FeedbackAFR");
+                    vm.T5.ShowAfrCommand.Execute("FeedbackAFR");
                     Assert.AreEqual(MapViewType.Decimal, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
-                    vm.ShowKnockMap(KnockSnapshot("openview-dec.KNK"));
+                    vm.T5.ShowKnockMap(KnockSnapshot("openview-dec.KNK"));
                     Assert.AreEqual(MapViewType.Decimal, ((MapViewerViewModel)vm.SelectedViewer!).ViewType);
                     window.Close();
                 }
@@ -75,13 +77,13 @@ namespace T5AppTest
             T5Tuning.ConvertMapSensor(T5Binary.Open(file), MapSensorType.MapSensor25, MapSensorType.MapSensor30, true);
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 vm.OpenSymbolByName("Ign_map_0!");
                 var ign = (MapViewerViewModel)vm.SelectedViewer!;
-                vm.ShowKnockMap(KnockSnapshot("knock3bar.KNK"));
+                vm.T5.ShowKnockMap(KnockSnapshot("knock3bar.KNK"));
                 var knock = (MapViewerViewModel)vm.SelectedViewer!;
                 StringAssert.StartsWith(knock.Title, "Knock counter snapshot");
                 CollectionAssert.AreEqual(ign.Map.XAxis, knock.Map.XAxis);

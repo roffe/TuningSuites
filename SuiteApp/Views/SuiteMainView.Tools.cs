@@ -4,7 +4,7 @@ using SuiteApp.Services;
 
 namespace SuiteApp.Views;
 
-/// <summary>The Information tools both suites have: interrupt vectors, disassembly, the symbol list's Browse axis info.</summary>
+/// <summary>The Information tools every ECU has: interrupt vectors, disassembly, the symbol list's Browse axis info.</summary>
 public partial class SuiteMainView
 {
     protected async void OnVectors(object? sender, RoutedEventArgs e)

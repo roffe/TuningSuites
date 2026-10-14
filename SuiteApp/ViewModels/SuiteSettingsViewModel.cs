@@ -6,8 +6,8 @@ using TrionicCANLib.API;
 namespace SuiteApp.ViewModels;
 
 /// <summary>
-/// frmSettings, the settings both suites have that do something here (of the docking / window size options only Hide symbol
-/// window) and the connection; each suite's dialog adds its own.
+/// frmSettings, the settings every ECU has that do something here (of the docking / window size options only Hide symbol
+/// window) and the connection: Settings → Common; each ECU's tab adds its own.
 /// </summary>
 public partial class SuiteSettingsViewModel : ObservableObject
 {
@@ -36,7 +36,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
     /// <summary>txlogger's colour blind modes, in its order and under its names.</summary>
     public string[] ColorBlindModes { get; } = Enum.GetNames<MapControls.ColorBlindMode>();
 
-    // realtime settings: the connection, the same for every suite
+    // realtime settings: the connection, the same for every ECU
     [ObservableProperty] private string _adapterType = "";
     [ObservableProperty] private string? _adapter;
     [ObservableProperty]

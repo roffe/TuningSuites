@@ -7,6 +7,8 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
 using T8App.ViewModels;
@@ -32,7 +34,7 @@ namespace T8AppTest
                     // each shot in the light skin, then in the dark one (<name>-dark.png)
                     foreach (var (theme, suffix) in new[] { (ThemeVariant.Light, ""), (ThemeVariant.Dark, "-dark") })
                     {
-                        var vm = new T8MainWindowViewModel();
+                        var vm = new MainViewModel();
                         var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
                         window.Show();
                         Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -43,7 +45,7 @@ namespace T8AppTest
                         Maximized(window, "mapviewer" + suffix);
                         Palettes(window, "bfuelcal", suffix);
 
-                        vm.ShowAirmassResultCommand.Execute(null);
+                        vm.T8.ShowAirmassResultCommand.Execute(null);
                         Maximized(window, "airmass-table" + suffix);
                         window.GetVisualDescendants().OfType<AirmassResultView>().Single().GetVisualDescendants().OfType<TabControl>().First().SelectedIndex = 1;
                         Maximized(window, "airmass-dyno" + suffix);
@@ -53,8 +55,8 @@ namespace T8AppTest
                         settings.ProjectFolder = settings.ProjectFolder.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~");
                         foreach (var (w, name) in new (Window, string)[]
                         {
-                            (new FirmwareInfoWindow { DataContext = new FirmwareInfoViewModel(vm.FirmwareInfo()!) }, "firmware"),
-                            (new SettingsWindow { DataContext = settings }, "settings"),
+                            (new FirmwareInfoWindow { DataContext = new FirmwareInfoViewModel(vm.T8.FirmwareInfo()!) }, "firmware"),
+                            (ShowSettings(vm, edit: s => s.Common.ProjectFolder = settings.ProjectFolder), "settings"),
                         })
                         {
                             w.Show();

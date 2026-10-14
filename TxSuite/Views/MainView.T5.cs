@@ -1,47 +1,25 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Interactivity;
 using SuiteApp.Services;
-using SuiteApp.ViewModels;
-using SuiteApp.Views;
 using T5App.ViewModels;
+using T5App.Views;
 
-namespace T5App.Views;
+namespace TxSuite.Views;
 
-/// <summary>T5Suite 2.0's main window: its menus (the ribbon's pages, groups and captions) and the actions only T5Suite has.</summary>
-public partial class MainView : SuiteMainView
+/// <summary>T5Suite 2.0's own actions (its ribbon's pages, groups and captions), for T5 binaries.</summary>
+public partial class MainView
 {
-    public MainView() => InitializeComponent();
+    private T5Module T5 => Vm.T5;
 
-    private new T5MainWindowViewModel Vm => (T5MainWindowViewModel)DataContext!;
-
-    protected override string BinaryFilesName => "Trionic 5 files";
-
-    protected override string OpenFileTitle => "Open a binary Trionic 5 file...";
-
-    protected override string CompareFilesName => "Trionic 5 binary files";
-
-    // T5Suite 2.0's frmAbout list
-    protected override string AboutThanks =>
-        "Steve Hayes, Hook, MrAze, Sandy_rus, T5_Germany, Seb, Tomili, sourcode, J.K Nilsson, General Failure, Danibjor, Johnc, tomas0student, Janus0070, Roffe and...";
-
-    protected override void OnDataContextChanged(System.EventArgs e)
-    {
-        base.OnDataContextChanged(e);
-        if (DataContext is not T5MainWindowViewModel vm) return;
-        vm.ShowFirmwareOptions = ShowFirmwareOptions;
-        // "Select mutations to accept" on Insp_mat!'s axes
-        vm.AcceptAutotune = percent =>
-        {
-            double[] x = vm.Binary?.GetXaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
-            double[] y = vm.Binary?.GetYaxisValues("Insp_mat!").Select(v => (double)v).ToArray() ?? [];
-            return new AutotuneAcceptWindow("Insp_mat!", percent, x, y, "MAP", "RPM", vm.Binary?.XAxisEasy("Insp_mat!")).ShowDialog<System.Collections.Generic.IReadOnlyCollection<int>?>(Host);
-        };
-    }
-
-    private async void OnFirmwareOptions(object? sender, RoutedEventArgs e) => await Vm.EditFirmwareAsync();
+    // T5Suite's data transfer wizard
+    private static readonly (string, string) T5TransferWizard =
+        ("Data transfer wizard", "Welcome to the data transfer wizard\n\nThis wizard will help you transferring data from the currect binary to the target binary file.\n\n"
+            + "Make sure the source and target binary files are for the same engine type and such to prevent problem in ignition advance and fuelling from occuring!\n\n"
+            + "Please review the target binary for correctness after the wizard finishes.");
 
     // an action picked in the partnumber's lookup closes the dialog unchanged first (frmEasyFirmwareSettings' Abort)
-    private async System.Threading.Tasks.Task<bool> ShowFirmwareOptions(FirmwareOptionsViewModel options)
+    private async Task<bool> ShowFirmwareOptions(FirmwareOptionsViewModel options)
     {
         var dialog = new FirmwareOptionsWindow { DataContext = options };
         (string action, string stock)? pick = null;
@@ -55,57 +33,28 @@ public partial class MainView : SuiteMainView
         return ok;
     }
 
-    private async void OnSettings(object? sender, RoutedEventArgs e)
-    {
-        if (SettingsDialog != null)
-        {
-            if (!await SettingsDialog(this)) return;
-        }
-        else
-        {
-            var settings = new SettingsViewModel(Vm.Settings, Vm.T5Settings);
-            // frmSettings' "Autotune settings": its Ok hands the values back to Settings, whose Ok saves them (T5Suite)
-            AutotuneSettingsViewModel? autotune = null;
-            var window = new SettingsWindow
-            {
-                DataContext = settings,
-                AutotuneSettings = async owner =>
-                {
-                    var edit = autotune?.Clone() ?? new AutotuneSettingsViewModel(Vm.Settings, Vm.T5Settings);
-                    if (await new AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(owner)) autotune = edit;
-                },
-            };
-            if (!await window.ShowDialog<bool>(Host)) return;
-            autotune?.Apply(Vm.Settings, Vm.T5Settings);
-            settings.Apply(Vm.Settings, Vm.T5Settings);
-        }
-        Vm.SettingsChanged();
-        Vm.T5SettingsChanged();
-        ApplyHideSymbolTable();
-    }
-
     // ---- Tuning wizards ----
 
     private async void OnTuneMeUp(object? sender, RoutedEventArgs e)
     {
-        if (Vm.TuneMeUp() is not { } wizard || !await new TuneMeUpWindow { DataContext = wizard }.ShowDialog<bool>(Host)) return;
-        if (await Vm.RunTuneMeUpAsync(wizard) is { } report) await Dialogs.Report(Host, $"Tuning report (stage {wizard.Stage})", report);
+        if (T5.TuneMeUp() is not { } wizard || !await new TuneMeUpWindow { DataContext = wizard }.ShowDialog<bool>(Host)) return;
+        if (await T5.RunTuneMeUpAsync(wizard) is { } report) await Dialogs.Report(Host, $"Tuning report (stage {wizard.Stage})", report);
     }
 
     private async void OnMapSensor(object? sender, RoutedEventArgs e)
     {
         if ((sender as Avalonia.Controls.Control)?.Tag is not string tag || !System.Enum.TryParse(tag, out Trionic5Tools.MapSensorType to)) return;
-        string from = Trionic5Tools.T5Tuning.SensorName(Vm.CurrentMapSensor), target = Trionic5Tools.T5Tuning.SensorName(to);
+        string from = Trionic5Tools.T5Tuning.SensorName(T5.CurrentMapSensor), target = Trionic5Tools.T5Tuning.SensorName(to);
         if (!await Dialogs.YesNo(Host, "All boost related tables will be altered to make sure the correct values are calculated within the ECU based on the new mapsensor type.\n\n" +
                 $"You are converting from a {from} to a {target}.\n\n" +
                 "If you used the wizard on a file that was already converted for use with a non-stock mapsensor, be sure to verify the binary file after the wizard completes.",
                 "Map sensor wizard")) return;
-        await Dialogs.Report(Host, target + " report", await Vm.ConvertMapSensorAsync(to));
+        await Dialogs.Report(Host, target + " report", await T5.ConvertMapSensorAsync(to));
     }
 
     private async void OnInjectors(object? sender, RoutedEventArgs e)
     {
-        if (Vm.InjectorWizard() is { } wizard && await new InjectorWizardWindow { DataContext = wizard }.ShowDialog<bool>(Host)) await Vm.ApplyInjectorsAsync(wizard);
+        if (T5.InjectorWizard() is { } wizard && await new InjectorWizardWindow { DataContext = wizard }.ShowDialog<bool>(Host)) await T5.ApplyInjectorsAsync(wizard);
     }
 
     private async void OnE85(object? sender, RoutedEventArgs e)
@@ -113,55 +62,46 @@ public partial class MainView : SuiteMainView
         if (!await Dialogs.YesNo(Host, "Please note that Trionic 5 does not support bi-fuelling. Once your binary has been converted to E85 it will no longer run on regular petrol. " +
                 "The wizard will alter ignition settings, cranking and afterstart fuelling and normal fuelling.\n\n" +
                 "The coldstart and warmup factors are estimated, check them with a wideband lambda sensor.", "E85 wizard")) return;
-        await Dialogs.Report(Host, "Convert to E85 report", await Vm.ConvertToE85Async());
+        await Dialogs.Report(Host, "Convert to E85 report", await T5.ConvertToE85Async());
     }
 
     private async void OnBoostAdaption(object? sender, RoutedEventArgs e)
     {
-        if (Vm.BoostAdaption() is not { } b) return;
+        if (T5.BoostAdaption() is not { } b) return;
         if (await Dialogs.Numbers(Host, "Boost adaption range wizard",
                 "Please note that this wizard will adjust the actual code in your binary! The boost adaption range should match the spool characteristics of your turbo.",
                 ("Manual gearbox from (rpm)", b.ManualLow, 1000, 9000, 50), ("Manual gearbox upto (rpm)", b.ManualHigh, 1000, 9000, 50),
                 ("Automatic gearbox from (rpm)", b.AutomaticLow, 1000, 9000, 50), ("Automatic gearbox upto (rpm)", b.AutomaticHigh, 1000, 9000, 50),
                 ("Max. boost error (bar)", b.BoostError / 100m, 0.01m, 0.2m, 0.01m)) is not { } v) return;
-        await Vm.SetBoostAdaptionAsync(new((int)v[0], (int)v[1], (int)v[2], (int)v[3], (int)System.Math.Round(v[4] * 100)));
+        await T5.SetBoostAdaptionAsync(new((int)v[0], (int)v[1], (int)v[2], (int)v[3], (int)System.Math.Round(v[4] * 100)));
     }
 
     private async void OnBoostBias(object? sender, RoutedEventArgs e)
     {
-        if (Vm.BoostBiasStep() is not { } step)
+        if (T5.BoostBiasStep() is not { } step)
         {
-            Vm.ShowInfo("This file has no 16-bit boost bias map, its range can't be changed");
+            T5.ShowInfo("This file has no 16-bit boost bias map, its range can't be changed");
             return;
         }
         // frmBoostBiasWizard recalculated the range on every step: 2500 + step × 30 × 10
         if (await Dialogs.Numbers(Host, "Boost bias RPM range wizard", "Please note that this wizard will adjust the actual code in your binary!",
                 s => $"Result rpm from 2500 rpm upto {2500 + (int)s[0] * 300}", ("Axis step range", step, 5, 20, 1)) is { } v)
-            await Vm.SetBoostBiasStepAsync((int)v[0]);
+            await T5.SetBoostBiasStepAsync((int)v[0]);
     }
 
     private async void OnRpmLimit(object? sender, RoutedEventArgs e)
     {
-        if (Vm.RpmLimits() is not { } r) return;
+        if (T5.RpmLimits() is not { } r) return;
         if (await Dialogs.Numbers(Host, "RPM limiter wizard", "Welcome to the RPM limiter wizard",
                 ("Software RPM limit", r.software, 5000, 10000, 100), ("Hardcoded RPM limit", r.hardcoded, 5000, 10000, 100)) is { } v)
-            await Vm.SetRpmLimitsAsync((int)v[1], (int)v[0]);
+            await T5.SetRpmLimitsAsync((int)v[1], (int)v[0]);
     }
 
     // ---- Actions page ----
 
-    protected override bool CompareSeveralFiles => true;
+    private async void OnExamine(object? sender, RoutedEventArgs e) => await Dialogs.Report(Host, "Examination report", T5.Examine());
 
-    protected override System.Func<System.Threading.Tasks.Task<string?>>? BrowsePartNumbers => () => T5ToolWindows.PartNumberList(Host);
-
-    protected override (string caption, string text) TransferWizard =>
-        ("Data transfer wizard", "Welcome to the data transfer wizard\n\nThis wizard will help you transferring data from the currect binary to the target binary file.\n\n"
-            + "Make sure the source and target binary files are for the same engine type and such to prevent problem in ignition advance and fuelling from occuring!\n\n"
-            + "Please review the target binary for correctness after the wizard finishes.");
-
-    private async void OnExamine(object? sender, RoutedEventArgs e) => await Dialogs.Report(Host, "Examination report", Vm.Examine());
-
-    private async void OnAnomalies(object? sender, RoutedEventArgs e) => await Dialogs.Report(Host, "Anomaly report", Vm.Anomalies());
+    private async void OnAnomalies(object? sender, RoutedEventArgs e) => await Dialogs.Report(Host, "Anomaly report", T5.Anomalies());
 
     /// <summary>Open a saved report: T5Suite read DevExpress .prnx files, the reports here are saved as text.</summary>
     private async void OnOpenReport(object? sender, RoutedEventArgs e)
@@ -205,22 +145,22 @@ public partial class MainView : SuiteMainView
             await Dialogs.Info(Host, "A canbus connection is needed to create a SRAM snapshot");
             return;
         }
-        if ((Vm.ProjectSnapshotFile() ?? await Dialogs.SaveFile(Host, "Get SRAM snapshot", "SRAM snapshots", "RAM", Vm.SnapshotName)) is { } file)
-            await Vm.DownloadSramAsync(file);
+        if ((T5.ProjectSnapshotFile() ?? await Dialogs.SaveFile(Host, "Get SRAM snapshot", "SRAM snapshots", "RAM", T5.SnapshotName)) is { } file)
+            await T5.DownloadSramAsync(file);
     }
 
     private async void OnUploadSram(object? sender, RoutedEventArgs e)
     {
         if (Vm.Binary is null || !Vm.IsConnected || await Dialogs.OpenFile(Host, "Upload SRAM to ECU", "SRAM snapshots", ["*.ram"]) is not { } file) return;
         bool toFile = await Dialogs.YesNo(Host, "Do you want to write to the current binary file as well?", "Question");
-        await Vm.UploadSramAsync(file, toFile);
+        await T5.UploadSramAsync(file, toFile);
     }
 
-    private async void OnCompareEcu(object? sender, RoutedEventArgs e) => await Vm.CompareEcuWithBinaryAsync();
+    private async void OnCompareEcu(object? sender, RoutedEventArgs e) => await T5.CompareEcuWithBinaryAsync();
 
     private async void OnKnockSnapshots(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary != null) await T5ToolWindows.KnockSnapshots(Host, Vm);
+        if (Vm.Binary != null) await T5ToolWindows.KnockSnapshots(Host, T5);
     }
 
     /// <summary>Autotune ignition: starts or stops it on the running realtime panel.</summary>
@@ -237,30 +177,30 @@ public partial class MainView : SuiteMainView
         if (await Dialogs.Checks(Host, "Select merge options", "Select items to merge from adaption data",
                 ("Fuel adaption (spot adaption)", true), ("Long term fuel trim", true), ("Idle fuel trim", true),
                 ("Cylinder fuel correction from knock information", false)) is { } o)
-            await Vm.MergeAdaptionAsync(file, new Trionic5Tools.T5Tuning.AdaptionMerge(o[0], o[1], o[2], o[3]));
+            await T5.MergeAdaptionAsync(file, new Trionic5Tools.T5Tuning.AdaptionMerge(o[0], o[1], o[2], o[3]));
     }
 
     // ---- Actions page: T5Suite's tools ----
 
     private void OnAddToRealtimeUserMaps(object? sender, RoutedEventArgs e)
     {
-        if (Vm.SelectedSymbol is { } sh) Vm.AddRealtimeUserMap(sh);
+        if (Vm.SelectedSymbol is { } sh) T5.AddRealtimeUserMap(sh);
     }
 
-    private async void OnUserLibrary(object? sender, RoutedEventArgs e) => await T5ToolWindows.UserLibrary(Host, Vm);
+    private async void OnUserLibrary(object? sender, RoutedEventArgs e) => await T5ToolWindows.UserLibrary(Host, T5);
 
     private void OnDyno(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary != null) T5ToolWindows.Dyno(Host, Vm);
+        if (Vm.Binary != null) T5ToolWindows.Dyno(Host, T5);
     }
 
     private void OnCompressorMap(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary != null) T5ToolWindows.Compressor(Host, Vm);
+        if (Vm.Binary != null) T5ToolWindows.Compressor(Host, T5);
     }
 
     private void OnInjectionTiming(object? sender, RoutedEventArgs e)
     {
-        if (Vm.Binary != null) T5ToolWindows.InjectionTiming(Host, Vm);
+        if (Vm.Binary != null) T5ToolWindows.InjectionTiming(Host, T5);
     }
 }

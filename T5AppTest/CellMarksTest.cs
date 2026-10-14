@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using MapControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using T5App.ViewModels;
 using T5App.Views;
@@ -21,7 +23,7 @@ namespace T5AppTest
             string file = CopyOfStockBin("marks.bin");
             s_session!.Dispatch(async () =>
             {
-                var vm = new T5MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -43,7 +45,7 @@ namespace T5AppTest
                 Save(window, "marks-fuel");
 
                 // Ignition lock map opens Ign_map_0!: padlocks below the knock pressure (by row), nothing locked yet
-                vm.ShowIgnitionLocksCommand.Execute(null);
+                vm.T5.ShowIgnitionLocksCommand.Execute(null);
                 var ign = (MapViewerViewModel)vm.SelectedViewer!;
                 Assert.AreEqual("Ign_map_0!", ign.MapName);
                 Assert.AreEqual(18, ign.Map.Cols);
@@ -60,11 +62,11 @@ namespace T5AppTest
                 CollectionAssert.AreEqual(Cells(ign.Map, (r, c) => c == 8 && r is >= 5 and <= 7), Marked(ign.Map, m => m.KnockAdaption));
                 CollectionAssert.AreEqual(Cells(ign.Map, (r, c) => c == 17 && r is >= 6 and <= 9), Marked(ign.Map, m => m.BoostAdaption));
                 // a cell the autotune locks shows at once, in its own row (T5Suite drew the lock map upside down)
-                vm.IgnitionMaps!.LockCell(10, 12);
+                vm.T5.IgnitionMaps!.LockCell(10, 12);
                 CollectionAssert.AreEqual(belowKnock.Append(12 * 18 + 10).Order().ToArray(), Marked(ign.Map, m => m.Locked));
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 Save(window, "marks-ignition");
-                vm.ReleaseIgnitionLocksCommand.Execute(null);
+                vm.T5.ReleaseIgnitionLocksCommand.Execute(null);
                 CollectionAssert.AreEqual(belowKnock, Marked(ign.Map, m => m.Locked));
                 window.Close();
                 return true;

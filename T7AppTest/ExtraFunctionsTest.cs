@@ -2,6 +2,8 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.LogicalTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T7App.ViewModels;
 using T7App.Views;
 
@@ -18,7 +20,7 @@ namespace T7AppTest
         {
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 var infos = new System.Collections.Generic.List<string>();
@@ -37,7 +39,7 @@ namespace T7AppTest
                 vm.Settings.Adapter = "";
                 try
                 {
-                    Assert.IsNull(await vm.SaabOpenTechAsync("I"));
+                    Assert.IsNull(await vm.T7.SaabOpenTechAsync("I"));
                     CollectionAssert.AreEqual(new[] { "Check settings, no CAN adapter has been selected!" }, infos);
                     Assert.IsFalse(vm.IsBusy);
                 }

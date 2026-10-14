@@ -16,15 +16,15 @@ using TrionicCANLib.Firmware;
 namespace T7App.ViewModels;
 
 /// <summary>
-/// T7Suite's main window (frmMain): T7 binaries, and the features only T7Suite has or that aren't shared yet (ECU, realtime,
-/// logs, SID, the tools).
+/// T7 binaries in the main window, what T7Suite's frmMain did its own way: opening and checking them, the ECU over KWP, realtime,
+/// the AFR maps, SID, the firmware tools.
 /// </summary>
-public partial class T7MainWindowViewModel : MainWindowViewModel
+public partial class T7Module : EcuModule
 {
     // T7 symbols have no bit mask (T8's)
     protected override bool HasSymbolColumn(string path) => path != nameof(SymbolHelper.BitMask);
 
-    public T7MainWindowViewModel() : base("T7SuitePro", "T7Suite", new T7SuiteRegistry())
+    public T7Module(MainWindowViewModel main) : base(main, "T7", new T7SuiteRegistry(), T7SuiteRegistry.Former)
     {
         Trionic7File.onProgress += (_, e) => Dispatcher.UIThread.Post(() => ProgressText = e.Percentage >= 55 ? "" : e.Info);
         InitEcu();
@@ -37,10 +37,6 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
     protected override string? InvalidFileMessage => "File is not a Trionic 7 binary file!";
 
     protected override SuiteBinary OpenBinary(string path) => T7Binary.Open(path, Settings.ApplicationLanguage, Settings.AutoFixFooter);
-
-    protected override string ReleaseTagPrefix => "T7suite_v";
-
-    protected override string? LegacyMruKey => @"Software\T7SuitePro\MRUList";
 
     public override string PackageFilesName => "Trionic 7 packages";
 
@@ -62,12 +58,6 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
         return true;
     }
 
-    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
-    {
-        base.OnPropertyChanged(e);
-        if (e.PropertyName == nameof(Binary)) OnPropertyChanged(nameof(OriginalFile));
-    }
-
     /// <summary>The ribbon's Verify checksum: with AutoChecksum a mismatch offers to recalculate.</summary>
     protected override async Task VerifyChecksumAsync()
     {
@@ -85,10 +75,9 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
         return (header.getCarDescription().Trim(), header.getPartNumber().Trim() + " " + header.getSoftwareVersion().Trim());
     }
 
-    /// <summary>After the settings dialog: also the footer fix for writes, the SRAM viewers' timer and the AFR captions.</summary>
+    /// <summary>After the settings dialog: the footer fix for writes and the AFR captions.</summary>
     public override void SettingsChanged()
     {
-        base.SettingsChanged();
         if (Binary is T7Binary bin) bin.AutoFixFooter = Settings.AutoFixFooter;
         OnPropertyChanged(nameof(FeedbackMapCaption));
         OnPropertyChanged(nameof(ClearFeedbackCaption));
@@ -113,7 +102,7 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
         {
             // ponytail: an unreadable footer keeps the T1752 / 2.0 litre defaults
         }
-        ShowDocument(new AirmassResultViewModel(this, bin.FileName, new AirmassSuite(
+        ShowDocument(new AirmassResultViewModel(Main, bin.FileName, new AirmassSuite(
             (file, options) => new T7AirmassResult(T7Binary.Open(file, Settings.ApplicationLanguage, false), options),
             T7Binary.IsValidFile, "File is not a Trionic 7 binary file!", "Car is a convertible", false,
             ["Reverse", "First gear", "Second gear", "Third gear", "Fourth gear", "Fifth gear"],
@@ -127,11 +116,8 @@ public partial class T7MainWindowViewModel : MainWindowViewModel
             compressor)));
     }
 
-    /// <summary>"Compare to original file": the stock bin with this part number, when Binaries has exactly one.</summary>
-    public string? OriginalFile => Binary is T7Binary bin ? bin.OriginalFile() : null;
-
-    [RelayCommand]
-    private Task CompareToOriginal() => OriginalFile is { } file ? CompareToFileAsync(file) : Task.CompletedTask;
+    /// <summary>"Compare to original file": the stock bin with this part number, when Binaries/T7 has exactly one.</summary>
+    public override string? OriginalFile => Binary is T7Binary bin ? bin.OriginalFile() : null;
 
     // ---- firmware information ----
 

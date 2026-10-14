@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using CommonSuite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -105,6 +106,91 @@ namespace SuiteCoreTest
             }
             finally
             {
+                Directory.Delete(dir, true);
+            }
+        }
+
+        // an ECU's section of a program's settings
+        private sealed class Section(string path) : SuiteRegistry
+        {
+            public override string getRegistryPath() => path;
+        }
+
+        private static void Old(string dir, string suite, string json)
+        {
+            Directory.CreateDirectory(Path.Combine(dir, suite));
+            File.WriteAllText(Path.Combine(dir, suite, "settings.json"), json);
+        }
+
+        /// <summary>The old suites' settings into the program's, once: shared options at its top (the first suite's), the rest per section.</summary>
+        [TestMethod]
+        public void AnOldSuitesSettingsGoIntoItsSectionOnce()
+        {
+            string old = SettingsKey.BaseFolder, dir = Directory.CreateTempSubdirectory("import").FullName;
+            try
+            {
+                SettingsKey.BaseFolder = dir;
+                Old(dir, "OldA", """{ "ShowAddressesInHex": "True", "AutoFixFooter": "True", "MRUList\\0": "a.bin", "MRUList\\1": "b.bin", "LogFilters\\0\\symbol": "In.n_Engine" }""");
+                File.WriteAllText(Path.Combine(dir, "OldA", "mymaps.xml"), "<maps />");
+                Old(dir, "OldB", """{ "ShowAddressesInHex": "False", "AutoFixFooter": "False", "MRUList\\0": "b.bin", "MRUList\\1": "c.bin" }""");
+                string[] shared = ["ShowAddressesInHex"];
+                SettingsKey.ImportOnce("OldA", "Prog/A", shared);
+                SettingsKey.ImportOnce("OldB", "Prog/B", shared);
+
+                using (var prog = SettingsKey.Open("Prog"))
+                {
+                    // the shared option once, from the suite imported first; an own option never at the top
+                    Assert.AreEqual("True", prog.GetValue("ShowAddressesInHex"));
+                    Assert.IsNull(prog.GetValue("AutoFixFooter"));
+                }
+                using (var a = SettingsKey.Open("Prog/A"))
+                {
+                    Assert.AreEqual("True", a.GetValue("AutoFixFooter"));
+                    Assert.IsNull(a.GetValue("ShowAddressesInHex"));
+                }
+                using (var b = SettingsKey.Open("Prog/B")) Assert.AreEqual("False", b.GetValue("AutoFixFooter"));
+                using (var filters = SettingsKey.Open("Prog/A", @"LogFilters\0")) Assert.AreEqual("In.n_Engine", filters.GetValue("symbol"));
+                // one Recent: the first suite's, then the second's new files
+                using (var mru = SettingsKey.Open("Prog", "MRUList"))
+                    CollectionAssert.AreEqual(new[] { "a.bin", "b.bin", "c.bin" }, new[] { "0", "1", "2" }.Select(n => (string)mru.GetValue(n)).ToArray());
+                Assert.IsTrue(File.Exists(Path.Combine(SettingsKey.Folder("Prog/A"), "mymaps.xml")));
+
+                // once: what the old suite does later stays its own
+                Old(dir, "OldA", """{ "AutoFixFooter": "False" }""");
+                SettingsKey.ImportOnce("OldA", "Prog/A", shared);
+                using (var a = SettingsKey.Open("Prog/A")) Assert.AreEqual("True", a.GetValue("AutoFixFooter"));
+            }
+            finally
+            {
+                SettingsKey.BaseFolder = old;
+                Directory.Delete(dir, true);
+            }
+        }
+
+        /// <summary>Two ECUs' settings in one file: a shared option set through one is the other's too, an own option stays its own.</summary>
+        [TestMethod]
+        public void EcuSettingsShareTheSharedOptions()
+        {
+            string old = SettingsKey.BaseFolder, dir = Directory.CreateTempSubdirectory("sections").FullName;
+            try
+            {
+                SettingsKey.BaseFolder = dir;
+                var a = new AppSettings(new Section("Prog/A"));
+                a.ShowAddressesInHex = true;
+                a.AutoFixFooter = true;
+                var b = new AppSettings(new Section("Prog/B"));
+                Assert.IsTrue(b.ShowAddressesInHex);
+                Assert.IsFalse(b.AutoFixFooter);
+                b.AutoFixFooter = false;
+                Assert.IsTrue(new AppSettings(new Section("Prog/A")).AutoFixFooter, "B's write left A's own option alone");
+                using var prog = SettingsKey.Open("Prog");
+                Assert.AreEqual("True", prog.GetValue("ShowAddressesInHex"));
+                Assert.AreEqual("True", prog.GetValue(@"A\AutoFixFooter"));
+                Assert.AreEqual("False", prog.GetValue(@"B\AutoFixFooter"));
+            }
+            finally
+            {
+                SettingsKey.BaseFolder = old;
                 Directory.Delete(dir, true);
             }
         }

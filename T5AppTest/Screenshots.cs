@@ -7,6 +7,8 @@ using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using T5App.ViewModels;
 using T5App.Views;
 
@@ -30,7 +32,7 @@ namespace T5AppTest
                     // each shot in the light skin, then in the dark one (<name>-dark.png)
                     foreach (var (theme, suffix) in new[] { (ThemeVariant.Light, ""), (ThemeVariant.Dark, "-dark") })
                     {
-                        var vm = new T5MainWindowViewModel();
+                        var vm = new MainViewModel();
                         var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
                         window.Show();
                         Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
@@ -41,14 +43,14 @@ namespace T5AppTest
                         Maximized(window, "mapviewer" + suffix);
                         Palettes(window, "ign", suffix);
 
-                        var settings = new SettingsViewModel(vm.Settings, vm.T5Settings);
+                        var settings = new SettingsViewModel(vm.Settings, vm.T5.T5Settings);
                         // the default under the home folder, not whoever made the screenshots
                         settings.ProjectFolder = settings.ProjectFolder.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~");
                         foreach (var (w, name) in new (Window, string)[]
                         {
-                            (T5ToolWindows.Dyno(window, vm), "dyno"),
-                            (new FirmwareOptionsWindow { DataContext = vm.FirmwareOptions()! }, "firmware"),
-                            (new SettingsWindow { DataContext = settings }, "settings"),
+                            (T5ToolWindows.Dyno(window, vm.T5), "dyno"),
+                            (new FirmwareOptionsWindow { DataContext = vm.T5.FirmwareOptions()! }, "firmware"),
+                            (ShowSettings(vm, edit: s => s.Common.ProjectFolder = settings.ProjectFolder), "settings"),
                         })
                         {
                             w.Show();

@@ -11,6 +11,8 @@ using CommonSuite;
 using Dock.Avalonia.Controls;
 using Dock.Model.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using TxSuite.ViewModels;
+using TxSuite.Views;
 using SuiteApp.ViewModels;
 using SuiteApp.Views;
 using T7App.ViewModels;
@@ -40,7 +42,7 @@ namespace T7AppTest
             }
             s_session!.Dispatch(async () =>
             {
-                var vm = new T7MainWindowViewModel();
+                var vm = new MainViewModel();
                 var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
                 window.Show();
                 vm.Settings.SynchronizeMapviewers = true;

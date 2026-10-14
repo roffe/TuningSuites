@@ -13,8 +13,8 @@ using SuiteApp.ViewModels;
 namespace SuiteApp.Views;
 
 /// <summary>
-/// The offline tuning menus both suites have: compare and transfer, search, symbol imports and exports, tuning packages, part
-/// number lookup and the map menus (a MenuItem named QuickMapsMenu / MyMapsMenu in the app's menus).
+/// The offline tuning menus every ECU has: compare and transfer, search, symbol imports and exports, tuning packages, part
+/// number lookup and the map menus (a MenuItem named QuickMapsMenu / MyMapsMenu in the program's menus).
 /// </summary>
 public partial class SuiteMainView
 {
@@ -23,7 +23,12 @@ public partial class SuiteMainView
 
     private void WatchMapMenus(MainWindowViewModel vm)
     {
-        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildTuningMenu(); };
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainWindowViewModel.Binary)) BuildTuningMenu();
+            // My Maps are the ECU's: its map names
+            else if (e.PropertyName == nameof(MainWindowViewModel.Module)) BuildMyMaps();
+        };
         vm.MyMapsChanged += BuildMyMaps;
         BuildMyMaps();
     }
@@ -101,26 +106,24 @@ public partial class SuiteMainView
         if (Vm.Binary != null && await new SearchMapsWindow { DataContext = options }.ShowDialog<bool>(Host)) Vm.SearchMaps(options.ToOptions());
     }
 
-    /// <summary>The lookup's partnumber list (T5Suite's frmPartNumberList): the picked partnumber, null when cancelled.</summary>
+    /// <summary>The lookup's partnumber list (frmPartNumberList, a tab per ECU): the picked partnumber, null when cancelled.</summary>
     protected virtual Func<Task<string?>>? BrowsePartNumbers => null;
-
-    /// <summary>TxSuite: Lookup partnumber over every ECU's partnumbers; null in the single suites.</summary>
-    public static Func<string, PartInfo?>? LookupAll { get; set; }
-
-    /// <summary>TxSuite: the partnumber list with a tab per ECU, the open suite's in front; null in the single suites.</summary>
-    public static Func<Window, MainWindowViewModel, Task<string?>>? BrowseAll { get; set; }
 
     protected async void OnLookupPartnumber(object? sender, RoutedEventArgs e)
     {
         if (await ShowPartLookupAsync(Host) is { } pick) await RunPartLookupAsync(pick.action, pick.stock);
     }
 
-    /// <summary>Lookup partnumber over owner, looked up at once when a partnumber is given: the action picked on its stock file, or null.</summary>
+    /// <summary>
+    /// Lookup partnumber over owner, looked up at once when a partnumber is given: the action picked on its stock file, or null. Every
+    /// ECU's partnumbers; Compare to this file only for the open file's ECU's.
+    /// </summary>
     protected async Task<(string action, string stock)?> ShowPartLookupAsync(Window owner, string partNumber = "")
     {
-        var lookup = LookupAll is { } all
-            ? new PartLookupViewModel(all, MainWindowViewModel.Combined?.Name ?? Vm.Caption) { Own = Vm.LookupPartNumber, Browse = () => BrowseAll!(Host, Vm), PartNumber = partNumber }
-            : new PartLookupViewModel(Vm.LookupPartNumber, Vm.Caption) { Browse = BrowsePartNumbers, PartNumber = partNumber };
+        var lookup = new PartLookupViewModel(Vm.LookupAnyPartNumber, Vm.Caption)
+        {
+            Own = pn => Vm.Binary != null ? Vm.LookupPartNumber(pn) : null, Browse = BrowsePartNumbers, PartNumber = partNumber,
+        };
         if (partNumber != "") lookup.Lookup();
         string? action = await new PartLookupWindow { DataContext = lookup }.ShowDialog<string?>(owner);
         return action != null && lookup.Info?.Binary is { } stock ? (action, stock) : null;
