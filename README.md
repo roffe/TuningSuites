@@ -1,20 +1,33 @@
 # TuningSuites
-T5, T7 and T8 Suites
+TxSuite: T5Suite, T7Suite and T8Suite in one program
 
-The TxSuites are Open Source tools used to tune Trionic 5, 7 and 8 based ECU’s.
+TxSuite is an Open Source tool for tuning Trionic 5, 7 and 8 ECU's.
 
-It is possible to tune how the software behaves to increase the performance of the car and adjust the software for hardware modifications, such a high performance injectors.
+You can tune how the software behaves to get more performance out of the car, and adjust it for hardware changes like high performance injectors.
 
-The TxSuites also supports real-time view and can be used to predict the behavior of the tune through it’s Air-mass viewer.
+TxSuite also has realtime viewing and logging, and an airmass result viewer that predicts how a tune will behave.
 
-Installer packages and other information for the original suites are located here:
+Installer packages and other information for the original suites are here:
 http://www.txsuite.org
 
-# T5Suite, T7Suite and T8Suite for Windows, Linux and macOS
+# TxSuite for Windows, Linux and macOS
 
-T5Suite, T7Suite and T8Suite have been rebuilt on .NET 10 and Avalonia, without the commercial components the old suites needed, so they run on Windows, Linux and macOS. They are one program now, TxSuite, which opens T5, T7 and T8 binaries alike. They read, edit and write the same files as the old suites and talk to the ECU through [TrionicCANLib](https://github.com/roffe/Trionic), the library of the Trionic CAN Flasher. [PORTING.md](PORTING.md) tracks what has been ported and every deliberate difference; the old .NET Framework suites are kept in [OldSuites](OldSuites) for reference.
+T5Suite, T7Suite and T8Suite have been rebuilt on .NET 10 and Avalonia, without the commercial components the old suites needed, so they run on Windows, Linux and macOS. The three are merged into one program, TxSuite. Open a T5, T7 or T8 binary and TxSuite works on it the way that ECU's suite did: the same files read, edited and written, the same maps, tools and realtime panel. It talks to the ECU through [TrionicCANLib](https://github.com/roffe/Trionic), the library of the Trionic CAN Flasher.
 
-The suites support the same interfaces as the flasher (T5Suite talks to the ECU's P-bus):
+[PORTING.md](PORTING.md) tracks what has been ported and every deliberate difference from the old suites. The old .NET Framework suites are kept in [OldSuites](OldSuites) for reference.
+
+## One program for three ECU's
+
+- One window for all three. The file you open decides the ECU. Opening a file of another ECU closes the one before, unsaved maps are asked about first.
+- One menu. What every ECU has is always there, an ECU's own items show while one of its files is open. Want the old suites' ribbon back? Settings → Show ribbon bar instead of menus.
+- Connecting to the ECU needs an open file, the file tells TxSuite which ECU it's talking to.
+- One settings dialog: Common, Logging and a tab per ECU. The first start takes over the settings of T5Suite, T7Suite and T8Suite once, their Recent lists merged into one.
+- Lookup partnumber finds the partnumbers of all three ECU's, and its list has a tab per ECU.
+- Help has the user manual and the Trionic documentation of every ECU.
+
+Settings and log files are in `%APPDATA%\MattiasC\TxSuite` on Windows and `~/.config/MattiasC/TxSuite` on Linux. Settings → Logging decides which log files get written, at what level and for how long.
+
+TxSuite supports the same interfaces as the flasher (on a T5 it talks to the ECU's P-bus):
 
 | Interface | Windows | Linux | macOS |
 |---|---|---|---|
@@ -29,18 +42,18 @@ The suites support the same interfaces as the flasher (T5Suite talks to the ECU'
 
 ## Screenshots
 
-Every suite has a light and a dark skin (Skin menu, or the system's theme).
+TxSuite has a light and a dark skin (Skin menu, or follow the system's theme).
 
 | Light | Dark |
 |---|---|
-| ![T7Suite map viewer](docs/screenshots/t7/mapviewer.png) | ![T7Suite map viewer, dark](docs/screenshots/t7/mapviewer-dark.png) |
-| ![T5Suite map viewer](docs/screenshots/t5/mapviewer.png) | ![T5Suite map viewer, dark](docs/screenshots/t5/mapviewer-dark.png) |
-| ![T7Suite airmass result](docs/screenshots/t7/airmass-table.png) | ![T7Suite airmass result, dark](docs/screenshots/t7/airmass-table-dark.png) |
-| ![T8Suite dyno graph](docs/screenshots/t8/airmass-dyno.png) | ![T8Suite dyno graph, dark](docs/screenshots/t8/airmass-dyno-dark.png) |
-| ![T7Suite symbol palette](docs/screenshots/t7/palette-symbols.png) | ![T7Suite symbol palette, dark](docs/screenshots/t7/palette-symbols-dark.png) |
-| ![T5Suite command palette](docs/screenshots/t5/palette-commands.png) | ![T5Suite command palette, dark](docs/screenshots/t5/palette-commands-dark.png) |
+| ![T7 map viewer](docs/screenshots/t7/mapviewer.png) | ![T7 map viewer, dark](docs/screenshots/t7/mapviewer-dark.png) |
+| ![T5 map viewer](docs/screenshots/t5/mapviewer.png) | ![T5 map viewer, dark](docs/screenshots/t5/mapviewer-dark.png) |
+| ![T7 airmass result](docs/screenshots/t7/airmass-table.png) | ![T7 airmass result, dark](docs/screenshots/t7/airmass-table-dark.png) |
+| ![T8 dyno graph](docs/screenshots/t8/airmass-dyno.png) | ![T8 dyno graph, dark](docs/screenshots/t8/airmass-dyno-dark.png) |
+| ![T7 symbol palette](docs/screenshots/t7/palette-symbols.png) | ![T7 symbol palette, dark](docs/screenshots/t7/palette-symbols-dark.png) |
+| ![T5 command palette](docs/screenshots/t5/palette-commands.png) | ![T5 command palette, dark](docs/screenshots/t5/palette-commands-dark.png) |
 
-T7Suite's ignition map, T5Suite's fuel map, the airmass result of T7Suite and T8Suite's dyno graph, all on stock binaries. As in VS Code, Ctrl+P opens a symbol by any part of its name and Ctrl+Shift+P runs any menu command (Cmd on macOS), in every suite. The firmware and settings dialogs and both palettes of each suite are in [docs/screenshots](docs/screenshots); `bash docs/screenshots/generate.sh` renders them all again from the apps.
+A T7's ignition map, a T5's fuel map, a T7's airmass result and a T8's dyno graph, all on stock binaries. Like in VS Code, Ctrl+P opens a symbol by any part of its name and Ctrl+Shift+P runs any menu command (Cmd on macOS). The firmware and settings dialogs and both palettes for each ECU are in [docs/screenshots](docs/screenshots), `bash docs/screenshots/generate.sh` renders them all again from TxSuite.
 
 ## System Requirements
 - Windows 10 or Windows 11. The setup brings its own .NET runtime.
@@ -90,9 +103,12 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). T
     dotnet test T7CoreTest
     dotnet test T8CoreTest
     dotnet test T5CoreTest
+    dotnet test TxSuiteTest
     dotnet run --project TxSuite
 
 `-p:TrionicDir=../Trionic` builds against another checkout of roffe/Trionic instead, for working on both.
+
+How the code is laid out: TxSuite is the program, its window, menus and settings dialog. Each ECU has a core with its file, map and ECU code (T5Core, T7Core, T8Core) and a library with its part of the program (T5App, T7App, T8App). SuiteCore and SuiteApp are shared by all three and know no ECU. The tests sit next to what they test (T7CoreTest, T7AppTest, TxSuiteTest, ...).
 
 A self-contained build that runs on a machine without .NET, for `win-x86`, `linux-x64`, `linux-arm64`, `osx-arm64` or `osx-x64`:
 
