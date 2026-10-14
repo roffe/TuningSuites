@@ -69,6 +69,8 @@ The newest TxSuite and TxExtras are on [one page](https://github.com/roffe/Tunin
 ### Windows
 Run TxSuiteSetup.exe. It installs to `Program Files (x86)\MattiasC\TxSuite`, next to any old T5Suite, T7Suite or T8Suite (it replaces none of them), and asks whether `.bin` files should open in TxSuite; if you once picked another program with "Always", Windows keeps that one until you pick TxSuite under Open with. Then TxExtrasSetup.exe puts the stock binaries into TxSuite's folder. Running the setup of a newer build over an existing installation upgrades it.
 
+Rather not install it? TxSuite-win-x86.zip runs from wherever you unpack it, unpack TxExtras.zip into the `TxSuite` folder for the stock binaries. It doesn't open `.bin` files by itself, and its update check opens the release page instead of downloading the setup.
+
 ### Linux
 Download TxSuite-linux-x64.tar.gz (or -linux-arm64) and run it from where you extracted it; unpack TxExtras.zip into the `TxSuite` folder for the stock binaries:
 
@@ -88,7 +90,7 @@ Download TxSuite-osx-arm64.zip (Apple silicon) or -osx-x64 (Intel). The build is
     ./TxSuite/TxSuite
 
 ## Updates
-TxSuite looks for a newer `Txsuite_v…` release when it starts and from Help → Check for updates, and shows the result in the status bar. When there is one it asks; OK downloads the setup on Windows and opens the release page elsewhere.
+TxSuite looks for a newer `Txsuite_v…` release when it starts and from Help → Check for updates, and shows the result in the status bar. When there is one it asks; OK downloads the setup on Windows and opens the release page elsewhere (and for the Windows zip).
 
 ## Disclaimer
 This is Open Source software that pokes around in your car's control system. The authors of the tools shall not be held accountable for how you decide to use the tools. If you are not careful, you can easily brick your car with these tools so please use this software with care.
