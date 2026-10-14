@@ -92,21 +92,25 @@ namespace TxSuiteTest
                     Assert.IsFalse(Groups(ribbon).SelectMany(g => g.Buttons).Any(b => b.Text == "Exit"));
                     Save(window, "ribbon-file");
 
-                    // too narrow for every group: the wide one folds into a button with its items in a dropdown, the ones after it fit
+                    // too narrow for every group: the wide one folds into a button with its items in a dropdown, the ones before it stay
+                    // open. The width from the groups' own, the fonts differ between systems: room for Checksum and Information, not Actions
                     Select(ribbon, "Actions");
+                    window.Width = 5000;
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.IsFalse(Groups(ribbon).Any(g => g.Folded));
+                    var page = (RibbonPage)ribbon.Tabs.SelectedContent!;
                     var actions = Group(ribbon, "Actions");
+                    window.Width = window.Width - page.Bounds.Width + Group(ribbon, "Checksum").FullWidth + Group(ribbon, "Information").FullWidth + actions.FullWidth - 1;
+                    Dispatcher.UIThread.RunJobs();
                     Assert.IsTrue(actions.Folded);
-                    Assert.IsFalse(Groups(ribbon).Except([actions]).Any(g => g.Folded));
-                    Assert.IsLessThanOrEqualTo(ribbon.Bounds.Width, Groups(ribbon).Sum(g => g.Bounds.Width));
+                    Assert.IsFalse(Group(ribbon, "Checksum").Folded || Group(ribbon, "Information").Folded);
+                    Assert.IsLessThanOrEqualTo(page.Bounds.Width, Groups(ribbon).Sum(g => g.Bounds.Width));
                     Save(window, "ribbon-actions");
                     Click(actions.FoldedButton);
                     // a click on an entry is a click on the menu item
                     Click(Entry(actions.FoldedButton, "View file in hex"));
                     Assert.IsInstanceOfType<HexViewerViewModel>(vm.SelectedViewer);
                     Assert.IsFalse(actions.FoldedButton.Flyout!.IsOpen);
-                    window.Width = 5000;
-                    Dispatcher.UIThread.RunJobs();
-                    Assert.IsFalse(Groups(ribbon).Any(g => g.Folded));
                     window.Width = 1200;
                     Dispatcher.UIThread.RunJobs();
 

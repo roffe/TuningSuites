@@ -41,6 +41,7 @@ namespace TxSuiteTest
             }
             // what opens: the file a link points at
             string t7Opened = OperatingSystem.IsWindows() ? t7Stock : Path.Combine(s_dir, T7Part + ".bin");
+            string t5Opened = OperatingSystem.IsWindows() ? t5Stock : Path.Combine(s_dir, T5Part + ".bin");
             string t5 = OperatingSystem.IsWindows() ? Stock("T5Binaries", T5Part + ".bin") : Path.Combine(s_dir, T5Part + ".bin");
             string copy = Path.Combine(s_dir, "copy-of-" + T7Part + ".bin");
             s_session!.Dispatch(async () =>
@@ -134,7 +135,7 @@ namespace TxSuiteTest
 
                     // back to T5, then Create new from original (the save picker's answer given straight to the dialog)
                     Assert.IsTrue(await vm.OpenPlainFileAsync(t5Stock, true));
-                    await OpenedIn(vm, vm.T5, t5);
+                    await OpenedIn(vm, vm.T5, t5Opened);
                     (lookupWindow, lookup) = OpenLookup(window);
                     lookup.PartNumber = T7Part;
                     lookup.Lookup();
