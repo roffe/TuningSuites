@@ -36,6 +36,9 @@
                             <CheckBox Content="Show graphs in mapviewer" IsChecked="{Binding ShowGraphs}">
                                 <ToolTip.Tip><c:SuperTip Title="Show graphs in mapviewer" Text="When checked the graphical representation of the selected map will also be displayed. This consumes more system memory and cpu time." /></ToolTip.Tip>
                             </CheckBox>
+                            <CheckBox Grid.Row="1" Content="Show ribbon bar instead of menus" IsChecked="{Binding ShowRibbon}">
+                                <ToolTip.Tip><c:SuperTip Title="Show ribbon bar instead of menus" Text="When checked, the menus show as a ribbon bar at the top of the window, as in the old suites: a tab per menu with its commands as buttons in groups. Groups that don't fit in the window fold into a button that drops them down. Unchecked, the window has normal menus." /></ToolTip.Tip>
+                            </CheckBox>
                             <CheckBox Grid.Column="1" Content="Auto load last file on startup" IsChecked="{Binding AutoLoadLastFile}">
                                 <ToolTip.Tip><c:SuperTip Title="Auto load last file on startup" Text="Lets you decide whether or not the last used file should be automatically loaded when the program starts up." /></ToolTip.Tip>
                             </CheckBox>

@@ -23,6 +23,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _requestProjectNotes;
     [ObservableProperty] private bool _hideSymbolTable;
     [ObservableProperty] private bool _showMapPreviewPopup;
+    [ObservableProperty] private bool _showRibbon;
     [ObservableProperty] private string _projectFolder;
 
     public string[] ViewTypes { get; } = ["Hexadecimal view", "Decimal view", "Easy view"];
@@ -107,6 +108,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _requestProjectNotes = s.RequestProjectNotes;
         _hideSymbolTable = s.HideSymbolTable;
         _showMapPreviewPopup = s.ShowMapPreviewPopup;
+        _showRibbon = s.ShowRibbon;
         _projectFolder = s.ProjectFolder;
         _adapter = s.Adapter;
         _baudrate = s.Baudrate;
@@ -146,6 +148,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.RequestProjectNotes = RequestProjectNotes;
         s.HideSymbolTable = HideSymbolTable;
         s.ShowMapPreviewPopup = ShowMapPreviewPopup;
+        s.ShowRibbon = ShowRibbon;
         s.AdapterType = AdapterType;
         s.Adapter = Adapter ?? "";
         s.Baudrate = Baudrate;

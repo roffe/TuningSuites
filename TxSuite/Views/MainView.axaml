@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TxSuite.ViewModels"
         xmlns:sv="using:SuiteApp.Views"
+        xmlns:c="using:SuiteApp.Controls"
         x:Class="TxSuite.Views.MainView"
         x:DataType="vm:MainViewModel">
     <UserControl.KeyBindings>
@@ -25,10 +26,12 @@
         </ContextMenu>
     </UserControl.Resources>
     <DockPanel>
-        <Menu DockPanel.Dock="Top">
-            <!-- the old suites' menus in one, in the layout they shared: what every ECU has always, an ECU's own items (T5Suite's,
-                 T7Suite's, T8Suite's, in their places) only while a file of that ECU is open -->
-            <MenuItem x:Name="FileMenu" Header="_File">
+        <!-- the old suites' menus in one, in the layout they shared: what every ECU has always, an ECU's own items (T5Suite's,
+             T7Suite's, T8Suite's, in their places) only while a file of that ECU is open. Shown as the old suites' ribbon instead
+             with Settings → Show ribbon bar instead of menus: its groups are the menus' sections, captioned by c:Ribbon.Group (the
+             old ribbons' captions) -->
+        <Menu x:Name="MainMenu" DockPanel.Dock="Top" IsVisible="{Binding !ShowRibbon}">
+            <MenuItem x:Name="FileMenu" Header="_File" c:Ribbon.Group="File actions">
                 <MenuItem Header="_Open file..." Click="OnOpenFile" />
                 <!-- the files are made by SuiteMainView (BuildRecent) -->
                 <MenuItem x:Name="RecentMenu" Header="_Recent" />
@@ -46,12 +49,12 @@
                           IsEnabled="{Binding OriginalFile, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <MenuItem Header="Setup log filters" Click="OnLogFilters" />
                 <MenuItem Header="Generate Idc file" Click="OnGenerateIdc" IsEnabled="{Binding HasFile}" />
-                <Separator />
+                <Separator c:Ribbon.Group="Options" />
                 <MenuItem Header="Settings" Click="OnSettings" />
                 <MenuItem Header="Lookup partnumber" Click="OnLookupPartnumber" />
                 <MenuItem Header="User library" Click="OnUserLibrary" IsVisible="{Binding IsT5}" />
                 <Separator />
-                <MenuItem Header="_Project">
+                <MenuItem Header="_Project" c:Ribbon.Group="Projects">
                     <MenuItem Header="Create a project" Click="OnCreateProject" />
                     <MenuItem Header="Open a project" Click="OnOpenProject" />
                     <MenuItem Header="Close project" Command="{Binding CloseProjectMenuCommand}" IsEnabled="{Binding IsProjectOpen}" />
@@ -67,18 +70,18 @@
                     <MenuItem Header="Produce latest binary" Click="OnProduceLatest" IsEnabled="{Binding IsProjectOpen}" />
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="E_xit" Command="{Binding ExitCommand}" />
+                <MenuItem Header="E_xit" Command="{Binding ExitCommand}" c:Ribbon.Hidden="True" />
             </MenuItem>
-            <MenuItem x:Name="ActionsMenu" Header="_Actions">
+            <MenuItem x:Name="ActionsMenu" Header="_Actions" c:Ribbon.Group="Checksum">
                 <MenuItem Header="_Verify checksum" Command="{Binding VerifyChecksumCommand}" IsEnabled="{Binding HasFile}" />
-                <Separator />
+                <Separator c:Ribbon.Group="Information" />
                 <MenuItem Header="_Firmware information" Click="OnFirmwareInformation" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="VIN decoder" Click="OnVinDecoder" />
                 <MenuItem Header="Browse axis information" Command="{Binding BrowseAxesCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Show interrupt vectors" Click="OnVectors" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Show disassembly" Click="OnDisassembly" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Show full disassembly" Click="OnFullDisassembly" IsVisible="{Binding IsT7OrT8}" />
-                <Separator />
+                <Separator c:Ribbon.Group="Actions" />
                 <MenuItem Header="Compare symbols with other binary" Click="OnCompareToFile" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Compare binary outside symbolrange" Click="OnBinaryCompareOutsideSymbols" IsVisible="{Binding IsT8}" />
                 <MenuItem Header="Compare binary with other binary" Click="OnBinaryCompare" IsEnabled="{Binding HasFile}" />
@@ -88,13 +91,13 @@
                 <MenuItem Header="Export map to CSV" Click="OnExportMapCsv" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import map from CSV" Click="OnImportMapCsv" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="View file in hex" Command="{Binding ViewHexCommand}" IsEnabled="{Binding HasFile}" />
-                <Separator />
+                <Separator c:Ribbon.Group="SRAM snapshots" />
                 <MenuItem Header="Compare binary to SRAM snapshot" Click="OnCompareToSram" IsVisible="{Binding IsT5OrT7}" />
                 <MenuItem Header="Compare SRAM snapshots" Click="OnCompareSram" IsVisible="{Binding IsT5OrT7}" />
                 <MenuItem Header="Binary compare SRAM snapshots" Click="OnBinaryCompareSram" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Import SRAM snapshot" Click="OnImportSram" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Import SRAM snapshot into binary" Click="OnMergeAdaption" IsVisible="{Binding IsT5}" />
-                <Separator IsVisible="{Binding HasFile}" />
+                <Separator IsVisible="{Binding HasFile}" c:Ribbon.Group="Tools" />
                 <MenuItem Header="Airmass result viewer" Command="{Binding T7.ShowAirmassResultCommand}" IsVisible="{Binding IsT7}" />
                 <MenuItem Header="Airmass result viewer" Command="{Binding T8.ShowAirmassResultCommand}" IsVisible="{Binding IsT8}" />
                 <MenuItem Header="SID information" Click="OnSidInfo" IsVisible="{Binding IsT7}" />
@@ -114,8 +117,8 @@
             </MenuItem>
             <!-- T5's tuning wizards and T8's Tuning Wizard, then txlogger's menu for the open file's ECU with the maps the bin has
                  (built in code) -->
-            <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}">
-                <MenuItem Header="Tuning wizards" IsVisible="{Binding IsT5}">
+            <MenuItem x:Name="QuickMapsMenu" Header="_Tuning" IsEnabled="{Binding HasFile}" c:Ribbon.Group="Tuning wizards">
+                <MenuItem Header="Tuning wizards" IsVisible="{Binding IsT5}" c:Ribbon.Group="Tuning wizards">
                     <MenuItem Header="Tune me up ®" Click="OnTuneMeUp" />
                     <Separator IsVisible="{Binding IsT5Advanced}" />
                     <MenuItem Header="Convert to different MAP sensor" IsVisible="{Binding IsT5Advanced}">
@@ -133,8 +136,8 @@
                 </MenuItem>
                 <MenuItem Header="Tuning Wizard" Click="OnTuningWizard" IsVisible="{Binding IsT8}" />
             </MenuItem>
-            <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" />
-            <MenuItem x:Name="RealtimeMenu" Header="_Realtime">
+            <MenuItem x:Name="MyMapsMenu" Header="M_y Maps" c:Ribbon.Group="myMaps settings" />
+            <MenuItem x:Name="RealtimeMenu" Header="_Realtime" c:Ribbon.Group="CAN bus connection">
                 <MenuItem Header="{Binding ConnectCaption}" Command="{Binding ConnectDisconnectCommand}" />
                 <MenuItem Header="Toggle realtime panel" InputGesture="Shift+F1" Command="{Binding ToggleRealtimePanelCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Configure realtime panel" Command="{Binding ConfigureRealtimePanelCommand}" IsVisible="{Binding IsT5}" />
@@ -149,7 +152,7 @@
                 <MenuItem Header="Clear knock counters" Command="{Binding T5.ClearKnockCountersCommand}" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Write log marker" InputGesture="F6" Command="{Binding WriteLogMarkerCommand}" />
                 <MenuItem Header="Export logfile to CSV" Click="OnExportLogCsv" />
-                <Separator IsVisible="{Binding HasFile}" />
+                <Separator IsVisible="{Binding HasFile}" c:Ribbon.Group="Tuning in realtime" />
                 <MenuItem Header="View knock count map" Command="{Binding ShowEcuMapCommand}" CommandParameter="KnkDetAdap.KnkCntMap" IsVisible="{Binding IsT7}" />
                 <MenuItem Header="View false knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.FKnkCntMap" IsVisible="{Binding IsT7}" />
                 <MenuItem Header="View real knock map" Command="{Binding ShowEcuMapCommand}" CommandParameter="F_KnkDetAdap.RKnkCntMap" IsVisible="{Binding IsT7}" />
@@ -194,14 +197,14 @@
                 <MenuItem Header="Generate tuning package from ECU" Click="OnGeneratePackage" IsVisible="{Binding IsT7}" />
                 <MenuItem Header="Synchronize maps" Command="{Binding T5.SynchronizeMapsCommand}" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Compare ECU with binary" Click="OnCompareEcu" IsVisible="{Binding IsT5}" />
-                <Separator IsVisible="{Binding IsT5Advanced}" />
+                <Separator IsVisible="{Binding IsT5Advanced}" c:Ribbon.Group="Autotune" />
                 <MenuItem Header="Toggle Autotune" InputGesture="Shift+F5" Command="{Binding T5Realtime.ToggleAutotuneCommand, FallbackValue={x:Null}}"
                           IsVisible="{Binding IsT5Advanced}" />
                 <MenuItem Header="Autotune ignition" Click="OnIgnitionAutotune" IsVisible="{Binding IsT5Advanced}" />
                 <MenuItem Header="Ignition lock map" Command="{Binding T5.ShowIgnitionLocksCommand}" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Release locked ignition cells" Command="{Binding T5.ReleaseIgnitionLocksCommand}" IsVisible="{Binding IsT5}" />
             </MenuItem>
-            <MenuItem x:Name="EcuMenu" Header="E_CU">
+            <MenuItem x:Name="EcuMenu" Header="E_CU" c:Ribbon.Group="CAN Flasher">
                 <MenuItem Header="Read ECU" Click="OnReadEcu" />
                 <MenuItem Header="Flash current file to ECU" Click="OnFlashEcu" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Get SRAM snapshot" Command="{Binding T7.GetSramSnapshotCommand}" IsVisible="{Binding IsT7}" />
@@ -209,17 +212,17 @@
                 <MenuItem Header="Upload SRAM to ECU" Click="OnUploadSram" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Recover ECU" Click="OnRecoverEcu" IsVisible="{Binding IsT8}" />
             </MenuItem>
-            <MenuItem Header="_Skin">
+            <MenuItem Header="_Skin" c:Ribbon.Group="Available skins">
                 <MenuItem Header="Light" Click="OnSkin" Tag="Light" />
                 <MenuItem Header="Dark" Click="OnSkin" Tag="Dark" />
                 <MenuItem Header="Follow the system" Click="OnSkin" Tag="Default" />
-                <Separator />
+                <Separator c:Ribbon.Group="Window layout" />
                 <MenuItem Header="Cascade windows" Click="OnCascade" />
                 <MenuItem Header="Tile windows horizontally" Click="OnTileHorizontal" />
                 <MenuItem Header="Tile windows vertically" Click="OnTileVertical" />
                 <MenuItem Header="Dock all floating windows" Command="{Binding DockAllCommand}" />
             </MenuItem>
-            <MenuItem Header="_Help">
+            <MenuItem Header="_Help" c:Ribbon.Group="Documentation">
                 <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5SuitePro User Manual.pdf" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Trionic 5 documentation" Click="OnHelpFile" Tag="Trionic 5.pdf" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="User manual" Click="OnHelpFile" Tag="T7_manual.pdf" IsVisible="{Binding IsT7}" />
@@ -227,11 +230,12 @@
                 <MenuItem Header="User manual" Click="OnHelpFile" Tag="T8_manual.pdf" IsVisible="{Binding IsT8}" />
                 <MenuItem Header="Trionic 8 documentation" Click="OnHelpFile" Tag="Trionic 8.pdf" IsVisible="{Binding IsT8}" />
                 <MenuItem Header="Release notes" Click="OnReleaseNotes" />
-                <Separator />
+                <Separator c:Ribbon.Group="Help on TxSuite" />
                 <MenuItem Header="Check for updates" Click="OnCheckForUpdates" />
                 <MenuItem x:Name="AboutMenu" Header="About TxSuite" Click="OnAbout" />
             </MenuItem>
         </Menu>
+        <c:Ribbon DockPanel.Dock="Top" Menu="{Binding #MainMenu}" IsVisible="{Binding ShowRibbon}" />
         <sv:StatusBar DockPanel.Dock="Bottom" />
         <sv:SuiteWorkspace />
     </DockPanel>

@@ -146,6 +146,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _canRollForward;
     [ObservableProperty] private bool _hasTransactions;
 
+    /// <summary>The menus as the old suites' ribbon (Settings → Show ribbon bar instead of menus).</summary>
+    [ObservableProperty] private bool _showRibbon;
+
     /// <summary>A line of text from the user (frmChangeNote), null when cancelled; answered by the view.</summary>
     public Func<string, Task<string?>>? AskText { get; set; }
 
@@ -186,6 +189,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         ApplyColorBlindMode();
         ApplySymbolListFont();
         ApplyMapCellGap();
+        _showRibbon = Settings.ShowRibbon;
         Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
@@ -700,6 +704,7 @@ public abstract partial class MainWindowViewModel : ObservableObject
         ApplyColorBlindMode();
         ApplySymbolListFont();
         ApplyMapCellGap();
+        ShowRibbon = Settings.ShowRibbon;
         RefreshSymbols();
         RestartSramTimer();
         // Settings → Logging, the program's

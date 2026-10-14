@@ -208,4 +208,34 @@
         <Setter Property="MinHeight" Value="30" />
         <Setter Property="Padding" Value="10,2" />
     </Style>
+    <!-- the ribbon (Settings → Show ribbon bar instead of menus): flat buttons as DevExpress' small ribbon items, a group's caption
+         under its buttons and a line after it, a line under the ribbon -->
+    <Style Selector="c|Ribbon">
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Button.ribbonItem, Button.ribbonGroup">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.ribbonItem">
+        <Setter Property="Padding" Value="6,0" />
+    </Style>
+    <Style Selector="Button.ribbonGroup">
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.ribbonItem:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.ribbonGroup:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="TextBlock.ribbonCaption">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+    </Style>
+    <Style Selector="Border.ribbonLine">
+        <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    </Style>
 </Styles>

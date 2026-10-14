@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommonSuite;
+using SuiteApp.Controls;
 using SuiteApp.Services;
 using SuiteApp.ViewModels;
 
@@ -266,7 +267,12 @@ public partial class SuiteMainView
         menu.Items.Clear();
         foreach (object? item in m_tuningItems) menu.Items.Add(item);
         if (Vm.Binary is { } bin)
-            foreach (MenuItem item in TuningItems(bin, bin.TuningMenu())) menu.Items.Add(item);
+            foreach (MenuItem item in TuningItems(bin, bin.TuningMenu()))
+            {
+                // the ribbon's groups, as the old suites' Tuning pages had them
+                if (item.ItemCount > 0) Ribbon.SetGroup(item, Ribbon.Text(item.Header));
+                menu.Items.Add(item);
+            }
     }
 
     // left out: a map the bin has under none of its names, one opening what an entry above it does, an empty submenu
@@ -309,7 +315,8 @@ public partial class SuiteMainView
         if (maps.Count > 0) menu.Items.Add(new Separator());
         foreach (var group in maps.GroupBy(m => m.Group))
         {
-            var item = new MenuItem { Header = MenuTextConverter.Escape(group.Key) };
+            // a ribbon group per category, as T7Suite's My Maps page
+            var item = new MenuItem { Header = MenuTextConverter.Escape(group.Key), [Ribbon.GroupProperty] = group.Key };
             foreach (var m in group) item.Items.Add(Shortcut(m));
             menu.Items.Add(item);
         }

@@ -1592,6 +1592,19 @@ namespace CommonSuite
             }
         }
 
+        // TxSuite: the menus as the old suites' ribbon (Settings → Show ribbon bar instead of menus), off by default
+        private bool m_ShowRibbon = false;
+
+        public bool ShowRibbon
+        {
+            get { return m_ShowRibbon; }
+            set
+            {
+                m_ShowRibbon = value;
+                SaveRegistrySetting("ShowRibbon", m_ShowRibbon);
+            }
+        }
+
         private bool m_Showpopupmap = true;
 
         public bool Showpopupmap
@@ -1754,6 +1767,7 @@ namespace CommonSuite
                 saveSettings.SetValue("AutoLoadLastFile", m_AutoLoadLastFile);
                 saveSettings.SetValue("FancyDocking", m_FancyDocking);
                 saveSettings.SetValue("ShowMapPreviewPopup", m_ShowMapPreviewPopup);
+                saveSettings.SetValue("ShowRibbon", m_ShowRibbon);
                 saveSettings.SetValue("SynchronizeMapviewers", m_SynchronizeMapviewers);
                 saveSettings.SetValue("AllowAskForPartnumber", m_AllowAskForPartnumber);
                 saveSettings.SetValue("ShowTablesUpsideDown", m_ShowTablesUpsideDown);
@@ -1815,7 +1829,7 @@ namespace CommonSuite
         /// </summary>
         public static readonly HashSet<string> SharedNames = new(StringComparer.OrdinalIgnoreCase)
         {
-            "ShowGraphs", "AutoLoadLastFile", "DefaultViewType", "ColorBlindMode", "SymbolListFontSize",
+            "ShowGraphs", "AutoLoadLastFile", "DefaultViewType", "ColorBlindMode", "SymbolListFontSize", "ShowRibbon",
             "MapCellGap", "SynchronizeMapviewers", "AutoChecksum", "ShowAddressesInHex", "RequestProjectNotes", "HideSymbolTable", "ShowMapPreviewPopup",
             "ProjectFolder", "AdapterType", "Adapter", "Baudrate", "AutoUpdateSRAMViewers", "AutoUpdateInterval", "InterpolateLogWorksTimescale",
             "MeasureAFRInLambda", "UseDigitalWidebandLambda", "WidebandDevice", "WbPort", "LastFilename", "LastProjectname", "LastOpenedType",
@@ -2135,6 +2149,10 @@ namespace CommonSuite
                             else if (a == "ShowMapPreviewPopup")
                             {
                                 m_ShowMapPreviewPopup = Convert.ToBoolean(Settings.GetValue(a).ToString());
+                            }
+                            else if (a == "ShowRibbon")
+                            {
+                                m_ShowRibbon = Convert.ToBoolean(Settings.GetValue(a).ToString());
                             }
                             else if (a == "AlwaysRecreateRepositoryItems")
                             {
