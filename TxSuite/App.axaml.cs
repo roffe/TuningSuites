@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using SuiteApp;
+using SuiteApp.Services;
 using TxSuite.ViewModels;
 using TxSuite.Views;
 
@@ -14,7 +15,13 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) SuiteStartup.Start(desktop, new MainViewModel(), new MainWindow());
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            // Settings → Logging before anything logs: the logs at their levels, the old ones gone
+            Logging.Apply();
+            Logging.DeleteOld();
+            SuiteStartup.Start(desktop, new MainViewModel(), new MainWindow());
+        }
         base.OnFrameworkInitializationCompleted();
     }
 }

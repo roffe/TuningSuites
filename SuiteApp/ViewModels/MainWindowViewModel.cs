@@ -186,7 +186,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
         ApplyColorBlindMode();
         ApplySymbolListFont();
         ApplyMapCellGap();
-        Logging.ApplyCanLogging(Settings.EnableCanLog);
         Title = $"{Suite} v{Version}";
         ColumnFilters = new(SymbolColumns.Where(c => c.Visible).Select(NewFilter));
         LoadRecent();
@@ -353,7 +352,6 @@ public abstract partial class MainWindowViewModel : ObservableObject
         Binary = null;
         Symbols = null;
         Module = ecu;
-        Logging.ApplyCanLogging(Settings.EnableCanLog);
         return true;
     }
 
@@ -704,7 +702,9 @@ public abstract partial class MainWindowViewModel : ObservableObject
         ApplyMapCellGap();
         RefreshSymbols();
         RestartSramTimer();
-        Logging.ApplyCanLogging(Settings.EnableCanLog);
+        // Settings → Logging, the program's
+        Logging.Apply();
+        Logging.DeleteOld();
         foreach (EcuModule m in Modules) m.SettingsChanged();
     }
 

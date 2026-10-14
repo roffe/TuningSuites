@@ -28,9 +28,9 @@ namespace TxSuiteTest
                 var window = new TxSuite.Views.TxSettingsWindow { DataContext = settings };
                 window.Show();
                 var tabs = window.FindControl<TabControl>("Tabs")!;
-                CollectionAssert.AreEqual(new[] { "Common", "T5", "T7", "T8" }, tabs.Items.OfType<TabItem>().Select(t => (string)t.Header!).ToArray());
+                CollectionAssert.AreEqual(new[] { "Common", "Logging", "T5", "T7", "T8" }, tabs.Items.OfType<TabItem>().Select(t => (string)t.Header!).ToArray());
                 Avalonia.Size? size = null;
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 5; i++)
                 {
                     tabs.SelectedIndex = i;
                     Avalonia.Threading.Dispatcher.UIThread.RunJobs();

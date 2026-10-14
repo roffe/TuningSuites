@@ -45,6 +45,13 @@ public partial class TxSettingsWindow : Window
         if (await new T7App.Views.AutotuneSettingsWindow { DataContext = edit }.ShowDialog<bool>(this)) Vm.T7Autotune = edit;
     }
 
+    // Logging → Open: the folder in the system's file manager
+    private void OnOpenLogFolder(object? sender, RoutedEventArgs e)
+    {
+        System.IO.Directory.CreateDirectory(Vm.Logging.Folder);
+        SuiteApp.Services.Dialogs.OpenWithShell(Vm.Logging.Folder);
+    }
+
     private void OnOk(object? sender, RoutedEventArgs e) => Close(true);
 
     private void OnCancel(object? sender, RoutedEventArgs e) => Close(false);

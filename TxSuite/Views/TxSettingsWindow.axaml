@@ -186,6 +186,49 @@
                 </StackPanel>
             </TabItem>
 
+            <!-- the log files: TxSuite's, not an ECU's (Logging.cs); a row per NLog.config file target -->
+            <TabItem Header="Logging">
+                <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding Logging}" x:DataType="svm:LoggingSettingsViewModel">
+                    <HeaderedContentControl Classes="group" Header="Log files">
+                        <ItemsControl ItemsSource="{Binding Logs}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="svm:LogRow">
+                                    <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16" Margin="0,1">
+                                        <CheckBox Content="{Binding Caption}" IsChecked="{Binding On}">
+                                            <ToolTip.Tip><c:SuperTip Title="{Binding Caption}" Text="{Binding Tip}" /></ToolTip.Tip>
+                                        </CheckBox>
+                                        <Grid Grid.Column="1" Classes="pair" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                            <ToolTip.Tip><c:SuperTip Title="Level" Text="What the log gets: Trace everything, Debug a little less, then Info, Warn and Error. A level also logs every one after it, so Error logs the errors alone." /></ToolTip.Tip>
+                                            <TextBlock Text="Level" />
+                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Levels}" SelectedItem="{Binding Level}" IsEnabled="{Binding On}" HorizontalAlignment="Stretch" />
+                                        </Grid>
+                                        <TextBlock Grid.Column="2" Text="{Binding FileName}" Opacity="0.7" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </HeaderedContentControl>
+                    <HeaderedContentControl Classes="group" Header="Log folder">
+                        <Grid Classes="columns" ColumnDefinitions="300,616" ColumnSpacing="16">
+                            <Grid Classes="pair" ColumnDefinitions="*,120" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Keep log files (days)" Text="Log files last written longer ago than this many days are deleted when TxSuite starts and when the settings are saved. 0 keeps them all." /></ToolTip.Tip>
+                                <TextBlock Text="Keep log files (days)" />
+                                <NumericUpDown Grid.Column="1" Value="{Binding KeepDays}" Minimum="0" Maximum="365" Increment="1" FormatString="0" />
+                            </Grid>
+                            <Grid Grid.Column="1" Classes="pair" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ToolTip.Tip><c:SuperTip Title="Log folder" Text="Where TxSuite writes its log files, a file per log and day. The button opens the folder." /></ToolTip.Tip>
+                                <TextBlock Text="Log folder" />
+                                <TextBox Grid.Column="1" Text="{Binding Folder, Mode=OneWay}" IsReadOnly="True">
+                                    <TextBox.InnerRightContent>
+                                        <Button Content="Open" Padding="6,0" Click="OnOpenLogFolder" />
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
+                            </Grid>
+                        </Grid>
+                    </HeaderedContentControl>
+                </StackPanel>
+            </TabItem>
+
             <TabItem Header="T5">
                 <StackPanel Spacing="6" Margin="0,8,0,0" DataContext="{Binding T5}" x:DataType="t5:SettingsViewModel">
                     <HeaderedContentControl Classes="group" Header="User interface settings">
@@ -262,9 +305,6 @@
                         <Grid Classes="columns" ColumnDefinitions="300,300,300" ColumnSpacing="16">
                             <CheckBox Content="Auto fix footer" IsChecked="{Binding AutoFixFooter}">
                                 <ToolTip.Tip><c:SuperTip Title="Auto fix footer" Text="When checked, T7Suite repairs a broken footer when it opens a binary, on Verify checksum and whenever it updates the checksum. A footer that holds the chassis ID more than once, or lacks the chassis ID or the immobilizer code, is rebuilt with each field once (a missing chassis ID or immobilizer code as zeros)." /></ToolTip.Tip>
-                            </CheckBox>
-                            <CheckBox Grid.Column="1" Content="Enable CAN logging" IsChecked="{Binding EnableCanLog}">
-                                <ToolTip.Tip><c:SuperTip Title="Enable CAN logging" Text="If checked, a detailed log of the communication with the ECU will be written: every CAN frame sent and received goes into canLog&lt;date&gt;.txt. This downgrades performance and should only be used for debugging." /></ToolTip.Tip>
                             </CheckBox>
                         </Grid>
                     </HeaderedContentControl>

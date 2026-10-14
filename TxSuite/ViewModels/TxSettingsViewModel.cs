@@ -4,8 +4,9 @@ using SuiteApp.ViewModels;
 namespace TxSuite.ViewModels;
 
 /// <summary>
-/// TxSuite's settings: what every ECU shares (Common), then each ECU's own (T5, T7, T8), as the old suites' frmSettings had them. Ok
-/// writes each ECU's live settings: the shared options go once to the top of TxSuite's settings, each tab's into its ECU's section.
+/// TxSuite's settings: what every ECU shares (Common), the log files (Logging), then each ECU's own (T5, T7, T8), as the old suites'
+/// frmSettings had them. Ok writes each ECU's live settings: the shared options go once to the top of TxSuite's settings, each tab's into
+/// its ECU's section.
 /// </summary>
 public sealed class TxSettingsViewModel
 {
@@ -13,6 +14,10 @@ public sealed class TxSettingsViewModel
     private readonly Trionic5Tools.T5AppSettings m_t5Own;
 
     public SuiteSettingsViewModel Common { get; }
+
+    /// <summary>The log files: on or off, their levels, how long they're kept (the program's, not an ECU's).</summary>
+    public LoggingSettingsViewModel Logging { get; } = new();
+
     public T5App.ViewModels.SettingsViewModel T5 { get; }
     public T7App.ViewModels.SettingsViewModel T7 { get; }
     public T8App.ViewModels.SettingsViewModel T8 { get; }
@@ -40,6 +45,7 @@ public sealed class TxSettingsViewModel
 
     public void Apply()
     {
+        Logging.Apply();
         foreach (SuiteSettingsViewModel ecu in new SuiteSettingsViewModel[] { T5, T7, T8 }) CopyCommon(Common, ecu);
         // each old suite's order (T5Suite's and T7Suite's frmSettings)
         T5Autotune?.Apply(m_t5, m_t5Own);

@@ -21,23 +21,32 @@ public class SuperTip : StackPanel
         Children.Add(m_text);
     }
 
+    // bindable, for a tip in a template (Settings → Logging's rows)
+    public static readonly StyledProperty<string?> TitleProperty = AvaloniaProperty.Register<SuperTip, string?>(nameof(Title));
+    public static readonly StyledProperty<string?> TextProperty = AvaloniaProperty.Register<SuperTip, string?>(nameof(Text));
+
     public string? Title
     {
-        get => m_title.Text;
-        set
-        {
-            m_title.Text = value;
-            m_title.IsVisible = !string.IsNullOrEmpty(value);
-        }
+        get => GetValue(TitleProperty);
+        set => SetValue(TitleProperty, value);
     }
 
     public string? Text
     {
-        get => m_text.Text;
-        set
-        {
-            m_text.Text = value;
-            m_text.IsVisible = !string.IsNullOrEmpty(value);
-        }
+        get => GetValue(TextProperty);
+        set => SetValue(TextProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == TitleProperty) Show(m_title, Title);
+        else if (change.Property == TextProperty) Show(m_text, Text);
+    }
+
+    private static void Show(TextBlock block, string? text)
+    {
+        block.Text = text;
+        block.IsVisible = !string.IsNullOrEmpty(text);
     }
 }
