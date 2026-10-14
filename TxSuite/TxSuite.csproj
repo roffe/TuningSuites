@@ -24,9 +24,9 @@
   <ItemGroup>
     <AvaloniaResource Include="TxSuite.ico" />
     <None Update="NLog.config" CopyToOutputDirectory="PreserveNewest" />
-    <!-- Help → User manual / Trionic N documentation of the open file's ECU (T5Suite 2.0's manual under T5SuitePro's name) -->
-    <None Include="..\reference files\T5Suite2 User Manual.pdf" Link="T5SuitePro User Manual.pdf" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="..\reference files\Trionic 5.pdf" Link="Trionic 5.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Help → User manual / Trionic N documentation of the open file's ECU -->
+    <None Include="..\T5_manual.pdf" Link="T5_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Trionic 5.pdf" Link="Trionic 5.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\T7_manual.pdf" Link="T7_manual.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Trionic 7.pdf" Link="Trionic 7.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\T8_manual.pdf" Link="T8_manual.pdf" CopyToOutputDirectory="PreserveNewest" />

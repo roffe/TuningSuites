@@ -223,7 +223,7 @@
                 <MenuItem Header="Dock all floating windows" Command="{Binding DockAllCommand}" />
             </MenuItem>
             <MenuItem Header="_Help" c:Ribbon.Group="Documentation">
-                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5SuitePro User Manual.pdf" IsVisible="{Binding IsT5}" />
+                <MenuItem Header="User manual" Click="OnHelpFile" Tag="T5_manual.pdf" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="Trionic 5 documentation" Click="OnHelpFile" Tag="Trionic 5.pdf" IsVisible="{Binding IsT5}" />
                 <MenuItem Header="User manual" Click="OnHelpFile" Tag="T7_manual.pdf" IsVisible="{Binding IsT7}" />
                 <MenuItem Header="Trionic 7 documentation" Click="OnHelpFile" Tag="Trionic 7.pdf" IsVisible="{Binding IsT7}" />

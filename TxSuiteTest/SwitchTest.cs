@@ -178,6 +178,21 @@ namespace TxSuiteTest
             }, default).GetAwaiter().GetResult();
         }
 
+        /// <summary>Help's manuals ship next to the program under the names its items open (T5's as T7's and T8's).</summary>
+        [TestMethod]
+        public void HelpFilesShip()
+        {
+            s_session!.Dispatch(() =>
+            {
+                var (_, window) = NewWindow(new ClassicDesktopStyleApplicationLifetime());
+                string[] files = [.. window.GetLogicalDescendants().OfType<MenuItem>().Select(m => m.Tag).OfType<string>().Where(t => t.EndsWith(".pdf"))];
+                CollectionAssert.AreEquivalent(new[] { "T5_manual.pdf", "Trionic 5.pdf", "T7_manual.pdf", "Trionic 7.pdf", "T8_manual.pdf", "Trionic 8.pdf" }, files);
+                foreach (string file in files) Assert.IsTrue(File.Exists(Path.Combine(System.AppContext.BaseDirectory, file)), file);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
+
         /// <summary>The ECU of the file opened last is the one a new start begins with (its My Maps, its S19 size).</summary>
         [TestMethod]
         public void StartsWithTheEcuOpenedLast()
