@@ -82,6 +82,13 @@ Download TxSuite-linux-x64.tar.gz (or -linux-arm64) and run it from where you ex
     sudo cp TxSuite/70-txsuite.rules /etc/udev/rules.d/
     sudo udevadm control --reload && sudo udevadm trigger
 
+Or take the AppImage, all of TxSuite in one file (TxSuite-linux-x64.AppImage, or -linux-arm64):
+
+    chmod +x TxSuite-linux-x64.AppImage
+    ./TxSuite-linux-x64.AppImage
+
+It needs FUSE, which most desktops have; without it start it with `--appimage-extract-and-run`. The stock binaries go next to the AppImage: unpack TxExtras.zip in its folder. Settings, logs and projects are in your home folder as with the tar.gz. The CombiAdapter's udev rule isn't in it: take `70-txsuite.rules` from the tar.gz (or `packaging/linux/TxSuite/` in the repo).
+
 ### macOS
 Download TxSuite-osx-arm64.zip (Apple silicon) or -osx-x64 (Intel). The build is not signed, so clear the quarantine flag after extracting it, then start it from Terminal or by double-clicking TxSuite in Finder:
 
@@ -111,6 +118,8 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). T
 `-p:TrionicDir=../Trionic` builds against another checkout of roffe/Trionic instead, for working on both.
 
 How the code is laid out: TxSuite is the program, its window, menus and settings dialog. Each ECU has a core with its file, map and ECU code (T5Core, T7Core, T8Core) and a library with its part of the program (T5App, T7App, T8App). SuiteCore and SuiteApp are shared by all three and know no ECU. The tests sit next to what they test (T7CoreTest, T7AppTest, TxSuiteTest, ...).
+
+`make appimage` builds an AppImage of your checkout into `out/`, named after its version (`TxSuite-1.0.1-<sha>-linux-x64.AppImage`, `make appimage RID=linux-arm64` for ARM), handy for passing a build around. It fetches appimagetool and the AppImage runtime once, pinned releases checked by their sha256, into `~/.cache/txsuite-appimage`.
 
 A self-contained build that runs on a machine without .NET, for `win-x86`, `linux-x64`, `linux-arm64`, `osx-arm64` or `osx-x64`:
 
