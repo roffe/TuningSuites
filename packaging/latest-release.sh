@@ -22,6 +22,4 @@ done
 title="TxSuite"
 gh release view latest > /dev/null 2>&1 || gh release create latest --target "$GITHUB_SHA" --title "$title" --notes "" || true
 gh release upload latest "$@" --clobber
-# the single suites' packages from before TxSuite go (their own T5suite_v / T7suite_v / T8suite_v releases keep them)
-gh release view latest --json assets -q '.assets[].name' | grep -v -E '^Tx(Suite|Extras)' | while read -r a; do gh release delete-asset latest "$a" -y; done
 gh release edit latest --latest --title "$title" --notes "$notes"

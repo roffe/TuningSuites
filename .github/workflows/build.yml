@@ -1,8 +1,7 @@
 name: Build
 on:
   push:
-    # combine: TxSuite's branch until it is merged into master
-    branches: [master, combine]
+    branches: [master]
     tags:
     - 'Txsuite_v*' # a TxSuite release, e.g. Txsuite_v1.0.0
   pull_request:
@@ -62,19 +61,19 @@ jobs:
     - name: Test map controls
       run: dotnet test MapControlsTest -c Release --no-build
 
-    # T7Suite headless on a stock bin: open, symbol list, map viewer, firmware information
+    # TxSuite headless on a T7 stock bin: open, symbol list, map viewer, firmware information
     - name: Test T7 app
       run: dotnet test T7AppTest -c Release --no-build
 
-    # T8Suite on the shared window, headless on a stock bin
+    # TxSuite headless on a T8 stock bin
     - name: Test T8 app
       run: dotnet test T8AppTest -c Release --no-build
 
-    # T5Suite on the shared window, headless on a stock bin: open, firmware options, tuning wizards
+    # TxSuite headless on a T5 stock bin: open, firmware options, tuning wizards
     - name: Test T5 app
       run: dotnet test T5AppTest -c Release --no-build
 
-    # TxSuite headless: switching suites, the partnumber lookup over every ECU, the settings tabs
+    # TxSuite headless: switching ECUs, the partnumber lookup over every ECU, the settings tabs, the ribbon
     - name: Test TxSuite
       run: dotnet test TxSuiteTest -c Release --no-build
 
@@ -175,8 +174,7 @@ jobs:
         DOTNET_NOLOGO: true
       run: echo "tx=$(dotnet msbuild TxSuite/TxSuite.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
 
-    # ponytail: a rolling tag, a pre-release that always points at the latest build of a branch above (master or combine; the last pushed
-    # wins); the update check skips it
+    # ponytail: a rolling tag, a pre-release that always points at the latest master build; the update check skips it
     - name: Move nightly tag
       if: github.ref_type == 'branch'
       run: |
