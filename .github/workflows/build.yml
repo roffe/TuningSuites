@@ -141,11 +141,19 @@ jobs:
         mkdir -p dist
         cd out && 7z a ../dist/TxSuite-${{ matrix.rid }}.zip TxSuite > /dev/null
 
+    # TxSuite-<rid>.AppImage: the same folder as one file that runs as it is (make appimage builds one locally)
+    - name: AppImage
+      if: runner.os == 'Linux'
+      env:
+        PUBLISHED: out/TxSuite
+        OUTPUT: dist/TxSuite-${{ matrix.rid }}.AppImage
+      run: bash packaging/linux/appimage.sh ${{ matrix.rid }}
+
     - name: Package Linux
       if: runner.os == 'Linux'
       run: |
         cp packaging/linux/TxSuite/* out/TxSuite/
-        mkdir dist
+        mkdir -p dist
         tar -czf dist/TxSuite-${{ matrix.rid }}.tar.gz -C out TxSuite
 
     # ponytail: plain unsigned folder, no .app bundle or notarization (and so no .bin association)

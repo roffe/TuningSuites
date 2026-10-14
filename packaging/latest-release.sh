@@ -23,7 +23,7 @@ notes="Newest release of TxSuite and TxExtras, all on one page.
 
 TxSuite is T5Suite, T7Suite and T8Suite in one program.
 
-Windows: TxSuiteSetup.exe, or TxSuite-win-x86.zip to run it without installing. Linux: the .tar.gz for your arch. macOS: the osx zip for your Mac.
+Windows: TxSuiteSetup.exe, or TxSuite-win-x86.zip to run it without installing. Linux: the AppImage or the .tar.gz for your arch. macOS: the osx zip for your Mac.
 
 TxExtras are the stock binaries of all three ECUs (Compare to original file, Lookup partnumber, Create binary from TIS file). On Windows run TxExtrasSetup.exe after TxSuite's setup. With TxSuite from a zip or tar.gz (the Windows zip, Linux, macOS) unpack TxExtras.zip into TxSuite's folder.
 "
