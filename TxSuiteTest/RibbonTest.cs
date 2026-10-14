@@ -42,11 +42,16 @@ namespace TxSuiteTest
         }
 
         // an entry of an open dropdown, once its popup has laid it out (it shows)
-        private static MenuItem Entry(Button dropdown, string header)
+        private static MenuItem Entry(Button dropdown, string header) => Entry(dropdown, header, m => m.Header as string == header);
+
+        // a Recent file by its path, its tooltip (two files can share a name: on Windows the stock bins in Binaries are copies)
+        private static MenuItem RecentEntry(Button dropdown, string path) => Entry(dropdown, path, m => ToolTip.GetTip(m) as string == path);
+
+        private static MenuItem Entry(Button dropdown, string header, System.Func<MenuItem, bool> which)
         {
             var flyout = (MenuFlyout)dropdown.Flyout!;
             Assert.IsTrue(flyout.IsOpen);
-            var entry = flyout.Items.OfType<MenuItem>().Single(m => m.Header as string == header);
+            var entry = flyout.Items.OfType<MenuItem>().Single(which);
             for (int i = 0; i < 5 && TopLevel.GetTopLevel(entry) == null; i++)
             {
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick();
@@ -141,11 +146,11 @@ namespace TxSuiteTest
                     Select(ribbon, "File");
                     var recent = Group(ribbon, "File actions").Buttons.Single(b => b.Text == "Recent ▾");
                     Click(recent);
-                    Entry(recent, System.IO.Path.GetFileName(t7));
+                    RecentEntry(recent, t7);
                     Click(recent);
                     Assert.IsFalse(recent.Flyout!.IsOpen);
                     Click(recent);
-                    Click(Entry(recent, System.IO.Path.GetFileName(t5)));
+                    Click(RecentEntry(recent, t5));
                     Assert.IsFalse(recent.Flyout!.IsOpen);
                     for (int i = 0; i < 100 && vm.Binary?.FileName != t5; i++) await System.Threading.Tasks.Task.Delay(20);
                     Dispatcher.UIThread.RunJobs();
