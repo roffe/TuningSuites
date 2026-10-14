@@ -44,7 +44,7 @@ public partial class SuiteMainView
         if (this.FindLogicalDescendantOfType<Menu>() is { } menu) ShowPalette("Run a menu command", MenuCommands(menu.Items, "").ToList());
     }
 
-    // the menu's enabled leaves as "Menu > Submenu > Item"; Recent's files are data items, not MenuItems, and stay out
+    // the menu's enabled leaves as "Menu > Submenu > Item", Recent's files too
     private static IEnumerable<PaletteEntry> MenuCommands(ItemCollection items, string path)
     {
         foreach (MenuItem item in items.OfType<MenuItem>().Where(m => m.IsVisible && m.IsEnabled))

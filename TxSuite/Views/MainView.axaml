@@ -1,7 +1,6 @@
 <sv:SuiteMainView xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TxSuite.ViewModels"
-        xmlns:svm="using:SuiteApp.ViewModels"
         xmlns:sv="using:SuiteApp.Views"
         x:Class="TxSuite.Views.MainView"
         x:DataType="vm:MainViewModel">
@@ -31,17 +30,8 @@
                  T7Suite's, T8Suite's, in their places) only while a file of that ECU is open -->
             <MenuItem x:Name="FileMenu" Header="_File">
                 <MenuItem Header="_Open file..." Click="OnOpenFile" />
-                <MenuItem x:Name="RecentMenu" Header="_Recent" ItemsSource="{Binding Recent}">
-                    <MenuItem.Styles>
-                        <!-- only Recent's own entries; "MenuItem > MenuItem" would also match Recent itself, which sits inside File -->
-                        <Style Selector="MenuItem#RecentMenu > MenuItem" x:DataType="svm:RecentFile">
-                            <Setter Property="Header" Value="{Binding Name, Converter={x:Static sv:MenuTextConverter.Instance}}" />
-                            <Setter Property="ToolTip.Tip" Value="{Binding Path}" />
-                            <Setter Property="Command" Value="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenRecentCommand}" />
-                            <Setter Property="CommandParameter" Value="{Binding}" />
-                        </Style>
-                    </MenuItem.Styles>
-                </MenuItem>
+                <!-- the files are made by SuiteMainView (BuildRecent) -->
+                <MenuItem x:Name="RecentMenu" Header="_Recent" />
                 <MenuItem Header="Save all" Command="{Binding SaveAllCommand}" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Save as..." Click="OnSaveAs" IsEnabled="{Binding HasFile}" />
                 <MenuItem Header="Export to S19" Click="OnExportS19" IsVisible="{Binding IsT7OrT8}" />

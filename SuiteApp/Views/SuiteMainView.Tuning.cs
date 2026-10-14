@@ -14,7 +14,7 @@ namespace SuiteApp.Views;
 
 /// <summary>
 /// The offline tuning menus every ECU has: compare and transfer, search, symbol imports and exports, tuning packages, part
-/// number lookup and the map menus (a MenuItem named QuickMapsMenu / MyMapsMenu in the program's menus).
+/// number lookup and the menus made in code (a MenuItem named QuickMapsMenu / MyMapsMenu / RecentMenu in the program's menus).
 /// </summary>
 public partial class SuiteMainView
 {
@@ -31,6 +31,17 @@ public partial class SuiteMainView
         };
         vm.MyMapsChanged += BuildMyMaps;
         BuildMyMaps();
+        vm.Recent.CollectionChanged += (_, _) => BuildRecent();
+        BuildRecent();
+    }
+
+    // File > Recent: a menu item per file, as the other menus made in code (not a bound list: what reads the menu's items finds them)
+    private void BuildRecent()
+    {
+        if (this.FindControl<MenuItem>("RecentMenu") is not { } menu) return;
+        menu.Items.Clear();
+        foreach (RecentFile file in Vm.Recent)
+            menu.Items.Add(new MenuItem { Header = MenuTextConverter.Escape(file.Name), Command = Vm.OpenRecentCommand, CommandParameter = file, [ToolTip.TipProperty] = file.Path });
     }
 
     // ---- compare ----
