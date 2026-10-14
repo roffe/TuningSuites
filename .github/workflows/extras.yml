@@ -33,7 +33,7 @@ jobs:
     # TxExtras.zip: the Binaries folder to unpack into TxSuite's folder (Linux, macOS), Binaries/<ECU> as the setup lays it out
     - name: Zip
       run: |
-        for e in T5 T7 T8; do mkdir -p dist/Binaries/$e && cp ${e}Binaries/* dist/Binaries/$e/; done
+        for e in T5 T7 T8; do mkdir -p dist/Binaries/$e && cp ${e}Binaries/*.bin dist/Binaries/$e/; done
         cd dist && 7z a TxExtras.zip Binaries > /dev/null && rm -r Binaries
 
     - name: Release

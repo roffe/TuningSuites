@@ -77,6 +77,12 @@ jobs:
     - name: Test TxSuite
       run: dotnet test TxSuiteTest -c Release --no-build
 
+    # the tests open copies of the stock bins: nothing may change in their folders or appear next to them (T7's <bin>.xml, AFR maps)
+    - name: Stock bins untouched
+      run: |
+        left=$(git status --porcelain --ignored -- T5Binaries T7Binaries T8Binaries)
+        if [ -n "$left" ]; then echo "::error::the tests changed the stock bin folders"; echo "$left"; exit 1; fi
+
   # TxSuite for each platform, packaged as roffe/Trionic packages the flasher: publish to out/TxSuite, SetupTx (Inno Setup) on Windows
   package:
     needs: test

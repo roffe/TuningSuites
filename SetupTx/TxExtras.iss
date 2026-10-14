@@ -1,4 +1,4 @@
-; TxExtras (Inno Setup 6): the stock bins of all three ECUs into TxSuite's folder, Binaries\T5, Binaries\T7 (with T7's symbol files)
+; TxExtras (Inno Setup 6): the stock bins of all three ECUs into TxSuite's folder, Binaries\T5, Binaries\T7
 ; and Binaries\T8, where TxSuite looks for them (PartInfo.StockFolder). The version is the Txextras_v tag's (.github/workflows/extras.yml):
 ;   ISCC /DVersion=1.0.0 /O<dist> SetupTx\TxExtras.iss   ->   TxExtrasSetup.exe
 
@@ -30,6 +30,6 @@ PrivilegesRequired=admin
 MinVersion=10.0
 
 [Files]
-Source: "..\T5Binaries\*"; DestDir: "{app}\Binaries\T5"; Flags: ignoreversion
-Source: "..\T7Binaries\*"; DestDir: "{app}\Binaries\T7"; Flags: ignoreversion
-Source: "..\T8Binaries\*"; DestDir: "{app}\Binaries\T8"; Flags: ignoreversion
+Source: "..\T5Binaries\*.bin"; DestDir: "{app}\Binaries\T5"; Flags: ignoreversion
+Source: "..\T7Binaries\*.bin"; DestDir: "{app}\Binaries\T7"; Flags: ignoreversion
+Source: "..\T8Binaries\*.bin"; DestDir: "{app}\Binaries\T8"; Flags: ignoreversion
