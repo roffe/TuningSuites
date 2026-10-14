@@ -22,6 +22,11 @@
     <TrionicDir Condition="'$(TrionicDir)' == ''">$(MSBuildThisFileDirectory)Trionic</TrionicDir>
   </PropertyGroup>
 
+  <!-- the debug symbols inside the dlls: an exception's stack trace in the log keeps its file and line, and no .pdb files ship -->
+  <PropertyGroup>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
   <PropertyGroup>
     <VersionFromGit Condition="'$(VersionFromGit)' == '' and '$(Version)' != ''">false</VersionFromGit>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

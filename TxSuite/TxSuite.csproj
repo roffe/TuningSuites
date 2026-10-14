@@ -50,4 +50,12 @@
     <ProjectReference Include="..\T8App\T8App.csproj" />
   </ItemGroup>
 
+  <!-- no .pdb files in the published folder the setup, the zip and the tar.gz are made of: ours are in the dlls (DebugType embedded),
+       SkiaSharp's and HarfBuzzSharp's native ones were 108 MB of the Windows packages -->
+  <Target Name="NoSymbolFilesInPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
 </Project>
