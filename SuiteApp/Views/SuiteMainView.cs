@@ -250,13 +250,17 @@ public partial class SuiteMainView : UserControl
     /// the browser on Windows, elsewhere the release page lists the packages. A build without a release tag (0.0.0) skips the
     /// startup check, every release would be newer.
     /// </summary>
+    /// <remarks>A Windows copy from the zip gets the release page too: the setup would install a second one beside it.</remarks>
     public async Task CheckForUpdatesAsync(bool startup)
     {
         if (startup && Vm.BuildVersion == new Version(0, 0, 0, 0)) return;
         if (await Vm.CheckForUpdatesAsync() is not { } release) return;
         if (await new UpdateAvailableWindow(release, Vm.Suite).ShowDialog<bool>(Host))
-            Dialogs.OpenWithShell(OperatingSystem.IsWindows() && release.Setup != null ? release.Setup : release.Page);
+            Dialogs.OpenWithShell(OperatingSystem.IsWindows() && InstalledBySetup && release.Setup != null ? release.Setup : release.Page);
     }
+
+    // the setup's uninstaller is next to the program it installed (Inno Setup's unins000.exe); a copy from the zip has none
+    private static bool InstalledBySetup => File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe"));
 
     protected async void OnCheckForUpdates(object? sender, RoutedEventArgs e) => await CheckForUpdatesAsync(false);
 

@@ -133,6 +133,14 @@ jobs:
         & $iscc /Q "/DPublishDir=$env:GITHUB_WORKSPACE\out\TxSuite" "/O$env:GITHUB_WORKSPACE\dist" SetupTx\TxSuite.iss
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
+    # TxSuite-win-x86.zip: the same folder to run from anywhere without installing (no .bin association, the update check opens the
+    # release page)
+    - name: Zip Windows
+      if: runner.os == 'Windows'
+      run: |
+        mkdir -p dist
+        cd out && 7z a ../dist/TxSuite-${{ matrix.rid }}.zip TxSuite > /dev/null
+
     - name: Package Linux
       if: runner.os == 'Linux'
       run: |
