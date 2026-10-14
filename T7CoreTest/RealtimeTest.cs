@@ -14,7 +14,7 @@ namespace T7CoreTest
     {
         private static string Here([CallerFilePath] string path = "") => Path.GetDirectoryName(path);
 
-        private static T7Binary Bin() => T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
+        private static T7Binary Bin() => T7Binary.Open(Stock.Copy("5168646.bin"), 0, false);
 
         [TestMethod]
         public void DecodesBigEndianAndSignedByName()

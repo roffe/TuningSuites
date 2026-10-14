@@ -20,7 +20,7 @@ namespace T7CoreTest
             try
             {
                 var bins = Directory.GetFiles(Path.Combine(Here(), "..", "T7Binaries"), "*.bin").OrderBy(f => f).ToList();
-                string esp = bins.First(f => FirmwareTools.ReadEsp(T7Binary.Open(f, 0, false)) != null);
+                string esp = bins.First(f => FirmwareTools.ReadEsp(T7Binary.Open(Stock.Copy(f), 0, false)) != null);
                 string file = Path.Combine(dir, "esp.bin");
                 File.Copy(esp, file);
                 T7Binary bin = T7Binary.Open(file, 0, false);
@@ -29,7 +29,7 @@ namespace T7CoreTest
                 FirmwareTools.WriteEsp(bin, other, false);
                 Assert.AreEqual(other, FirmwareTools.ReadEsp(T7Binary.Open(file, 0, false)));
 
-                string tcmBin = bins.FirstOrDefault(f => FirmwareTools.ReadTcm(T7Binary.Open(f, 0, false)) != null);
+                string tcmBin = bins.FirstOrDefault(f => FirmwareTools.ReadTcm(T7Binary.Open(Stock.Copy(f), 0, false)) != null);
                 TestContext.WriteLine($"esp: {Path.GetFileName(esp)} {current:X2}, tcm: {Path.GetFileName(tcmBin ?? "none")}");
                 if (tcmBin == null) return;
                 string tf = Path.Combine(dir, "tcm.bin");

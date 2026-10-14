@@ -15,7 +15,7 @@ namespace T7CoreTest
         [TestMethod]
         public void WotRowOnAStockBin()
         {
-            T7Binary bin = T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
+            T7Binary bin = T7Binary.Open(Stock.Copy("5168646.bin"), 0, false);
             Assert.IsTrue(T7AirmassResult.Available(bin));
             var r = new T7AirmassResult(bin, new AirmassOptions());
             int wot = r.Pedal.Length - 1, c2400 = System.Array.IndexOf(r.Rpm, 2400);

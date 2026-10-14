@@ -20,7 +20,7 @@ namespace T7CoreTest
             string dir = Directory.CreateTempSubdirectory("t7asm").FullName;
             try
             {
-                T7Binary bin = T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
+                T7Binary bin = T7Binary.Open(Stock.Copy("5168646.bin"), 0, false);
                 var watch = Stopwatch.StartNew();
                 string asm = Path.Combine(dir, "x.asm");
                 bin.Disassemble(asm, false);

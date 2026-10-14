@@ -63,7 +63,7 @@ namespace T7CoreTest
         [TestMethod]
         public void SramComparesAndPackages()
         {
-            T7Binary bin = T7Binary.Open(Path.Combine(Here(), "..", "T7Binaries", "5168646.bin"), 0, false);
+            T7Binary bin = T7Binary.Open(Stock.Copy("5168646.bin"), 0, false);
             SymbolHelper map = bin.Find("IgnNormCal.Map");
             byte[] data = bin.ReadSymbol(map);
             var ram = new byte[0x10000];
