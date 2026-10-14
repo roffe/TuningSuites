@@ -4,9 +4,13 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using CommonSuite;
 
 namespace SuiteApp.Controls;
 
@@ -16,7 +20,8 @@ namespace SuiteApp.Controls;
 /// visibility, and a click on it is a click on the menu item (its Click handlers, then its command). A group is a section of the menu
 /// between separators, captioned by Ribbon.Group on the separator (the first section's on the menu itself); a submenu with a
 /// Ribbon.Group is a group of its own, any other submenu a dropdown. Ribbon.Hidden leaves an item out. Groups that don't fit fold into
-/// a button that drops them down, as DevExpress' did.
+/// a button that drops them down, as DevExpress' did; the user folds or keeps open a group with a double click and drags groups into
+/// another order, kept per LayoutKey (the open file's ECU) and tab.
 /// </summary>
 public class Ribbon : UserControl
 {
@@ -36,7 +41,12 @@ public class Ribbon : UserControl
 
     public static void SetHidden(Control c, bool value) => c.SetValue(HiddenProperty, value);
 
+    /// <summary>Whose group layout the pages show and keep (the open file's ECU): Ribbon\&lt;key&gt;\&lt;tab&gt; in the program's settings.</summary>
+    public static readonly StyledProperty<string?> LayoutKeyProperty = AvaloniaProperty.Register<Ribbon, string?>(nameof(LayoutKey));
+
     public Menu? Menu { get => GetValue(MenuProperty); set => SetValue(MenuProperty, value); }
+
+    public string? LayoutKey { get => GetValue(LayoutKeyProperty); set => SetValue(LayoutKeyProperty, value); }
 
     /// <summary>A tab per menu; the selected one's page holds RibbonGroups.</summary>
     public TabControl Tabs { get; } = new();
@@ -53,6 +63,12 @@ public class Ribbon : UserControl
     {
         base.OnPropertyChanged(change);
         if (change.Property == MenuProperty) BuildTabs();
+        else if (change.Property == LayoutKeyProperty)
+        {
+            // another ECU's layout: every page made again with it
+            foreach (TabItem tab in Tabs.Items.OfType<TabItem>()) tab.Content = null;
+            Fill(Tabs.SelectedItem as TabItem);
+        }
     }
 
     // a tab per menu; its page is made when it's shown, and again when the menu's items change (Tuning and My Maps are built per file)
@@ -79,11 +95,12 @@ public class Ribbon : UserControl
         Tabs.SelectedIndex = 0;
     }
 
-    private static void Fill(TabItem? tab)
+    private void Fill(TabItem? tab)
     {
         if (tab is not { Tag: MenuItem menu } || tab.Content != null) return;
-        var page = new RibbonPage();
+        var page = new RibbonPage(LayoutKey is { } key ? $"Ribbon\\{key}\\{tab.Header}" : null);
         foreach (var (caption, items, submenu) in Groups(menu)) page.Children.Add(new RibbonGroup(caption, items, submenu));
+        page.Restore();
         // the Tuning menu without a file
         Follow(page, menu, () => page.IsEnabled = menu.IsEnabled);
         tab.Content = page;
@@ -167,28 +184,210 @@ public class Ribbon : UserControl
     }
 }
 
+/// <summary>How a group folds: when it doesn't fit, as the user folded it, or kept open by the user.</summary>
+public enum RibbonFold { Auto, Folded, Open }
+
 /// <summary>
 /// A tab's page: its groups in a row, the ones that don't fit folded. DevExpress folded from the right; here a group stays open while it
-/// fits with the ones after it folded, so a wide group in the middle folds and the narrower ones after it don't.
+/// fits with the ones after it folded, so a wide group in the middle folds and the narrower ones after it don't. A double click on a
+/// group (its caption or the space around its buttons) folds it, on a folded one keeps it open; dragged there, a group moves. Folds and
+/// order are kept per ECU and tab in the program's settings (Ribbon\&lt;ECU&gt;\&lt;tab&gt;: Fold\&lt;group&gt;, Order).
 /// </summary>
 public class RibbonPage : Panel
 {
-    public RibbonPage() => MinHeight = RibbonGroup.FullHeight;
+    private readonly string? m_layout;
+    private List<RibbonGroup> m_natural = [];
+    private (RibbonGroup Group, Point Start)? m_press;
+    private bool m_dragging;
+    private TopLevel? m_top;
+
+    /// <param name="layout">Where the page keeps its groups' folds and order, null for nowhere.</param>
+    public RibbonPage(string? layout = null)
+    {
+        m_layout = layout;
+        MinHeight = RibbonGroup.FullHeight;
+        // before the buttons: a folded group's button would drop down, and a press the open dropdown dismissed still counts
+        AddHandler(PointerPressedEvent, OnPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerMovedEvent, OnMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerReleasedEvent, OnReleased, RoutingStrategies.Tunnel, handledEventsToo: true);
+    }
+
+    /// <summary>The groups' keys (their captions, a repeated one numbered), then the folds and order kept for this ECU and tab.</summary>
+    public void Restore()
+    {
+        m_natural = [.. Children.OfType<RibbonGroup>()];
+        foreach (var same in m_natural.GroupBy(g => g.Caption ?? ""))
+            foreach (var (g, i) in same.Select((g, i) => (g, i))) g.Key = i == 0 ? same.Key : $"{same.Key}#{i + 1}";
+        if (m_layout == null) return;
+        using var key = SettingsKey.Open(SettingsKey.Program, m_layout);
+        foreach (RibbonGroup g in m_natural) g.Fold = Enum.TryParse(key.GetValue("Fold\\" + g.Key) as string, out RibbonFold fold) ? fold : RibbonFold.Auto;
+        if (key.GetValue("Order") is not string order) return;
+        // the kept order; a group it doesn't know (the menu grew) goes after the one the menu has before it
+        var byKey = m_natural.ToDictionary(g => g.Key);
+        var ordered = order.Split('\n').Where(byKey.ContainsKey).Select(k => byKey[k]).Distinct().ToList();
+        for (int i = 0; i < m_natural.Count; i++)
+            if (!ordered.Contains(m_natural[i])) ordered.Insert(i == 0 ? 0 : ordered.IndexOf(m_natural[i - 1]) + 1, m_natural[i]);
+        Children.Clear();
+        Children.AddRange(ordered);
+    }
+
+    /// <summary>The menu's order and every group folding only when it doesn't fit, as nothing was ever kept.</summary>
+    public void Reset()
+    {
+        foreach (RibbonGroup g in m_natural) g.Fold = RibbonFold.Auto;
+        Children.Clear();
+        Children.AddRange(m_natural);
+        Save();
+        InvalidateMeasure();
+    }
+
+    private void Save()
+    {
+        if (m_layout == null) return;
+        using var key = SettingsKey.Open(SettingsKey.Program, m_layout);
+        var groups = Children.OfType<RibbonGroup>().ToList();
+        foreach (RibbonGroup g in groups)
+            if (g.Fold == RibbonFold.Auto) key.DeleteValue("Fold\\" + g.Key);
+            else key.SetValue("Fold\\" + g.Key, g.Fold);
+        // only a moved order is kept: a menu that grows puts its new groups in their places
+        if (groups.SequenceEqual(m_natural)) key.DeleteValue("Order");
+        else key.SetValue("Order", string.Join('\n', groups.Select(g => g.Key)));
+    }
+
+    // the group a press is on, not on one of its buttons (they run their menu items)
+    private static RibbonGroup? HandleOf(object? source)
+    {
+        for (var v = source as Visual; v != null; v = v.GetVisualParent())
+        {
+            if (v is RibbonButton) return null;
+            if (v is RibbonGroup g) return g;
+        }
+        return null;
+    }
+
+    private void OnPressed(object? sender, PointerPressedEventArgs e)
+    {
+        m_press = null;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || HandleOf(e.Source) is not { } group) return;
+        if (e.ClickCount == 2)
+        {
+            Toggle(group);
+            // a folded group's button doesn't drop down again
+            e.Handled = true;
+            return;
+        }
+        m_press = (group, e.GetPosition(this));
+    }
+
+    // a double click folds an open group and keeps a folded one open
+    private void Toggle(RibbonGroup group)
+    {
+        group.Fold = group.Folded ? RibbonFold.Open : RibbonFold.Folded;
+        group.FoldedButton.Flyout?.Hide();
+        Save();
+        InvalidateMeasure();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        m_top = TopLevel.GetTopLevel(this);
+        m_top?.AddHandler(PointerPressedEvent, OnWindowPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        m_top?.RemoveHandler(PointerPressedEvent, OnWindowPressed);
+        m_top = null;
+    }
+
+    // a folded group's open dropdown lays its dismiss overlay over the window: a double click's second press on the group's button lands
+    // there, not on the button
+    private void OnWindowPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.ClickCount != 2 || e.Source is Visual v && this.IsVisualAncestorOf(v)) return;
+        if (Children.OfType<RibbonGroup>().FirstOrDefault(g => g.IsVisible && g.Folded && new Rect(g.FoldedButton.Bounds.Size).Contains(e.GetPosition(g.FoldedButton))) is not { } group) return;
+        Toggle(group);
+        e.Handled = true;
+    }
+
+    private void OnMoved(object? sender, PointerEventArgs e)
+    {
+        if (m_press is not { } press) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            EndDrag();
+            return;
+        }
+        Point p = e.GetPosition(this);
+        if (!m_dragging)
+        {
+            if (Math.Abs(p.X - press.Start.X) < 6) return;
+            // the page takes the pointer: a folded group's button neither clicks nor drops down
+            m_dragging = true;
+            press.Group.FoldedButton.Flyout?.Hide();
+            press.Group.Opacity = 0.6;
+            e.Pointer.Capture(this);
+        }
+        // before the first other group whose middle is right of the pointer
+        RibbonGroup? before = Children.OfType<RibbonGroup>().FirstOrDefault(g => g != press.Group && g.IsVisible && g.Bounds.X + g.Bounds.Width / 2 > p.X);
+        int from = Children.IndexOf(press.Group), to = before == null ? Children.Count - 1 : Children.IndexOf(before);
+        if (to > from && before != null) to--;
+        if (to != from) Children.Move(from, to);
+        e.Handled = true;
+    }
+
+    private void OnReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (m_dragging)
+        {
+            e.Handled = true;
+            e.Pointer.Capture(null);
+        }
+        EndDrag();
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        EndDrag();
+    }
+
+    private void EndDrag()
+    {
+        if (m_dragging && m_press is { } press)
+        {
+            press.Group.Opacity = 1;
+            Save();
+        }
+        m_dragging = false;
+        m_press = null;
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var groups = Children.OfType<RibbonGroup>().Where(g => g.IsVisible).ToList();
         foreach (RibbonGroup g in groups) g.Measure(Size.Infinity);
-        double width = groups.Sum(g => g.FoldedWidth);
-        foreach (RibbonGroup g in groups)
+        // the kept-open ones open and the rest folded, then the automatic ones open from the left while they fit; kept-open ones that
+        // still don't fit fold from the right
+        var folded = groups.ToDictionary(g => g, g => g.Fold != RibbonFold.Open);
+        double width = groups.Sum(g => folded[g] ? g.FoldedWidth : g.FullWidth);
+        foreach (RibbonGroup g in groups.Where(g => g.Fold == RibbonFold.Auto && width + g.FullWidth - g.FoldedWidth <= availableSize.Width))
         {
-            bool fits = width + g.FullWidth - g.FoldedWidth <= availableSize.Width;
-            if (fits) width += g.FullWidth - g.FoldedWidth;
-            if (g.Folded == fits)
+            width += g.FullWidth - g.FoldedWidth;
+            folded[g] = false;
+        }
+        foreach (RibbonGroup g in Enumerable.Reverse(groups).Where(g => g.Fold == RibbonFold.Open))
+            if (width > availableSize.Width)
             {
-                g.Folded = !fits;
-                g.InvalidateArrange();
+                width -= g.FullWidth - g.FoldedWidth;
+                folded[g] = true;
             }
+        foreach (RibbonGroup g in groups.Where(g => g.Folded != folded[g]))
+        {
+            g.Folded = folded[g];
+            g.InvalidateArrange();
         }
         return new Size(width, RibbonGroup.FullHeight);
     }
@@ -224,6 +423,14 @@ public class RibbonGroup : Panel
     /// <summary>Folded into its button: set by the page as it measures (only the arrange follows it).</summary>
     public bool Folded { get; internal set; }
 
+    /// <summary>How the user wants it folded (a double click), kept per ECU and tab.</summary>
+    public RibbonFold Fold { get; set; }
+
+    /// <summary>The group in the kept layout: its caption, numbered when the page has it twice.</summary>
+    public string Key { get; internal set; } = "";
+
+    private const string HandleTip = "Double-click to fold this group, or a folded one to keep it open; drag it to move it. Right-click to put this tab's groups back as they were.";
+
     public double FullWidth => m_full.DesiredSize.Width;
 
     public double FoldedWidth => m_folded.DesiredSize.Width;
@@ -239,7 +446,12 @@ public class RibbonGroup : Panel
         Buttons = [.. items.Select(i => new RibbonButton(i))];
         var columns = new RibbonColumns { Margin = new Thickness(3, 2, 3, 0) };
         columns.Children.AddRange(Buttons);
-        var text = new TextBlock { Text = caption, Height = CaptionHeight, HorizontalAlignment = HorizontalAlignment.Center, Classes = { "ribbonCaption" } };
+        // the caption across the group: something to double-click and to drag it by
+        var text = new TextBlock
+        {
+            Text = caption, Height = CaptionHeight, TextAlignment = TextAlignment.Center, Background = Brushes.Transparent, Classes = { "ribbonCaption" },
+            ContextMenu = ResetMenu(), [ToolTip.TipProperty] = HandleTip,
+        };
         var line = new Border { Width = 1, Margin = new Thickness(0, 4), Classes = { "ribbonLine" } };
         Grid.SetRow(text, 1);
         Grid.SetColumn(line, 1);
@@ -250,13 +462,22 @@ public class RibbonGroup : Panel
         {
             Classes = { "ribbonGroup" }, Focusable = false, ClipToBounds = true, Height = FullHeight,
             Content = new StackPanel { Children = { new TextBlock { Text = caption ?? "" }, new TextBlock { Text = "▾", HorizontalAlignment = HorizontalAlignment.Center } } },
-            Flyout = Ribbon.Dropdown(() => items),
+            Flyout = Ribbon.Dropdown(() => items), ContextMenu = ResetMenu(), [ToolTip.TipProperty] = HandleTip,
         };
+        // the space around the buttons is a handle too
+        Background = Brushes.Transparent;
         Children.Add(m_full);
         Children.Add(m_folded);
         foreach (RibbonButton b in Buttons) b.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) Update(); };
         if (submenu != null) Ribbon.Follow(this, submenu, Update);
         Update();
+    }
+
+    private ContextMenu ResetMenu()
+    {
+        var reset = new MenuItem { Header = "Reset this tab's groups" };
+        reset.Click += (_, _) => (Parent as RibbonPage)?.Reset();
+        return new ContextMenu { Items = { reset } };
     }
 
     // shown while one of its buttons is (and its submenu)

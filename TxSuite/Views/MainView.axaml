@@ -242,7 +242,8 @@
                 <MenuItem x:Name="AboutMenu" Header="About TxSuite" Click="OnAbout" />
             </MenuItem>
         </Menu>
-        <c:Ribbon DockPanel.Dock="Top" Menu="{Binding #MainMenu}" IsVisible="{Binding ShowRibbon}" />
+        <!-- its groups' folds and order are each ECU's own -->
+        <c:Ribbon DockPanel.Dock="Top" Menu="{Binding #MainMenu}" LayoutKey="{Binding Module.Name}" IsVisible="{Binding ShowRibbon}" />
         <sv:StatusBar DockPanel.Dock="Bottom" />
         <sv:SuiteWorkspace />
     </DockPanel>
