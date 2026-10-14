@@ -12,7 +12,7 @@ http://www.txsuite.org
 
 # T5Suite, T7Suite and T8Suite for Windows, Linux and macOS
 
-T5Suite, T7Suite and T8Suite have been rebuilt on .NET 10 and Avalonia, without the commercial components the old suites needed, so they run on Windows, Linux and macOS. They ship as one program, TxSuite, which opens a T5, T7 or T8 binary in that suite. They read, edit and write the same files as the old suites and talk to the ECU through [TrionicCANLib](https://github.com/roffe/Trionic), the library of the Trionic CAN Flasher. [PORTING.md](PORTING.md) tracks what has been ported and every deliberate difference; the old .NET Framework suites are kept in [OldSuites](OldSuites) for reference.
+T5Suite, T7Suite and T8Suite have been rebuilt on .NET 10 and Avalonia, without the commercial components the old suites needed, so they run on Windows, Linux and macOS. They are one program now, TxSuite, which opens T5, T7 and T8 binaries alike. They read, edit and write the same files as the old suites and talk to the ECU through [TrionicCANLib](https://github.com/roffe/Trionic), the library of the Trionic CAN Flasher. [PORTING.md](PORTING.md) tracks what has been ported and every deliberate difference; the old .NET Framework suites are kept in [OldSuites](OldSuites) for reference.
 
 The suites support the same interfaces as the flasher (T5Suite talks to the ECU's P-bus):
 

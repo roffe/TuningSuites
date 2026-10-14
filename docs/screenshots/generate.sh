@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders docs/screenshots/<suite>/*.png from the real apps, headless: the Screenshots test in T5AppTest / T7AppTest / T8AppTest.
+# Renders docs/screenshots/<ecu>/*.png from TxSuite, headless, on a stock bin of that ECU: the Screenshots test in T5AppTest / T7AppTest / T8AppTest.
 # bash docs/screenshots/generate.sh [T5 T7 T8]   (all three without arguments)
 set -eu
 cd "$(dirname "$0")/../.."
