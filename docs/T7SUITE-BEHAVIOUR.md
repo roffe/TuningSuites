@@ -459,7 +459,7 @@ There is no checksum update of the result.
   - The 3D view can overlay both files' surfaces.
   - Title "Symbol difference: <name> [<compare file>]".
 - **Export to Excel:** writes diffexport.xls.
-- **Export as tuning package:** ori or compared file, all rows; .t7p via PackageExporter.
+- **Export as tuning package:** "Choose a file to export data from" (frmFileToExportSelection: "Original file" / "Compare file" buttons named after the files, Cancel); every row's symbol that file has by SmartVarname (a "Symbolnumber" row by its Userdescription; names starting with Symbolnumber, overrun, Data_name or MapChkCal skipped); frmSymbolSelection (titled "Logfile data selection", all rows selected); .t7p via PackageExporter, open software with that file's address offset. Hidden in the map search's results (UseForFind).
 
 **Transfer maps** (wizard "Transfer maps to different binary wizard"):
 1. Offered: symbols in the file whose name contains '.', excluding MapChkCal.ST_Enable, SymbolNames and LocalID. A checked list, with the last selection remembered in the TransferSettings registry key.
