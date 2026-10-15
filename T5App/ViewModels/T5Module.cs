@@ -75,6 +75,8 @@ public partial class T5Module : EcuModule
 
     public override string PackageExtension => "t5p";
 
+    public override bool HasTuningPackages => false;
+
     /// <summary>Lookup partnumber: T5's own part number list.</summary>
     public override PartInfo? LookupPartNumber(string partNumber) => PartLookup(partNumber);
 

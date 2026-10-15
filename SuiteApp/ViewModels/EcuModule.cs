@@ -201,6 +201,9 @@ public abstract partial class EcuModule : ObservableObject
     /// <summary>"t7p" / "t8p".</summary>
     public abstract string PackageExtension { get; }
 
+    /// <summary>Tuning package imports and exports (T7 / T8; T5Suite had none).</summary>
+    public virtual bool HasTuningPackages => true;
+
     /// <summary>A file to compare with, opened without changing it.</summary>
     protected internal virtual SuiteBinary OpenCompareBinary(string path) => OpenBinary(path);
 

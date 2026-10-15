@@ -19,6 +19,7 @@
                 <MenuItem Header="Open" Click="OnOpen" />
                 <MenuItem Header="Show differences map" Click="OnDifferenceMap" />
                 <MenuItem Header="Export to CSV" Click="OnExport" />
+                <MenuItem Header="Export as tuning package" Click="OnExportPackage" IsVisible="{Binding CanExportPackage}" />
             </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>

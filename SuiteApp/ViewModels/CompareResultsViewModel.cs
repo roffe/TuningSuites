@@ -98,6 +98,21 @@ public partial class CompareResultsViewModel : DocumentViewModel
         m_owner.ShowDocument(viewer);
     }
 
+    /// <summary>"Export as tuning package" shows: a compare of two bins, of an ECU with packages (T7 / T8).</summary>
+    public bool CanExportPackage => Other != null && Owner.Module.HasTuningPackages;
+
+    public MainWindowViewModel Owner => m_owner;
+
+    /// <summary>
+    /// Export as tuning package (exportAsTuningPackageToolStripMenuItem_Click): every row's symbol the chosen file has, by
+    /// SmartVarname, a "Symbolnumber" row by its user description; Symbolnumber, overrun, Data_name and MapChkCal names left out.
+    /// </summary>
+    public List<SymbolHelper> PackageSymbols(SuiteBinary bin) =>
+        Rows.SourceCollection.Cast<CompareRow>()
+            .Select(r => r.SymbolName.StartsWith("Symbolnumber") ? r.Userdescription : r.SymbolName)
+            .Where(n => !n.StartsWith("Symbolnumber") && !n.StartsWith("overrun") && !n.StartsWith("Data_name") && !n.StartsWith("MapChkCal"))
+            .Select(bin.Find).Where(sh => sh != null).ToList();
+
     /// <summary>"Export to Excel" becomes CSV: the grid's columns, one row per result.</summary>
     public void ExportCsv(string file)
     {
@@ -123,6 +138,8 @@ public partial class TransferItem(string name, bool selected) : ObservableObject
 /// <summary>frmTransferSelectionSymbolsSelection: the offered symbols by name, the last selection checked.</summary>
 public class TransferSelectionViewModel(IEnumerable<string> candidates, ISet<string> lastSelection)
 {
+    public string Prompt { get; init; } = "Select symbols to transfer...";
+
     public List<TransferItem> Items { get; } = candidates.Select(n => new TransferItem(n, lastSelection.Contains(n))).ToList();
 
     public void SetAll(bool selected)

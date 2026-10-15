@@ -12,7 +12,7 @@
             <Button Content="Ok" MinWidth="80" IsDefault="True" Click="OnOk" />
             <Button Content="Cancel" MinWidth="80" IsCancel="True" Click="OnCancel" />
         </StackPanel>
-        <TextBlock DockPanel.Dock="Top" Text="Select symbols to transfer..." FontWeight="SemiBold" Margin="0,0,0,6" />
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Prompt}" FontWeight="SemiBold" Margin="0,0,0,6" />
         <ListBox ItemsSource="{Binding Items}">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:TransferItem">

@@ -28,6 +28,7 @@ namespace T5AppTest
                 Assert.IsTrue(await vm.OpenPlainFileAsync(file, true));
                 await vm.CompareToFileAsync(other);
                 var results = (CompareResultsViewModel)vm.SelectedViewer!;
+                Assert.IsFalse(results.CanExportPackage, "T5Suite had no tuning packages");
                 results.Open(results.Rows.SourceCollection.Cast<CompareRow>().Single(r => r.SymbolName == "Insp_mat!"));
                 Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                 var tabs = vm.DockedViewers.OfType<DocumentTabsViewModel>().Single();
