@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -97,6 +98,29 @@ namespace T7AppTest
                 }
                 window.CaptureRenderedFrame();
                 Assert.AreEqual(28, Cell().Bounds.Height, 1);
+                // Settings → Show descriptions under symbol names: T7Suite's preview line, a line under the row's cells, off by default.
+                // Category headers grow with the rows: the grid broke folding with rows and headers of different heights
+                TextBlock? Line() => RowOf(fuel).GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Classes.Contains("descriptionLine") && t.IsEffectivelyVisible);
+                Assert.IsFalse(string.IsNullOrEmpty(fuel.Description));
+                Assert.IsNull(Line());
+                try
+                {
+                    vm.Settings.ShowSymbolDescriptionLine = true;
+                    vm.SettingsChanged();
+                    Assert.AreEqual(45, Cell().Bounds.Height, 1);
+                    Assert.AreEqual(fuel.Description, Line()?.Text);
+                    Assert.AreEqual(28, Line()!.TranslatePoint(default, RowOf(fuel))!.Value.Y, 1, "under the name");
+                    DataGridRowGroupHeader header = grid.GetVisualDescendants().OfType<DataGridRowGroupHeader>().First(h => h.IsVisible);
+                    Assert.AreEqual(Cell().Bounds.Height, header.Bounds.Height, 1);
+                    Save(window, "description-line");
+                }
+                finally
+                {
+                    vm.Settings.ShowSymbolDescriptionLine = false;
+                    vm.SettingsChanged();
+                }
+                Assert.AreEqual(28, Cell().Bounds.Height, 1);
+                Assert.IsNull(Line());
 
                 // one chosen in the list (a key, a click) only scrolls into view
                 grid.Focus();

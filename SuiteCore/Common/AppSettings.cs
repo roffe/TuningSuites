@@ -1592,6 +1592,19 @@ namespace CommonSuite
             }
         }
 
+        // the old T7Suite / T8Suite symbol grid's preview line (Description under each row), off by default: the Description column has it
+        private bool m_ShowSymbolDescriptionLine = false;
+
+        public bool ShowSymbolDescriptionLine
+        {
+            get { return m_ShowSymbolDescriptionLine; }
+            set
+            {
+                m_ShowSymbolDescriptionLine = value;
+                SaveRegistrySetting("ShowSymbolDescriptionLine", m_ShowSymbolDescriptionLine);
+            }
+        }
+
         // TxSuite: the menus as the old suites' ribbon (Settings → Show ribbon bar instead of menus), off by default
         private bool m_ShowRibbon = false;
 
@@ -1767,6 +1780,7 @@ namespace CommonSuite
                 saveSettings.SetValue("AutoLoadLastFile", m_AutoLoadLastFile);
                 saveSettings.SetValue("FancyDocking", m_FancyDocking);
                 saveSettings.SetValue("ShowMapPreviewPopup", m_ShowMapPreviewPopup);
+                saveSettings.SetValue("ShowSymbolDescriptionLine", m_ShowSymbolDescriptionLine);
                 saveSettings.SetValue("ShowRibbon", m_ShowRibbon);
                 saveSettings.SetValue("SynchronizeMapviewers", m_SynchronizeMapviewers);
                 saveSettings.SetValue("AllowAskForPartnumber", m_AllowAskForPartnumber);
@@ -1831,6 +1845,7 @@ namespace CommonSuite
         {
             "ShowGraphs", "AutoLoadLastFile", "DefaultViewType", "ColorBlindMode", "SymbolListFontSize", "ShowRibbon",
             "MapCellGap", "SynchronizeMapviewers", "AutoChecksum", "ShowAddressesInHex", "RequestProjectNotes", "HideSymbolTable", "ShowMapPreviewPopup",
+            "ShowSymbolDescriptionLine",
             "ProjectFolder", "AdapterType", "Adapter", "Baudrate", "AutoUpdateSRAMViewers", "AutoUpdateInterval", "InterpolateLogWorksTimescale",
             "MeasureAFRInLambda", "UseDigitalWidebandLambda", "WidebandDevice", "WbPort", "LastFilename", "LastProjectname", "LastOpenedType",
         };
@@ -2149,6 +2164,10 @@ namespace CommonSuite
                             else if (a == "ShowMapPreviewPopup")
                             {
                                 m_ShowMapPreviewPopup = Convert.ToBoolean(Settings.GetValue(a).ToString());
+                            }
+                            else if (a == "ShowSymbolDescriptionLine")
+                            {
+                                m_ShowSymbolDescriptionLine = Convert.ToBoolean(Settings.GetValue(a).ToString());
                             }
                             else if (a == "ShowRibbon")
                             {

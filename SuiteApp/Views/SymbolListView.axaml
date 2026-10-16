@@ -5,6 +5,12 @@
              xmlns:cs="using:CommonSuite"
              x:Class="SuiteApp.Views.SymbolListView"
              x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <!-- the name cell lets the description line run on under the other columns (a DataGridCell clips); its name clips itself -->
+        <ControlTheme x:Key="SymbolNameCell" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+            <Setter Property="ClipToBounds" Value="False" />
+        </ControlTheme>
+    </UserControl.Resources>
     <UserControl.Styles>
         <Style Selector="TextBlock.onLight">
             <Setter Property="Foreground" Value="Black" />
@@ -16,10 +22,21 @@
         <Style Selector="DataGridRow:selected DataGridCell, DataGridRowGroupHeader:current">
             <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
         </Style>
+        <Style Selector="DataGridRow:selected TextBlock.descriptionLine">
+            <Setter Property="Foreground" Value="{DynamicResource SuiteSymbolSelectedForeground}" />
+        </Style>
         <!-- the text size from Settings (Fluent's grid: 15 px on rows of at least 32 px) -->
         <Style Selector="DataGridCell, DataGridRowGroupHeader">
             <Setter Property="FontSize" Value="{DynamicResource SuiteSymbolListFontSize}" />
             <Setter Property="MinHeight" Value="{DynamicResource SuiteSymbolListRowHeight}" />
+        </Style>
+        <!-- Settings → Show descriptions under symbol names, T7Suite's preview line: the rows a line taller (SuiteSymbolListRowHeight), that
+             line the cells' bottom padding, which the name cell writes the description into. Rows and category headers stay one height:
+             Avalonia's DataGrid (12.1) loses track of its shown rows when they differ (index out of range on folding a category), which
+             its row details, a row template with a line of its own and taller cells alone all ran into.
+             ponytail: one line, cut at the list's right edge; T7Suite wrapped it, which needs rows as tall as their own text -->
+        <Style Selector="DataGridCell">
+            <Setter Property="Padding" Value="{DynamicResource SuiteSymbolDescriptionRoom}" />
         </Style>
         <!-- the map preview popup is as large as its map -->
         <Style Selector="ToolTip">
@@ -60,13 +77,20 @@
                   GridLinesVisibility="Horizontal" SelectionMode="Extended"
                   DoubleTapped="OnSymbolDoubleTapped" CellEditEnded="OnSymbolCellEditEnded" SelectionChanged="OnSelectionChanged">
             <DataGrid.Columns>
-                <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True">
+                <DataGridTemplateColumn Header="Symbol name" SortMemberPath="Varname" Width="190" IsReadOnly="True" CellTheme="{StaticResource SymbolNameCell}">
                     <DataTemplate x:DataType="cs:SymbolHelper">
-                        <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2"
-                                ToolTip.Tip="" ToolTip.ShowDelay="100" ToolTip.Placement="Right" ToolTip.ToolTipOpening="OnNameToolTipOpening">
-                            <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Classes.onLight="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=light}"
-                                       Classes.onDark="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=dark}" />
-                        </Border>
+                        <Panel>
+                            <Border Background="{Binding Varname, Converter={x:Static v:SymbolColorConverter.Instance}}" Padding="6,2" ClipToBounds="True"
+                                    ToolTip.Tip="" ToolTip.ShowDelay="100" ToolTip.Placement="Right" ToolTip.ToolTipOpening="OnNameToolTipOpening">
+                                <TextBlock Text="{Binding Varname}" VerticalAlignment="Center" Classes.onLight="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=light}"
+                                           Classes.onDark="{Binding Varname, Converter={x:Static v:SymbolShadeConverter.Instance}, ConverterParameter=dark}" />
+                            </Border>
+                            <!-- Settings → Show descriptions under symbol names: drawn into the cells' bottom padding (the styles above), across
+                                 the row; the Canvas has no size, so the line never makes a row taller -->
+                            <Canvas VerticalAlignment="Bottom" IsVisible="{DynamicResource SuiteSymbolDescriptionLine}">
+                                <TextBlock Classes="descriptionLine" Text="{Binding Description}" Opacity="0.7" Margin="6,0,0,0" />
+                            </Canvas>
+                        </Panel>
                     </DataTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn x:DataType="cs:SymbolHelper" Header="Address" SortMemberPath="Flash_start_address"

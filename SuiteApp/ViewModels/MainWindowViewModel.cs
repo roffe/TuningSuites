@@ -725,13 +725,19 @@ public abstract partial class MainWindowViewModel : ObservableObject
         if (Application.Current is { } app) app.Resources["SuiteMapCellGap"] = (double)Math.Clamp(Settings.MapCellGap, 0, SuiteSettingsViewModel.MaxCellGap);
     }
 
-    /// <summary>The symbol list's text size into the application's resources, its rows as tall as Fluent's grid makes them for its 15 px.</summary>
+    /// <summary>
+    /// The symbol list's text size into the application's resources, its rows as tall as Fluent's grid makes them for its 15 px; with
+    /// the description under each symbol's name (T7Suite's preview line) a line taller, that line the cells' bottom padding.
+    /// </summary>
     private void ApplySymbolListFont()
     {
         if (Application.Current is not { } app) return;
         double size = Math.Clamp(Settings.SymbolListFontSize, SuiteSettingsViewModel.MinFontSize, SuiteSettingsViewModel.MaxFontSize);
+        double line = Settings.ShowSymbolDescriptionLine ? Math.Round(size * 4 / 3) : 0;
         app.Resources["SuiteSymbolListFontSize"] = size;
-        app.Resources["SuiteSymbolListRowHeight"] = Math.Round(size * 32 / 15);
+        app.Resources["SuiteSymbolListRowHeight"] = Math.Round(size * 32 / 15) + line;
+        app.Resources["SuiteSymbolDescriptionRoom"] = new Thickness(0, 0, 0, line);
+        app.Resources["SuiteSymbolDescriptionLine"] = line > 0;
     }
 
     // ---- projects ----

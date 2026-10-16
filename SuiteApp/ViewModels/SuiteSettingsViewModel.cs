@@ -23,6 +23,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _requestProjectNotes;
     [ObservableProperty] private bool _hideSymbolTable;
     [ObservableProperty] private bool _showMapPreviewPopup;
+    [ObservableProperty] private bool _showSymbolDescriptionLine;
     [ObservableProperty] private bool _showRibbon;
     [ObservableProperty] private string _projectFolder;
 
@@ -108,6 +109,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         _requestProjectNotes = s.RequestProjectNotes;
         _hideSymbolTable = s.HideSymbolTable;
         _showMapPreviewPopup = s.ShowMapPreviewPopup;
+        _showSymbolDescriptionLine = s.ShowSymbolDescriptionLine;
         _showRibbon = s.ShowRibbon;
         _projectFolder = s.ProjectFolder;
         _adapter = s.Adapter;
@@ -148,6 +150,7 @@ public partial class SuiteSettingsViewModel : ObservableObject
         s.RequestProjectNotes = RequestProjectNotes;
         s.HideSymbolTable = HideSymbolTable;
         s.ShowMapPreviewPopup = ShowMapPreviewPopup;
+        s.ShowSymbolDescriptionLine = ShowSymbolDescriptionLine;
         s.ShowRibbon = ShowRibbon;
         s.AdapterType = AdapterType;
         s.Adapter = Adapter ?? "";

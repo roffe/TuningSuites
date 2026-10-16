@@ -71,6 +71,7 @@ public sealed class TxSettingsViewModel
         to.RequestProjectNotes = from.RequestProjectNotes;
         to.HideSymbolTable = from.HideSymbolTable;
         to.ShowMapPreviewPopup = from.ShowMapPreviewPopup;
+        to.ShowSymbolDescriptionLine = from.ShowSymbolDescriptionLine;
         to.ShowRibbon = from.ShowRibbon;
         to.ProjectFolder = from.ProjectFolder;
         // the type first: a new type refills the adapter list
