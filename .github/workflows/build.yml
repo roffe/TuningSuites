@@ -196,6 +196,12 @@ jobs:
         DOTNET_NOLOGO: true
       run: echo "tx=$(dotnet msbuild TxSuite/TxSuite.csproj -t:VersionFromGit -getProperty:InformationalVersion)" >> "$GITHUB_OUTPUT"
 
+    # the features, fixes and speedups since the previous Txsuite_v release, from the commit messages
+    - name: Release notes
+      run: |
+        if [ "${{ github.ref_type }}" = branch ]; then printf 'Automated build %s of %s\n\n' "${{ steps.version.outputs.tx }}" "$GITHUB_SHA"; fi > notes.md
+        bash packaging/release-notes.sh >> notes.md
+
     # ponytail: a rolling tag, a pre-release that always points at the latest master build; the update check skips it
     - name: Move nightly tag
       if: github.ref_type == 'branch'
@@ -210,7 +216,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_name: Txsuite_nightly
         name: TxSuite nightly build ${{ steps.version.outputs.tx }}
-        body: Automated build ${{ steps.version.outputs.tx }} of ${{ github.sha }}
+        body_path: notes.md
         prerelease: true
         make_latest: "false"
         files: dist/TxSuite*
@@ -221,6 +227,7 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        body_path: notes.md
         make_latest: "false"
         files: dist/*
 
