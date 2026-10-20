@@ -75,6 +75,12 @@ namespace T7AppTest
 
         private static void Maximized(Window window, string name)
         {
+            MaximizeDocuments(window);
+            Save(window, name);
+        }
+
+        private static void MaximizeDocuments(Window window)
+        {
             // a pass first: the document's window has to be in the workspace to be maximized
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             window.CaptureRenderedFrame();
@@ -83,7 +89,6 @@ namespace T7AppTest
                 mdi.MdiState = Dock.Model.Core.MdiWindowState.Maximized;
             Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             window.CaptureRenderedFrame();
-            Save(window, name);
         }
 
         // Ctrl+P and Ctrl+Shift+P with something typed, over the map

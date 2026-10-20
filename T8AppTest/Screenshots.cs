@@ -64,6 +64,7 @@ namespace T8AppTest
                             w.Close();
                         }
                         window.Close();
+                        await ManualScreenshots(file, theme, suffix);
                     }
                 }
                 finally

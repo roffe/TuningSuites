@@ -58,6 +58,7 @@ namespace T5AppTest
                             w.Close();
                         }
                         window.Close();
+                        await ManualScreenshots(file, theme, suffix);
                     }
                 }
                 finally
