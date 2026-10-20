@@ -70,10 +70,14 @@ public partial class T5Module
         if (await SyncDatesAsync() is not { } dates || dates.file == dates.ecu || AskButtons == null) return;
         var (file, ecu) = dates;
         bool toFile = ecu > file;
-        int? choice = await AskButtons($"Timestamp binary: {SyncText(file)}\nTimestamp ECU: {SyncText(ecu)}\n\nProposed sync: {(toFile ? "ECU to binary" : "binary to ECU")}",
-            "Data synchronization", ["Accept", "Decline", "Reverse"]);
+        int? choice = await AskSyncAsync(file, ecu);
         if (choice is 0 or 2) await SyncMapsAsync(choice == 0 ? toFile : !toFile, file, ecu);
     }
+
+    /// <summary>The question on its own (the screenshots ask it with test dates): Accept 0, Decline 1, Reverse 2, null when closed.</summary>
+    public Task<int?> AskSyncAsync(DateTime file, DateTime ecu) =>
+        AskButtons!($"Timestamp binary: {SyncText(file)}\nTimestamp ECU: {SyncText(ecu)}\n\nProposed sync: {(ecu > file ? "ECU to binary" : "binary to ECU")}",
+            "Data synchronization", ["Accept", "Decline", "Reverse"]);
 
     /// <summary>Online tuning → Synchronize maps: the direction from the dates, no question.</summary>
     [RelayCommand]
