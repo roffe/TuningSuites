@@ -232,14 +232,20 @@ public partial class SuiteMainView : UserControl
     {
         if (sender is not MenuItem { Tag: string name }) return;
         string file = Path.Combine(AppContext.BaseDirectory, name);
+        if (!File.Exists(file))
+        {
+            await Dialogs.Info(Host, $"{name} could not be found in {AppContext.BaseDirectory}");
+            return;
+        }
         try
         {
-            if (!File.Exists(file)) throw new FileNotFoundException();
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = true });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            await Dialogs.Info(Host, $"{name} could not be found or opened!");
+            // .NET's own message names the pdf as missing when it found no xdg-open, gnome-open or kfmclient to open it with
+            string why = OperatingSystem.IsLinux() ? "there is no xdg-open to open it with, install xdg-utils" : ex.Message;
+            await Dialogs.Info(Host, $"{file} could not be opened: {why}");
         }
     }
 
