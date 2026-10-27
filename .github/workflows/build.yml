@@ -109,6 +109,15 @@ jobs:
       with:
         dotnet-version: 10.x
 
+    # Help's manuals from roffe/TrionicDocumentation's newest release over the repository's copies; GitHub turned the spaces in
+    # its asset names into dots
+    - name: Newest manuals
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release download -R roffe/TrionicDocumentation --pattern '*.pdf' --clobber
+        for n in 5 7 8; do mv "Trionic.$n.pdf" "Trionic $n.pdf"; done
+
     # the stock bins are not in it, they ship as TxExtras (extras.yml)
     - name: Publish
       run: dotnet publish TxSuite/TxSuite.csproj -c Release -r ${{ matrix.rid }} --self-contained -o out/TxSuite
