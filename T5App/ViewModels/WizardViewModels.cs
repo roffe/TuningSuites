@@ -29,7 +29,7 @@ public partial class TuneMeUpViewModel : ObservableObject
 
     public static MapSensorType[] MapSensors { get; } = Enum.GetValues<MapSensorType>();
     public static InjectorType[] InjectorTypes { get; } = Enum.GetValues<InjectorType>();
-    public static TurboType[] Turbos { get; } = Enum.GetValues<TurboType>();
+    public static TurboType[] Turbos { get; } = Enum.GetValues<TurboType>().Where(t => t != TurboType.GT17).ToArray();
     public static BPCType[] Valves { get; } = Enum.GetValues<BPCType>();
 
     [ObservableProperty]

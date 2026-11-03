@@ -640,7 +640,7 @@ T5Suite has nothing like T7's "Firmware information" dialog: there is no VIN, pr
 | TuningStage | byte at len − 0x200 | FF → 0; enum Stock, Stage1..Stage8, StageX |
 | MapSensorType | byte at len − 0x1FF | FF → 2.5 bar, 01 = 3.0, 02 = 3.5, 03 = 4.0, 04 = 5.0. The marker only: no auto-detect here. |
 | InjectorType | byte at len − 0x1FE | FF → 0; enum Stock, GreenGiants, Siemens630Dekas, Siemens875Dekas, Siemens1000cc |
-| TurboType | byte at len − 0x1FD | FF → 0; `CommonSuite.TurboType`: Stock, GT17, TD0415T, TD0419T, GT28BB, GT28RS, GT3071R, HX35w, HX40w, S400SX371 |
+| TurboType | byte at len − 0x1FD | FF → 0; cast to `CommonSuite.TurboType` (Stock, GT17, TD0415T, TD0419T, GT28BB, GT28RS, GT3071R, HX35w, HX40w, S400SX371), but the dialogs write their list index (no GT17), so in files out there byte 1 means TD04-15T |
 | SyncDateTime | 7 bytes at len − 0x1E0 | year u16 BE, month, day, h, m, s. An invalid date (e.g. FF…) gives 2000-01-01 00:00:00 (2265). |
 | HardcodedRPMLimit | u16 BE | at a code-pattern offset (below) |
 

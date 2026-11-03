@@ -2454,9 +2454,15 @@ namespace Trionic5Tools
             int address = m_fileInfo.Filelength - 0x1FD;
             if (address > 0)
             {
-                writebyteinfile(m_currentFile, address, Convert.ToByte((int)turboType)); 
+                writebyteinfile(m_currentFile, address, Convert.ToByte(TurboMarker(turboType)));
             }
         }
+
+        // T5Suite stored its turbo list's index, a list without GT17: byte 1 is TD04-15T, every turbo after Stock one off the enum
+        public static int TurboMarker(TurboType turbo) => turbo <= TurboType.GT17 ? 0 : (int)turbo - 1;
+
+        public static TurboType TurboFromMarker(int marker) =>
+            marker == 0 ? TurboType.Stock : (TurboType)Math.Min(marker + 1, (int)TurboType.S400SX371);
 
         public override void WriteTuningStageMarker(TuningStage tuningStage)
         {
@@ -2512,7 +2518,7 @@ namespace Trionic5Tools
                     if (stage == 0xFF) stage = 0;
                 }
             }
-            return stage;
+            return (int)TurboFromMarker(stage);
         }
 
 

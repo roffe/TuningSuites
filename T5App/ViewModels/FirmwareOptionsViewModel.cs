@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using CommonSuite;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -81,8 +82,7 @@ public partial class FirmwareOptionsViewModel : ObservableObject
 
     public static InjectorType[] Injectors { get; } = Enum.GetValues<InjectorType>();
     public static MapSensorType[] MapSensors { get; } = Enum.GetValues<MapSensorType>();
-    // by name: T5Suite's list was one off against the enum and lacked the last two
-    public static TurboType[] Turbos { get; } = Enum.GetValues<TurboType>();
+    public static TurboType[] Turbos { get; } = Enum.GetValues<TurboType>().Where(t => t != TurboType.GT17).ToArray();
     public static TuningStage[] Stages { get; } = Enum.GetValues<TuningStage>();
 
     /// <summary>frmEasyFirmwareSettings' combo captions (GT17 and S400SX371 weren't in its turbo list).</summary>

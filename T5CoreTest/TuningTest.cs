@@ -46,6 +46,24 @@ namespace T5CoreTest
         });
 
         [TestMethod]
+        public void TurboMarkerIsT5SuitesListIndex() => InTemp(dir =>
+        {
+            T5Binary bin = OpenCopy(dir);
+            int at = (int)new FileInfo(bin.FileName).Length - 0x1FD;
+            byte[] raw = File.ReadAllBytes(bin.FileName);
+            raw[at] = 1;
+            File.WriteAllBytes(bin.FileName, raw);
+            Trionic5Properties p = T5Binary.Open(bin.FileName).File.GetTrionicProperties();
+            Assert.AreEqual(TurboType.TD0415T, p.TurboType);
+
+            T5Binary again = T5Binary.Open(bin.FileName);
+            Trionic5Properties hx = again.File.GetTrionicProperties();
+            hx.TurboType = TurboType.HX40w;
+            again.File.SetTrionicOptions(hx);
+            Assert.AreEqual(7, File.ReadAllBytes(bin.FileName)[at]);
+        });
+
+        [TestMethod]
         public void MapSensorGoesToTheChosenType() => InTemp(dir =>
         {
             T5Binary bin = OpenCopy(dir);
