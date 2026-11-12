@@ -91,9 +91,8 @@ namespace TxSuiteTest
                     await vm.ConnectDisconnectCommand.ExecuteAsync(null);
                     Assert.AreEqual(MainWindowViewModel.FileNeeded, info);
                     Assert.IsFalse(vm.IsConnected);
-                    info = null;
-                    await vm.ReadEcuAsync(Path.Combine(s_dir, "read.bin"));
-                    Assert.AreEqual(MainWindowViewModel.FileNeeded, info);
+                    // Read ECU asks which ECU instead, T5, T7, T8
+                    CollectionAssert.AreEqual(new EcuModule[] { vm.T5, vm.T7, vm.T8 }, vm.ReadEcuChoices.ToList());
                     // the messages' dialogs closed: they block the window's keys
                     Avalonia.Threading.Dispatcher.UIThread.RunJobs();
                     foreach (Window dialog in window.OwnedWindows.ToList()) dialog.Close();
@@ -112,6 +111,7 @@ namespace TxSuiteTest
                     // T8 in the same window and view model: the T7 map closed, T8's items in place of T7's
                     Assert.IsTrue(await vm.OpenPlainFileAsync(t8, true));
                     Assert.AreSame(vm.T8, vm.Module);
+                    Assert.AreEqual(2, vm.ReadEcuDefault);
                     Assert.AreSame(view, window.View);
                     Assert.AreSame(vm, window.DataContext);
                     Assert.AreEqual(t8, vm.Binary?.FileName);
@@ -140,6 +140,8 @@ namespace TxSuiteTest
                     // T5: its columns (no type, no bit mask) and its realtime panel's autotune key
                     Assert.IsTrue(await vm.OpenPlainFileAsync(t5, true));
                     Assert.AreSame(vm.T5, vm.Module);
+                    // Enter in Read ECU takes the open file's ECU
+                    Assert.AreEqual(0, vm.ReadEcuDefault);
                     Assert.IsTrue(Item(window, "Examine binary").IsVisible);
                     Assert.IsFalse(vm.SymbolColumns.Any(c => c.Path is nameof(SymbolHelper.BitMask) or nameof(SymbolHelper.Symbol_type)));
                     await vm.ToggleRealtimePanelCommand.ExecuteAsync(null);

@@ -18,7 +18,7 @@ public record FaultCode(string Code, string Description);
 /// The ECU side every ECU has on top of its own session (T5Ecu, T7Ecu over KWP, T8Ecu over GMLAN): the connection state, the map
 /// viewers' Read from / Save to ECU and their auto update, maps that only live in SRAM, .RAM snapshot files, the flasher's busy
 /// state and fault code descriptions. What goes over the wire is the open file's ECU's module's. Nothing connects without a file:
-/// the file says which ECU it is.
+/// the file says which ECU it is. Read ECU is the exception, it asks which ECU is connected.
 /// </summary>
 public abstract partial class MainWindowViewModel
 {
@@ -38,12 +38,16 @@ public abstract partial class MainWindowViewModel
 
     public bool HasSramFile => SramFile != null && File.Exists(SramFile);
 
-    /// <summary>Read ECU: the flash into a file, the open file's ECU's way.</summary>
-    public async Task ReadEcuAsync(string file)
-    {
-        if (NeedsFile()) return;
-        await Module.ReadEcuAsync(file);
-    }
+    /// <summary>
+    /// Read ECU's choice of ECU, T5, T7, T8: the ECU on the bench needn't be the open file's, and its protocol to another ECU gets
+    /// no answer. ReadEcuDefault is the open file's (or, without one, the last one's).
+    /// </summary>
+    public IReadOnlyList<EcuModule> ReadEcuChoices => [.. Modules.OrderBy(m => m.Name)];
+
+    public int ReadEcuDefault => ReadEcuChoices.ToList().IndexOf(Module);
+
+    /// <summary>Read ECU: the flash into a file, the chosen ECU's way.</summary>
+    public Task ReadEcuAsync(EcuModule ecu, string file) => ecu.ReadEcuAsync(file);
 
     /// <summary>Flash current file to ECU (askYesNo for the questions on the way).</summary>
     public Task FlashEcuAsync(Func<string, Task<bool>> askYesNo) => Module.FlashEcuAsync(askYesNo);

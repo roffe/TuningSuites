@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Avalonia.Interactivity;
 using CommonSuite;
 using SuiteApp.Services;
@@ -8,10 +9,13 @@ namespace SuiteApp.Views;
 /// <summary>The ECU menus every ECU has: Read ECU, Flash, fault codes, the SRAM snapshot file and reading maps from it.</summary>
 public partial class SuiteMainView
 {
-    // the file tells which ECU to read, before anything is asked
+    // which ECU first, then where to: Enter takes the open file's ECU
     protected async void OnReadEcu(object? sender, RoutedEventArgs e)
     {
-        if (!Vm.NeedsFile() && await Dialogs.SaveFile(Host, "Read ECU", "Binary files", "bin", null) is { } file) await Vm.ReadEcuAsync(file);
+        var ecus = Vm.ReadEcuChoices;
+        if (await Dialogs.Buttons(Host, "Which ECU is connected?", "Read ECU", [.. ecus.Select(m => "Trionic " + m.Name[1..])], Vm.ReadEcuDefault) is { } i
+            && await Dialogs.SaveFile(Host, "Read ECU", "Binary files", "bin", null) is { } file)
+            await Vm.ReadEcuAsync(ecus[i], file);
     }
 
     protected async void OnFlashEcu(object? sender, RoutedEventArgs e) =>

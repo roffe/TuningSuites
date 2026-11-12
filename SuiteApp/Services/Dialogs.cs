@@ -56,7 +56,7 @@ namespace SuiteApp.Services
         }
 
         /// <summary>A question with the suite's own buttons (T5Suite's Accept / Decline / Reverse): the index clicked, null when closed.</summary>
-        public static async Task<int?> Buttons(Window owner, string text, string caption, params string[] labels)
+        public static async Task<int?> Buttons(Window owner, string text, string caption, string[] labels, int defaultButton = 0)
         {
             var dlg = new Window
             {
@@ -72,7 +72,7 @@ namespace SuiteApp.Services
             for (int i = 0; i < labels.Length; i++)
             {
                 int index = i;
-                var b = new Button { Content = labels[i], MinWidth = 80, IsDefault = i == 0 };
+                var b = new Button { Content = labels[i], MinWidth = 80, IsDefault = i == defaultButton };
                 b.Click += (_, _) => dlg.Close(index);
                 buttons.Children.Add(b);
             }
