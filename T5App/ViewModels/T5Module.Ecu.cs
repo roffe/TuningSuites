@@ -173,8 +173,8 @@ public partial class T5Module
     /// <summary>Download flash from ECU: the T5 CAN Flasher's dump (its checksum check included).</summary>
     public override Task ReadEcuAsync(string file) => RunFlasherAsync(async () =>
     {
-        bool ok = await Ecu.ReadFlashAsync(Settings, file);
-        ShowInfo(ok ? $"Download done: {file}" : "Failed to download flash from ECU");
+        var (ok, message) = await Ecu.ReadFlashAsync(Settings, file);
+        ShowInfo(ok ? $"Download done: {file}" : message);
     });
 
     /// <summary>Upload flash to ECU: the open file, checked first as T7 / T8 flash theirs; conversions are asked by the library.</summary>

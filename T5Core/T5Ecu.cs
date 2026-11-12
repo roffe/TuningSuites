@@ -109,25 +109,44 @@ namespace Trionic5Tools
 
         // ---- flash: a session of its own, the T5 CAN Flasher's way ----
 
-        /// <summary>Download flash from ECU: MyBooty, the 128 / 256 KB dump with its checksum check, then the bootloader exits.</summary>
-        public async Task<bool> ReadFlashAsync(AppSettings settings, string file)
+        /// <summary>
+        /// Download flash from ECU: MyBooty, the 128 / 256 KB dump with its checksum check, then the bootloader exits. A failure's
+        /// message is ReadFailedText of the library's lines.
+        /// </summary>
+        public async Task<(bool ok, string message)> ReadFlashAsync(AppSettings settings, string file)
         {
+            var lines = new List<string>();
+            void OnInfo(object s, ITrionic.CanInfoEventArgs e) => lines.Add(e.Info);
             IsFlashing = true;
+            Info += OnInfo;
             try
             {
-                if (!await OpenFlasherAsync(settings)) return false;
-                return await RunAsync(t =>
+                bool ok = await OpenFlasherAsync(settings) && await RunAsync(t =>
                 {
                     var args = new DoWorkEventArgs(file);
                     t.DumpECU(null, args);
                     return args.Result is true;
                 });
+                return (ok, ok ? "" : ReadFailedText(lines));
             }
             finally
             {
+                Info -= OnInfo;
                 await RunAsync(t => t.Cleanup());
                 IsFlashing = false;
             }
+        }
+
+        public const string NoAnswer = "No Trionic 5 answered. Check that the ECU is a Trionic 5, that it has power, and the CAN H / CAN L wires (ECU pins 62 and 63).";
+
+        /// <summary>
+        /// What a failed read says: the library's lines of the attempt, which name the protocol and the reason (the adapter's
+        /// permissions, the step of the bootloader upload that failed); an unanswered first bootloader frame adds NoAnswer.
+        /// </summary>
+        public static string ReadFailedText(IReadOnlyList<string> lines)
+        {
+            string text = "Failed to download flash from ECU\n\n" + string.Join("\n", lines.Where(l => l.Trim() != ""));
+            return lines.Any(l => l.EndsWith("(step 0: no reply)")) ? text + "\n\n" + NoAnswer : text;
         }
 
         /// <summary>Upload flash to ECU: the library detects the ECU and asks about T5.2 / T5.5 conversions through UserPrompt.</summary>
