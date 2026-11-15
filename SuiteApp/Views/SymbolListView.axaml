@@ -99,8 +99,9 @@
                                     Binding="{Binding Length, Converter={x:Static v:SymbolNumberConverter.Instance}, Mode=OneWay}" IsReadOnly="True" />
                 <DataGridTemplateColumn Header="Description" SortMemberPath="Description" Width="300" IsReadOnly="True">
                     <DataTemplate x:DataType="cs:SymbolHelper">
-                        <Border Background="{Binding Category, Converter={x:Static v:CategoryColorConverter.Instance}}" Padding="6,2">
-                            <TextBlock Text="{Binding Description}" VerticalAlignment="Center"
+                        <Border Background="{Binding Category, Converter={x:Static v:CategoryColorConverter.Instance}}" Padding="6,2"
+                                ToolTip.Tip="" ToolTip.ToolTipOpening="OnDescriptionToolTipOpening">
+                            <TextBlock Text="{Binding Description}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                        Classes.onLight="{Binding Category, Converter={x:Static v:CategoryColorConverter.Instance}, ConverterParameter=light}" />
                         </Border>
                     </DataTemplate>

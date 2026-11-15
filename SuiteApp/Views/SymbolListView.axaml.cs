@@ -6,6 +6,7 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using CommonSuite;
 using SuiteApp.ViewModels;
@@ -285,6 +286,17 @@ public partial class SymbolListView : UserControl
         {
             Map = preview.Map, ViewType = preview.ViewType, IsReadOnly = true,
         });
+    }
+
+    // a cut off description in full, as T7Suite's grid hint
+    private void OnDescriptionToolTipOpening(object? sender, CancelRoutedEventArgs e)
+    {
+        if (sender is not Border { Child: TextBlock text } b || !text.TextLayout.TextLines.Any(l => l.HasCollapsed))
+        {
+            e.Cancel = true;
+            return;
+        }
+        ToolTip.SetTip(b, new TextBlock { Text = text.Text, TextWrapping = TextWrapping.Wrap, MaxWidth = 600 });
     }
 
     private void OnSymbolDoubleTapped(object? sender, TappedEventArgs e) => Vm?.OpenSymbolCommand.Execute(Vm.SelectedSymbol);

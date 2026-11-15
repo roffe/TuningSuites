@@ -50,5 +50,39 @@ namespace T7AppTest
                 return true;
             }, default).GetAwaiter().GetResult();
         }
+
+        /// <summary>A description cut off by its column shows in full on hover; one that fits shows none.</summary>
+        [TestMethod]
+        public void DescriptionTip()
+        {
+            s_session!.Dispatch(async () =>
+            {
+                var vm = new MainViewModel();
+                var window = new MainWindow { DataContext = vm, Width = 1500, Height = 950 };
+                window.Show();
+                Assert.IsTrue(await vm.OpenFileAsync(Path.Combine(s_dir, "5168646.bin"), true));
+                SymbolHelper symbol = vm.Binary!.Symbols.Cast<SymbolHelper>().MaxBy(s => s.Description?.Length ?? 0)!;
+                Assert.IsTrue(symbol.Description.Length > 100, symbol.Description);
+                vm.SearchText = symbol.SmartVarname;
+                window.CaptureRenderedFrame();
+                var cell = window.GetVisualDescendants().OfType<Border>().First(b => b.DataContext == symbol && b.Child is TextBlock { Text: var t } && t == symbol.Description);
+                var column = window.GetVisualDescendants().OfType<DataGrid>().First().Columns.First(c => c.SortMemberPath == "Description");
+
+                column.Width = new DataGridLength(120);
+                window.CaptureRenderedFrame();
+                var opening = new Avalonia.Interactivity.CancelRoutedEventArgs(ToolTip.ToolTipOpeningEvent);
+                cell.RaiseEvent(opening);
+                Assert.IsFalse(opening.Cancel);
+                Assert.AreEqual(symbol.Description, ((TextBlock)ToolTip.GetTip(cell)!).Text);
+
+                column.Width = new DataGridLength(30000);
+                window.CaptureRenderedFrame();
+                opening = new Avalonia.Interactivity.CancelRoutedEventArgs(ToolTip.ToolTipOpeningEvent);
+                cell.RaiseEvent(opening);
+                Assert.IsTrue(opening.Cancel);
+                window.Close();
+                return true;
+            }, default).GetAwaiter().GetResult();
+        }
     }
 }
