@@ -40,6 +40,8 @@ namespace T5AppTest
                 Assert.IsTrue(DisassemblyViewModel.TryParseAddress(lines[line], out uint address));
                 Assert.AreEqual((ulong)(address - 0x40000), bytes.Start);
                 Assert.IsNotNull(asm.FindAddress(bytes.Start));
+                // the disassembler let go of the file: Windows refuses to write or delete one left open
+                using (File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
 
                 Assert.IsTrue(File.Exists(bin.ExportIdc()));
                 window.Close();

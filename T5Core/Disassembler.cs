@@ -1839,9 +1839,9 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
 
             inname = inputfile;
             adrcntr = 0L;
-            FileStream fsbr = new FileStream(inname, FileMode.Open, FileAccess.Read);
+            using FileStream fsbr = new FileStream(inname, FileMode.Open, FileAccess.Read);
             if (fsbr == null) return _labels;
-            BinaryReader br = new BinaryReader(fsbr);
+            using BinaryReader br = new BinaryReader(fsbr);
             if (br == null)
             {
                 fsbr.Close();
@@ -1906,9 +1906,9 @@ int find_symbol(string symbol, long caddr)  // TEST SEQUENCE FOR READING BINARY 
             /* Read all the preceding words first */
             adrcntr = 0L;
             //StreamWriter sw = new StreamWriter(outname, false);
-            FileStream fsbr = new FileStream(inname, FileMode.Open, FileAccess.Read);
+            using FileStream fsbr = new FileStream(inname, FileMode.Open, FileAccess.Read);
             if (fsbr == null) return false;
-            BinaryReader br = new BinaryReader(fsbr);
+            using BinaryReader br = new BinaryReader(fsbr);
             if (br == null)
             {
                 fsbr.Close();
